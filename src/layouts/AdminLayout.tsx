@@ -16,7 +16,10 @@ import {
   TrendingUp,
   Eye,
   Database,
-  LayoutDashboard
+  LayoutDashboard,
+  History,
+  UserCog,
+  Backup
 } from 'lucide-react';
 
 export const AdminLayout: React.FC = () => {
@@ -32,6 +35,9 @@ export const AdminLayout: React.FC = () => {
     { name: 'Devis', href: '/admin/devis', icon: 'FileText' },
     { name: 'Analytics', href: '/admin/analytics', icon: 'BarChart3' },
     { name: 'Modération', href: '/admin/moderation', icon: 'AlertTriangle' },
+    { name: 'Journaux d\'audit', href: '/admin/audit-logs', icon: 'History' },
+    { name: 'Rôles et permissions', href: '/admin/roles', icon: 'UserCog' },
+    { name: 'Backup et restauration', href: '/admin/backup-restore', icon: 'Backup' },
     { name: 'Données', href: '/admin/donnees', icon: 'Database' },
     { name: 'Paramètres', href: '/admin/parametres', icon: 'Settings' },
   ];

@@ -1,8 +1,12 @@
-import { Mail, MessageCircle, Phone, X } from "lucide-react";
+import { Mail, MessageCircle, Phone, X, Download, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { QuotePDFGenerator } from "@/features/quotes/components/QuotePDFGenerator";
+import { useNotifications } from "@/features/notifications/hooks/useNotifications";
+import { quoteService, QuoteRequest } from "@/services/quoteService";
+import { useState } from "react";
 
 interface QuoteOptionsModalProps {
   open: boolean;
@@ -18,19 +22,124 @@ interface QuoteOptionsModalProps {
 }
 
 const QuoteOptionsModal = ({ open, onOpenChange, offer }: QuoteOptionsModalProps) => {
-  const handleOptionSelect = (option: 'email' | 'whatsapp' | 'phone') => {
-    // TODO: Implement actual quote request logic
-    console.log(`Quote requested via ${option} for offer ${offer.id}`);
+  const { showNotification } = useNotifications();
+  const [showPDF, setShowPDF] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
-    // Close modal after selection
-    onOpenChange(false);
+  // Données mock pour le devis (remplacer par vraies données du formulaire)
+  const mockQuoteRequest: QuoteRequest = {
+    customerInfo: {
+      fullName: "Jean Kouadio",
+      email: "jean.kouadio@email.com",
+      phone: "+225 07 00 00 00 00",
+      address: "Abidjan, Cocody",
+      birthDate: "1990-01-01",
+      licenseNumber: "CI-ABJ-123456",
+      licenseDate: "2015-06-15",
+    },
+    vehicleInfo: {
+      brand: "Toyota",
+      model: "Yaris",
+      year: 2020,
+      registrationNumber: "CI-1234-ABJ",
+      vehicleType: "Berline",
+      fuelType: "Essence",
+      value: 5000000,
+    },
+    insuranceNeeds: {
+      coverageType: offer.coverageType,
+      usage: "Personnel",
+      annualKilometers: 15000,
+      parkingType: "Garage fermé",
+      historyClaims: "Aucun",
+    },
+  };
 
-    // Show success message (you can implement a toast notification here)
-    alert(`Votre demande de devis a été envoyée ! Vous recevrez votre devis PDF ${
-      option === 'email' ? 'par email' :
-      option === 'whatsapp' ? 'par WhatsApp' :
-      'et un conseiller vous contactera par téléphone sous 48h'
-    }.`);
+  const handleOptionSelect = async (option: 'email' | 'whatsapp' | 'phone' | 'pdf') => {
+    setIsProcessing(true);
+
+    try {
+      switch (option) {
+        case 'pdf':
+          setShowPDF(true);
+          break;
+
+        case 'email':
+          // Générer et envoyer le PDF par email
+          const quotes = await quoteService.generateQuotes(mockQuoteRequest);
+          const selectedQuote = quotes.find(q => q.insurer === offer.insurer);
+
+          if (selectedQuote) {
+            showNotification({
+              id: `quote-email-${Date.now()}`,
+              title: 'Devis envoyé par email',
+              message: `Votre devis ${offer.insurer} a été envoyé à votre adresse email.`,
+              type: 'success',
+              timestamp: new Date(),
+              read: false,
+              actionUrl: '/mes-devis',
+              actionText: 'Voir mes devis',
+            });
+          }
+          break;
+
+        case 'whatsapp':
+          // Partager via WhatsApp
+          const message = encodeURIComponent(
+            `🚗 *Devis Assurance NOLI*\n\n` +
+            `*Assureur:* ${offer.insurer}\n` +
+            `*Formule:* ${offer.coverageType}\n` +
+            `*Tarif mensuel:* ${offer.monthlyPrice.toLocaleString('fr-FR')} FCFA\n` +
+            `*Tarif annuel:* ${offer.annualPrice.toLocaleString('fr-FR')} FCFA\n\n` +
+            `Le devis complet vous sera envoyé par email.\n\n` +
+            `📞 Contact: +225 27 20 00 00 00\n` +
+            `🌐 www.noli.ci`
+          );
+          window.open(`https://wa.me/2252720000000?text=${message}`, '_blank');
+
+          showNotification({
+            id: `quote-whatsapp-${Date.now()}`,
+            title: 'Message WhatsApp envoyé',
+            message: 'Les informations de votre devis ont été partagées via WhatsApp.',
+            type: 'success',
+            timestamp: new Date(),
+            read: false,
+          });
+          break;
+
+        case 'phone':
+          // Demander un rappel téléphonique
+          showNotification({
+            id: `quote-phone-${Date.now()}`,
+            title: 'Demande de rappel téléphonique',
+            message: `Un conseiller ${offer.insurer} vous contactera sous 48h au +225 07 00 00 00 00.`,
+            type: 'info',
+            timestamp: new Date(),
+            read: false,
+          });
+          break;
+      }
+
+      // Fermer le modal après un court délai sauf pour PDF
+      if (option !== 'pdf') {
+        setTimeout(() => {
+          onOpenChange(false);
+        }, 2000);
+      }
+
+    } catch (error) {
+      console.error('Erreur lors de la demande de devis:', error);
+      showNotification({
+        id: `quote-error-${Date.now()}`,
+        title: 'Erreur de demande',
+        message: 'Une erreur est survenue lors du traitement de votre demande. Veuillez réessayer.',
+        type: 'error',
+        timestamp: new Date(),
+        read: false,
+      });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   if (!open) return null;
@@ -80,11 +189,28 @@ const QuoteOptionsModal = ({ open, onOpenChange, offer }: QuoteOptionsModalProps
 
         {/* Options */}
         <div className="space-y-3">
+          {/* Télécharger PDF Option */}
+          <Button
+            variant="default"
+            className="w-full h-auto p-4 flex items-center gap-4"
+            onClick={() => handleOptionSelect('pdf')}
+            disabled={isProcessing}
+          >
+            <div className="w-12 h-12 rounded-full bg-primary-foreground flex items-center justify-center flex-shrink-0">
+              <Download className="w-6 h-6 text-primary" />
+            </div>
+            <div className="flex-1 text-left">
+              <div className="font-semibold text-primary-foreground">Télécharger le PDF</div>
+              <div className="text-sm text-primary-foreground/80">Devis complet et personnalisé</div>
+            </div>
+          </Button>
+
           {/* Email Option */}
           <Button
             variant="outline"
             className="w-full h-auto p-4 flex items-center gap-4 hover:bg-primary/5 hover:border-primary/20"
             onClick={() => handleOptionSelect('email')}
+            disabled={isProcessing}
           >
             <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
               <Mail className="w-6 h-6 text-blue-600" />
@@ -100,13 +226,14 @@ const QuoteOptionsModal = ({ open, onOpenChange, offer }: QuoteOptionsModalProps
             variant="outline"
             className="w-full h-auto p-4 flex items-center gap-4 hover:bg-primary/5 hover:border-primary/20"
             onClick={() => handleOptionSelect('whatsapp')}
+            disabled={isProcessing}
           >
             <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-              <MessageCircle className="w-6 h-6 text-green-600" />
+              <MessageSquare className="w-6 h-6 text-green-600" />
             </div>
             <div className="flex-1 text-left">
               <div className="font-semibold text-foreground">Recevoir par WhatsApp</div>
-              <div className="text-sm text-muted-foreground">Devis PDF envoyé instantanément</div>
+              <div className="text-sm text-muted-foreground">Informations envoyées instantanément</div>
             </div>
           </Button>
 
@@ -115,12 +242,13 @@ const QuoteOptionsModal = ({ open, onOpenChange, offer }: QuoteOptionsModalProps
             variant="outline"
             className="w-full h-auto p-4 flex items-center gap-4 hover:bg-primary/5 hover:border-primary/20"
             onClick={() => handleOptionSelect('phone')}
+            disabled={isProcessing}
           >
             <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
               <Phone className="w-6 h-6 text-purple-600" />
             </div>
             <div className="flex-1 text-left">
-              <div className="font-semibold text-foreground">Être contacter par téléphone</div>
+              <div className="font-semibold text-foreground">Être contacté par téléphone</div>
               <div className="text-sm text-muted-foreground">Conseiller vous appelle sous 48h</div>
             </div>
           </Button>
@@ -131,8 +259,77 @@ const QuoteOptionsModal = ({ open, onOpenChange, offer }: QuoteOptionsModalProps
           <p className="text-xs text-center text-muted-foreground">
             Votre demande est traitée de manière sécurisée et confidentielle
           </p>
+          <div className="flex justify-center gap-4 mt-2">
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <div className="w-2 h-2 bg-green-500 rounded-full" />
+              <span>PDF certifié</span>
+            </div>
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <div className="w-2 h-2 bg-blue-500 rounded-full" />
+              <span>Validité 30 jours</span>
+            </div>
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <div className="w-2 h-2 bg-purple-500 rounded-full" />
+              <span>Support 7j/7</span>
+            </div>
+          </div>
         </div>
       </Card>
+
+      {/* Modal pour le générateur de PDF */}
+      {showPDF && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-background rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-semibold">Votre devis personnalisé</h3>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowPDF(false)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+
+              <QuotePDFGenerator
+                quoteData={{
+                  id: `quote-${offer.id}-${Date.now()}`,
+                  createdAt: new Date(),
+                  customerInfo: mockQuoteRequest.customerInfo,
+                  vehicleInfo: mockQuoteRequest.vehicleInfo,
+                  insuranceInfo: {
+                    insurer: offer.insurer,
+                    offerName: `${offer.coverageType} - ${offer.insurer}`,
+                    coverageType: offer.coverageType,
+                    price: {
+                      monthly: offer.monthlyPrice,
+                      annual: offer.annualPrice,
+                    },
+                    franchise: 50000, // Valeur par défaut
+                    features: [
+                      'Assistance 24/7',
+                      'Protection juridique',
+                      'Défense pénale',
+                      'Véhicule de remplacement',
+                    ],
+                    guarantees: {
+                      assistance24h: true,
+                      vehicleReplacement: true,
+                      driverProtection: true,
+                      glassBreakage: true,
+                      legalProtection: true,
+                      newVehicleValue: false,
+                      internationalAssistance: false,
+                    },
+                  },
+                  personalInfo: mockQuoteRequest.insuranceNeeds,
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

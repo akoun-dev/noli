@@ -395,3 +395,6 @@ NOLI Assurance
     return { success, failed };
   }
 }
+
+// Export instance for use throughout the application
+export const notificationService = NotificationService;

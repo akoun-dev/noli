@@ -35,6 +35,9 @@ import AdminDataManagementPage from "@/pages/admin/AdminDataManagementPage";
 import AdminAnalyticsPage from "@/pages/admin/AdminAnalyticsPage";
 import AdminModerationPage from "@/pages/admin/AdminModerationPage";
 import AdminOffersPage from "@/pages/admin/AdminOffersPage";
+import { AuditLogsPage } from "@/features/admin/components/AuditLogsPage";
+import { RoleManagementPage } from "@/features/admin/components/RoleManagementPage";
+import { BackupRestorePage } from "@/features/admin/components/BackupRestorePage";
 import UserQuotesPage from "@/features/user/pages/UserQuotesPage";
 import UserPoliciesPage from "@/features/user/pages/UserPoliciesPage";
 import UserProfilePage from "@/features/user/pages/UserProfilePage";
@@ -118,6 +121,9 @@ const App = () => (
                   <Route path="/admin/analytics" element={<AdminAnalyticsPage />} />
                   <Route path="/admin/moderation" element={<AdminModerationPage />} />
                   <Route path="/admin/donnees" element={<AdminDataManagementPage />} />
+                  <Route path="/admin/audit-logs" element={<AuditLogsPage />} />
+                  <Route path="/admin/roles" element={<RoleManagementPage />} />
+                  <Route path="/admin/backup-restore" element={<BackupRestorePage />} />
                   <Route path="/admin/parametres" element={<AdminSettingsPage />} />
                 </Route>
               </Route>

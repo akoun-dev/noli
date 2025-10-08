@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Search, Filter, MoreHorizontal, Edit, Trash2, Eye, Phone, MapPin, Calendar, Building, Shield } from "lucide-react";
+import { Plus, Search, Filter, MoreHorizontal, Edit, Trash2, Eye, Phone, MapPin, Calendar, Building, Shield, Car } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +25,7 @@ interface Insurer {
   lastLogin: string;
   profileCompleted: boolean;
   quotesCount: number;
+  offersCount: number;
   conversionRate: number;
   description?: string;
   website?: string;
@@ -53,6 +54,7 @@ const AdminInsurersPage = () => {
       lastLogin: '2024-01-18',
       profileCompleted: true,
       quotesCount: 0,
+      offersCount: 15,
       conversionRate: 0,
       description: 'Compagnie d\'assurance ivoirienne leader',
       website: 'https://www.nsia-assurance.com',
@@ -70,6 +72,7 @@ const AdminInsurersPage = () => {
       lastLogin: '2024-01-19',
       profileCompleted: true,
       quotesCount: 12,
+      offersCount: 22,
       conversionRate: 25,
       description: 'Filiale ivoirienne du groupe AXA',
       website: 'https://www.axa.ci',
@@ -87,6 +90,7 @@ const AdminInsurersPage = () => {
       lastLogin: '2024-01-18',
       profileCompleted: true,
       quotesCount: 8,
+      offersCount: 17,
       conversionRate: 20,
       description: 'Compagnie d\'assurance panafricaine',
       website: 'https://www.sunu.com',
@@ -412,6 +416,17 @@ const AdminInsurersPage = () => {
             </div>
           </CardContent>
         </Card>
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-4">
+              <Car className="h-8 w-8 text-teal-600" />
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total Offres</p>
+                <p className="text-2xl font-bold">{insurers.reduce((sum, i) => sum + i.offersCount, 0)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Filters */}
@@ -465,6 +480,7 @@ const AdminInsurersPage = () => {
                   <TableHead>Contact</TableHead>
                   <TableHead>Statut</TableHead>
                   <TableHead>Devis reçus</TableHead>
+                  <TableHead>Offres</TableHead>
                   <TableHead>Taux conversion</TableHead>
                   <TableHead>Date création</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -528,6 +544,11 @@ const AdminInsurersPage = () => {
                     <TableCell>
                       <div className="text-center">
                         <div className="font-medium">{insurer.quotesCount}</div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-center">
+                        <div className="font-medium">{insurer.offersCount}</div>
                       </div>
                     </TableCell>
                     <TableCell>

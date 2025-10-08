@@ -16,7 +16,10 @@ import {
   Database,
   AlertTriangle,
   CreditCard,
-  History
+  History,
+  UserCog,
+  Archive,
+  Clock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -66,6 +69,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ userRole }) => {
       { name: 'Devis', href: '/admin/devis', icon: FileText },
       { name: 'Analytics', href: '/admin/analytics', icon: BarChart3 },
       { name: 'Modération', href: '/admin/moderation', icon: AlertTriangle },
+      { name: 'Journaux d\'audit', href: '/admin/audit-logs', icon: Clock },
+      { name: 'Rôles et permissions', href: '/admin/roles', icon: UserCog },
+      { name: 'Backup et restauration', href: '/admin/backup-restore', icon: Archive },
       { name: 'Données', href: '/admin/donnees', icon: Database },
       { name: 'Paramètres', href: '/admin/parametres', icon: Settings },
     ],

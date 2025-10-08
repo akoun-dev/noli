@@ -4,6 +4,8 @@ import { Header } from '@/components/common/Header';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { useAuth } from '@/contexts/AuthContext';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { NotificationBell } from '@/features/notifications/components/NotificationBell';
+import { ChatWidget } from '@/features/chat/components/ChatWidget';
 
 export const UserLayout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -56,6 +58,7 @@ export const UserLayout: React.FC = () => {
                 </svg>
               </button>
               <div className="flex items-center space-x-2">
+                <NotificationBell />
                 <ThemeToggle />
                 <span className="text-sm font-medium text-foreground">
                   Bienvenue, {user?.firstName}
@@ -70,6 +73,9 @@ export const UserLayout: React.FC = () => {
           </div>
         </main>
       </div>
+
+      {/* Chat Widget - Visible sur toutes les pages utilisateur */}
+      <ChatWidget />
     </div>
   );
 };

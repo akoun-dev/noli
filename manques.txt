@@ -1,0 +1,197 @@
+logique de tarification:
+
+Partie 1 : Le Modèle de Données (Les Tables)
+Vous aurez besoin de stocker les informations statiques dans des tables de votre base de données.
+
+Table 1 : Vehicules (Informations saisies par l'utilisateur)
+Cette table stocke les caractéristiques du véhicule à assurer.
+
+Champ
+Type
+Description
+Exemple
+id	INT (PK)	Identifiant unique	123
+categorie_code	VARCHAR	Code de la catégorie (401, 402, etc.)	'401'
+energie	VARCHAR	Type d'énergie ('Essence', 'Diesel')	'Essence'
+puissance_fiscale	INT	Puissance fiscale en CV	8
+nb_places	INT	Nombre de places	5
+date_mise_circulation	DATE	Date de première mise en circulation	'2020-01-15'
+valeurs	JSON/TEXT	Stocke les valeurs clés	{"venale": 12000000, "neuve": 15000000}
+
+Table 2 : Tarif_RC (Grille de la Responsabilité Civile)
+Source : Onglet MTPL tariff.
+
+Categorie
+Energie
+Puissance_Min
+Puissance_Max
+Prime
+'401'	'Essence'	1	2	68675
+'401'	'Diesel'	2	4	87885
+'401'	'Essence'	3	6	87885
+'401'	'Diesel'	5	6	102345
+'401'	'Essence'	7	9	102345
+...	...	...	...	...
+
+Table 3 : Tarif_IC_IPT (Grille Individuelle Conducteur/Passagers)
+Source : Onglet IC IPT ASS.
+
+Type
+Formule
+Nb_Places
+Prime
+'IC'	1	*	5500
+'IC'	2	*	8400
+'IC'	3	*	15900
+'IPT'	1	3	8400
+'IPT'	1	4	10200
+'IPT'	2	3	10000
+...	...	...	...
+
+Table 4 : Tarif_TCM_TCL (Grille des Taux Tierce)
+Source : Onglet Taux TCM_TCL. C'est la table la plus complexe.
+
+Categorie
+Type_Garantie
+Valeur_Neuf_Min
+Valeur_Neuf_Max
+Franchise
+Taux
+'401'	'Tierce Complete'	0	12000000	0	4.40
+'401'	'Tierce Complete'	0	12000000	250000	3.52
+'401'	'Tierce Complete'	12000001	25000000	250000	3.828
+'401'	'Tierce Collision'	0	40000000	50000	4.311
+'402'	'Tierce Complete'	0	12000000	250000	2.255
+...	...	...	...	...	...
+
+Table 5 : Tarifs_Fixes (Garanties à Prime Fixe)
+Source : Onglet Tariff_TailorMadePack et Tariff_Pack.
+
+Nom_Garantie
+Prime
+Conditions
+Pack_Prix_Reduit
+'Defense et Recours'	7950	*	4240
+'Avance sur recours'	15000	*	15000
+'Vol des accessoires'	15000	*	15000
+'Assistance Bronze'	48000	Uniquement pickups	*
+'Assistance Silver'	65000	Uniquement pickups	*
+...	...	...	...
+
+Partie 2 : Les Règles de Calcul (Le Moteur de Calcul)
+Chaque garantie a une "méthode de calcul". Votre application doit implémenter ces méthodes.
+
+Méthode 1 : FIXED_AMOUNT
+Logique : Retourne une valeur fixe.
+Garanties associées : Défense et Recours, Avance sur recours, etc.
+Calcul : Prix = Tarifs_Fixes.Prime WHERE Nom_Garantie = 'XXX'
+Méthode 2 : RATE_ON_SI (Taux sur Valeur Assurée)
+Logique : Applique un pourcentage à la valeur vénale du véhicule.
+Garanties associées : Incendie, Vol, Vol à mains armées.
+Calcul : Prix = (Taux / 100) * Vehicule.valeurs.venale
+Méthode 3 : RATE_ON_NEW_VALUE (Taux sur Valeur Neuve)
+Logique : Applique un pourcentage à la valeur neuve du véhicule.
+Garanties associées : Bris de glaces, Tierce complète plafonnée.
+Calcul : Prix = (Taux / 100) * Vehicule.valeurs.neuve
+Méthode 4 : MTPL_TARIFF (Grille Responsabilité Civile)
+Logique : Cherche la prime dans la grille Tarif_RC.
+Garanties associées : Responsabilité Civile.
+Calcul (pseudo-code) :
+
+SELECT Prime FROM Tarif_RC
+WHERE
+  Categorie = Vehicule.categorie_code AND
+  Energie = Vehicule.energie AND
+  Vehicule.puissance_fiscale BETWEEN Puissance_Min AND Puissance_Max
+
+Méthode 5 : TCM_TCL_MATRIX (Matrice Tierce)
+Logique : Cherche un taux dans la grille Tarif_TCM_TCL puis l'applique à la valeur neuve.
+Garanties associées : Tierce complète, Tierce collision.
+Calcul (pseudo-code) :
+
+// Étape 1: Trouver le taux
+taux = SELECT Taux FROM Tarif_TCM_TCL
+WHERE
+  Categorie = Vehicule.categorie_code AND
+  Type_Garantie = 'Tierce Complete' AND // ou 'Tierce Collision'
+  Vehicule.valeurs.neuve BETWEEN Valeur_Neuf_Min AND Valeur_Neuf_Max AND
+  Franchise = [franchise_choisie_par_utilisateur]
+
+// Étape 2: Calculer la prime
+Prix = (taux / 100) * Vehicule.valeurs.neuve
+
+Méthode 6 : IC_IPT_FORMULA (Formule IC/IPT)
+Logique : Cherche la prime dans la grille Tarif_IC_IPT.
+Garanties associées : Individuelle Conducteur, Individuelle Passagers.
+Calcul (pseudo-code) :
+
+SELECT Prime FROM Tarif_IC_IPT
+WHERE
+  Type = 'IC' AND // ou 'IPT'
+  Formule = [formule_choisie_par_utilisateur] AND
+  Nb_Places = Vehicule.nb_places
+
+Méthode 7 : CONDITIONAL_RATE (Taux Conditionnel)
+Logique : Le taux à appliquer dépend d'une condition (ici, la valeur assurée).
+Garanties associées : Vol, Vol à mains armées.
+Calcul (pseudo-code) :
+
+SI Vehicule.valeurs.venale <= 25000000 ALORS
+  taux = 1.1 // pour Vol
+SINON
+  taux = 2.1 // pour Vol
+
+Prix = (taux / 100) * Vehicule.valeurs.venale
+
+Partie 3 : Le Processus de Calcul (L'Algorithme)
+Voici le flux logique que votre application doit suivre pour générer un devis.
+
+Entrées :
+
+Objet Vehicule avec toutes ses caractéristiques.
+Type d'offre : 'PACK' ou 'TAILOR_MADE'.
+Liste des garanties choisies (si TAILOR_MADE) ou le nom du pack (si PACK).
+Paramètres additionnels (ex: formule IC/IPT, montant de la franchise pour Tierce).
+Algorithme :
+
+Initialiser Total_Prime = 0.
+Déterminer la liste des garanties à tarifer :
+Si PACK : Récupérer la liste des garanties pré-définies pour ce pack (ex: pour "Plan EVOLUTION", la liste est RC, Défense/Recours, IC/IPT, etc.).
+Si TAILOR_MADE : Utiliser la liste des garanties sélectionnées par l'utilisateur.
+Boucle sur chaque Garantie dans la liste :
+a. Identifier la Methode_Calcul pour cette garantie (ex: pour 'Responsabilité Civile', la méthode est MTPL_TARIFF).
+b. Appliquer la règle de calcul correspondante pour obtenir Prime_Garantie.
+c. Gérer les cas spéciaux :
+* Si la garantie est "Défense et Recours" et que l'offre est un PACK, utiliser le Pack_Prix_Reduit de la table Tarifs_Fixes.
+* Si la garantie est "Assistance", vérifier que le véhicule est bien un pickup avant d'appliquer le tarif.
+d. Ajouter au total : Total_Prime = Total_Prime + Prime_Garantie.
+Retourner Total_Prime.
+Exemple Concret d'Implémentation
+Scénario : Calculer un devis Tailor Made pour :
+
+Véhicule : Catégorie 401, Essence, 8 CV, 5 places, Valeur Neuve=15M, Valeur Assurée=12M.
+Garanties choisies : RC, Défense et Recours, Vol, Tierce Complète (avec franchise 250k).
+Déroulement de l'algorithme :
+
+Total_Prime = 0.
+Liste des garanties : ['Responsabilité Civile', 'Defense et Recours', 'Vol', 'Tierce Complete'].
+Boucle :
+Garantie 'Responsabilité Civile':
+Méthode : MTPL_TARIFF.
+Calcul : Recherche dans Tarif_RC pour 401/Essence/8CV -> 102 345 FCFA.
+Total_Prime = 0 + 102 345.
+Garantie 'Defense et Recours':
+Méthode : FIXED_AMOUNT.
+Calcul : Recherche dans Tarifs_Fixes -> 7 950 FCFA.
+Total_Prime = 102 345 + 7 950 = 110 295.
+Garantie 'Vol':
+Méthode : CONDITIONAL_RATE.
+Calcul : Valeur Assurée (12M) < 25M, donc taux = 1.1%. Prime = 1.1% * 12 000 000 = 132 000 FCFA.
+Total_Prime = 110 295 + 132 000 = 242 295.
+Garantie 'Tierce Complete':
+Méthode : TCM_TCL_MATRIX.
+Calcul :
+Recherche du taux dans Tarif_TCM_TCL pour 401/Tierce Complete/VN=15M/Franchise=250k -> Taux = 3.52%.
+Prime = 3.52% * 15 000 000 = 528 000 FCFA.
+Total_Prime = 242 295 + 528 000 = 770 295.
+Résultat final : Le devis s'élève à 770 295 FCFA.
