@@ -1,0 +1,667 @@
+import { useState, useEffect } from "react";
+import {
+  Shield,
+  FileText,
+  Download,
+  Eye,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  XCircle,
+  Calendar,
+  CreditCard,
+  Car,
+  MoreHorizontal,
+  Search,
+  Filter,
+  Plus
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
+import { toast } from "sonner";
+import { Policy, PolicyDocument, Payment, Claim } from "@/types";
+
+interface PolicyWithDetails extends Policy {
+  insurerName: string;
+  daysUntilExpiry: number;
+  daysUntilRenewal: number;
+  isExpiringSoon: boolean;
+  isOverdue: boolean;
+  nextPayment?: Payment;
+}
+
+const UserPoliciesPage = () => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [selectedPolicy, setSelectedPolicy] = useState<PolicyWithDetails | null>(null);
+  const [activeTab, setActiveTab] = useState('active');
+
+  // Mock policy data
+  const mockPolicies: PolicyWithDetails[] = [
+    {
+      id: '1',
+      userId: '1',
+      insurerId: '6',
+      quoteId: 'quote-1',
+      policyNumber: 'POL-2024-001',
+      contractType: 'tous_risques',
+      status: 'active',
+      startDate: new Date('2024-01-01'),
+      endDate: new Date('2024-12-31'),
+      renewalDate: new Date('2024-12-15'),
+      premium: 250000,
+      paymentFrequency: 'monthly',
+      insurerName: 'AXA Côte d\'Ivoire',
+      daysUntilExpiry: 45,
+      daysUntilRenewal: 30,
+      isExpiringSoon: false,
+      isOverdue: false,
+      vehicle: {
+        id: '1',
+        type: 'voiture',
+        brand: 'Toyota',
+        model: 'Yaris',
+        year: 2022,
+        fiscalPower: 6,
+        registration: 'AB-1234-CD',
+        value: 8500000
+      },
+      coverage: {
+        id: '3',
+        name: 'Tous Risques',
+        description: 'Couverture complète tous risques',
+        level: 'tous_risques'
+      },
+      guarantees: ['Responsabilité civile', 'Dommages tous accidents', 'Vol', 'Incendie', 'Bris de glace'],
+      franchise: 50000,
+      documents: [
+        {
+          id: '1',
+          name: 'Contrat d\'assurance.pdf',
+          type: 'contract',
+          url: '/docs/contract-1.pdf',
+          uploadedAt: new Date('2024-01-01'),
+          size: 2048576
+        },
+        {
+          id: '2',
+          name: 'Carte verte.pdf',
+          type: 'certificate',
+          url: '/docs/certificate-1.pdf',
+          uploadedAt: new Date('2024-01-01'),
+          size: 1024000
+        }
+      ],
+      paymentHistory: [
+        {
+          id: '1',
+          amount: 250000,
+          dueDate: new Date('2024-01-01'),
+          paidDate: new Date('2024-01-01'),
+          status: 'paid',
+          method: 'mobile_money',
+          transactionId: 'TXN-001'
+        },
+        {
+          id: '2',
+          amount: 250000,
+          dueDate: new Date('2024-02-01'),
+          paidDate: new Date('2024-02-01'),
+          status: 'paid',
+          method: 'mobile_money',
+          transactionId: 'TXN-002'
+        }
+      ],
+      claims: [],
+      createdAt: new Date('2023-12-15'),
+      updatedAt: new Date('2024-01-01')
+    },
+    {
+      id: '2',
+      userId: '1',
+      insurerId: '3',
+      quoteId: 'quote-2',
+      policyNumber: 'POL-2024-002',
+      contractType: 'tiers_plus',
+      status: 'active',
+      startDate: new Date('2024-03-01'),
+      endDate: new Date('2025-02-28'),
+      renewalDate: new Date('2025-02-15'),
+      premium: 180000,
+      paymentFrequency: 'quarterly',
+      insurerName: 'NSIA Assurance',
+      daysUntilExpiry: 120,
+      daysUntilRenewal: 105,
+      isExpiringSoon: false,
+      isOverdue: false,
+      vehicle: {
+        id: '2',
+        type: 'moto',
+        brand: 'Honda',
+        model: 'CB500',
+        year: 2023,
+        fiscalPower: 4,
+        registration: 'AB-5678-EF',
+        value: 1500000
+      },
+      coverage: {
+        id: '2',
+        name: 'Tiers Plus',
+        description: 'Couverture étendue tiers plus',
+        level: 'tiers_plus'
+      },
+      guarantees: ['Responsabilité civile', 'Dommages accidentels', 'Vol', 'Incendie'],
+      franchise: 75000,
+      documents: [
+        {
+          id: '3',
+          name: 'Contrat moto.pdf',
+          type: 'contract',
+          url: '/docs/contract-2.pdf',
+          uploadedAt: new Date('2024-03-01'),
+          size: 1536000
+        }
+      ],
+      paymentHistory: [
+        {
+          id: '3',
+          amount: 540000,
+          dueDate: new Date('2024-03-01'),
+          paidDate: new Date('2024-03-01'),
+          status: 'paid',
+          method: 'bank_transfer',
+          transactionId: 'TXN-003'
+        }
+      ],
+      claims: [
+        {
+          id: '1',
+          policyId: '2',
+          claimNumber: 'SIN-2024-001',
+          type: 'accident',
+          description: 'Collision avec un autre véhicule',
+          status: 'under_review',
+          amount: 200000,
+          dateOfIncident: new Date('2024-04-15'),
+          dateSubmitted: new Date('2024-04-16'),
+          dateResolved: undefined,
+          documents: [],
+          createdAt: new Date('2024-04-16'),
+          updatedAt: new Date('2024-04-20')
+        }
+      ],
+      createdAt: new Date('2024-02-15'),
+      updatedAt: new Date('2024-03-01')
+    }
+  ];
+
+  const filteredPolicies = mockPolicies.filter(policy => {
+    const matchesSearch = policy.policyNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         policy.insurerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         policy.vehicle.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         policy.vehicle.registration.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || policy.status === statusFilter;
+    const matchesTab = activeTab === 'all' ||
+                      (activeTab === 'active' && policy.status === 'active') ||
+                      (activeTab === 'expired' && policy.status === 'expired');
+    return matchesSearch && matchesStatus && matchesTab;
+  });
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'active':
+        return <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Actif</Badge>;
+      case 'expired':
+        return <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">Expiré</Badge>;
+      case 'cancelled':
+        return <Badge className="bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200">Annulé</Badge>;
+      case 'pending':
+        return <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">En attente</Badge>;
+      default:
+        return <Badge>{status}</Badge>;
+    }
+  };
+
+  const getContractTypeLabel = (type: string) => {
+    switch (type) {
+      case 'tiers':
+        return 'Au tiers';
+      case 'tiers_plus':
+        return 'Tiers Plus';
+      case 'tous_risques':
+        return 'Tous Risques';
+      default:
+        return type;
+    }
+  };
+
+  const getPaymentFrequencyLabel = (frequency: string) => {
+    switch (frequency) {
+      case 'monthly':
+        return 'Mensuel';
+      case 'quarterly':
+        return 'Trimestriel';
+      case 'annually':
+        return 'Annuel';
+      default:
+        return frequency;
+    }
+  };
+
+  const handleDownloadDocument = (document: PolicyDocument) => {
+    toast.success(`Téléchargement de ${document.name}`);
+  };
+
+  const handleViewPolicy = (policy: PolicyWithDetails) => {
+    setSelectedPolicy(policy);
+  };
+
+  const handleMakePayment = (policyId: string) => {
+    toast.success('Redirection vers le paiement...');
+  };
+
+  const handleFileClaim = (policyId: string) => {
+    toast.success('Redirection vers la déclaration de sinistre...');
+  };
+
+  const PolicyCard = ({ policy }: { policy: PolicyWithDetails }) => (
+    <Card className={`transition-all hover:shadow-md ${policy.isExpiringSoon ? 'border-orange-200' : ''}`}>
+      <CardHeader>
+        <div className="flex justify-between items-start">
+          <div>
+            <CardTitle className="text-lg">{policy.policyNumber}</CardTitle>
+            <CardDescription className="flex items-center gap-2 mt-1">
+              <Shield className="h-4 w-4" />
+              {policy.insurerName}
+            </CardDescription>
+          </div>
+          {getStatusBadge(policy.status)}
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Car className="h-4 w-4 text-gray-500" />
+            <span className="font-medium">{policy.vehicle.brand} {policy.vehicle.model}</span>
+          </div>
+          <span className="text-sm text-gray-500">{policy.vehicle.registration}</span>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <span className="text-gray-500">Type de contrat:</span>
+            <span className="ml-2 font-medium">{getContractTypeLabel(policy.contractType)}</span>
+          </div>
+          <div>
+            <span className="text-gray-500">Prime:</span>
+            <span className="ml-2 font-medium">{policy.premium.toLocaleString()} FCFA</span>
+          </div>
+          <div>
+            <span className="text-gray-500">Fréquence:</span>
+            <span className="ml-2 font-medium">{getPaymentFrequencyLabel(policy.paymentFrequency)}</span>
+          </div>
+          <div>
+            <span className="text-gray-500">Franchise:</span>
+            <span className="ml-2 font-medium">{policy.franchise.toLocaleString()} FCFA</span>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm">
+            <Calendar className="h-4 w-4 text-gray-500" />
+            <span>Expire le {policy.endDate.toLocaleDateString('fr-FR')}</span>
+          </div>
+          {policy.isExpiringSoon && (
+            <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
+              Expire bientôt
+            </Badge>
+          )}
+        </div>
+
+        <div className="flex gap-2">
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button size="sm" variant="outline" onClick={() => handleViewPolicy(policy)}>
+                <Eye className="h-4 w-4 mr-1" />
+                Voir
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+              <PolicyDetails policy={policy} />
+            </DialogContent>
+          </Dialog>
+          <Button size="sm" variant="outline" onClick={() => handleMakePayment(policy.id)}>
+            <CreditCard className="h-4 w-4 mr-1" />
+            Payer
+          </Button>
+          <Button size="sm" onClick={() => handleFileClaim(policy.id)}>
+            <AlertTriangle className="h-4 w-4 mr-1" />
+            Sinistre
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  const PolicyDetails = ({ policy }: { policy: PolicyWithDetails }) => (
+    <div className="space-y-6">
+      <DialogHeader>
+        <DialogTitle className="flex items-center gap-2">
+          <Shield className="h-5 w-5" />
+          Détails du contrat {policy.policyNumber}
+        </DialogTitle>
+        <DialogDescription>
+          Contrat d'assurance avec {policy.insurerName}
+        </DialogDescription>
+      </DialogHeader>
+
+      <div className="grid grid-cols-2 gap-6">
+        <div className="space-y-4">
+          <div>
+            <h4 className="font-semibold mb-2">Informations du contrat</h4>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-500">Statut:</span>
+                {getStatusBadge(policy.status)}
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Type de contrat:</span>
+                <span>{getContractTypeLabel(policy.contractType)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Prime annuelle:</span>
+                <span>{policy.premium.toLocaleString()} FCFA</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Fréquence de paiement:</span>
+                <span>{getPaymentFrequencyLabel(policy.paymentFrequency)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Franchise:</span>
+                <span>{policy.franchise.toLocaleString()} FCFA</span>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h4 className="font-semibold mb-2">Dates importantes</h4>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-500">Début:</span>
+                <span>{policy.startDate.toLocaleDateString('fr-FR')}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Fin:</span>
+                <span>{policy.endDate.toLocaleDateString('fr-FR')}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Renouvellement:</span>
+                <span>{policy.renewalDate.toLocaleDateString('fr-FR')}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <h4 className="font-semibold mb-2">Véhicule assuré</h4>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-500">Marque/Modèle:</span>
+                <span>{policy.vehicle.brand} {policy.vehicle.model}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Immatriculation:</span>
+                <span>{policy.vehicle.registration}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Année:</span>
+                <span>{policy.vehicle.year}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Puissance fiscale:</span>
+                <span>{policy.vehicle.fiscalPower} CV</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Valeur:</span>
+                <span>{policy.vehicle.value.toLocaleString()} FCFA</span>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h4 className="font-semibold mb-2">Couverture et garanties</h4>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-500">Niveau de couverture:</span>
+                <span>{policy.coverage.name}</span>
+              </div>
+              <div className="mt-2">
+                <span className="text-gray-500">Garanties incluses:</span>
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {policy.guarantees.map((guarantee, index) => (
+                    <Badge key={index} variant="outline" className="text-xs">
+                      {guarantee}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <Separator />
+
+      <div>
+        <h4 className="font-semibold mb-2">Documents</h4>
+        <div className="space-y-2">
+          {policy.documents.map((doc) => (
+            <div key={doc.id} className="flex items-center justify-between p-2 border rounded">
+              <div className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-gray-500" />
+                <span className="text-sm">{doc.name}</span>
+                <Badge variant="outline" className="text-xs">{doc.type}</Badge>
+              </div>
+              <Button size="sm" variant="outline" onClick={() => handleDownloadDocument(doc)}>
+                <Download className="h-4 w-4" />
+              </Button>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <Separator />
+
+      <div>
+        <h4 className="font-semibold mb-2">Historique des paiements</h4>
+        <div className="space-y-2">
+          {policy.paymentHistory.map((payment) => (
+            <div key={payment.id} className="flex items-center justify-between p-2 border rounded">
+              <div className="flex items-center gap-2">
+                {payment.status === 'paid' ? (
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                ) : (
+                  <Clock className="h-4 w-4 text-yellow-500" />
+                )}
+                <span className="text-sm">
+                  {payment.amount.toLocaleString()} FCFA - {payment.dueDate.toLocaleDateString('fr-FR')}
+                </span>
+              </div>
+              <Badge variant={payment.status === 'paid' ? 'default' : 'secondary'}>
+                {payment.status === 'paid' ? 'Payé' : payment.status === 'overdue' ? 'En retard' : 'En attente'}
+              </Badge>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {policy.claims.length > 0 && (
+        <>
+          <Separator />
+          <div>
+            <h4 className="font-semibold mb-2">Sinistres déclarés</h4>
+            <div className="space-y-2">
+              {policy.claims.map((claim) => (
+                <div key={claim.id} className="flex items-center justify-between p-2 border rounded">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-orange-500" />
+                    <span className="text-sm">{claim.claimNumber} - {claim.type}</span>
+                  </div>
+                  <Badge variant="outline">{claim.status}</Badge>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+
+      <DialogFooter>
+        <Button onClick={() => handleMakePayment(policy.id)}>
+          <CreditCard className="h-4 w-4 mr-2" />
+          Effectuer un paiement
+        </Button>
+        <Button variant="outline" onClick={() => handleFileClaim(policy.id)}>
+          <AlertTriangle className="h-4 w-4 mr-2" />
+          Déclarer un sinistre
+        </Button>
+      </DialogFooter>
+    </div>
+  );
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold">Mes Contrats</h1>
+          <p className="text-muted-foreground">Gérez vos contrats d'assurance</p>
+        </div>
+        <Button>
+          <Plus className="w-4 h-4 mr-2" />
+          Nouveau contrat
+        </Button>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-4">
+              <Shield className="h-8 w-8 text-blue-600" />
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Total Contrats</p>
+                <p className="text-2xl font-bold">{mockPolicies.length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-4">
+              <CheckCircle className="h-8 w-8 text-green-600" />
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Contrats Actifs</p>
+                <p className="text-2xl font-bold">{mockPolicies.filter(p => p.status === 'active').length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-4">
+              <Clock className="h-8 w-8 text-yellow-600" />
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Expirant bientôt</p>
+                <p className="text-2xl font-bold">{mockPolicies.filter(p => p.isExpiringSoon).length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-4">
+              <CreditCard className="h-8 w-8 text-purple-600" />
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Prime mensuelle</p>
+                <p className="text-2xl font-bold">
+                  {mockPolicies
+                    .filter(p => p.status === 'active')
+                    .reduce((sum, p) => sum + (p.premium / 12), 0)
+                    .toLocaleString()} FCFA
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filters */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Liste des contrats</CardTitle>
+            <div className="flex items-center space-x-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <Input
+                  placeholder="Rechercher un contrat..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 w-64"
+                />
+              </div>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-32">
+                  <SelectValue placeholder="Statut" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous</SelectItem>
+                  <SelectItem value="active">Actifs</SelectItem>
+                  <SelectItem value="expired">Expirés</SelectItem>
+                  <SelectItem value="cancelled">Annulés</SelectItem>
+                  <SelectItem value="pending">En attente</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="all">Tous les contrats</TabsTrigger>
+              <TabsTrigger value="active">Contrats actifs</TabsTrigger>
+              <TabsTrigger value="expired">Contrats expirés</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value={activeTab} className="mt-6">
+              <div className="grid gap-4">
+                {filteredPolicies.length > 0 ? (
+                  filteredPolicies.map((policy) => (
+                    <PolicyCard key={policy.id} policy={policy} />
+                  ))
+                ) : (
+                  <div className="text-center py-8">
+                    <Shield className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-500">Aucun contrat trouvé</p>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+export default UserPoliciesPage;
