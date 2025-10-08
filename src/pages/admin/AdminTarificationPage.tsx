@@ -541,7 +541,7 @@ export const AdminTarificationPage: React.FC = () => {
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
-              </div>
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center space-x-2 mb-4">
@@ -769,7 +769,7 @@ export const AdminTarificationPage: React.FC = () => {
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
-              </div>
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center space-x-2 mb-4">
