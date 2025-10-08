@@ -36,6 +36,9 @@ import {
   Target,
   Zap
 } from 'lucide-react';
+import { guaranteeService } from '@/features/tarification/services/guaranteeService';
+import { pricingService } from '@/features/tarification/services/pricingService';
+import type { Guarantee, InsurancePackage } from '@/types/tarification';
 
 interface Offer {
   id: string;
@@ -788,11 +791,76 @@ const OfferForm: React.FC<{ offer?: any; insurers: any[]; categories: any[] }> =
     tags: offer?.tags || []
   });
 
+  const [guarantees, setGuarantees] = useState<Guarantee[]>([]);
+  const [packages, setPackages] = useState<InsurancePackage[]>([]);
+  const [selectedGuaranteeIds, setSelectedGuaranteeIds] = useState<string[]>([]);
+  const [selectedPackageId, setSelectedPackageId] = useState<string>('');
+  const [offerType, setOfferType] = useState<'TAILOR_MADE' | 'PACK'>('TAILOR_MADE');
+
+  React.useEffect(() => {
+    const loadData = async () => {
+      const [loadedGuarantees, loadedPackages] = await Promise.all([
+        guaranteeService.getGuarantees(),
+        guaranteeService.getPackages()
+      ]);
+      setGuarantees(loadedGuarantees);
+      setPackages(loadedPackages);
+    };
+    loadData();
+  }, []);
+
+  // Sync package selection with guarantees
+  React.useEffect(() => {
+    if (offerType === 'PACK' && selectedPackageId) {
+      const pkg = packages.find(p => p.id === selectedPackageId);
+      if (pkg) {
+        setSelectedGuaranteeIds(pkg.guarantees);
+        setFormData(prev => ({
+          ...prev,
+          coverage: guarantees.filter(g => pkg.guarantees.includes(g.id)).map(g => g.name),
+          price: pkg.basePrice.toString()
+        }));
+      }
+    }
+  }, [selectedPackageId, offerType, packages, guarantees]);
+
+  // Keep coverage names in sync with selected guarantees
+  React.useEffect(() => {
+    if (offerType === 'TAILOR_MADE') {
+      const names = guarantees.filter(g => selectedGuaranteeIds.includes(g.id)).map(g => g.name);
+      setFormData(prev => ({ ...prev, coverage: names }));
+    }
+  }, [selectedGuaranteeIds, guarantees, offerType]);
+
+  // Handle package selection
+  const handlePackageChange = (packageId: string) => {
+    setSelectedPackageId(packageId);
+    if (packageId) {
+      setOfferType('PACK');
+    } else {
+      setOfferType('TAILOR_MADE');
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     console.log('Form submitted:', formData);
     // Implement form submission logic
   };
+
+  const filteredGuarantees = React.useMemo(() => {
+    return guarantees.filter(g => g.isActive);
+  }, [guarantees]);
+
+  const pricing = React.useMemo(() => {
+    if (offerType === 'PACK' && selectedPackageId) {
+      const pkg = packages.find(p => p.id === selectedPackageId);
+      return pkg ? pkg.totalPrice : Number(formData.price) || 0;
+    } else {
+      const base = Number(formData.price) || 0;
+      return pricingService.quickCalculate(base, selectedGuaranteeIds.map(id => ({ id, selected: true })));
+    }
+  }, [formData.price, selectedGuaranteeIds, offerType, selectedPackageId, packages]);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -927,14 +995,110 @@ const OfferForm: React.FC<{ offer?: any; insurers: any[]; categories: any[] }> =
         />
       </div>
 
-      <div>
-        <Label>Couvertures</Label>
-        <Textarea
-          placeholder="Entrez les couvertures, une par ligne"
-          value={formData.coverage.join('\n')}
-          onChange={(e) => setFormData({ ...formData, coverage: e.target.value.split('\n').filter(item => item.trim()) })}
-          rows={4}
-        />
+      <div className="space-y-4">
+        <Label>Type d'offre</Label>
+        <div className="flex space-x-4">
+          <label className="flex items-center space-x-2">
+            <input
+              type="radio"
+              value="TAILOR_MADE"
+              checked={offerType === 'TAILOR_MADE'}
+              onChange={() => {
+                setOfferType('TAILOR_MADE');
+                setSelectedPackageId('');
+              }}
+            />
+            <span>Sur mesure</span>
+          </label>
+          <label className="flex items-center space-x-2">
+            <input
+              type="radio"
+              value="PACK"
+              checked={offerType === 'PACK'}
+              onChange={() => setOfferType('PACK')}
+            />
+            <span>Package prédéfini</span>
+          </label>
+        </div>
+
+        {offerType === 'PACK' && (
+          <div>
+            <Label htmlFor="package">Package *</Label>
+            <Select value={selectedPackageId} onValueChange={handlePackageChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="Sélectionner un package" />
+              </SelectTrigger>
+              <SelectContent>
+                {packages.filter(p => p.isActive).map(pkg => (
+                  <SelectItem key={pkg.id} value={pkg.id}>
+                    <div>
+                      <div className="font-medium">{pkg.name}</div>
+                      <div className="text-xs text-gray-500">{pkg.description} - {pkg.basePrice.toLocaleString()} FCFA</div>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <Label>Garanties {offerType === 'PACK' ? '(incluses dans le package)' : '(sélectionnez celles à inclure)'}</Label>
+        <div className="border rounded-lg p-3 max-h-56 overflow-auto">
+          {filteredGuarantees.length === 0 && (
+            <div className="text-sm text-gray-500">Aucune garantie disponible pour la catégorie sélectionnée.</div>
+          )}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {filteredGuarantees.map(g => {
+              const checked = selectedGuaranteeIds.includes(g.id);
+              const disabled = offerType === 'PACK';
+              return (
+                <label key={g.id} className={`flex items-center justify-between p-2 rounded border ${
+                  checked ? 'bg-blue-50 border-blue-200' :
+                  disabled ? 'bg-gray-50 border-gray-200' : 'bg-white'
+                } ${disabled ? 'opacity-60' : ''}`}>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      disabled={disabled}
+                      onChange={(e) => {
+                        if (!disabled) {
+                          setSelectedGuaranteeIds(prev => e.target.checked ? [...prev, g.id] : prev.filter(id => id !== g.id));
+                        }
+                      }}
+                    />
+                    <div>
+                      <div className="text-sm font-medium">{g.name}</div>
+                      <div className="text-xs text-gray-500">{g.description}</div>
+                    </div>
+                  </div>
+                  <div className="text-xs font-medium text-right">
+                    {g.calculationMethod === 'FIXED_AMOUNT' && g.rate ?
+                      `+ ${g.rate.toLocaleString()} FCFA` :
+                      g.calculationMethod === 'RATE_ON_SI' || g.calculationMethod === 'RATE_ON_NEW_VALUE' ?
+                        `+ ${g.rate}%` :
+                        'Variable'
+                    }
+                  </div>
+                </label>
+              );
+            })}
+          </div>
+        </div>
+        <div className="text-sm text-gray-600">
+          {offerType === 'PACK' && selectedPackageId ? (
+            <span>Prix du package: <span className="font-semibold">{pricing.toLocaleString()} {formData.currency}</span></span>
+          ) : (
+            <span>Prix estimé avec garanties: <span className="font-semibold">{pricing.toLocaleString()} {formData.currency}</span></span>
+          )}
+          {offerType === 'PACK' && selectedPackageId && (
+            <div className="text-xs text-blue-600 mt-1">
+              {packages.find(p => p.id === selectedPackageId)?.guarantees.length} garanties incluses
+            </div>
+          )}
+        </div>
       </div>
 
       <div>

@@ -195,3 +195,21 @@ Recherche du taux dans Tarif_TCM_TCL pour 401/Tierce Complete/VN=15M/Franchise=2
 Prime = 3.52% * 15 000 000 = 528 000 FCFA.
 Total_Prime = 242 295 + 528 000 = 770 295.
 Résultat final : Le devis s'élève à 770 295 FCFA.
+
+
+=== Implémentation (Front Admin) livrée ===
+
+- Page: /admin/tarification pour la gestion des garanties (CRUD)
+  - Fichier: src/pages/admin/AdminTarificationPage.tsx
+  - Persistance: localStorage via src/features/tarification/services/guaranteeService.ts
+  - Types: src/features/tarification/types.ts
+- Calcul rapide (front): src/features/tarification/services/pricingService.ts
+  - Additionne au prix de base: montants fixes ou % (avec min/max optionnels)
+- Création d’offre (Admin > Offres):
+  - Le formulaire propose la sélection de garanties par catégorie
+  - Affiche un « Prix estimé avec garanties » (base + impacts)
+  - La liste « Couvertures » de l’offre est alimentée avec les noms des garanties sélectionnées
+
+Remarques
+- Le champ « Prix » du formulaire d’offre est traité comme prix de base.
+- La logique back-end avancée décrite dans ce fichier (grilles RC, matrices TCM/TCL, etc.) pourra remplacer/compléter le pricing front.

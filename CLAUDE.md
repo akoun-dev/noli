@@ -116,9 +116,12 @@ The insurance comparison follows a structured 3-step process:
 - `src/features/user/`: User dashboard, quotes, policies, profile
 - `src/features/insurers/`: Insurer dashboard and management
 - `src/features/admin/`: Admin dashboard and system management
+  - **Audit Logs**: Complete activity tracking with filtering and export capabilities
+  - **Role Management**: Advanced RBAC with granular permissions across 12 categories
+  - **Backup & Restore**: Automated backup system with scheduling and selective restoration
 
 ### Types & Validation
-- `src/types/`: TypeScript type definitions
+- `src/types/`: TypeScript type definitions including admin types (audit logs, roles, backups)
 - `src/lib/`: Utilities and validation schemas
 
 ## Development Guidelines
@@ -170,7 +173,7 @@ The project currently uses mock data for development:
 ### Dashboard Systems
 - **User Dashboard**: Quote history, policy management, profile settings
 - **Insurer Dashboard**: Offer performance, quote management, analytics
-- **Admin Dashboard**: System supervision, user management, global statistics
+- **Admin Dashboard**: System supervision, user management, global statistics, audit logs, role management, backup system
 
 ## Configuration Files
 
@@ -219,9 +222,17 @@ The project is set up for development but currently lacks dedicated test configu
 
 ### Working with Data
 1. Use React Query for data fetching and caching
-2. Create service functions in feature directories
+2. Create service functions in feature directories (see `src/features/admin/services/` for patterns)
 3. Implement proper error handling and loading states
 4. Use TypeScript interfaces for API responses
+5. Mock data patterns are established in `src/features/*/services/*.ts` files
+
+### Admin Features Development
+1. Follow established patterns in `src/features/admin/services/` for new admin functionality
+2. Use comprehensive TypeScript interfaces from `src/types/admin.d.ts`
+3. Implement proper filtering, pagination, and export functionality
+4. Follow role-based access control patterns when creating new admin features
+5. Use consistent UI patterns from existing admin components (dialogs, tables, tabs)
 
 ## Performance Considerations
 
@@ -229,6 +240,14 @@ The project is set up for development but currently lacks dedicated test configu
 - Component-based architecture supports code splitting
 - Optimized bundle configuration with Vite
 - Mock data structure supports easy replacement with real APIs
+
+## Development Environment
+
+The project uses Lovable for development with Git integration:
+- **Local Development**: `npm run dev` starts Vite dev server on port 8080
+- **Lovable Integration**: Changes via Lovable are auto-committed to the repo
+- **IDE Support**: Full local development with TypeScript and hot reload
+- **Deployment**: Available through Lovable's publishing system
 
 ## Areas for Enhancement
 
@@ -247,4 +266,34 @@ The project is set up for development but currently lacks dedicated test configu
 - Add loading skeletons for better UX
 - Optimize bundle size for production
 
-This codebase represents a well-architected, modern React application with excellent separation of concerns, comprehensive documentation, and a solid foundation for scaling the insurance comparison platform.
+## Admin System Architecture
+
+The admin system implements enterprise-grade features with complete audit trails and security:
+
+### Audit System (`src/features/admin/services/auditService.ts`)
+- Tracks all system activities with 28+ action types
+- Supports real-time filtering, export (CSV/JSON/PDF), and security monitoring
+- Implements severity-based alerting (LOW, MEDIUM, HIGH, CRITICAL)
+- Provides comprehensive statistics and compliance reporting
+
+### Role-Based Access Control (`src/features/admin/services/roleService.ts`)
+- Granular permissions across 12 categories (USER_MANAGEMENT, ROLE_MANAGEMENT, etc.)
+- Supports role inheritance and per-user permission overrides
+- Pre-configured roles: Super Admin, Admin, Insurer Admin, Insurer Agent, User, Auditor
+- Complete CRUD operations with conflict prevention
+
+### Backup System (`src/features/admin/services/backupService.ts`)
+- Automated scheduling (daily/weekly/monthly) with configurable retention
+- Multiple backup types: FULL, INCREMENTAL, DIFFERENTIAL
+- Selective restoration with conflict resolution (OVERWRITE/SKIP/MERGE)
+- Real-time progress tracking and connection testing
+- Compression and encryption with storage quota management
+
+All admin features follow consistent patterns:
+- Mock services that simulate real backend behavior
+- Comprehensive TypeScript interfaces in `src/types/admin.d.ts`
+- Rich UI components with tables, dialogs, tabs, and real-time updates
+- Proper error handling and loading states
+- Export functionality and statistical dashboards
+
+This codebase represents a well-architected, modern React application with enterprise-grade admin capabilities, excellent separation of concerns, comprehensive documentation, and a solid foundation for scaling the insurance comparison platform.

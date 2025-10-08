@@ -35,6 +35,7 @@ import AdminDataManagementPage from "@/pages/admin/AdminDataManagementPage";
 import AdminAnalyticsPage from "@/pages/admin/AdminAnalyticsPage";
 import AdminModerationPage from "@/pages/admin/AdminModerationPage";
 import AdminOffersPage from "@/pages/admin/AdminOffersPage";
+import AdminTarificationPage from "@/pages/admin/AdminTarificationPage";
 import { AuditLogsPage } from "@/features/admin/components/AuditLogsPage";
 import { RoleManagementPage } from "@/features/admin/components/RoleManagementPage";
 import { BackupRestorePage } from "@/features/admin/components/BackupRestorePage";
@@ -117,6 +118,7 @@ const App = () => (
                   <Route path="/admin/utilisateurs" element={<AdminUsersPage />} />
                   <Route path="/admin/assureurs" element={<AdminInsurersPage />} />
                   <Route path="/admin/offres" element={<AdminOffersPage />} />
+                  <Route path="/admin/tarification" element={<AdminTarificationPage />} />
                   <Route path="/admin/devis" element={<div>Admin Quotes</div>} />
                   <Route path="/admin/analytics" element={<AdminAnalyticsPage />} />
                   <Route path="/admin/moderation" element={<AdminModerationPage />} />

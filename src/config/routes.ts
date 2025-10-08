@@ -51,6 +51,7 @@ export const APP_ROUTES = {
     users: '/admin/utilisateurs',
     insurers: '/admin/assureurs',
     offers: '/admin/offres',
+    tarification: '/admin/tarification',
     settings: '/admin/parametres',
   },
 } as const;
