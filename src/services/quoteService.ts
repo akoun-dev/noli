@@ -150,9 +150,24 @@ export class QuoteService {
     ];
 
     // Notifier l'utilisateur que les devis sont prêts
-    mockQuotes.forEach(quote => {
-      notificationService.notifyQuoteGenerated(quote.id, quote.insurer, quote.price.monthly);
-    });
+    for (const quote of mockQuotes) {
+      try {
+        await notificationService.sendNotification(
+          ['email'],
+          { email: request.customerInfo.email, phone: request.customerInfo.phone },
+          'quoteGenerated',
+          {
+            firstName: request.customerInfo.fullName.split(' ')[0],
+            quoteId: quote.id,
+            price: quote.price.annual,
+            insurerName: quote.insurer,
+            downloadUrl: `${window.location.origin}/devis/${quote.id}`
+          }
+        );
+      } catch (error) {
+        console.error('Failed to send notification for quote:', quote.id, error);
+      }
+    }
 
     return mockQuotes;
   }
@@ -165,7 +180,22 @@ export class QuoteService {
     // Notifier l'acceptation
     const quote = await this.getQuoteById(quoteId);
     if (quote) {
-      notificationService.notifyQuoteApproved(quoteId, quote.insurer);
+      try {
+        // Pour la démo, on utilise une adresse email par défaut
+        await notificationService.sendNotification(
+          ['email'],
+          { email: 'customer@example.com', phone: '+2250000000000' },
+          'quoteApproved',
+          {
+            firstName: 'Client',
+            quoteId: quoteId,
+            insurerName: quote.insurer,
+            nextSteps: 'Veuillez préparer votre pièce d\'identité, permis de conduire et carte grise pour la finalisation du contrat.'
+          }
+        );
+      } catch (error) {
+        console.error('Failed to send quote approval notification:', error);
+      }
     }
 
     return true;
@@ -247,13 +277,28 @@ export class QuoteService {
     const quotes = await this.getUserQuotes('current-user');
     const now = new Date();
 
-    quotes.forEach(quote => {
+    for (const quote of quotes) {
       const daysUntilExpiry = Math.ceil((quote.validUntil.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
       if (daysUntilExpiry <= 7 && daysUntilExpiry > 0) {
-        notificationService.notifyQuoteExpiring(quote.id, daysUntilExpiry);
+        try {
+          await notificationService.sendNotification(
+            ['email'],
+            { email: 'customer@example.com', phone: '+2250000000000' },
+            'quoteGenerated', // On réutilise le template existant
+            {
+              firstName: 'Client',
+              quoteId: quote.id,
+              price: 0,
+              insurerName: quote.insurer,
+              downloadUrl: `${window.location.origin}/devis/${quote.id}`
+            }
+          );
+        } catch (error) {
+          console.error('Failed to send quote expiry notification:', error);
+        }
       }
-    });
+    }
   }
 
   // Convertir un devis en données pour le PDF

@@ -187,7 +187,7 @@ export const auditService = {
     }
   },
 
-  private exportToCSV(logs: AuditLog[]): Blob {
+  exportToCSV(logs: AuditLog[]): Blob {
     const headers = [
       'ID', 'User Email', 'Action', 'Resource', 'Resource ID',
       'IP Address', 'Severity', 'Timestamp', 'Details'
@@ -211,12 +211,12 @@ export const auditService = {
     return new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   },
 
-  private exportToJSON(logs: AuditLog[]): Blob {
+  exportToJSON(logs: AuditLog[]): Blob {
     const jsonContent = JSON.stringify(logs, null, 2);
     return new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
   },
 
-  private exportToPDF(logs: AuditLog[]): Blob {
+  exportToPDF(logs: AuditLog[]): Blob {
     const htmlContent = `
       <!DOCTYPE html>
       <html>
