@@ -64,22 +64,24 @@ export const QuoteFilters: React.FC<QuoteFiltersProps> = ({
   return (
     <Card className="w-full">
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <CardTitle className="text-lg flex items-center gap-2">
             <Filter className="h-5 w-5" />
             Filtres
           </CardTitle>
           <div className="flex items-center gap-2">
             {hasActiveFilters && (
-              <Button variant="outline" size="sm" onClick={onClearFilters}>
-                <X className="h-4 w-4 mr-2" />
-                Effacer
+              <Button variant="outline" size="sm" onClick={onClearFilters} className="text-xs sm:text-sm">
+                <X className="h-4 w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Effacer</span>
+                <span className="sm:hidden">Effacer</span>
               </Button>
             )}
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setIsExpanded(!isExpanded)}
+              className="text-xs sm:text-sm"
             >
               {isExpanded ? 'Masquer' : 'Afficher'}
             </Button>
@@ -88,17 +90,17 @@ export const QuoteFilters: React.FC<QuoteFiltersProps> = ({
       </CardHeader>
 
       {isExpanded && (
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-3 sm:space-y-4">
           {/* Search by Insurer */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Assureur</label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Rechercher par assureur..."
                 value={filters.insurer || ''}
                 onChange={(e) => handleInsurerChange(e.target.value)}
-                className="pl-10"
+                className="pl-10 text-sm"
               />
             </div>
           </div>
@@ -132,7 +134,7 @@ export const QuoteFilters: React.FC<QuoteFiltersProps> = ({
                   <Button
                     variant="outline"
                     className={cn(
-                      'w-full justify-start text-left font-normal',
+                      'w-full justify-start text-left font-normal text-sm',
                       !filters.dateRange && 'text-muted-foreground'
                     )}
                   >
@@ -161,8 +163,9 @@ export const QuoteFilters: React.FC<QuoteFiltersProps> = ({
                         handleDateRangeChange(range);
                       }
                     }}
-                    numberOfMonths={2}
+                    numberOfMonths={1}
                     locale={fr}
+                    className="text-xs sm:text-sm"
                   />
                 </PopoverContent>
               </Popover>
@@ -171,7 +174,7 @@ export const QuoteFilters: React.FC<QuoteFiltersProps> = ({
                   variant="ghost"
                   size="sm"
                   onClick={clearDateRange}
-                  className="p-2 h-10 w-10"
+                  className="p-2 h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0"
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -183,19 +186,19 @@ export const QuoteFilters: React.FC<QuoteFiltersProps> = ({
           {hasActiveFilters && (
             <div className="space-y-2">
               <label className="text-sm font-medium">Filtres actifs</label>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-1 sm:gap-2">
                 {filters.status && (
-                  <Badge variant="secondary">
+                  <Badge variant="secondary" className="text-xs">
                     Statut: {filters.status === 'pending' ? 'En attente' : filters.status === 'approved' ? 'Approuvé' : filters.status === 'rejected' ? 'Rejeté' : 'Expiré'}
                   </Badge>
                 )}
                 {filters.insurer && (
-                  <Badge variant="secondary">
+                  <Badge variant="secondary" className="text-xs">
                     Assureur: {filters.insurer}
                   </Badge>
                 )}
                 {filters.dateRange && (
-                  <Badge variant="secondary">
+                  <Badge variant="secondary" className="text-xs">
                     Période: {format(filters.dateRange.start, 'dd/MM/yyyy')} - {format(filters.dateRange.end, 'dd/MM/yyyy')}
                   </Badge>
                 )}

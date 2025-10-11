@@ -193,11 +193,11 @@ export const PaymentProcessor: React.FC<PaymentProcessorProps> = ({
     return (
       <Card>
         <CardContent className="p-8 text-center">
-          <CreditCard className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
+          <CreditCard className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-foreground mb-2">
             Aucune méthode de paiement
           </h3>
-          <p className="text-gray-600 mb-4">
+          <p className="text-muted-foreground mb-4">
             Vous devez ajouter une méthode de paiement pour continuer
           </p>
         </CardContent>
@@ -217,12 +217,12 @@ export const PaymentProcessor: React.FC<PaymentProcessorProps> = ({
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <p className="text-sm text-blue-800 font-medium">{description}</p>
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+            <p className="text-sm text-blue-800 dark:text-blue-400 font-medium">{description}</p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">
+            <label className="block text-sm font-medium text-foreground mb-3">
               Méthode de paiement
             </label>
             <div className="space-y-3">
@@ -231,19 +231,19 @@ export const PaymentProcessor: React.FC<PaymentProcessorProps> = ({
                   key={method.id}
                   className={`flex items-center justify-between p-4 border rounded-lg cursor-pointer transition-colors ${
                     selectedMethodId === method.id || (defaultMethod?.id === method.id && !selectedMethodId)
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:border-gray-300'
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
                   }`}
                   onClick={() => setSelectedMethodId(method.id)}
                 >
                   <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-gray-100 rounded-lg">
+                    <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
                       {getProviderIcon(method.provider)}
                     </div>
                     <div>
                       <p className="font-medium">{getProviderName(method.provider)}</p>
                       {method.last4 && (
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-muted-foreground">
                           {method.type === 'credit_card' ? `**** **** **** ${method.last4}` : `**** ${method.last4}`}
                         </p>
                       )}
@@ -270,12 +270,12 @@ export const PaymentProcessor: React.FC<PaymentProcessorProps> = ({
             </div>
           </div>
 
-          <div className="bg-gray-50 rounded-lg p-4">
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
             <div className="flex items-center space-x-2 mb-2">
-              <Shield className="h-5 w-5 text-green-600" />
-              <span className="text-sm font-medium text-green-800">Paiement sécurisé</span>
+              <Shield className="h-5 w-5 text-green-600 dark:text-green-400" />
+              <span className="text-sm font-medium text-green-800 dark:text-green-400">Paiement sécurisé</span>
             </div>
-            <p className="text-xs text-gray-600">
+            <p className="text-xs text-muted-foreground">
               Vos informations de paiement sont cryptées et sécurisées. Nous ne stockons jamais vos données bancaires.
             </p>
           </div>
@@ -303,23 +303,23 @@ export const PaymentProcessor: React.FC<PaymentProcessorProps> = ({
                 </Alert>
 
                 {selectedMethodId ? (
-                  <div className="flex items-center justify-center space-x-3 p-4 bg-gray-50 rounded-lg">
+                  <div className="flex items-center justify-center space-x-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
                     {getProviderIcon(paymentMethods?.find(m => m.id === selectedMethodId)?.provider || '')}
                     <div>
                       <p className="font-medium">
                         {getProviderName(paymentMethods?.find(m => m.id === selectedMethodId)?.provider || '')}
                       </p>
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm text-muted-foreground">
                         {paymentMethods?.find(m => m.id === selectedMethodId)?.last4}
                       </p>
                     </div>
                   </div>
                 ) : defaultMethod && (
-                  <div className="flex items-center justify-center space-x-3 p-4 bg-gray-50 rounded-lg">
+                  <div className="flex items-center justify-center space-x-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
                     {getProviderIcon(defaultMethod.provider)}
                     <div>
                       <p className="font-medium">{getProviderName(defaultMethod.provider)}</p>
-                      <p className="text-sm text-gray-600">{defaultMethod.last4}</p>
+                      <p className="text-sm text-muted-foreground">{defaultMethod.last4}</p>
                     </div>
                   </div>
                 )}
@@ -455,15 +455,15 @@ export const PaymentHistory: React.FC<PaymentHistoryProps> = ({ userId }) => {
         <CardContent>
           <div className="space-y-4">
             {transactions?.map((transaction) => (
-              <div key={transaction.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
+              <div key={transaction.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800">
                 <div className="flex items-center space-x-4">
                   {getStatusIcon(transaction.status)}
                   <div>
                     <p className="font-medium">{transaction.description}</p>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-muted-foreground">
                       {getProviderName(transaction.provider)} • {transaction.reference}
                     </p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-muted-foreground">
                       {new Date(transaction.createdAt).toLocaleDateString('fr-FR')} • {new Date(transaction.createdAt).toLocaleTimeString('fr-FR')}
                     </p>
                   </div>
@@ -486,8 +486,8 @@ export const PaymentHistory: React.FC<PaymentHistoryProps> = ({ userId }) => {
 
           {transactions?.length === 0 && (
             <div className="text-center py-8">
-              <CreditCard className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600">Aucune transaction trouvée</p>
+              <CreditCard className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground">Aucune transaction trouvée</p>
             </div>
           )}
         </CardContent>

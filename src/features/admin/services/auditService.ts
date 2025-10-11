@@ -173,21 +173,22 @@ export const auditService = {
   async exportAuditLogs(exportConfig: AuditLogExport): Promise<Blob> {
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    const { logs } = await this.getAuditLogs(exportConfig.filters);
+    const { logs } = await auditService.getAuditLogs(exportConfig.filters);
 
     switch (exportConfig.format) {
       case 'CSV':
-        return this.exportToCSV(logs);
+        return auditService.exportToCSV(logs);
       case 'JSON':
-        return this.exportToJSON(logs);
+        return auditService.exportToJSON(logs);
       case 'PDF':
-        return this.exportToPDF(logs);
+        return auditService.exportToPDF(logs);
       default:
         throw new Error(`Unsupported export format: ${exportConfig.format}`);
     }
   },
 
-  private exportToCSV(logs: AuditLog[]): Blob {
+  // Helper functions for export
+  exportToCSV: function(logs: AuditLog[]): Blob {
     const headers = [
       'ID', 'User Email', 'Action', 'Resource', 'Resource ID',
       'IP Address', 'Severity', 'Timestamp', 'Details'
@@ -211,12 +212,12 @@ export const auditService = {
     return new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   },
 
-  private exportToJSON(logs: AuditLog[]): Blob {
+  exportToJSON: function(logs: AuditLog[]): Blob {
     const jsonContent = JSON.stringify(logs, null, 2);
     return new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
   },
 
-  private exportToPDF(logs: AuditLog[]): Blob {
+  exportToPDF: function(logs: AuditLog[]): Blob {
     const htmlContent = `
       <!DOCTYPE html>
       <html>

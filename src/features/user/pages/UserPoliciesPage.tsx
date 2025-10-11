@@ -275,77 +275,82 @@ const UserPoliciesPage = () => {
 
   const PolicyCard = ({ policy }: { policy: PolicyWithDetails }) => (
     <Card className={`transition-all hover:shadow-md ${policy.isExpiringSoon ? 'border-orange-200' : ''}`}>
-      <CardHeader>
-        <div className="flex justify-between items-start">
-          <div>
-            <CardTitle className="text-lg">{policy.policyNumber}</CardTitle>
-            <CardDescription className="flex items-center gap-2 mt-1">
-              <Shield className="h-4 w-4" />
+      <CardHeader className="pb-2 sm:pb-4">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
+          <div className="space-y-1 sm:space-y-2">
+            <CardTitle className="text-base sm:text-lg">{policy.policyNumber}</CardTitle>
+            <CardDescription className="flex items-center gap-2 text-xs sm:text-sm">
+              <Shield className="h-3 w-3 sm:h-4 sm:w-4" />
               {policy.insurerName}
             </CardDescription>
           </div>
-          {getStatusBadge(policy.status)}
+          <div className="text-right sm:text-left">
+            {getStatusBadge(policy.status)}
+          </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex items-center justify-between">
+      <CardContent className="space-y-3 sm:space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div className="flex items-center gap-2">
             <Car className="h-4 w-4 text-gray-500" />
-            <span className="font-medium">{policy.vehicle.brand} {policy.vehicle.model}</span>
+            <span className="font-medium text-sm sm:text-base">{policy.vehicle.brand} {policy.vehicle.model}</span>
           </div>
-          <span className="text-sm text-gray-500">{policy.vehicle.registration}</span>
+          <span className="text-xs sm:text-sm text-gray-500">{policy.vehicle.registration}</span>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 text-sm">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-xs sm:text-sm">
           <div>
-            <span className="text-gray-500">Type de contrat:</span>
-            <span className="ml-2 font-medium">{getContractTypeLabel(policy.contractType)}</span>
+            <span className="text-gray-500">Type:</span>
+            <span className="ml-2 font-medium block sm:inline">{getContractTypeLabel(policy.contractType)}</span>
           </div>
           <div>
             <span className="text-gray-500">Prime:</span>
-            <span className="ml-2 font-medium">{policy.premium.toLocaleString()} FCFA</span>
+            <span className="ml-2 font-medium block sm:inline">{policy.premium.toLocaleString()} FCFA</span>
           </div>
           <div>
             <span className="text-gray-500">Fréquence:</span>
-            <span className="ml-2 font-medium">{getPaymentFrequencyLabel(policy.paymentFrequency)}</span>
+            <span className="ml-2 font-medium block sm:inline">{getPaymentFrequencyLabel(policy.paymentFrequency)}</span>
           </div>
           <div>
             <span className="text-gray-500">Franchise:</span>
-            <span className="ml-2 font-medium">{policy.franchise.toLocaleString()} FCFA</span>
+            <span className="ml-2 font-medium block sm:inline">{policy.franchise.toLocaleString()} FCFA</span>
           </div>
         </div>
 
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div className="flex items-center gap-2 text-xs sm:text-sm">
             <Calendar className="h-4 w-4 text-gray-500" />
             <span>Expire le {policy.endDate.toLocaleDateString('fr-FR')}</span>
           </div>
           {policy.isExpiringSoon && (
-            <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
+            <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 text-xs">
               Expire bientôt
             </Badge>
           )}
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           <Dialog>
             <DialogTrigger asChild>
-              <Button size="sm" variant="outline" onClick={() => handleViewPolicy(policy)}>
+              <Button size="sm" variant="outline" onClick={() => handleViewPolicy(policy)} className="flex-1 sm:flex-initial">
                 <Eye className="h-4 w-4 mr-1" />
-                Voir
+                <span className="hidden sm:inline">Détails</span>
+                <span className="sm:hidden">Voir</span>
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
               <PolicyDetails policy={policy} />
             </DialogContent>
           </Dialog>
-          <Button size="sm" variant="outline" onClick={() => handleMakePayment(policy.id)}>
+          <Button size="sm" variant="outline" onClick={() => handleMakePayment(policy.id)} className="flex-1 sm:flex-initial">
             <CreditCard className="h-4 w-4 mr-1" />
-            Payer
+            <span className="hidden sm:inline">Payer</span>
+            <span className="sm:hidden">Paiement</span>
           </Button>
-          <Button size="sm" onClick={() => handleFileClaim(policy.id)}>
+          <Button size="sm" onClick={() => handleFileClaim(policy.id)} className="flex-1 sm:flex-initial">
             <AlertTriangle className="h-4 w-4 mr-1" />
-            Sinistre
+            <span className="hidden sm:inline">Sinistre</span>
+            <span className="sm:hidden">Déclarer</span>
           </Button>
         </div>
       </CardContent>
@@ -539,61 +544,62 @@ const UserPoliciesPage = () => {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Mes Contrats</h1>
-          <p className="text-muted-foreground">Gérez vos contrats d'assurance</p>
+          <h1 className="text-xl sm:text-2xl font-bold">Mes Contrats</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">Gérez vos contrats d'assurance</p>
         </div>
-        <Button>
+        <Button className="w-full sm:w-auto">
           <Plus className="w-4 h-4 mr-2" />
-          Nouveau contrat
+          <span className="hidden sm:inline">Nouveau contrat</span>
+          <span className="sm:hidden">Ajouter</span>
         </Button>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
         <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-4">
-              <Shield className="h-8 w-8 text-blue-600" />
+          <CardContent className="p-3 sm:p-4 lg:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-center gap-2 sm:gap-4 text-center sm:text-left">
+              <Shield className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600 flex-shrink-0 mx-auto sm:mx-0" />
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Contrats</p>
-                <p className="text-2xl font-bold">{mockPolicies.length}</p>
+                <p className="text-xs sm:text-sm font-medium text-muted-foreground">Total Contrats</p>
+                <p className="text-lg sm:text-xl lg:text-2xl font-bold">{mockPolicies.length}</p>
               </div>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-4">
-              <CheckCircle className="h-8 w-8 text-green-600" />
+          <CardContent className="p-3 sm:p-4 lg:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-center gap-2 sm:gap-4 text-center sm:text-left">
+              <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 text-green-600 flex-shrink-0 mx-auto sm:mx-0" />
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Contrats Actifs</p>
-                <p className="text-2xl font-bold">{mockPolicies.filter(p => p.status === 'active').length}</p>
+                <p className="text-xs sm:text-sm font-medium text-muted-foreground">Contrats Actifs</p>
+                <p className="text-lg sm:text-xl lg:text-2xl font-bold">{mockPolicies.filter(p => p.status === 'active').length}</p>
               </div>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-4">
-              <Clock className="h-8 w-8 text-yellow-600" />
+          <CardContent className="p-3 sm:p-4 lg:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-center gap-2 sm:gap-4 text-center sm:text-left">
+              <Clock className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-600 flex-shrink-0 mx-auto sm:mx-0" />
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Expirant bientôt</p>
-                <p className="text-2xl font-bold">{mockPolicies.filter(p => p.isExpiringSoon).length}</p>
+                <p className="text-xs sm:text-sm font-medium text-muted-foreground">Expirant bientôt</p>
+                <p className="text-lg sm:text-xl lg:text-2xl font-bold">{mockPolicies.filter(p => p.isExpiringSoon).length}</p>
               </div>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-4">
-              <CreditCard className="h-8 w-8 text-purple-600" />
+          <CardContent className="p-3 sm:p-4 lg:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-center gap-2 sm:gap-4 text-center sm:text-left">
+              <CreditCard className="h-6 w-6 sm:h-8 sm:w-8 text-purple-600 flex-shrink-0 mx-auto sm:mx-0" />
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Prime mensuelle</p>
-                <p className="text-2xl font-bold">
+                <p className="text-xs sm:text-sm font-medium text-muted-foreground">Prime mensuelle</p>
+                <p className="text-lg sm:text-xl lg:text-2xl font-bold">
                   {mockPolicies
                     .filter(p => p.status === 'active')
                     .reduce((sum, p) => sum + (p.premium / 12), 0)
@@ -607,21 +613,21 @@ const UserPoliciesPage = () => {
 
       {/* Filters */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Liste des contrats</CardTitle>
-            <div className="flex items-center space-x-2">
+        <CardHeader className="pb-3 sm:pb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+            <CardTitle className="text-lg sm:text-xl">Liste des contrats</CardTitle>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                 <Input
                   placeholder="Rechercher un contrat..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 w-64"
+                  className="pl-10 w-full sm:w-64"
                 />
               </div>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-32">
+                <SelectTrigger className="w-full sm:w-32">
                   <SelectValue placeholder="Statut" />
                 </SelectTrigger>
                 <SelectContent>
@@ -638,21 +644,21 @@ const UserPoliciesPage = () => {
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="all">Tous les contrats</TabsTrigger>
-              <TabsTrigger value="active">Contrats actifs</TabsTrigger>
-              <TabsTrigger value="expired">Contrats expirés</TabsTrigger>
+              <TabsTrigger value="all" className="text-xs sm:text-sm">Tous</TabsTrigger>
+              <TabsTrigger value="active" className="text-xs sm:text-sm">Actifs</TabsTrigger>
+              <TabsTrigger value="expired" className="text-xs sm:text-sm">Expirés</TabsTrigger>
             </TabsList>
 
-            <TabsContent value={activeTab} className="mt-6">
-              <div className="grid gap-4">
+            <TabsContent value={activeTab} className="mt-4 sm:mt-6">
+              <div className="grid gap-3 sm:gap-4">
                 {filteredPolicies.length > 0 ? (
                   filteredPolicies.map((policy) => (
                     <PolicyCard key={policy.id} policy={policy} />
                   ))
                 ) : (
-                  <div className="text-center py-8">
-                    <Shield className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-500">Aucun contrat trouvé</p>
+                  <div className="text-center py-6 sm:py-8">
+                    <Shield className="h-10 w-10 sm:h-12 sm:w-12 text-gray-400 mx-auto mb-3 sm:mb-4" />
+                    <p className="text-gray-500 text-sm sm:text-base">Aucun contrat trouvé</p>
                   </div>
                 )}
               </div>

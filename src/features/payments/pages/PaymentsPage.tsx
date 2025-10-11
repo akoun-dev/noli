@@ -51,10 +51,10 @@ export const PaymentsPage: React.FC = () => {
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <AlertTriangle className="h-12 w-12 text-yellow-600 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
+          <h3 className="text-lg font-medium text-foreground mb-2">
             Connexion requise
           </h3>
-          <p className="text-gray-600">
+          <p className="text-muted-foreground">
             Vous devez être connecté pour accéder à la page de paiement
           </p>
         </div>
@@ -65,8 +65,8 @@ export const PaymentsPage: React.FC = () => {
   return (
     <div className="p-6">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Paiements</h1>
-        <p className="text-gray-600">
+        <h1 className="text-3xl font-bold text-foreground mb-2">Paiements</h1>
+        <p className="text-muted-foreground">
           Gérez vos méthodes de paiement et suivez vos transactions
         </p>
       </div>
@@ -77,25 +77,11 @@ export const PaymentsPage: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Méthodes actives</p>
-                <p className="text-2xl font-bold text-gray-900">3</p>
+                <p className="text-sm font-medium text-muted-foreground">Méthodes actives</p>
+                <p className="text-2xl font-bold text-foreground">3</p>
               </div>
-              <div className="p-3 bg-blue-100 rounded-lg">
-                <CreditCard className="h-6 w-6 text-blue-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Transactions ce mois</p>
-                <p className="text-2xl font-bold text-gray-900">12</p>
-              </div>
-              <div className="p-3 bg-green-100 rounded-lg">
-                <TrendingUp className="h-6 w-6 text-green-600" />
+              <div className="p-3 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+                <CreditCard className="h-6 w-6 text-blue-600 dark:text-blue-400" />
               </div>
             </div>
           </CardContent>
@@ -105,11 +91,11 @@ export const PaymentsPage: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Taux de succès</p>
-                <p className="text-2xl font-bold text-gray-900">92%</p>
+                <p className="text-sm font-medium text-muted-foreground">Transactions ce mois</p>
+                <p className="text-2xl font-bold text-foreground">12</p>
               </div>
-              <div className="p-3 bg-green-100 rounded-lg">
-                <CheckCircle className="h-6 w-6 text-green-600" />
+              <div className="p-3 bg-green-100 dark:bg-green-900/20 rounded-lg">
+                <TrendingUp className="h-6 w-6 text-green-600 dark:text-green-400" />
               </div>
             </div>
           </CardContent>
@@ -119,11 +105,25 @@ export const PaymentsPage: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Dépenses ce mois</p>
-                <p className="text-2xl font-bold text-gray-900">1.5M FCFA</p>
+                <p className="text-sm font-medium text-muted-foreground">Taux de succès</p>
+                <p className="text-2xl font-bold text-foreground">92%</p>
               </div>
-              <div className="p-3 bg-purple-100 rounded-lg">
-                <Wallet className="h-6 w-6 text-purple-600" />
+              <div className="p-3 bg-green-100 dark:bg-green-900/20 rounded-lg">
+                <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Dépenses ce mois</p>
+                <p className="text-2xl font-bold text-foreground">1.5M FCFA</p>
+              </div>
+              <div className="p-3 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
+                <Wallet className="h-6 w-6 text-purple-600 dark:text-purple-400" />
               </div>
             </div>
           </CardContent>

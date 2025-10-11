@@ -86,7 +86,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ userRole }) => {
   };
 
   return (
-    <div className={`bg-card shadow-lg border-r transition-all duration-300 ${
+    <div className={`bg-card shadow-lg border-r transition-all duration-300 h-screen ${
       isCollapsed ? 'w-16' : 'w-64'
     }`}>
       <div className="flex flex-col h-full">

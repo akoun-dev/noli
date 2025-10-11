@@ -49,11 +49,11 @@ export const QuoteCard: React.FC<QuoteCardProps> = ({ quote, onView, onDownload 
 
   return (
     <Card className="w-full hover:shadow-md transition-shadow">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div className="space-y-1">
-            <CardTitle className="text-lg font-semibold">{quote.insurerName}</CardTitle>
-            <div className="flex items-center gap-2">
+      <CardHeader className="pb-2 sm:pb-3">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+          <div className="space-y-1 sm:space-y-2">
+            <CardTitle className="text-base sm:text-lg font-semibold">{quote.insurerName}</CardTitle>
+            <div className="flex flex-wrap items-center gap-1 sm:gap-2">
               <Badge className={cn('text-xs', getStatusColor(quote.status))}>
                 {getStatusLabel(quote.status)}
               </Badge>
@@ -64,16 +64,16 @@ export const QuoteCard: React.FC<QuoteCardProps> = ({ quote, onView, onDownload 
               )}
             </div>
           </div>
-          <div className="text-right">
-            <div className="text-2xl font-bold text-primary">
+          <div className="text-left sm:text-right">
+            <div className="text-xl sm:text-2xl font-bold text-primary">
               {quote.price.toLocaleString('fr-FR')} FCFA
             </div>
-            <div className="text-sm text-muted-foreground">/an</div>
+            <div className="text-xs sm:text-sm text-muted-foreground">/an</div>
           </div>
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-3 sm:space-y-4">
         {/* Vehicle Information */}
         <div className="bg-muted p-3 rounded-lg">
           <div className="flex items-center gap-2 mb-2">
@@ -81,8 +81,8 @@ export const QuoteCard: React.FC<QuoteCardProps> = ({ quote, onView, onDownload 
             <span className="font-medium text-sm">Véhicule</span>
           </div>
           <div className="text-sm text-muted-foreground">
-            <p>{quote.vehicleInfo.brand} {quote.vehicleInfo.model} ({quote.vehicleInfo.year})</p>
-            <p className="text-xs">Immatriculation: {quote.vehicleInfo.registration}</p>
+            <p className="break-words">{quote.vehicleInfo.brand} {quote.vehicleInfo.model} ({quote.vehicleInfo.year})</p>
+            <p className="text-xs break-all">Immatriculation: {quote.vehicleInfo.registration}</p>
           </div>
         </div>
 
@@ -90,12 +90,12 @@ export const QuoteCard: React.FC<QuoteCardProps> = ({ quote, onView, onDownload 
         <div className="space-y-2">
           <div className="text-sm">
             <span className="font-medium">Couverture:</span>
-            <span className="ml-2">{quote.coverageName}</span>
+            <span className="ml-2 block sm:inline">{quote.coverageName}</span>
           </div>
         </div>
 
         {/* Dates */}
-        <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-sm text-muted-foreground">
           <div>
             <span className="font-medium">Créé le:</span>
             <p>{format(new Date(quote.createdAt), 'dd MMM yyyy', { locale: fr })}</p>
@@ -117,16 +117,18 @@ export const QuoteCard: React.FC<QuoteCardProps> = ({ quote, onView, onDownload 
             className="flex-1"
           >
             <Eye className="h-4 w-4 mr-2" />
-            Détails
+            <span className="hidden sm:inline">Détails</span>
+            <span className="sm:hidden">Voir</span>
           </Button>
           {quote.status === 'approved' && (
             <Button
               variant="default"
               size="sm"
               onClick={() => onDownload(quote.id)}
+              className="px-3 sm:px-4"
             >
-              <Download className="h-4 w-4 mr-2" />
-              PDF
+              <Download className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">PDF</span>
             </Button>
           )}
         </div>

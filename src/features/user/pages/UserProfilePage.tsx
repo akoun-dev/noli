@@ -412,18 +412,19 @@ const UserProfilePage = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Mon Profil</h1>
-          <p className="text-gray-600">Gérez vos informations personnelles et préférences</p>
+          <h1 className="text-xl sm:text-2xl font-bold">Mon Profil</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">Gérez vos informations personnelles et préférences</p>
         </div>
         <Dialog>
           <DialogTrigger asChild>
-            <Button variant="outline">
+            <Button variant="outline" className="w-full sm:w-auto">
               <Edit className="w-4 h-4 mr-2" />
-              Modifier le profil
+              <span className="hidden sm:inline">Modifier le profil</span>
+              <span className="sm:hidden">Modifier</span>
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-md">
@@ -491,12 +492,13 @@ const UserProfilePage = () => {
       </div>
 
       {/* Action Buttons */}
-      <div className="flex gap-3">
+      <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
         <Dialog open={showLocationDialog} onOpenChange={setShowLocationDialog}>
           <DialogTrigger asChild>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" className="w-full sm:w-auto">
               <MapPinIcon className="h-4 w-4 mr-2" />
-              Modifier l'adresse
+              <span className="hidden sm:inline">Modifier l'adresse</span>
+              <span className="sm:hidden">Adresse</span>
             </Button>
           </DialogTrigger>
           <DialogContent>
@@ -530,9 +532,10 @@ const UserProfilePage = () => {
 
         <Dialog open={showDeleteAccountDialog} onOpenChange={setShowDeleteAccountDialog}>
           <DialogTrigger asChild>
-            <Button variant="destructive" size="sm">
+            <Button variant="destructive" size="sm" className="w-full sm:w-auto">
               <Trash2 className="h-4 w-4 mr-2" />
-              Supprimer mon compte
+              <span className="hidden sm:inline">Supprimer mon compte</span>
+              <span className="sm:hidden">Supprimer</span>
             </Button>
           </DialogTrigger>
           <DialogContent>
@@ -563,82 +566,89 @@ const UserProfilePage = () => {
       {/* Profile Overview Card */}
       <Card>
         <CardHeader>
-          <div className="flex items-center space-x-4">
-            <div className="relative">
-              <Avatar className="w-20 h-20">
-                <AvatarImage src={user.avatar} alt={user.firstName} />
-                <AvatarFallback className="text-lg">
-                  {getInitials(user.firstName, user.lastName)}
-                </AvatarFallback>
-              </Avatar>
-              <Button
-                size="sm"
-                className="absolute -bottom-2 -right-2 rounded-full w-8 h-8 p-0"
-                variant="outline"
-              >
-                <Camera className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="flex-1">
-              <div className="flex items-center space-x-2">
-                <h2 className="text-xl font-semibold">{user.firstName} {user.lastName}</h2>
-                {user.isEmailVerified && <CheckCircle className="h-4 w-4 text-green-500" />}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center space-x-4">
+              <div className="relative">
+                <Avatar className="w-16 h-16 sm:w-20 sm:h-20">
+                  <AvatarImage src={user.avatar} alt={user.firstName} />
+                  <AvatarFallback className="text-sm sm:text-lg">
+                    {getInitials(user.firstName, user.lastName)}
+                  </AvatarFallback>
+                </Avatar>
+                <Button
+                  size="sm"
+                  className="absolute -bottom-2 -right-2 rounded-full w-6 h-6 sm:w-8 sm:h-8 p-0"
+                  variant="outline"
+                >
+                  <Camera className="h-3 w-3 sm:h-4 sm:w-4" />
+                </Button>
               </div>
-              <p className="text-gray-600">{user.email}</p>
-              <div className="flex items-center space-x-2 mt-2">
-                <Badge variant="outline">{user.role}</Badge>
-                <Badge variant="secondary">Membre depuis {user.statistics.memberSince.toLocaleDateString('fr-FR')}</Badge>
+              <div className="flex-1">
+                <div className="flex items-center space-x-2">
+                  <h2 className="text-lg sm:text-xl font-semibold">{user.firstName} {user.lastName}</h2>
+                  {user.isEmailVerified && <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-green-500" />}
+                </div>
+                <p className="text-muted-foreground text-sm sm:text-base break-all">{user.email}</p>
+                <div className="flex flex-wrap items-center gap-1 sm:gap-2 mt-2">
+                  <Badge variant="outline" className="text-xs sm:text-sm">{user.role}</Badge>
+                  <Badge variant="secondary" className="text-xs sm:text-sm">Membre depuis {user.statistics.memberSince.toLocaleDateString('fr-FR')}</Badge>
+                </div>
               </div>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             <div className="space-y-3">
               <div className="flex items-center space-x-2">
-                <Phone className="h-4 w-4 text-gray-500" />
-                <span className="text-sm">{user.phone}</span>
-                {user.isPhoneVerified && <CheckCircle className="h-4 w-4 text-green-500" />}
+                <Phone className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm break-all">{user.phone}</span>
+                {user.isPhoneVerified && <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-green-500" />}
               </div>
-              <div className="flex items-center space-x-2">
-                <MapPin className="h-4 w-4 text-gray-500" />
-                <span className="text-sm">{user.address}</span>
+              <div className="flex items-start space-x-2">
+                <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                <span className="text-sm break-words">{user.address}</span>
               </div>
             </div>
             <div className="space-y-3">
-              <div className="flex items-center space-x-2">
-                <Calendar className="h-4 w-4 text-gray-500" />
-                <span className="text-sm">Dernière connexion: {user.lastLogin.toLocaleDateString('fr-FR')} {user.lastLogin.toLocaleTimeString('fr-FR')}</span>
+              <div className="flex items-start space-x-2">
+                <Calendar className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                <span className="text-sm">
+                  <span className="hidden sm:inline">Dernière connexion:</span>
+                  <span className="sm:hidden">Dernière connexion:</span>
+                  <br className="sm:hidden" />
+                  {user.lastLogin.toLocaleDateString('fr-FR')} {user.lastLogin.toLocaleTimeString('fr-FR')}
+                </span>
               </div>
               <div className="flex items-center space-x-2">
-                <Shield className="h-4 w-4 text-gray-500" />
+                <Shield className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm">Compte vérifié</span>
               </div>
             </div>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Devis demandés</span>
-                <span className="font-semibold">{user.statistics.totalQuotes}</span>
+                <span className="text-sm text-muted-foreground">Devis demandés</span>
+                <span className="font-semibold text-sm">{user.statistics.totalQuotes}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Contrats actifs</span>
-                <span className="font-semibold">{user.statistics.activePolicies}</span>
+                <span className="text-sm text-muted-foreground">Contrats actifs</span>
+                <span className="font-semibold text-sm">{user.statistics.activePolicies}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Sinistres déclarés</span>
-                <span className="font-semibold">{user.statistics.totalClaims}</span>
+                <span className="text-sm text-muted-foreground">Sinistres déclarés</span>
+                <span className="font-semibold text-sm">{user.statistics.totalClaims}</span>
               </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="profile">Informations</TabsTrigger>
-          <TabsTrigger value="security">Sécurité</TabsTrigger>
-          <TabsTrigger value="preferences">Préférences</TabsTrigger>
-          <TabsTrigger value="documents">Documents</TabsTrigger>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
+          <TabsTrigger value="profile" className="text-xs sm:text-sm py-2 px-2 sm:px-4">Informations</TabsTrigger>
+          <TabsTrigger value="security" className="text-xs sm:text-sm py-2 px-2 sm:px-4">Sécurité</TabsTrigger>
+          <TabsTrigger value="preferences" className="text-xs sm:text-sm py-2 px-2 sm:px-4">Préférences</TabsTrigger>
+          <TabsTrigger value="documents" className="text-xs sm:text-sm py-2 px-2 sm:px-4">Documents</TabsTrigger>
         </TabsList>
 
         {/* Personal Information Tab */}
@@ -651,27 +661,27 @@ const UserProfilePage = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label>Prénom</Label>
-                  <div className="mt-1 p-2 bg-gray-50 rounded">{user.firstName}</div>
+                  <div className="mt-1 p-2 sm:p-3 bg-muted rounded text-sm">{user.firstName}</div>
                 </div>
                 <div>
                   <Label>Nom</Label>
-                  <div className="mt-1 p-2 bg-gray-50 rounded">{user.lastName}</div>
+                  <div className="mt-1 p-2 sm:p-3 bg-muted rounded text-sm">{user.lastName}</div>
                 </div>
                 <div>
                   <Label>Email</Label>
-                  <div className="mt-1 p-2 bg-gray-50 rounded">{user.email}</div>
+                  <div className="mt-1 p-2 sm:p-3 bg-muted rounded text-sm break-all">{user.email}</div>
                 </div>
                 <div>
                   <Label>Téléphone</Label>
-                  <div className="mt-1 p-2 bg-gray-50 rounded">{user.phone}</div>
+                  <div className="mt-1 p-2 sm:p-3 bg-muted rounded text-sm">{user.phone}</div>
                 </div>
               </div>
               <div>
                 <Label>Adresse</Label>
-                <div className="mt-1 p-2 bg-gray-50 rounded">{user.address}</div>
+                <div className="mt-1 p-2 sm:p-3 bg-muted rounded text-sm break-words">{user.address}</div>
               </div>
             </CardContent>
           </Card>
@@ -685,28 +695,28 @@ const UserProfilePage = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               {user.paymentMethods.map((method) => (
-                <div key={method.id} className="flex items-center justify-between p-4 border rounded-lg">
+                <div key={method.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 sm:p-4 border rounded-lg">
                   <div className="flex items-center space-x-3">
-                    <CreditCard className="h-5 w-5 text-gray-500" />
+                    <CreditCard className="h-5 w-5 text-muted-foreground" />
                     <div>
-                      <div className="font-medium">
+                      <div className="font-medium text-sm">
                         {method.type === 'mobile_money' ? 'Mobile Money' : 'Carte bancaire'}
                       </div>
-                      <div className="text-sm text-gray-500">
+                      <div className="text-xs sm:text-sm text-muted-foreground">
                         {method.type === 'mobile_money' ? `****${method.last4}` : `****${method.last4}`}
                         {method.type === 'card' && method.expiryMonth && method.expiryYear && ` - ${method.expiryMonth}/${method.expiryYear}`}
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    {method.isDefault && <Badge variant="default">Par défaut</Badge>}
-                    <Button size="sm" variant="outline">Modifier</Button>
+                  <div className="flex items-center justify-between sm:justify-end space-x-2">
+                    {method.isDefault && <Badge variant="default" className="text-xs">Par défaut</Badge>}
+                    <Button size="sm" variant="outline" className="text-xs">Modifier</Button>
                   </div>
                 </div>
               ))}
               <Button className="w-full" variant="outline">
                 <Plus className="w-4 h-4 mr-2" />
-                Ajouter une méthode de paiement
+                <span className="text-sm">Ajouter une méthode de paiement</span>
               </Button>
             </CardContent>
           </Card>
@@ -1098,16 +1108,17 @@ const UserProfilePage = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex justify-between items-center">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
                 <div>
-                  <h4 className="font-medium">Documents téléchargés</h4>
-                  <p className="text-sm text-gray-500">Gérez vos documents importants</p>
+                  <h4 className="font-medium text-sm sm:text-base">Documents téléchargés</h4>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Gérez vos documents importants</p>
                 </div>
                 <label htmlFor="document-upload">
-                  <Button variant="outline" asChild>
+                  <Button variant="outline" asChild className="w-full sm:w-auto">
                     <span>
                       <Upload className="w-4 h-4 mr-2" />
-                      Télécharger un document
+                      <span className="hidden sm:inline">Télécharger un document</span>
+                      <span className="sm:hidden">Télécharger</span>
                     </span>
                   </Button>
                 </label>
@@ -1122,37 +1133,40 @@ const UserProfilePage = () => {
 
               <div className="space-y-3">
                 {user.documents.map((doc) => (
-                  <div key={doc.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div key={doc.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 sm:p-4 border rounded-lg">
                     <div className="flex items-center space-x-3">
-                      <FileText className="h-5 w-5 text-gray-500" />
+                      <FileText className="h-5 w-5 text-muted-foreground" />
                       <div>
-                        <div className="font-medium">{doc.name}</div>
-                        <div className="text-sm text-gray-500">
+                        <div className="font-medium text-sm break-words">{doc.name}</div>
+                        <div className="text-xs sm:text-sm text-muted-foreground">
                           {doc.type} • {(doc.size / 1024 / 1024).toFixed(2)} MB • {doc.uploadedAt.toLocaleDateString('fr-FR')}
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-1 sm:space-x-2">
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() => handleDownloadDocument(doc)}
+                        className="px-2 sm:px-3"
                       >
-                        <Download className="h-4 w-4" />
+                        <Download className="h-3 w-3 sm:h-4 sm:w-4" />
                       </Button>
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() => handleViewDocument(doc)}
+                        className="px-2 sm:px-3"
                       >
-                        <Eye className="h-4 w-4" />
+                        <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
                       </Button>
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() => handleDeleteDocument(doc.id)}
+                        className="px-2 sm:px-3"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                       </Button>
                     </div>
                   </div>
@@ -1171,19 +1185,19 @@ const UserProfilePage = () => {
             <CardContent className="space-y-4">
               <Alert>
                 <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
+                <AlertDescription className="text-sm">
                   Vous avez le droit de demander une copie de toutes vos données personnelles ou de demander leur suppression.
                 </AlertDescription>
               </Alert>
 
-              <div className="grid grid-cols-2 gap-4">
-                <Button variant="outline" className="h-auto p-4 flex flex-col items-center space-y-2">
-                  <Download className="h-6 w-6" />
-                  <span>Télécharger mes données</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                <Button variant="outline" className="h-auto p-3 sm:p-4 flex flex-col items-center space-y-2">
+                  <Download className="h-5 w-5 sm:h-6 sm:w-6" />
+                  <span className="text-xs sm:text-sm">Télécharger mes données</span>
                 </Button>
-                <Button variant="outline" className="h-auto p-4 flex flex-col items-center space-y-2">
-                  <FileText className="h-6 w-6" />
-                  <span>Demande de suppression</span>
+                <Button variant="outline" className="h-auto p-3 sm:p-4 flex flex-col items-center space-y-2">
+                  <FileText className="h-5 w-5 sm:h-6 sm:w-6" />
+                  <span className="text-xs sm:text-sm">Demande de suppression</span>
                 </Button>
               </div>
             </CardContent>

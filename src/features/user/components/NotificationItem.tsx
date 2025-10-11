@@ -103,14 +103,14 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
         isUnread && 'border-l-4 border-l-primary bg-primary/5'
       )}
     >
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1 space-y-3">
+      <CardContent className="p-3 sm:p-4">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
+          <div className="flex-1 space-y-2 sm:space-y-3">
             {/* Header */}
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
               <div className="flex items-center gap-1">
                 {getChannelIcon(notification.channel)}
-                <span className="text-sm font-medium capitalize">
+                <span className="text-xs sm:text-sm font-medium capitalize">
                   {notification.channel}
                 </span>
               </div>
@@ -129,12 +129,12 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
 
             {/* Title and Message */}
             <div className="space-y-1">
-              <h3 className="font-semibold text-foreground">{notification.title}</h3>
-              <p className="text-sm text-muted-foreground">{notification.message}</p>
+              <h3 className="font-semibold text-sm sm:text-base text-foreground">{notification.title}</h3>
+              <p className="text-xs sm:text-sm text-muted-foreground">{notification.message}</p>
             </div>
 
             {/* Metadata */}
-            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs text-muted-foreground">
               <span>
                 {format(new Date(notification.createdAt), 'dd MMM yyyy à HH:mm', { locale: fr })}
               </span>
@@ -151,9 +151,9 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
                 variant="outline"
                 size="sm"
                 onClick={() => onActionClick?.(notification.metadata!.actionButton!.url)}
-                className="mt-2"
+                className="mt-2 text-xs sm:text-sm"
               >
-                <ExternalLink className="h-3 w-3 mr-2" />
+                <ExternalLink className="h-3 w-3 mr-1 sm:mr-2" />
                 {notification.metadata.actionButton.text}
               </Button>
             )}
@@ -165,7 +165,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
               variant="ghost"
               size="sm"
               onClick={() => onMarkAsRead(notification.id)}
-              className="p-2 h-8 w-8"
+              className="p-2 h-8 w-8 sm:h-8 sm:w-8 flex-shrink-0 self-start sm:self-auto"
               title="Marquer comme lu"
             >
               <Check className="h-4 w-4" />

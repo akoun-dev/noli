@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Outlet } from 'react-router-dom';
-import { Header } from '@/components/common/Header';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { useAuth } from '@/contexts/AuthContext';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
@@ -51,12 +50,9 @@ export const AdminLayout: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <Header />
-
       <div className="flex">
-        {/* Sidebar - Desktop */}
-        <div className="hidden lg:block">
+        {/* Sidebar - Desktop - Fixed */}
+        <div className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-50 lg:block lg:w-64">
           <Sidebar userRole="ADMIN" />
         </div>
 
@@ -74,7 +70,7 @@ export const AdminLayout: React.FC = () => {
         )}
 
         {/* Main Content */}
-        <main className="flex-1">
+        <main className="flex-1 lg:pl-64">
           <div className="min-h-screen">
             {/* Mobile Header */}
             <div className="lg:hidden bg-card border-b px-4 py-3 flex items-center justify-between">

@@ -101,8 +101,8 @@ export const PaymentMethodsManager: React.FC<PaymentMethodsManagerProps> = ({ us
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <div className="h-32 bg-gray-200 animate-pulse rounded-lg"></div>
-        <div className="h-32 bg-gray-200 animate-pulse rounded-lg"></div>
+        <div className="h-32 bg-muted animate-pulse rounded-lg"></div>
+        <div className="h-32 bg-muted animate-pulse rounded-lg"></div>
       </div>
     );
   }
@@ -111,8 +111,8 @@ export const PaymentMethodsManager: React.FC<PaymentMethodsManagerProps> = ({ us
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold">Méthodes de paiement</h3>
-          <p className="text-sm text-gray-600">Gérez vos méthodes de paiement enregistrées</p>
+          <h3 className="text-lg font-semibold text-foreground">Méthodes de paiement</h3>
+          <p className="text-sm text-muted-foreground">Gérez vos méthodes de paiement enregistrées</p>
         </div>
         <Dialog open={isAddingMethod} onOpenChange={setIsAddingMethod}>
           <DialogTrigger asChild>
@@ -136,31 +136,31 @@ export const PaymentMethodsManager: React.FC<PaymentMethodsManagerProps> = ({ us
 
       <div className="grid gap-4">
         {paymentMethods?.map((method) => (
-          <Card key={method.id} className={method.isDefault ? 'border-blue-200 bg-blue-50' : ''}>
+          <Card key={method.id} className={method.isDefault ? 'border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20' : ''}>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
-                  <div className="p-2 bg-gray-100 rounded-lg">
+                  <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
                     {getProviderIcon(method.provider)}
                   </div>
                   <div>
                     <div className="flex items-center space-x-2">
-                      <h4 className="font-medium">{getProviderName(method.provider)}</h4>
+                      <h4 className="font-medium text-foreground">{getProviderName(method.provider)}</h4>
                       {method.isDefault && (
-                        <Badge variant="default" className="bg-blue-600">
+                        <Badge variant="default" className="bg-blue-600 dark:bg-blue-700">
                           <Star className="h-3 w-3 mr-1" />
                           Défaut
                         </Badge>
                       )}
                     </div>
-                    <p className="text-sm text-gray-600">{getMethodName(method.type)}</p>
+                    <p className="text-sm text-muted-foreground">{getMethodName(method.type)}</p>
                     {method.last4 && (
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-muted-foreground">
                         {method.type === 'credit_card' ? `**** **** **** ${method.last4}` : `**** ${method.last4}`}
                       </p>
                     )}
                     {method.type === 'credit_card' && method.expiryMonth && method.expiryYear && (
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-muted-foreground">
                         Expire: {method.expiryMonth.toString().padStart(2, '0')}/{method.expiryYear.toString().slice(-2)}
                       </p>
                     )}
@@ -222,11 +222,11 @@ export const PaymentMethodsManager: React.FC<PaymentMethodsManagerProps> = ({ us
       {paymentMethods?.length === 0 && (
         <Card>
           <CardContent className="p-12 text-center">
-            <CreditCard className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
+            <CreditCard className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-foreground mb-2">
               Aucune méthode de paiement
             </h3>
-            <p className="text-gray-600 mb-4">
+            <p className="text-muted-foreground mb-4">
               Ajoutez une méthode de paiement pour faciliter vos transactions futures
             </p>
             <Button onClick={() => setIsAddingMethod(true)}>
@@ -304,7 +304,7 @@ const PaymentMethodForm: React.FC<PaymentMethodFormProps> = ({ method, onSubmit,
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-foreground mb-2">
           Type de paiement
         </label>
         <select
@@ -314,7 +314,7 @@ const PaymentMethodForm: React.FC<PaymentMethodFormProps> = ({ method, onSubmit,
             type: e.target.value as PaymentMethod['type'],
             provider: getProviders(e.target.value)[0]?.value || ''
           }))}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-3 py-2 border border-input bg-background rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
           disabled={isLoading}
         >
           <option value="mobile_money">Mobile Money</option>
@@ -324,13 +324,13 @@ const PaymentMethodForm: React.FC<PaymentMethodFormProps> = ({ method, onSubmit,
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-foreground mb-2">
           Fournisseur
         </label>
         <select
           value={formData.provider}
           onChange={(e) => setFormData(prev => ({ ...prev, provider: e.target.value }))}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-3 py-2 border border-input bg-background rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
           disabled={isLoading}
         >
           {getProviders(formData.type).map(provider => (
@@ -342,7 +342,7 @@ const PaymentMethodForm: React.FC<PaymentMethodFormProps> = ({ method, onSubmit,
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-foreground mb-2">
           {formData.type === 'credit_card' ? 'Numéro de carte' : 'Numéro de téléphone'}
         </label>
         <input
@@ -350,7 +350,7 @@ const PaymentMethodForm: React.FC<PaymentMethodFormProps> = ({ method, onSubmit,
           value={formData.last4}
           onChange={(e) => setFormData(prev => ({ ...prev, last4: e.target.value }))}
           placeholder={formData.type === 'credit_card' ? '**** **** **** 4242' : '07 12 34 56 78'}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-3 py-2 border border-input bg-background rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
           disabled={isLoading}
         />
       </div>
@@ -358,13 +358,13 @@ const PaymentMethodForm: React.FC<PaymentMethodFormProps> = ({ method, onSubmit,
       {formData.type === 'credit_card' && (
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-foreground mb-2">
               Mois d'expiration
             </label>
             <select
               value={formData.expiryMonth}
               onChange={(e) => setFormData(prev => ({ ...prev, expiryMonth: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-input bg-background rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
               disabled={isLoading}
             >
               <option value="">Mois</option>
@@ -376,13 +376,13 @@ const PaymentMethodForm: React.FC<PaymentMethodFormProps> = ({ method, onSubmit,
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-foreground mb-2">
               Année d'expiration
             </label>
             <select
               value={formData.expiryYear}
               onChange={(e) => setFormData(prev => ({ ...prev, expiryYear: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-input bg-background rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
               disabled={isLoading}
             >
               <option value="">Année</option>
@@ -402,10 +402,10 @@ const PaymentMethodForm: React.FC<PaymentMethodFormProps> = ({ method, onSubmit,
           id="isDefault"
           checked={formData.isDefault}
           onChange={(e) => setFormData(prev => ({ ...prev, isDefault: e.target.checked }))}
-          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+          className="h-4 w-4 text-primary focus:ring-ring border-input rounded"
           disabled={isLoading}
         />
-        <label htmlFor="isDefault" className="text-sm text-gray-700">
+        <label htmlFor="isDefault" className="text-sm text-foreground">
           Définir comme méthode de paiement par défaut
         </label>
       </div>

@@ -99,10 +99,10 @@ export const ComparisonHistoryPage: React.FC = () => {
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <Shield className="h-12 w-12 text-yellow-600 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
+          <h3 className="text-lg font-medium text-foreground mb-2">
             Connexion requise
           </h3>
-          <p className="text-gray-600">
+          <p className="text-muted-foreground">
             Vous devez être connecté pour accéder à l'historique des comparaisons
           </p>
         </div>
@@ -113,8 +113,8 @@ export const ComparisonHistoryPage: React.FC = () => {
   return (
     <div className="p-6">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Historique des comparaisons</h1>
-        <p className="text-gray-600">
+        <h1 className="text-3xl font-bold text-foreground mb-2">Historique des comparaisons</h1>
+        <p className="text-muted-foreground">
           Consultez et gérez toutes vos comparaisons d'assurance
         </p>
       </div>
@@ -126,25 +126,11 @@ export const ComparisonHistoryPage: React.FC = () => {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Total comparaisons</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.totalComparisons}</p>
+                  <p className="text-sm font-medium text-muted-foreground">Total comparaisons</p>
+                  <p className="text-2xl font-bold text-foreground">{stats.totalComparisons}</p>
                 </div>
-                <div className="p-3 bg-blue-100 rounded-lg">
-                  <Car className="h-6 w-6 text-blue-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Offres moyenne</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.averageOffersPerComparison}</p>
-                </div>
-                <div className="p-3 bg-green-100 rounded-lg">
-                  <TrendingUp className="h-6 w-6 text-green-600" />
+                <div className="p-3 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+                  <Car className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                 </div>
               </div>
             </CardContent>
@@ -154,11 +140,11 @@ export const ComparisonHistoryPage: React.FC = () => {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Économie moyenne</p>
-                  <p className="text-2xl font-bold text-gray-900">{formatPrice(stats.averageSavings)}</p>
+                  <p className="text-sm font-medium text-muted-foreground">Offres moyenne</p>
+                  <p className="text-2xl font-bold text-foreground">{stats.averageOffersPerComparison}</p>
                 </div>
-                <div className="p-3 bg-purple-100 rounded-lg">
-                  <DollarSign className="h-6 w-6 text-purple-600" />
+                <div className="p-3 bg-green-100 dark:bg-green-900/20 rounded-lg">
+                  <TrendingUp className="h-6 w-6 text-green-600 dark:text-green-400" />
                 </div>
               </div>
             </CardContent>
@@ -168,11 +154,25 @@ export const ComparisonHistoryPage: React.FC = () => {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Taux de complétion</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.completionRate}%</p>
+                  <p className="text-sm font-medium text-muted-foreground">Économie moyenne</p>
+                  <p className="text-2xl font-bold text-foreground">{formatPrice(stats.averageSavings)}</p>
                 </div>
-                <div className="p-3 bg-orange-100 rounded-lg">
-                  <Clock className="h-6 w-6 text-orange-600" />
+                <div className="p-3 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
+                  <DollarSign className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Taux de complétion</p>
+                  <p className="text-2xl font-bold text-foreground">{stats.completionRate}%</p>
+                </div>
+                <div className="p-3 bg-orange-100 dark:bg-orange-900/20 rounded-lg">
+                  <Clock className="h-6 w-6 text-orange-600 dark:text-orange-400" />
                 </div>
               </div>
             </CardContent>
@@ -186,7 +186,7 @@ export const ComparisonHistoryPage: React.FC = () => {
           <div className="flex flex-col lg:flex-row gap-4">
             <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <Input
                   placeholder="Rechercher une comparaison..."
                   value={searchTerm}
@@ -243,9 +243,9 @@ export const ComparisonHistoryPage: React.FC = () => {
               <Card key={i}>
                 <CardContent className="p-6">
                   <div className="animate-pulse">
-                    <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
-                    <div className="h-4 bg-gray-200 rounded w-2/3 mb-2"></div>
-                    <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                    <div className="h-6 bg-muted rounded w-1/3 mb-4"></div>
+                    <div className="h-4 bg-muted rounded w-2/3 mb-2"></div>
+                    <div className="h-4 bg-muted rounded w-1/2"></div>
                   </div>
                 </CardContent>
               </Card>
@@ -254,11 +254,11 @@ export const ComparisonHistoryPage: React.FC = () => {
         ) : history?.length === 0 ? (
           <Card>
             <CardContent className="p-12 text-center">
-              <Car className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
+              <Car className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-foreground mb-2">
                 Aucune comparaison trouvée
               </h3>
-              <p className="text-gray-600 mb-4">
+              <p className="text-muted-foreground mb-4">
                 Commencez par comparer des offres d'assurance
               </p>
               <Button>
@@ -274,17 +274,17 @@ export const ComparisonHistoryPage: React.FC = () => {
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center space-x-3 mb-2">
-                      <h3 className="text-lg font-semibold text-gray-900">
+                      <h3 className="text-lg font-semibold text-foreground">
                         {comparison.title}
                       </h3>
                       {comparison.isShared && (
-                        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                        <Badge variant="outline" className="bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800">
                           <Share2 className="h-3 w-3 mr-1" />
                           Partagée
                         </Badge>
                       )}
                       {comparison.savedOffers.some(offer => offer.isFavorite) && (
-                        <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+                        <Badge variant="outline" className="bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800">
                           <Heart className="h-3 w-3 mr-1" />
                           Favoris
                         </Badge>
@@ -292,31 +292,31 @@ export const ComparisonHistoryPage: React.FC = () => {
                     </div>
 
                     {comparison.description && (
-                      <p className="text-gray-600 mb-3">{comparison.description}</p>
+                      <p className="text-muted-foreground mb-3">{comparison.description}</p>
                     )}
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                       <div className="flex items-center space-x-2">
-                        <Car className="h-4 w-4 text-gray-400" />
-                        <span className="text-sm text-gray-600">
+                        <Car className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">
                           {comparison.vehicleInfo.make} {comparison.vehicleInfo.model}
                         </span>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <Calendar className="h-4 w-4 text-gray-400" />
-                        <span className="text-sm text-gray-600">
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">
                           {formatDate(comparison.createdAt)}
                         </span>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <Users className="h-4 w-4 text-gray-400" />
-                        <span className="text-sm text-gray-600">
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">
                           {comparison.results.totalOffers} offres
                         </span>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <DollarSign className="h-4 w-4 text-gray-400" />
-                        <span className="text-sm text-gray-600">
+                        <DollarSign className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">
                           {formatPrice(comparison.results.averagePrice)}
                         </span>
                       </div>
@@ -330,7 +330,7 @@ export const ComparisonHistoryPage: React.FC = () => {
                         Budget: {formatPrice(comparison.preferences.budgetRange.min)} - {formatPrice(comparison.preferences.budgetRange.max)}
                       </Badge>
                       {comparison.results.bestOffer && (
-                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                        <Badge variant="outline" className="bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800">
                           Meilleur: {comparison.results.bestOffer.insurer} - {formatPrice(comparison.results.bestOffer.price)}
                         </Badge>
                       )}
@@ -419,22 +419,22 @@ const ComparisonDetailView: React.FC<ComparisonDetailViewProps> = ({ comparison 
         <CardContent>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium text-gray-600">Marque et modèle</label>
-              <p className="text-lg font-semibold">
+              <label className="text-sm font-medium text-muted-foreground">Marque et modèle</label>
+              <p className="text-lg font-semibold text-foreground">
                 {comparison.vehicleInfo.make} {comparison.vehicleInfo.model}
               </p>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-600">Année</label>
-              <p className="text-lg font-semibold">{comparison.vehicleInfo.year}</p>
+              <label className="text-sm font-medium text-muted-foreground">Année</label>
+              <p className="text-lg font-semibold text-foreground">{comparison.vehicleInfo.year}</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-600">Catégorie</label>
-              <p className="text-lg font-semibold">{comparison.vehicleInfo.category}</p>
+              <label className="text-sm font-medium text-muted-foreground">Catégorie</label>
+              <p className="text-lg font-semibold text-foreground">{comparison.vehicleInfo.category}</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-600">Valeur estimée</label>
-              <p className="text-lg font-semibold">{formatPrice(comparison.vehicleInfo.value)}</p>
+              <label className="text-sm font-medium text-muted-foreground">Valeur estimée</label>
+              <p className="text-lg font-semibold text-foreground">{formatPrice(comparison.vehicleInfo.value)}</p>
             </div>
           </div>
         </CardContent>
@@ -448,16 +448,16 @@ const ComparisonDetailView: React.FC<ComparisonDetailViewProps> = ({ comparison 
         <CardContent>
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="text-sm font-medium text-gray-600">Âge</label>
-              <p className="text-lg font-semibold">{comparison.driverInfo.age} ans</p>
+              <label className="text-sm font-medium text-muted-foreground">Âge</label>
+              <p className="text-lg font-semibold text-foreground">{comparison.driverInfo.age} ans</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-600">Années de permis</label>
-              <p className="text-lg font-semibold">{comparison.driverInfo.licenseYears} ans</p>
+              <label className="text-sm font-medium text-muted-foreground">Années de permis</label>
+              <p className="text-lg font-semibold text-foreground">{comparison.driverInfo.licenseYears} ans</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-600">Historique d'accidents</label>
-              <p className="text-lg font-semibold">{comparison.driverInfo.accidentHistory}</p>
+              <label className="text-sm font-medium text-muted-foreground">Historique d'accidents</label>
+              <p className="text-lg font-semibold text-foreground">{comparison.driverInfo.accidentHistory}</p>
             </div>
           </div>
         </CardContent>
@@ -471,22 +471,22 @@ const ComparisonDetailView: React.FC<ComparisonDetailViewProps> = ({ comparison 
         <CardContent>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium text-gray-600">Type de couverture</label>
-              <p className="text-lg font-semibold">{comparison.preferences.coverageType}</p>
+              <label className="text-sm font-medium text-muted-foreground">Type de couverture</label>
+              <p className="text-lg font-semibold text-foreground">{comparison.preferences.coverageType}</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-600">Budget</label>
-              <p className="text-lg font-semibold">
+              <label className="text-sm font-medium text-muted-foreground">Budget</label>
+              <p className="text-lg font-semibold text-foreground">
                 {formatPrice(comparison.preferences.budgetRange.min)} - {formatPrice(comparison.preferences.budgetRange.max)}
               </p>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-600">Franchise</label>
-              <p className="text-lg font-semibold">{formatPrice(comparison.preferences.deductible)}</p>
+              <label className="text-sm font-medium text-muted-foreground">Franchise</label>
+              <p className="text-lg font-semibold text-foreground">{formatPrice(comparison.preferences.deductible)}</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-600">Options supplémentaires</label>
-              <p className="text-lg font-semibold">
+              <label className="text-sm font-medium text-muted-foreground">Options supplémentaires</label>
+              <p className="text-lg font-semibold text-foreground">
                 {comparison.preferences.additionalOptions.join(', ') || 'Aucune'}
               </p>
             </div>
@@ -502,20 +502,20 @@ const ComparisonDetailView: React.FC<ComparisonDetailViewProps> = ({ comparison 
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="text-center">
-              <p className="text-2xl font-bold text-blue-600">{comparison.results.totalOffers}</p>
-              <p className="text-sm text-gray-600">Offres reçues</p>
+              <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{comparison.results.totalOffers}</p>
+              <p className="text-sm text-muted-foreground">Offres reçues</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-green-600">{formatPrice(comparison.results.priceRange.min)}</p>
-              <p className="text-sm text-gray-600">Prix minimum</p>
+              <p className="text-2xl font-bold text-green-600 dark:text-green-400">{formatPrice(comparison.results.priceRange.min)}</p>
+              <p className="text-sm text-muted-foreground">Prix minimum</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-red-600">{formatPrice(comparison.results.priceRange.max)}</p>
-              <p className="text-sm text-gray-600">Prix maximum</p>
+              <p className="text-2xl font-bold text-red-600 dark:text-red-400">{formatPrice(comparison.results.priceRange.max)}</p>
+              <p className="text-sm text-muted-foreground">Prix maximum</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-purple-600">{formatPrice(comparison.results.averagePrice)}</p>
-              <p className="text-sm text-gray-600">Prix moyen</p>
+              <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{formatPrice(comparison.results.averagePrice)}</p>
+              <p className="text-sm text-muted-foreground">Prix moyen</p>
             </div>
           </div>
         </CardContent>
@@ -532,7 +532,7 @@ const ComparisonDetailView: React.FC<ComparisonDetailViewProps> = ({ comparison 
               {comparison.savedOffers.map((offer) => (
                 <div key={offer.id} className="border rounded-lg p-4">
                   <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-semibold text-lg">{offer.insurer}</h4>
+                    <h4 className="font-semibold text-lg text-foreground">{offer.insurer}</h4>
                     <div className="flex items-center space-x-2">
                       {offer.isFavorite && <Star className="h-4 w-4 text-yellow-500 fill-current" />}
                       {offer.selected && <Badge variant="default">Sélectionnée</Badge>}
@@ -540,25 +540,25 @@ const ComparisonDetailView: React.FC<ComparisonDetailViewProps> = ({ comparison 
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div>
-                      <label className="text-sm font-medium text-gray-600">Prix</label>
-                      <p className="font-semibold">{formatPrice(offer.price)}</p>
+                      <label className="text-sm font-medium text-muted-foreground">Prix</label>
+                      <p className="font-semibold text-foreground">{formatPrice(offer.price)}</p>
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-gray-600">Couverture</label>
-                      <p className="font-semibold">{offer.coverage}</p>
+                      <label className="text-sm font-medium text-muted-foreground">Couverture</label>
+                      <p className="font-semibold text-foreground">{offer.coverage}</p>
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-gray-600">Franchise</label>
-                      <p className="font-semibold">{formatPrice(offer.deductible)}</p>
+                      <label className="text-sm font-medium text-muted-foreground">Franchise</label>
+                      <p className="font-semibold text-foreground">{formatPrice(offer.deductible)}</p>
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-gray-600">Sauvegardé le</label>
-                      <p className="font-semibold">{formatDate(offer.savedAt)}</p>
+                      <label className="text-sm font-medium text-muted-foreground">Sauvegardé le</label>
+                      <p className="font-semibold text-foreground">{formatDate(offer.savedAt)}</p>
                     </div>
                   </div>
                   {offer.additionalBenefits.length > 0 && (
                     <div className="mt-3">
-                      <label className="text-sm font-medium text-gray-600">Avantages inclus</label>
+                      <label className="text-sm font-medium text-muted-foreground">Avantages inclus</label>
                       <div className="flex flex-wrap gap-2 mt-1">
                         {offer.additionalBenefits.map((benefit, index) => (
                           <Badge key={index} variant="outline">{benefit}</Badge>
@@ -568,8 +568,8 @@ const ComparisonDetailView: React.FC<ComparisonDetailViewProps> = ({ comparison 
                   )}
                   {offer.notes && (
                     <div className="mt-3">
-                      <label className="text-sm font-medium text-gray-600">Notes</label>
-                      <p className="text-sm text-gray-700 mt-1">{offer.notes}</p>
+                      <label className="text-sm font-medium text-muted-foreground">Notes</label>
+                      <p className="text-sm text-muted-foreground mt-1">{offer.notes}</p>
                     </div>
                   )}
                 </div>
@@ -580,14 +580,14 @@ const ComparisonDetailView: React.FC<ComparisonDetailViewProps> = ({ comparison 
       )}
 
       {/* Comparison Details */}
-      <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
+      <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
         <div>
-          <label className="font-medium">Date de création</label>
-          <p>{formatDate(comparison.createdAt)}</p>
+          <label className="font-medium text-foreground">Date de création</label>
+          <p className="text-foreground">{formatDate(comparison.createdAt)}</p>
         </div>
         <div>
-          <label className="font-medium">Dernière mise à jour</label>
-          <p>{formatDate(comparison.updatedAt)}</p>
+          <label className="font-medium text-foreground">Dernière mise à jour</label>
+          <p className="text-foreground">{formatDate(comparison.updatedAt)}</p>
         </div>
       </div>
     </div>

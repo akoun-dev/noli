@@ -28,6 +28,8 @@ npm run lint
 npm run preview
 ```
 
+Note: The project currently does not have dedicated test commands configured. Testing infrastructure should be added as the project grows.
+
 ## Technology Stack
 
 - **Frontend**: React 18.3.1 with TypeScript 5.8.3
@@ -48,13 +50,16 @@ The application follows a feature-based structure where each business domain is 
 ```
 src/features/
 ├── auth/           # Authentication (login, register)
-├── comparison/     # Insurance comparison flow
-├── offers/         # Offer management
+├── comparison/     # Insurance comparison flow and history
+├── offers/         # Offer management and display
 ├── user/           # User-specific features (profile, quotes, policies)
-├── insurers/       # Insurer functionality
-├── admin/          # Admin functionality
+├── insurers/       # Insurer functionality and analytics
+├── admin/          # Admin functionality with enterprise features
 ├── notifications/  # Notification system
 ├── payments/       # Payment processing
+├── tarification/   # Insurance pricing and guarantee management
+├── chat/           # Chat functionality
+├── quotes/         # Quote management and PDF generation
 └── reporting/      # Analytics and reporting
 ```
 
@@ -111,14 +116,19 @@ The insurance comparison follows a structured 3-step process:
 - `src/features/auth/`: Authentication pages and services
 
 ### Core Features
-- `src/features/comparison/`: Multi-step insurance comparison flow
+- `src/features/comparison/`: Multi-step insurance comparison flow and history tracking
 - `src/features/offers/`: Offer management and display
-- `src/features/user/`: User dashboard, quotes, policies, profile
-- `src/features/insurers/`: Insurer dashboard and management
+- `src/features/user/`: User dashboard, quotes, policies, profile, and notifications
+- `src/features/insurers/`: Insurer dashboard, client management, analytics, and communication
 - `src/features/admin/`: Admin dashboard and system management
   - **Audit Logs**: Complete activity tracking with filtering and export capabilities
   - **Role Management**: Advanced RBAC with granular permissions across 12 categories
   - **Backup & Restore**: Automated backup system with scheduling and selective restoration
+- `src/features/tarification/`: Insurance pricing engine and guarantee management
+- `src/features/chat/`: Chat functionality for user communication
+- `src/features/quotes/`: Quote management with PDF generation capabilities
+- `src/features/payments/`: Payment processing and transaction management
+- `src/features/notifications/`: Multi-channel notification system
 
 ### Types & Validation
 - `src/types/`: TypeScript type definitions including admin types (audit logs, roles, backups)
@@ -178,15 +188,21 @@ The project currently uses mock data for development:
 ## Configuration Files
 
 ### Vite Configuration (`vite.config.ts`)
-- Development server on port 8080
+- Development server on port 8080 with host binding to `::`
 - Path aliases for clean imports (`@/` → `./src/`)
-- SWC plugin for fast compilation
-- Component tagger for development
+- SWC plugin for fast React compilation
+- Component tagger for development (enabled only in development mode)
+- Environment-based plugin loading
 
-### TypeScript Configuration
+### TypeScript Configuration (`tsconfig.json`)
 - Multi-project setup with app and node configurations
-- Relaxed strict settings for development flexibility
-- Path mapping for import aliases
+- Relaxed strict settings for development flexibility:
+  - `noImplicitAny: false` for gradual typing adoption
+  - `strictNullChecks: false` for easier development
+  - `noUnusedLocals: false` and `noUnusedParameters: false`
+  - `skipLibCheck: true` for faster compilation
+- Path mapping for import aliases (`@/*` → `./src/*`)
+- `allowJs: true` for JavaScript interoperability
 
 ### ESLint Configuration
 - TypeScript support with React hooks rules
@@ -227,6 +243,20 @@ The project is set up for development but currently lacks dedicated test configu
 4. Use TypeScript interfaces for API responses
 5. Mock data patterns are established in `src/features/*/services/*.ts` files
 
+**Current Service Architecture:**
+The application contains 18 specialized service files across features:
+- `src/features/admin/services/`: userService.ts, analyticsService.ts, roleService.ts, backupService.ts, auditService.ts
+- `src/features/comparison/services/`: comparisonHistoryService.ts
+- `src/features/insurers/services/`: clientCommunicationService.ts, insurerAnalyticsService.ts, insurerAlertService.ts
+- `src/features/payments/services/`: paymentService.ts
+- `src/features/quotes/services/`: pdfService.ts
+- `src/features/tarification/services/`: guaranteeService.ts, pricingService.ts
+- `src/features/chat/services/`: chatService.ts
+- `src/features/notifications/services/`: notificationService.ts
+- `src/features/user/services/`: quoteService.ts, notificationService.ts
+
+All services follow consistent patterns with mock implementations, comprehensive TypeScript interfaces, and simulated real backend behavior.
+
 ### Admin Features Development
 1. Follow established patterns in `src/features/admin/services/` for new admin functionality
 2. Use comprehensive TypeScript interfaces from `src/types/admin.d.ts`
@@ -246,8 +276,11 @@ The project is set up for development but currently lacks dedicated test configu
 The project uses Lovable for development with Git integration:
 - **Local Development**: `npm run dev` starts Vite dev server on port 8080
 - **Lovable Integration**: Changes via Lovable are auto-committed to the repo
+  - Project URL: https://lovable.dev/projects/7636aede-d87c-44de-a0b3-bfb1e99b67b8
 - **IDE Support**: Full local development with TypeScript and hot reload
-- **Deployment**: Available through Lovable's publishing system
+- **Deployment**: Available through Lovable's publishing system (Share -> Publish)
+- **Custom Domains**: Supported through Lovable's domain management
+- **Git Workflow**: Changes can be made via Lovable, local IDE, or GitHub Codespaces
 
 ## Areas for Enhancement
 

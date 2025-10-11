@@ -83,100 +83,61 @@ export const UserQuotesPage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Mes Devis</h1>
-          <p className="text-muted-foreground">Suivez toutes vos demandes d'assurance en un seul lieu</p>
+          <h1 className="text-xl sm:text-2xl font-bold">Mes Devis</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">Suivez toutes vos demandes d'assurance en un seul lieu</p>
         </div>
         <Button
           onClick={() => window.location.href = '/comparer'}
-          className="flex items-center gap-2"
+          className="flex items-center gap-2 w-full sm:w-auto"
         >
           <Plus className="h-4 w-4" />
-          Nouveau devis
+          <span className="hidden sm:inline">Nouveau devis</span>
+          <span className="sm:hidden">Comparer</span>
         </Button>
       </div>
 
       {/* Statistics Cards */}
       {!statsLoading && stats && (
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-4">
-                <FileText className="h-8 w-8 text-blue-600" />
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+          {[
+          { icon: FileText, color: 'text-blue-600', label: 'Total', value: stats.totalQuotes },
+          { icon: Clock, color: 'text-yellow-600', label: 'En attente', value: stats.pendingQuotes },
+          { icon: CheckCircle, color: 'text-green-600', label: 'Approuvés', value: stats.approvedQuotes },
+          { icon: XCircle, color: 'text-red-600', label: 'Rejetés', value: stats.rejectedQuotes },
+          { icon: TrendingUp, color: 'text-purple-600', label: 'Temps moyen', value: `${stats.averageProcessingTime.toFixed(1)}j` }
+        ].map((stat, index) => (
+          <Card key={index}>
+            <CardContent className="p-3 sm:p-4 lg:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-center gap-2 sm:gap-4 text-center sm:text-left">
+                <stat.icon className={`h-6 w-6 sm:h-8 sm:w-8 ${stat.color} flex-shrink-0 mx-auto sm:mx-0`} />
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Total</p>
-                  <p className="text-2xl font-bold">{stats.totalQuotes}</p>
+                  <p className="text-xs sm:text-sm font-medium text-muted-foreground">{stat.label}</p>
+                  <p className="text-lg sm:text-xl lg:text-2xl font-bold">{stat.value}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-4">
-                <Clock className="h-8 w-8 text-yellow-600" />
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">En attente</p>
-                  <p className="text-2xl font-bold">{stats.pendingQuotes}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-4">
-                <CheckCircle className="h-8 w-8 text-green-600" />
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Approuvés</p>
-                  <p className="text-2xl font-bold">{stats.approvedQuotes}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-4">
-                <XCircle className="h-8 w-8 text-red-600" />
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Rejetés</p>
-                  <p className="text-2xl font-bold">{stats.rejectedQuotes}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-4">
-                <TrendingUp className="h-8 w-8 text-purple-600" />
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Temps moyen</p>
-                  <p className="text-2xl font-bold">{stats.averageProcessingTime.toFixed(1)}j</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        ))}
         </div>
       )}
 
       {/* Filters and Sort */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Liste des devis</CardTitle>
-            <div className="flex items-center space-x-2">
+        <CardHeader className="pb-3 sm:pb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+            <CardTitle className="text-lg sm:text-xl">Liste des devis</CardTitle>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
               <QuoteFilters
                 filters={filters}
                 onFiltersChange={setFilters}
                 onClearFilters={handleClearFilters}
               />
               <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-40">
+                <SelectTrigger className="w-full sm:w-40">
                   <SelectValue placeholder="Trier par" />
                 </SelectTrigger>
                 <SelectContent>
@@ -192,38 +153,38 @@ export const UserQuotesPage: React.FC = () => {
         <CardContent>
           {/* Quotes List */}
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
               <div className="flex items-center gap-2">
                 <h3 className="text-lg font-semibold">Vos Devis</h3>
-                <Badge variant="outline">
+                <Badge variant="outline" className="text-xs sm:text-sm">
                   {isLoading ? 'Chargement...' : `${sortedQuotes.length} devis`}
                 </Badge>
               </div>
               {sortedQuotes.length > 0 && (
-                <Badge variant="secondary">
+                <Badge variant="secondary" className="text-xs sm:text-sm">
                   {sortedQuotes.filter(q => q.status === 'pending').length} en attente
                 </Badge>
               )}
             </div>
 
             {isLoading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 {[...Array(6)].map((_, i) => (
                   <Card key={i} className="animate-pulse">
-                    <CardHeader>
-                      <div className="h-6 bg-gray-200 rounded w-3/4"></div>
-                      <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                    <CardHeader className="pb-2 sm:pb-4">
+                      <div className="h-4 sm:h-6 bg-gray-200 rounded w-3/4"></div>
+                      <div className="h-3 sm:h-4 bg-gray-200 rounded w-1/2"></div>
                     </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="h-16 bg-gray-200 rounded"></div>
-                      <div className="h-12 bg-gray-200 rounded"></div>
-                      <div className="h-10 bg-gray-200 rounded"></div>
+                    <CardContent className="space-y-3 sm:space-y-4">
+                      <div className="h-12 sm:h-16 bg-gray-200 rounded"></div>
+                      <div className="h-8 sm:h-12 bg-gray-200 rounded"></div>
+                      <div className="h-8 sm:h-10 bg-gray-200 rounded"></div>
                     </CardContent>
                   </Card>
                 ))}
               </div>
             ) : sortedQuotes.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 {sortedQuotes.map((quote) => (
                   <QuoteCard
                     key={quote.id}
@@ -234,9 +195,9 @@ export const UserQuotesPage: React.FC = () => {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8">
-                <Car className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500">
+              <div className="text-center py-6 sm:py-8">
+                <Car className="h-10 w-10 sm:h-12 sm:w-12 text-gray-400 mx-auto mb-3 sm:mb-4" />
+                <p className="text-gray-500 text-sm sm:text-base">
                   {Object.keys(filters).length > 0
                     ? 'Aucun devis ne correspond à vos critères de recherche'
                     : 'Commencez votre comparaison d\'assurance'
