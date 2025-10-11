@@ -124,6 +124,277 @@ All colors MUST be HSL.
   }
 }
 
+/* Media queries personnalisées pour une approche mobile-first */
+@layer utilities {
+  /* Amélioration de l'accessibilité sur mobile */
+  .mobile-touch-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
+  
+  .mobile-text {
+    @apply text-sm;
+  }
+  
+  .mobile-padding {
+    @apply px-4 py-3;
+  }
+  
+  .mobile-margin {
+    @apply mx-4 my-2;
+  }
+  
+  /* Grilles flexibles pour tous les écrans */
+  .responsive-grid {
+    @apply grid grid-cols-1 gap-4;
+  }
+  
+  .responsive-grid-sm {
+    @apply grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4;
+  }
+  
+  .responsive-grid-md {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4;
+  }
+  
+  .responsive-grid-lg {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4;
+  }
+  
+  /* Conteneurs responsifs */
+  .responsive-container {
+    @apply w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+  
+  .responsive-container-sm {
+    @apply w-full max-w-2xl mx-auto px-4 sm:px-6;
+  }
+  
+  /* Images responsives */
+  .responsive-img {
+    @apply w-full h-auto object-cover;
+  }
+  
+  .responsive-img-contain {
+    @apply w-full h-auto object-contain;
+  }
+  
+  /* Textes responsifs */
+  .responsive-text-xs {
+    @apply text-xs sm:text-sm;
+  }
+  
+  .responsive-text-sm {
+    @apply text-sm sm:text-base;
+  }
+  
+  .responsive-text-base {
+    @apply text-base sm:text-lg;
+  }
+  
+  .responsive-text-lg {
+    @apply text-lg sm:text-xl lg:text-2xl;
+  }
+  
+  .responsive-text-xl {
+    @apply text-xl sm:text-2xl lg:text-3xl;
+  }
+  
+  /* Espacements responsifs */
+  .responsive-spacing-y {
+    @apply space-y-2 sm:space-y-4 lg:space-y-6;
+  }
+  
+  .responsive-spacing-x {
+    @apply space-x-2 sm:space-x-4 lg:space-x-6;
+  }
+  
+  /* Boutons responsifs */
+  .responsive-btn-sm {
+    @apply px-3 py-2 text-xs sm:text-sm h-8 sm:h-10;
+  }
+  
+  .responsive-btn {
+    @apply px-4 py-2 text-sm sm:text-base h-10 sm:h-12;
+  }
+  
+  .responsive-btn-lg {
+    @apply px-6 py-3 text-base sm:text-lg h-12 sm:h-14;
+  }
+  
+  /* Cartes responsives */
+  .responsive-card {
+    @apply p-4 sm:p-6 rounded-lg shadow-sm;
+  }
+  
+  .responsive-card-sm {
+    @apply p-3 sm:p-4 rounded-md shadow-sm;
+  }
+  
+  /* Formulaires responsifs */
+  .responsive-form {
+    @apply space-y-4 sm:space-y-6;
+  }
+  
+  .responsive-form-group {
+    @apply space-y-2 sm:space-y-3;
+  }
+  
+  /* Navigation responsive */
+  .responsive-nav {
+    @apply flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4;
+  }
+  
+  /* Tables responsives - wrapper pour le défilement horizontal */
+  .responsive-table-wrapper {
+    @apply overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0;
+  }
+  
+  /* Modales responsives */
+  .responsive-modal {
+    @apply w-full max-w-md sm:max-w-lg mx-4 sm:mx-auto;
+  }
+  
+  .responsive-modal-lg {
+    @apply w-full max-w-lg sm:max-w-2xl mx-4 sm:mx-auto;
+  }
+  
+  /* Statistiques responsives */
+  .responsive-stats-grid {
+    @apply grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4;
+  }
+  
+  /* Listes responsives */
+  .responsive-list {
+    @apply space-y-3 sm:space-y-4;
+  }
+  
+  /* En-têtes responsifs */
+  .responsive-header {
+    @apply flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4;
+  }
+  
+  /* Badges responsifs */
+  .responsive-badge {
+    @apply text-xs px-2 py-1;
+  }
+  
+  /* Actions responsives */
+  .responsive-actions {
+    @apply flex flex-col sm:flex-row gap-2 sm:gap-3;
+  }
+  
+  /* Filtres responsifs */
+  .responsive-filters {
+    @apply flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4;
+  }
+  
+  /* Onglets responsifs */
+  .responsive-tabs {
+    @apply flex flex-col sm:flex-row overflow-x-auto;
+  }
+  
+  .responsive-tab {
+    @apply px-3 py-2 text-xs sm:text-sm whitespace-nowrap;
+  }
+  
+  /* Alertes responsives */
+  .responsive-alert {
+    @apply p-3 sm:p-4 text-sm;
+  }
+  
+  /* Footer responsive */
+  .responsive-footer {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8;
+  }
+}
+
+/* Media queries spécifiques pour l'orientation */
+@media screen and (orientation: portrait) {
+  .orientation-portrait {
+    @apply block;
+  }
+  
+  .orientation-landscape {
+    @apply hidden;
+  }
+}
+
+@media screen and (orientation: landscape) {
+  .orientation-portrait {
+    @apply hidden;
+  }
+  
+  .orientation-landscape {
+    @apply block;
+  }
+}
+
+/* Media queries pour les très petits écrans */
+@media screen and (max-width: 380px) {
+  .tiny-screen-hidden {
+    @apply hidden;
+  }
+  
+  .tiny-screen-text {
+    @apply text-xs;
+  }
+  
+  .tiny-screen-padding {
+    @apply px-2 py-1;
+  }
+}
+
+/* Media queries pour les très grands écrans */
+@media screen and (min-width: 1920px) {
+  .ultra-wide-container {
+    @apply max-w-screen-2xl mx-auto;
+  }
+  
+  .ultra-wide-text {
+    @apply text-lg;
+  }
+  
+  .ultra-wide-spacing {
+    @apply space-y-8;
+  }
+}
+
+/* Amélioration de l'accessibilité pour les appareils tactiles */
+@media (hover: none) and (pointer: coarse) {
+  .touch-friendly {
+    @apply min-h-[44px] min-w-[44px];
+  }
+  
+  .touch-target {
+    @apply p-2;
+  }
+  
+  /* Augmenter la taille des cibles tactiles */
+  button, a, input, select, textarea {
+    @apply min-h-[44px];
+  }
+}
+
+/* Prise en charge du mode sombre avec préférence système */
+@media (prefers-color-scheme: dark) {
+  .auto-dark {
+    @apply dark;
+  }
+}
+
+/* Prise en charge des animations réduites */
+@media (prefers-reduced-motion: reduce) {
+  .reduce-motion {
+    @apply transition-none duration-0;
+  }
+  
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 @keyframes fade-in {
   0% {
     opacity: 0;

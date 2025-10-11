@@ -71,50 +71,50 @@ export const UserNotificationsPage: React.FC = () => {
   };
 
   const NotificationStatsCards = () => (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       <Card>
-        <CardContent className="p-6">
-          <div className="flex items-center space-x-4">
-            <Mail className="h-8 w-8 text-blue-600" />
+        <CardContent className="p-4 sm:p-6">
+          <div className="flex items-center space-x-3 sm:space-x-4">
+            <Mail className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600" />
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Email</p>
-              <p className="text-2xl font-bold">{channelStats.email}</p>
+              <p className="text-xs sm:text-sm font-medium text-muted-foreground">Email</p>
+              <p className="text-xl sm:text-2xl font-bold">{channelStats.email}</p>
             </div>
           </div>
         </CardContent>
       </Card>
 
       <Card>
-        <CardContent className="p-6">
-          <div className="flex items-center space-x-4">
-            <Bell className="h-8 w-8 text-green-600" />
+        <CardContent className="p-4 sm:p-6">
+          <div className="flex items-center space-x-3 sm:space-x-4">
+            <Bell className="h-6 w-6 sm:h-8 sm:w-8 text-green-600" />
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Push</p>
-              <p className="text-2xl font-bold">{channelStats.push}</p>
+              <p className="text-xs sm:text-sm font-medium text-muted-foreground">Push</p>
+              <p className="text-xl sm:text-2xl font-bold">{channelStats.push}</p>
             </div>
           </div>
         </CardContent>
       </Card>
 
       <Card>
-        <CardContent className="p-6">
-          <div className="flex items-center space-x-4">
-            <MessageCircle className="h-8 w-8 text-emerald-600" />
+        <CardContent className="p-4 sm:p-6">
+          <div className="flex items-center space-x-3 sm:space-x-4">
+            <MessageCircle className="h-6 w-6 sm:h-8 sm:w-8 text-emerald-600" />
             <div>
-              <p className="text-sm font-medium text-muted-foreground">WhatsApp</p>
-              <p className="text-2xl font-bold">{channelStats.whatsapp}</p>
+              <p className="text-xs sm:text-sm font-medium text-muted-foreground">WhatsApp</p>
+              <p className="text-xl sm:text-2xl font-bold">{channelStats.whatsapp}</p>
             </div>
           </div>
         </CardContent>
       </Card>
 
       <Card>
-        <CardContent className="p-6">
-          <div className="flex items-center space-x-4">
-            <Inbox className="h-8 w-8 text-purple-600" />
+        <CardContent className="p-4 sm:p-6">
+          <div className="flex items-center space-x-3 sm:space-x-4">
+            <Inbox className="h-6 w-6 sm:h-8 sm:w-8 text-purple-600" />
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Non lues</p>
-              <p className="text-2xl font-bold">{stats?.unread || 0}</p>
+              <p className="text-xs sm:text-sm font-medium text-muted-foreground">Non lues</p>
+              <p className="text-xl sm:text-2xl font-bold">{stats?.unread || 0}</p>
             </div>
           </div>
         </CardContent>
@@ -123,22 +123,23 @@ export const UserNotificationsPage: React.FC = () => {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Centre de Notifications</h1>
-          <p className="text-muted-foreground">Restez informé de toutes vos activités d'assurance</p>
+          <h1 className="text-xl sm:text-2xl font-bold">Centre de Notifications</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">Restez informé de toutes vos activités d'assurance</p>
         </div>
         <div className="flex items-center gap-2">
           {stats?.unread && stats.unread > 0 && (
             <Button
               variant="outline"
               onClick={handleMarkAllAsRead}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 w-full sm:w-auto"
             >
               <Check className="h-4 w-4" />
-              Tout marquer comme lu
+              <span className="hidden sm:inline">Tout marquer comme lu</span>
+              <span className="sm:hidden">Tout lire</span>
             </Button>
           )}
         </div>
@@ -149,12 +150,12 @@ export const UserNotificationsPage: React.FC = () => {
 
       {/* Main Content */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Notifications</CardTitle>
-            <div className="flex items-center space-x-2">
+        <CardHeader className="p-4 sm:p-6">
+          <div className="flex flex-col gap-4">
+            <CardTitle className="text-lg sm:text-xl">Notifications</CardTitle>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
               <Select value={filterCategory} onValueChange={setFilterCategory}>
-                <SelectTrigger className="w-40">
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Catégorie" />
                 </SelectTrigger>
                 <SelectContent>
@@ -167,7 +168,7 @@ export const UserNotificationsPage: React.FC = () => {
               </Select>
 
               <Select value={filterChannel} onValueChange={setFilterChannel}>
-                <SelectTrigger className="w-32">
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Canal" />
                 </SelectTrigger>
                 <SelectContent>
@@ -180,7 +181,7 @@ export const UserNotificationsPage: React.FC = () => {
               </Select>
 
               <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger className="w-32">
+                <SelectTrigger className="w-full sm:col-span-2 lg:col-span-1">
                   <SelectValue placeholder="Statut" />
                 </SelectTrigger>
                 <SelectContent>
@@ -192,21 +193,21 @@ export const UserNotificationsPage: React.FC = () => {
             </div>
           </div>
               </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 sm:p-6">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="notifications" className="flex items-center gap-2">
+        <TabsList className="grid w-full grid-cols-2 h-auto">
+          <TabsTrigger value="notifications" className="flex items-center gap-2 py-3 px-2 sm:px-4">
             <Bell className="h-4 w-4" />
-            Notifications
+            <span className="text-sm sm:text-base">Notifications</span>
             {stats?.unread && stats.unread > 0 && (
-              <Badge variant="destructive" className="ml-2">
+              <Badge variant="destructive" className="ml-2 text-xs">
                 {stats.unread}
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="preferences" className="flex items-center gap-2">
+          <TabsTrigger value="preferences" className="flex items-center gap-2 py-3 px-2 sm:px-4">
             <Settings className="h-4 w-4" />
-            Préférences
+            <span className="text-sm sm:text-base">Préférences</span>
           </TabsTrigger>
         </TabsList>
 
@@ -215,8 +216,8 @@ export const UserNotificationsPage: React.FC = () => {
               {unreadFiltered.length > 0 && (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold">Notifications non lues</h3>
-                    <Badge variant="outline">{unreadFiltered.length}</Badge>
+                    <h3 className="text-lg sm:text-xl font-semibold">Notifications non lues</h3>
+                    <Badge variant="outline" className="text-sm">{unreadFiltered.length}</Badge>
                   </div>
                   <div className="space-y-3">
                     {unreadFiltered.map((notification) => (
@@ -234,17 +235,17 @@ export const UserNotificationsPage: React.FC = () => {
               {/* Read Notifications */}
               <div className="space-y-4 mt-6">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold">Notifications lues</h3>
-                  <Badge variant="outline">{readFiltered.length}</Badge>
+                  <h3 className="text-lg sm:text-xl font-semibold">Notifications lues</h3>
+                  <Badge variant="outline" className="text-sm">{readFiltered.length}</Badge>
                 </div>
 
                 {notificationsLoading ? (
                   <div className="space-y-3">
                     {[...Array(5)].map((_, i) => (
                       <Card key={i} className="animate-pulse">
-                        <CardContent className="p-4">
-                          <div className="h-6 bg-gray-200 rounded w-3/4 mb-2"></div>
-                          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                        <CardContent className="p-3 sm:p-4">
+                          <div className="h-6 bg-muted rounded w-3/4 mb-2"></div>
+                          <div className="h-4 bg-muted rounded w-1/2"></div>
                         </CardContent>
                       </Card>
                     ))}
@@ -262,13 +263,13 @@ export const UserNotificationsPage: React.FC = () => {
                   </div>
                 ) : filterCategory !== 'all' || filterChannel !== 'all' || filterStatus !== 'all' ? (
                   <div className="text-center py-8">
-                    <Search className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-500">Aucune notification trouvée</p>
+                    <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">Aucune notification trouvée</p>
                   </div>
                 ) : (
                   <div className="text-center py-8">
-                    <Bell className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-500">Aucune notification lue pour le moment</p>
+                    <Bell className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">Aucune notification lue pour le moment</p>
                   </div>
                 )}
               </div>
@@ -279,13 +280,13 @@ export const UserNotificationsPage: React.FC = () => {
                 <div className="space-y-4">
                   {[...Array(4)].map((_, i) => (
                     <Card key={i} className="animate-pulse">
-                      <CardHeader>
-                        <div className="h-6 bg-gray-200 rounded w-1/3"></div>
+                      <CardHeader className="p-4 sm:p-6">
+                        <div className="h-6 bg-muted rounded w-1/3"></div>
                       </CardHeader>
-                      <CardContent>
+                      <CardContent className="p-4 sm:p-6">
                         <div className="space-y-3">
                           {[...Array(5)].map((_, j) => (
-                            <div key={j} className="h-16 bg-gray-200 rounded"></div>
+                            <div key={j} className="h-16 bg-muted rounded"></div>
                           ))}
                         </div>
                       </CardContent>
@@ -299,8 +300,8 @@ export const UserNotificationsPage: React.FC = () => {
                 />
               ) : (
                 <div className="text-center py-8">
-                  <Settings className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500">Impossible de charger vos préférences</p>
+                  <Settings className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">Impossible de charger vos préférences</p>
                 </div>
               )}
             </TabsContent>
