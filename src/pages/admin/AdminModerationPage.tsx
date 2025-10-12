@@ -268,17 +268,17 @@ export const AdminModerationPage: React.FC = () => {
       case 'approved':
       case 'published':
       case 'resolved':
-        return <Badge className="bg-green-100 text-green-800">Approuvé</Badge>;
+        return <Badge className="bg-green-100 text-green-800 dark:bg-green-500/20 dark:text-green-400">Approuvé</Badge>;
       case 'pending':
       case 'pending_review':
-        return <Badge className="bg-yellow-100 text-yellow-800">En attente</Badge>;
+        return <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-500/20 dark:text-yellow-400">En attente</Badge>;
       case 'rejected':
       case 'dismissed':
-        return <Badge className="bg-red-100 text-red-800">Rejeté</Badge>;
+        return <Badge className="bg-red-100 text-red-800 dark:bg-red-500/20 dark:text-red-400">Rejeté</Badge>;
       case 'investigating':
-        return <Badge className="bg-blue-100 text-blue-800">En cours</Badge>;
+        return <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400">En cours</Badge>;
       case 'draft':
-        return <Badge className="bg-gray-100 text-gray-800">Brouillon</Badge>;
+        return <Badge className="bg-gray-100 text-gray-800 dark:bg-gray-500/20 dark:text-gray-400">Brouillon</Badge>;
       default:
         return <Badge>{status}</Badge>;
     }
@@ -287,13 +287,13 @@ export const AdminModerationPage: React.FC = () => {
   const getPriorityBadge = (priority: string) => {
     switch (priority) {
       case 'urgent':
-        return <Badge className="bg-red-100 text-red-800">Urgent</Badge>;
+        return <Badge className="bg-red-100 text-red-800 dark:bg-red-500/20 dark:text-red-400">Urgent</Badge>;
       case 'high':
-        return <Badge className="bg-orange-100 text-orange-800">Haute</Badge>;
+        return <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-500/20 dark:text-orange-400">Haute</Badge>;
       case 'medium':
-        return <Badge className="bg-yellow-100 text-yellow-800">Moyenne</Badge>;
+        return <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-500/20 dark:text-yellow-400">Moyenne</Badge>;
       case 'low':
-        return <Badge className="bg-green-100 text-green-800">Basse</Badge>;
+        return <Badge className="bg-green-100 text-green-800 dark:bg-green-500/20 dark:text-green-400">Basse</Badge>;
       default:
         return <Badge>{priority}</Badge>;
     }
@@ -302,13 +302,13 @@ export const AdminModerationPage: React.FC = () => {
   const getSeverityBadge = (severity: string) => {
     switch (severity) {
       case 'critical':
-        return <Badge className="bg-red-100 text-red-800">Critique</Badge>;
+        return <Badge className="bg-red-100 text-red-800 dark:bg-red-500/20 dark:text-red-400">Critique</Badge>;
       case 'error':
-        return <Badge className="bg-red-100 text-red-800">Erreur</Badge>;
+        return <Badge className="bg-red-100 text-red-800 dark:bg-red-500/20 dark:text-red-400">Erreur</Badge>;
       case 'warning':
-        return <Badge className="bg-yellow-100 text-yellow-800">Avertissement</Badge>;
+        return <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-500/20 dark:text-yellow-400">Avertissement</Badge>;
       case 'info':
-        return <Badge className="bg-blue-100 text-blue-800">Info</Badge>;
+        return <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400">Info</Badge>;
       default:
         return <Badge>{severity}</Badge>;
     }
@@ -336,37 +336,37 @@ export const AdminModerationPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">Modération</h1>
-          <p className="text-gray-600">Gestion des avis, signalements et contenus</p>
+          <p className="text-gray-600 dark:text-gray-400">Gestion des avis, signalements et contenus</p>
         </div>
-        <div className="flex space-x-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           <Button variant="outline">
             <Download className="h-4 w-4 mr-2" />
-            Exporter rapports
+            <span className="hidden sm:inline">Exporter rapports</span>
           </Button>
           <Button variant="outline">
             <Settings className="h-4 w-4 mr-2" />
-            Paramètres
+            <span className="hidden sm:inline">Paramètres</span>
           </Button>
         </div>
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Avis en attente</p>
-                <p className="text-2xl font-bold text-yellow-600">24</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Avis en attente</p>
+                <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">24</p>
                 <div className="flex items-center space-x-1">
-                  <TrendingUp className="h-3 w-3 text-red-600" />
-                  <span className="text-xs text-red-600">+15%</span>
+                  <TrendingUp className="h-3 w-3 text-red-600 dark:text-red-400" />
+                  <span className="text-xs text-red-600 dark:text-red-400">+15%</span>
                 </div>
               </div>
-              <MessageSquare className="h-8 w-8 text-yellow-600" />
+              <MessageSquare className="h-8 w-8 text-yellow-600 dark:text-yellow-400" />
             </div>
           </CardContent>
         </Card>
@@ -375,14 +375,14 @@ export const AdminModerationPage: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Signalements</p>
-                <p className="text-2xl font-bold text-red-600">12</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Signalements</p>
+                <p className="text-2xl font-bold text-red-600 dark:text-red-400">12</p>
                 <div className="flex items-center space-x-1">
-                  <TrendingUp className="h-3 w-3 text-red-600" />
-                  <span className="text-xs text-red-600">+8%</span>
+                  <TrendingUp className="h-3 w-3 text-red-600 dark:text-red-400" />
+                  <span className="text-xs text-red-600 dark:text-red-400">+8%</span>
                 </div>
               </div>
-              <Flag className="h-8 w-8 text-red-600" />
+              <Flag className="h-8 w-8 text-red-600 dark:text-red-400" />
             </div>
           </CardContent>
         </Card>
@@ -391,14 +391,14 @@ export const AdminModerationPage: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Contenus à vérifier</p>
-                <p className="text-2xl font-bold text-blue-600">8</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Contenus à vérifier</p>
+                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">8</p>
                 <div className="flex items-center space-x-1">
-                  <TrendingUp className="h-3 w-3 text-blue-600" />
-                  <span className="text-xs text-blue-600">+3</span>
+                  <TrendingUp className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+                  <span className="text-xs text-blue-600 dark:text-blue-400">+3</span>
                 </div>
               </div>
-              <FileText className="h-8 w-8 text-blue-600" />
+              <FileText className="h-8 w-8 text-blue-600 dark:text-blue-400" />
             </div>
           </CardContent>
         </Card>
@@ -407,14 +407,14 @@ export const AdminModerationPage: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Actions aujourd\'hui</p>
-                <p className="text-2xl font-bold text-green-600">45</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Actions aujourd\'hui</p>
+                <p className="text-2xl font-bold text-green-600 dark:text-green-400">45</p>
                 <div className="flex items-center space-x-1">
-                  <TrendingUp className="h-3 w-3 text-green-600" />
-                  <span className="text-xs text-green-600">+12%</span>
+                  <TrendingUp className="h-3 w-3 text-green-600 dark:text-green-400" />
+                  <span className="text-xs text-green-600 dark:text-green-400">+12%</span>
                 </div>
               </div>
-              <CheckCircle className="h-8 w-8 text-green-600" />
+              <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
             </div>
           </CardContent>
         </Card>
@@ -422,31 +422,31 @@ export const AdminModerationPage: React.FC = () => {
 
       {/* Main Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="reviews">Avis clients</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
+          <TabsTrigger value="reviews">Avis</TabsTrigger>
           <TabsTrigger value="reports">Signalements</TabsTrigger>
           <TabsTrigger value="content">Contenus</TabsTrigger>
-          <TabsTrigger value="audit">Audit logs</TabsTrigger>
+          <TabsTrigger value="audit">Audit</TabsTrigger>
         </TabsList>
 
         {/* Reviews Tab */}
         <TabsContent value="reviews" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center justify-between">
+              <CardTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <span>Modération des avis</span>
-                <div className="flex space-x-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 h-4 w-4" />
                     <Input
                       placeholder="Rechercher un avis..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10 w-64"
+                      className="pl-10 w-full sm:w-64"
                     />
                   </div>
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-32">
+                    <SelectTrigger className="w-full sm:w-32">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -465,26 +465,26 @@ export const AdminModerationPage: React.FC = () => {
                   <div key={review.id} className="p-4 border rounded-lg">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-start space-x-3">
-                        <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center font-medium text-blue-600">
+                        <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center font-medium text-blue-600 dark:text-blue-400">
                           {review.user.avatar}
                         </div>
                         <div>
                           <div className="font-medium">{review.user.name}</div>
-                          <div className="text-sm text-gray-500">{review.user.email}</div>
+                          <div className="text-sm text-gray-500 dark:text-gray-400">{review.user.email}</div>
                           <div className="flex items-center space-x-2 mt-1">
                             <div className="flex items-center space-x-1">
                               {renderStars(review.rating)}
                             </div>
-                            <span className="text-sm text-gray-500">•</span>
-                            <span className="text-sm text-gray-500">{review.insurer}</span>
-                            <span className="text-sm text-gray-500">•</span>
-                            <span className="text-sm text-gray-500">{review.createdAt}</span>
+                            <span className="text-sm text-gray-500 dark:text-gray-400">•</span>
+                            <span className="text-sm text-gray-500 dark:text-gray-400">{review.insurer}</span>
+                            <span className="text-sm text-gray-500 dark:text-gray-400">•</span>
+                            <span className="text-sm text-gray-500 dark:text-gray-400">{review.createdAt}</span>
                           </div>
                         </div>
                       </div>
                       <div className="flex items-center space-x-2">
                         {review.flagged && (
-                          <Badge className="bg-red-100 text-red-800">
+                          <Badge className="bg-red-100 text-red-800 dark:bg-red-500/20 dark:text-red-400">
                             <Flag className="h-3 w-3 mr-1" />
                             Signalé
                           </Badge>
@@ -495,7 +495,7 @@ export const AdminModerationPage: React.FC = () => {
 
                     <div className="mb-3">
                       <h4 className="font-medium mb-1">{review.title}</h4>
-                      <p className="text-gray-700">{review.content}</p>
+                      <p className="text-gray-700 dark:text-gray-300">{review.content}</p>
                     </div>
 
                     {review.flagged && review.flaggedReason && (
@@ -508,7 +508,7 @@ export const AdminModerationPage: React.FC = () => {
                     )}
 
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4 text-sm text-gray-500">
+                      <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
                         <div className="flex items-center space-x-1">
                           <ThumbsUp className="h-4 w-4" />
                           <span>{review.helpfulCount} utile</span>
@@ -520,7 +520,7 @@ export const AdminModerationPage: React.FC = () => {
                           </div>
                         )}
                       </div>
-                      <div className="flex space-x-2">
+                      <div className="flex flex-col sm:flex-row gap-2">
                         <Dialog>
                           <DialogTrigger asChild>
                             <Button variant="outline" size="sm">
@@ -566,11 +566,11 @@ export const AdminModerationPage: React.FC = () => {
         <TabsContent value="reports" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center justify-between">
+              <CardTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <span>Signalements à traiter</span>
-                <div className="flex space-x-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                    <SelectTrigger className="w-32">
+                    <SelectTrigger className="w-full sm:w-32">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -592,23 +592,23 @@ export const AdminModerationPage: React.FC = () => {
                       <div className="flex-1">
                         <div className="flex items-center space-x-3 mb-2">
                           <span className="font-medium capitalize">{report.type}</span>
-                          <span className="text-gray-500">•</span>
-                          <span className="text-gray-700">{report.target}</span>
+                          <span className="text-gray-500 dark:text-gray-400">•</span>
+                          <span className="text-gray-700 dark:text-gray-300">{report.target}</span>
                           {getPriorityBadge(report.priority)}
                           {getStatusBadge(report.status)}
                         </div>
-                        <div className="text-sm text-gray-600 mb-2">
+                        <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                           <strong>Raison:</strong> {report.reason}
                         </div>
-                        <p className="text-gray-700 mb-2">{report.description}</p>
-                        <div className="text-xs text-gray-500">
+                        <p className="text-gray-700 dark:text-gray-300 mb-2">{report.description}</p>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
                           Signalé par {report.reporter} • {report.createdAt}
                           {report.assignedTo && ` • Assigné à ${report.assignedTo}`}
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex justify-end space-x-2">
+                    <div className="flex flex-col sm:flex-row sm:justify-end gap-2">
                       <Button variant="outline" size="sm">
                         <Eye className="h-3 w-3 mr-1" />
                         Voir détails
@@ -662,12 +662,12 @@ export const AdminModerationPage: React.FC = () => {
                       <div>
                         <div className="flex items-center space-x-3 mb-2">
                           <span className="font-medium">{item.title}</span>
-                          <Badge className="bg-gray-100 text-gray-800 capitalize">
+                          <Badge className="bg-gray-100 text-gray-800 dark:bg-gray-500/20 dark:text-gray-400 capitalize">
                             {item.type.replace('_', ' ')}
                           </Badge>
                           {getStatusBadge(item.status)}
                         </div>
-                        <div className="text-sm text-gray-600 mb-2">
+                        <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                           Par {item.author} • Modifié le {item.lastModified} • {item.wordCount} mots
                         </div>
                       </div>
@@ -682,7 +682,7 @@ export const AdminModerationPage: React.FC = () => {
                       </Alert>
                     )}
 
-                    <div className="flex justify-end space-x-2">
+                    <div className="flex flex-col sm:flex-row sm:justify-end gap-2">
                       <Button variant="outline" size="sm">
                         <Eye className="h-3 w-3 mr-1" />
                         Aperçu
@@ -714,17 +714,17 @@ export const AdminModerationPage: React.FC = () => {
             <CardContent>
               <div className="space-y-3">
                 {auditLogs.map((log) => (
-                  <div key={log.id} className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-gray-50">
+                  <div key={log.id} className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50">
                     <div className="flex-shrink-0 mt-1">
                       {getSeverityBadge(log.severity)}
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-1">
                         <span className="font-medium">{log.action}</span>
-                        <span className="text-xs text-gray-500">{log.timestamp}</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">{log.timestamp}</span>
                       </div>
-                      <div className="text-sm text-gray-700 mb-1">{log.details}</div>
-                      <div className="text-xs text-gray-500">
+                      <div className="text-sm text-gray-700 dark:text-gray-300 mb-1">{log.details}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
                         Cible: {log.target} • Par {log.user} • IP: {log.ipAddress}
                       </div>
                     </div>
@@ -740,16 +740,16 @@ export const AdminModerationPage: React.FC = () => {
 };
 
 // Review Details Component
-const ReviewDetails: React.FC<{ review: any }> = ({ review }) => {
+const ReviewDetails: React.FC<{ review: Review }> = ({ review }) => {
   return (
     <div className="space-y-4">
       <div className="flex items-center space-x-3">
-        <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center font-medium text-blue-600 text-lg">
+        <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center font-medium text-blue-600 dark:text-blue-400 text-lg">
           {review.user.avatar}
         </div>
         <div>
           <h3 className="font-semibold">{review.user.name}</h3>
-          <p className="text-gray-600">{review.user.email}</p>
+          <p className="text-gray-600 dark:text-gray-400">{review.user.email}</p>
         </div>
       </div>
 
@@ -782,10 +782,10 @@ const ReviewDetails: React.FC<{ review: any }> = ({ review }) => {
 
       <div>
         <h4 className="font-medium mb-1">{review.title}</h4>
-        <p className="text-gray-700">{review.content}</p>
+        <p className="text-gray-700 dark:text-gray-300">{review.content}</p>
       </div>
 
-      <div className="flex items-center space-x-4 text-sm text-gray-600">
+      <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
         <div className="flex items-center space-x-1">
           <ThumbsUp className="h-4 w-4" />
           <span>{review.helpfulCount} personnes ont trouvé cet avis utile</span>

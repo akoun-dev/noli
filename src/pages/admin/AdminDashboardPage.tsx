@@ -36,10 +36,10 @@ export const AdminDashboardPage: React.FC = () => {
   const exportReport = useExportAnalyticsReport();
 
   const platformStats = stats ? [
-    { label: 'Utilisateurs', value: stats.totalUsers.toLocaleString(), change: `+${stats.monthlyGrowth}%`, icon: Users, color: 'text-blue-600' },
-    { label: 'Assureurs', value: stats.totalInsurers.toLocaleString(), change: '+2', icon: Shield, color: 'text-green-600' },
-    { label: 'Devis générés', value: stats.totalQuotes.toLocaleString(), change: '+23%', icon: FileText, color: 'text-purple-600' },
-    { label: 'Taux conversion', value: `${stats.conversionRate}%`, change: '+2.3%', icon: TrendingUp, color: 'text-orange-600' },
+    { label: 'Utilisateurs', value: stats.totalUsers.toLocaleString(), change: `+${stats.monthlyGrowth}%`, icon: Users, color: 'text-blue-600 dark:text-blue-400' },
+    { label: 'Assureurs', value: stats.totalInsurers.toLocaleString(), change: '+2', icon: Shield, color: 'text-green-600 dark:text-green-400' },
+    { label: 'Devis générés', value: stats.totalQuotes.toLocaleString(), change: '+23%', icon: FileText, color: 'text-purple-600 dark:text-purple-400' },
+    { label: 'Taux conversion', value: `${stats.conversionRate}%`, change: '+2.3%', icon: TrendingUp, color: 'text-orange-600 dark:text-orange-400' },
   ] : [];
 
   const recentActivities = activityData ? activityData.slice(-5).map((activity, index) => ({
@@ -59,19 +59,19 @@ export const AdminDashboardPage: React.FC = () => {
   const getPriorityBadge = (priority: string) => {
     switch (priority) {
       case 'high':
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-500/20 dark:text-red-400">
           Urgent
         </span>;
       case 'medium':
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-500/20 dark:text-yellow-400">
           Moyen
         </span>;
       case 'low':
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-500/20 dark:text-green-400">
           Bas
         </span>;
       default:
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-500/20 dark:text-gray-400">
           {priority}
         </span>;
     }
@@ -80,22 +80,22 @@ export const AdminDashboardPage: React.FC = () => {
   const getActivityIcon = (type: string) => {
     switch (type) {
       case 'new_user':
-        return <Users className="h-4 w-4 text-blue-600" />;
+        return <Users className="h-4 w-4 text-blue-600 dark:text-blue-400" />;
       case 'new_quote':
-        return <FileText className="h-4 w-4 text-green-600" />;
+        return <FileText className="h-4 w-4 text-green-600 dark:text-green-400" />;
       case 'new_insurer':
-        return <Shield className="h-4 w-4 text-purple-600" />;
+        return <Shield className="h-4 w-4 text-purple-600 dark:text-purple-400" />;
       case 'approval':
-        return <CheckCircle className="h-4 w-4 text-orange-600" />;
+        return <CheckCircle className="h-4 w-4 text-orange-600 dark:text-orange-400" />;
       default:
-        return <Activity className="h-4 w-4 text-gray-600" />;
+        return <Activity className="h-4 w-4 text-muted-foreground" />;
     }
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full">
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         <Button className="h-20 flex-col" variant="outline">
           <Users className="h-6 w-6 mb-2" />
           Gérer utilisateurs
@@ -152,7 +152,7 @@ export const AdminDashboardPage: React.FC = () => {
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <span>En attente d'approbation</span>
-              <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">3</span>
+              <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full dark:bg-red-600">3</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -164,12 +164,12 @@ export const AdminDashboardPage: React.FC = () => {
                     {getPriorityBadge(item.priority)}
                   </div>
                   <p className="text-xs text-muted-foreground mb-2">Soumis le {item.submitted}</p>
-                  <div className="flex space-x-2">
-                    <Button variant="outline" size="sm">
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Button variant="outline" size="sm" className="w-full sm:w-auto">
                       <Eye className="h-3 w-3 mr-1" />
                       Voir
                     </Button>
-                    <Button size="sm">
+                    <Button size="sm" className="w-full sm:w-auto">
                       <CheckCircle className="h-3 w-3 mr-1" />
                       Approuver
                     </Button>
@@ -184,7 +184,7 @@ export const AdminDashboardPage: React.FC = () => {
       {/* Platform Statistics */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center justify-between">
+          <CardTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <span>Statistiques de la plateforme</span>
             <Button variant="outline" size="sm" onClick={() => exportReport.mutate({ reportType: 'comprehensive' })}>
               <Download className="h-3 w-3 mr-1" />
@@ -193,13 +193,13 @@ export const AdminDashboardPage: React.FC = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {platformStats.map((stat, index) => (
               <div key={index} className="text-center p-4 border rounded-lg">
                 <stat.icon className={`h-8 w-8 mx-auto mb-2 ${stat.color}`} />
                 <p className="text-2xl font-bold text-foreground">{stat.value}</p>
                 <p className="text-sm text-muted-foreground">{stat.label}</p>
-                <p className="text-xs text-green-600">{stat.change}</p>
+                <p className="text-xs text-green-600 dark:text-green-400">{stat.change}</p>
               </div>
             ))}
           </div>
@@ -207,26 +207,26 @@ export const AdminDashboardPage: React.FC = () => {
       </Card>
 
       {/* System Health */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
         {systemHealth && (
           <>
             <Card>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Performance système</p>
-                    <p className="text-2xl font-bold text-green-600">{systemHealth.uptime}%</p>
+                    <p className="text-sm font-medium text-muted-foreground">Performance système</p>
+                    <p className="text-2xl font-bold text-green-600 dark:text-green-400">{systemHealth.uptime}%</p>
                   </div>
-                  <div className="bg-green-100 p-3 rounded-lg">
-                    <Activity className="h-6 w-6 text-green-600" />
+                  <div className="bg-green-100 dark:bg-green-900/20 p-3 rounded-lg">
+                    <Activity className="h-6 w-6 text-green-600 dark:text-green-400" />
                   </div>
                 </div>
                 <div className="mt-4">
-                  <div className="flex justify-between text-xs text-gray-500 mb-1">
+                  <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
                     <span>Temps de réponse</span>
                     <span>{systemHealth.responseTime}ms</span>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                     <div className="bg-green-600 h-2 rounded-full" style={{ width: `${Math.min(100, 100 - (systemHealth.responseTime - 200) / 2)}%` }}></div>
                   </div>
                 </div>
@@ -237,37 +237,37 @@ export const AdminDashboardPage: React.FC = () => {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Base de données</p>
-                    <p className="text-2xl font-bold text-blue-600">Optimale</p>
+                    <p className="text-sm font-medium text-muted-foreground">Base de données</p>
+                    <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">Optimale</p>
                   </div>
-                  <div className="bg-blue-100 p-3 rounded-lg">
-                    <BarChart3 className="h-6 w-6 text-blue-600" />
+                  <div className="bg-blue-100 dark:bg-blue-900/20 p-3 rounded-lg">
+                    <BarChart3 className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                   </div>
                 </div>
                 <div className="mt-4">
-                  <div className="flex justify-between text-xs text-gray-500 mb-1">
+                  <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
                     <span>Stockage utilisé</span>
                     <span>{systemHealth.storageUsage}%</span>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                     <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${systemHealth.storageUsage}%` }}></div>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className={`border-${systemHealth.alerts.length > 0 ? 'orange' : 'green'}-200 bg-${systemHealth.alerts.length > 0 ? 'orange' : 'green'}-50`}>
+            <Card className={`border-${systemHealth.alerts.length > 0 ? 'orange' : 'green'}-200 bg-${systemHealth.alerts.length > 0 ? 'orange' : 'green'}-50 dark:border-${systemHealth.alerts.length > 0 ? 'orange' : 'green'}-800/30 dark:bg-${systemHealth.alerts.length > 0 ? 'orange' : 'green'}-900/20`}>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-orange-800">Alertes système</p>
-                    <p className="text-2xl font-bold text-orange-600">{systemHealth.alerts.length}</p>
+                    <p className="text-sm font-medium text-orange-800 dark:text-orange-400">Alertes système</p>
+                    <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{systemHealth.alerts.length}</p>
                   </div>
-                  <div className="bg-orange-100 p-3 rounded-lg">
-                    <AlertTriangle className="h-6 w-6 text-orange-600" />
+                  <div className="bg-orange-100 dark:bg-orange-900/20 p-3 rounded-lg">
+                    <AlertTriangle className="h-6 w-6 text-orange-600 dark:text-orange-400" />
                   </div>
                 </div>
-                <div className="mt-4 text-xs text-orange-700">
+                <div className="mt-4 text-xs text-orange-700 dark:text-orange-300">
                   {systemHealth.alerts.slice(0, 2).map((alert, index) => (
                     <p key={index}>• {alert}</p>
                   ))}

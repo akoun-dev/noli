@@ -194,16 +194,16 @@ export const AdminDataManagementPage: React.FC = () => {
       case 'completed':
       case 'success':
       case 'passed':
-        return <Badge className="bg-green-100 text-green-800">Terminé</Badge>;
+        return <Badge variant="outline" className="border-green-200 bg-green-50 text-green-800 dark:border-green-500/30 dark:bg-green-500/20 dark:text-green-400">Terminé</Badge>;
       case 'processing':
       case 'pending':
-        return <Badge className="bg-blue-100 text-blue-800">En cours</Badge>;
+        return <Badge variant="outline" className="border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/20 dark:text-blue-400">En cours</Badge>;
       case 'failed':
-        return <Badge className="bg-red-100 text-red-800">Échoué</Badge>;
+        return <Badge variant="outline" className="border-red-200 bg-red-50 text-red-800 dark:border-red-500/30 dark:bg-red-500/20 dark:text-red-400">Échoué</Badge>;
       case 'warning':
-        return <Badge className="bg-yellow-100 text-yellow-800">Avertissement</Badge>;
+        return <Badge variant="outline" className="border-yellow-200 bg-yellow-50 text-yellow-800 dark:border-yellow-500/30 dark:bg-yellow-500/20 dark:text-yellow-400">Avertissement</Badge>;
       default:
-        return <Badge>{status}</Badge>;
+        return <Badge variant="outline">{status}</Badge>;
     }
   };
 
@@ -212,27 +212,27 @@ export const AdminDataManagementPage: React.FC = () => {
       case 'completed':
       case 'success':
       case 'passed':
-        return <CheckCircle className="h-4 w-4 text-green-600" />;
+        return <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />;
       case 'processing':
       case 'pending':
-        return <Clock className="h-4 w-4 text-blue-600" />;
+        return <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />;
       case 'failed':
-        return <XCircle className="h-4 w-4 text-red-600" />;
+        return <XCircle className="h-4 w-4 text-red-600 dark:text-red-400" />;
       case 'warning':
-        return <AlertTriangle className="h-4 w-4 text-yellow-600" />;
+        return <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />;
       default:
-        return <Activity className="h-4 w-4 text-gray-600" />;
+        return <Activity className="h-4 w-4 text-gray-600 dark:text-gray-400" />;
     }
   };
 
   const getTrendIcon = (trend: 'up' | 'down' | 'stable') => {
     switch (trend) {
       case 'up':
-        return <TrendingUp className="h-3 w-3 text-green-600" />;
+        return <TrendingUp className="h-3 w-3 text-green-600 dark:text-green-400" />;
       case 'down':
-        return <TrendingDown className="h-3 w-3 text-red-600" />;
+        return <TrendingDown className="h-3 w-3 text-red-600 dark:text-red-400" />;
       case 'stable':
-        return <Minus className="h-3 w-3 text-gray-600" />;
+        return <Minus className="h-3 w-3 text-gray-600 dark:text-gray-400" />;
     }
   };
 
@@ -260,21 +260,21 @@ export const AdminDataManagementPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Gestion des Données</h1>
-          <p className="text-gray-600">Validation, import/export et contrôle qualité des données</p>
-        </div>
-        <div className="flex space-x-2">
-          <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
-            <DialogTrigger asChild>
-              <Button>
-                <Upload className="h-4 w-4 mr-2" />
-                Importer des données
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
+    {/* Header */}
+    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div>
+        <h1 className="text-2xl font-bold">Gestion des Données</h1>
+        <p className="text-muted-foreground">Validation, import/export et contrôle qualité des données</p>
+      </div>
+      <div className="flex w-full sm:w-auto">
+        <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
+          <DialogTrigger asChild>
+            <Button className="w-full sm:w-auto">
+              <Upload className="h-4 w-4 mr-2" />
+              Importer des données
+            </Button>
+          </DialogTrigger>
+            <DialogContent className="max-w-[95vw] sm:max-w-md">
               <DialogHeader>
                 <DialogTitle>Importer des données</DialogTitle>
               </DialogHeader>
@@ -324,64 +324,64 @@ export const AdminDataManagementPage: React.FC = () => {
       </div>
 
       {/* Data Quality Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Qualité globale</p>
-                <p className="text-2xl font-bold text-green-600">96.8%</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Qualité globale</p>
+                <p className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400">96.8%</p>
                 <div className="flex items-center space-x-1">
                   {getTrendIcon('up')}
-                  <span className="text-xs text-green-600">+2.3%</span>
+                  <span className="text-xs text-green-600 dark:text-green-400">+2.3%</span>
                 </div>
               </div>
-              <CheckCircle className="h-8 w-8 text-green-600" />
+              <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 text-green-600 dark:text-green-400" />
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Erreurs critiques</p>
-                <p className="text-2xl font-bold text-red-600">5</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Erreurs critiques</p>
+                <p className="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400">5</p>
                 <div className="flex items-center space-x-1">
                   {getTrendIcon('down')}
-                  <span className="text-xs text-green-600">-3</span>
+                  <span className="text-xs text-green-600 dark:text-green-400">-3</span>
                 </div>
               </div>
-              <XCircle className="h-8 w-8 text-red-600" />
+              <XCircle className="h-6 w-6 sm:h-8 sm:w-8 text-red-600 dark:text-red-400" />
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Avertissements</p>
-                <p className="text-2xl font-bold text-yellow-600">131</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Avertissements</p>
+                <p className="text-xl sm:text-2xl font-bold text-yellow-600 dark:text-yellow-400">131</p>
                 <div className="flex items-center space-x-1">
                   {getTrendIcon('stable')}
-                  <span className="text-xs text-gray-600">0</span>
+                  <span className="text-xs text-gray-600 dark:text-gray-400">0</span>
                 </div>
               </div>
-              <AlertTriangle className="h-8 w-8 text-yellow-600" />
+              <AlertTriangle className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-600 dark:text-yellow-400" />
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Dernière validation</p>
-                <p className="text-sm font-bold text-blue-600">Il y a 2h</p>
-                <div className="text-xs text-gray-500">20/01/2024 08:00</div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Dernière validation</p>
+                <p className="text-sm font-bold text-blue-600 dark:text-blue-400">Il y a 2h</p>
+                <div className="text-xs text-gray-500 dark:text-gray-400">20/01/2024 08:00</div>
               </div>
-              <RefreshCw className="h-8 w-8 text-blue-600" />
+              <RefreshCw className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600 dark:text-blue-400" />
             </div>
           </CardContent>
         </Card>
@@ -389,21 +389,21 @@ export const AdminDataManagementPage: React.FC = () => {
 
       {/* Main Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="validation">Validation des données</TabsTrigger>
-          <TabsTrigger value="imports">Imports/Exports</TabsTrigger>
-          <TabsTrigger value="history">Historique</TabsTrigger>
-          <TabsTrigger value="quality">Contrôle qualité</TabsTrigger>
+        <TabsList className="grid grid-cols-2 sm:grid-cols-4 w-full">
+          <TabsTrigger value="validation" className="text-xs sm:text-sm">Validation</TabsTrigger>
+          <TabsTrigger value="imports" className="text-xs sm:text-sm">Imports</TabsTrigger>
+          <TabsTrigger value="history" className="text-xs sm:text-sm">Historique</TabsTrigger>
+          <TabsTrigger value="quality" className="text-xs sm:text-sm">Qualité</TabsTrigger>
         </TabsList>
 
         {/* Data Validation Tab */}
         <TabsContent value="validation" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span>Dernières validations</span>
-                  <Button variant="outline" size="sm" onClick={() => runValidation('all')}>
+                <CardTitle className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                  <span className="text-lg">Dernières validations</span>
+                  <Button variant="outline" size="sm" onClick={() => runValidation('all')} className="w-full sm:w-auto">
                     <RefreshCw className="h-3 w-3 mr-1" />
                     Tout valider
                   </Button>
@@ -412,11 +412,11 @@ export const AdminDataManagementPage: React.FC = () => {
               <CardContent>
                 <div className="space-y-4">
                   {dataValidations.map((validation) => (
-                    <div key={validation.id} className="p-4 border rounded-lg">
-                      <div className="flex items-center justify-between mb-3">
+                    <div key={validation.id} className="p-3 sm:p-4 border rounded-lg">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-2">
                         <div className="flex items-center space-x-2">
                           {getStatusIcon(validation.status)}
-                          <span className="font-medium capitalize">{validation.entityType}</span>
+                          <span className="font-medium capitalize text-sm">{validation.entityType}</span>
                           {getStatusBadge(validation.status)}
                         </div>
                         <div className="text-xs text-gray-500">{validation.validationDate}</div>
@@ -448,12 +448,12 @@ export const AdminDataManagementPage: React.FC = () => {
                         )}
                       </div>
 
-                      <div className="mt-3 flex justify-between">
-                        <Button variant="outline" size="sm">
+                      <div className="mt-3 flex flex-col sm:flex-row justify-between gap-2">
+                        <Button variant="outline" size="sm" className="w-full sm:w-auto">
                           <Eye className="h-3 w-3 mr-1" />
                           Voir détails
                         </Button>
-                        <Button variant="outline" size="sm" onClick={() => runValidation(validation.entityType)}>
+                        <Button variant="outline" size="sm" onClick={() => runValidation(validation.entityType)} className="w-full sm:w-auto">
                           <RefreshCw className="h-3 w-3 mr-1" />
                           Relancer
                         </Button>
@@ -470,21 +470,21 @@ export const AdminDataManagementPage: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 gap-4">
-                  <Button variant="outline" className="h-20 flex-col" onClick={() => runValidation('users')}>
-                    <Users className="h-6 w-6 mb-2" />
-                    Valider utilisateurs
+                  <Button variant="outline" className="h-16 sm:h-20 flex-col" onClick={() => runValidation('users')}>
+                    <Users className="h-5 w-5 sm:h-6 sm:w-6 mb-1 sm:mb-2" />
+                    <span className="text-xs sm:text-sm">Valider utilisateurs</span>
                   </Button>
-                  <Button variant="outline" className="h-20 flex-col" onClick={() => runValidation('insurers')}>
-                    <Shield className="h-6 w-6 mb-2" />
-                    Valider assureurs
+                  <Button variant="outline" className="h-16 sm:h-20 flex-col" onClick={() => runValidation('insurers')}>
+                    <Shield className="h-5 w-5 sm:h-6 sm:w-6 mb-1 sm:mb-2" />
+                    <span className="text-xs sm:text-sm">Valider assureurs</span>
                   </Button>
-                  <Button variant="outline" className="h-20 flex-col" onClick={() => runValidation('offers')}>
-                    <FileText className="h-6 w-6 mb-2" />
-                    Valider offres
+                  <Button variant="outline" className="h-16 sm:h-20 flex-col" onClick={() => runValidation('offers')}>
+                    <FileText className="h-5 w-5 sm:h-6 sm:w-6 mb-1 sm:mb-2" />
+                    <span className="text-xs sm:text-sm">Valider offres</span>
                   </Button>
-                  <Button variant="outline" className="h-20 flex-col" onClick={() => exportData('all')}>
-                    <Download className="h-6 w-6 mb-2" />
-                    Exporter tout
+                  <Button variant="outline" className="h-16 sm:h-20 flex-col" onClick={() => exportData('all')}>
+                    <Download className="h-5 w-5 sm:h-6 sm:w-6 mb-1 sm:mb-2" />
+                    <span className="text-xs sm:text-sm">Exporter tout</span>
                   </Button>
                 </div>
               </CardContent>
@@ -501,13 +501,13 @@ export const AdminDataManagementPage: React.FC = () => {
             <CardContent>
               <div className="space-y-4">
                 {importJobs.map((job) => (
-                  <div key={job.id} className="p-4 border rounded-lg">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center space-x-3">
+                  <div key={job.id} className="p-3 sm:p-4 border rounded-lg">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-2">
+                      <div className="flex items-center space-x-2 sm:space-x-3">
                         {getStatusIcon(job.status)}
                         <div>
-                          <div className="font-medium">{job.fileName}</div>
-                          <div className="text-sm text-gray-500 capitalize">{job.type}</div>
+                          <div className="font-medium text-sm">{job.fileName}</div>
+                          <div className="text-xs sm:text-sm text-gray-500 capitalize">{job.type}</div>
                         </div>
                       </div>
                       <div className="flex items-center space-x-2">
@@ -524,17 +524,17 @@ export const AdminDataManagementPage: React.FC = () => {
                       <Progress value={job.progress} className="h-2" />
                     </div>
 
-                    <div className="grid grid-cols-3 gap-4 text-sm">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 text-xs sm:text-sm">
                       <div className="flex items-center space-x-2">
-                        <CheckCircle className="h-4 w-4 text-green-600" />
+                        <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
                         <span>{job.processedRecords} traités</span>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                        <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-600" />
                         <span>{job.warnings} avertissements</span>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <XCircle className="h-4 w-4 text-red-600" />
+                        <XCircle className="h-3 w-3 sm:h-4 sm:w-4 text-red-600" />
                         <span>{job.errors} erreurs</span>
                       </div>
                     </div>
@@ -544,7 +544,7 @@ export const AdminDataManagementPage: React.FC = () => {
                         <AlertTriangle className="h-4 w-4" />
                         <AlertDescription>
                           <div className="font-medium mb-1">Erreurs:</div>
-                          <ul className="text-sm list-disc list-inside">
+                          <ul className="text-xs sm:text-sm list-disc list-inside">
                             {job.errorDetails.map((error, index) => (
                               <li key={index}>{error}</li>
                             ))}
@@ -568,23 +568,23 @@ export const AdminDataManagementPage: React.FC = () => {
             <CardContent>
               <div className="space-y-4">
                 {updateHistory.map((update) => (
-                  <div key={update.id} className="flex items-start space-x-3 p-3 border rounded-lg">
+                  <div key={update.id} className="flex items-start space-x-2 sm:space-x-3 p-3 border rounded-lg">
                     <div className="flex-shrink-0 mt-1">
                       {getStatusIcon(update.status)}
                     </div>
                     <div className="flex-1">
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                         <div>
-                          <span className="font-medium">{update.entity}</span>
+                          <span className="font-medium text-sm">{update.entity}</span>
                           <span className="mx-2">•</span>
-                          <span className="text-sm text-gray-500 capitalize">{update.action}</span>
+                          <span className="text-xs sm:text-sm text-gray-500 capitalize">{update.action}</span>
                         </div>
                         <div className="flex items-center space-x-2">
                           {getStatusBadge(update.status)}
                           <span className="text-xs text-gray-500">{update.timestamp}</span>
                         </div>
                       </div>
-                      <div className="text-sm text-gray-600 mt-1">{update.details}</div>
+                      <div className="text-xs sm:text-sm text-gray-600 mt-1">{update.details}</div>
                       <div className="text-xs text-gray-500 mt-1">Par {update.user}</div>
                     </div>
                   </div>
@@ -596,34 +596,34 @@ export const AdminDataManagementPage: React.FC = () => {
 
         {/* Quality Control Tab */}
         <TabsContent value="quality" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
             <Card>
               <CardHeader>
                 <CardTitle>Indicateurs de qualité</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="p-4 border rounded-lg">
+                  <div className="p-3 sm:p-4 border rounded-lg">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium">Complétude des profils</span>
+                      <span className="font-medium text-sm">Complétude des profils</span>
                       <span className="text-green-600 font-bold">94%</span>
                     </div>
                     <Progress value={94} className="h-2" />
                     <div className="text-xs text-gray-500 mt-1">11,784 profils complets sur 12,543</div>
                   </div>
 
-                  <div className="p-4 border rounded-lg">
+                  <div className="p-3 sm:p-4 border rounded-lg">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium">Validité des emails</span>
+                      <span className="font-medium text-sm">Validité des emails</span>
                       <span className="text-yellow-600 font-bold">98%</span>
                     </div>
                     <Progress value={98} className="h-2" />
                     <div className="text-xs text-gray-500 mt-1">12,292 emails valides sur 12,543</div>
                   </div>
 
-                  <div className="p-4 border rounded-lg">
+                  <div className="p-3 sm:p-4 border rounded-lg">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium">Cohérence des prix</span>
+                      <span className="font-medium text-sm">Cohérence des prix</span>
                       <span className="text-green-600 font-bold">97%</span>
                     </div>
                     <Progress value={97} className="h-2" />
@@ -642,24 +642,24 @@ export const AdminDataManagementPage: React.FC = () => {
                   <Alert>
                     <AlertTriangle className="h-4 w-4" />
                     <AlertDescription>
-                      <div className="font-medium mb-1">Nettoyer les données utilisateurs</div>
-                      <div className="text-sm">54 utilisateurs avec des informations incomplètes</div>
+                      <div className="font-medium mb-1 text-sm">Nettoyer les données utilisateurs</div>
+                      <div className="text-xs sm:text-sm">54 utilisateurs avec des informations incomplètes</div>
                     </AlertDescription>
                   </Alert>
 
                   <Alert>
                     <AlertTriangle className="h-4 w-4" />
                     <AlertDescription>
-                      <div className="font-medium mb-1">Valider les offres</div>
-                      <div className="text-sm">11 offres sans prix nécessitent une correction</div>
+                      <div className="font-medium mb-1 text-sm">Valider les offres</div>
+                      <div className="text-xs sm:text-sm">11 offres sans prix nécessitent une correction</div>
                     </AlertDescription>
                   </Alert>
 
                   <Alert>
                     <CheckCircle className="h-4 w-4" />
                     <AlertDescription>
-                      <div className="font-medium mb-1">Données assureurs valides</div>
-                      <div className="text-sm">Tous les assureurs ont des données complètes et valides</div>
+                      <div className="font-medium mb-1 text-sm">Données assureurs valides</div>
+                      <div className="text-xs sm:text-sm">Tous les assureurs ont des données complètes et valides</div>
                     </AlertDescription>
                   </Alert>
                 </div>

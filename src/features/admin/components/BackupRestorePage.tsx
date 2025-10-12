@@ -51,11 +51,11 @@ const backupTypeLabels = {
 };
 
 const statusColors = {
-  PENDING: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-  IN_PROGRESS: 'bg-blue-100 text-blue-800 border-blue-200',
-  COMPLETED: 'bg-green-100 text-green-800 border-green-200',
-  FAILED: 'bg-red-100 text-red-800 border-red-200',
-  DELETED: 'bg-gray-100 text-gray-800 border-gray-200'
+  PENDING: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20 dark:bg-yellow-500/20 dark:text-yellow-400 dark:border-yellow-500/30',
+  IN_PROGRESS: 'bg-blue-500/10 text-blue-500 border-blue-500/20 dark:bg-blue-500/20 dark:text-blue-400 dark:border-blue-500/30',
+  COMPLETED: 'bg-green-500/10 text-green-500 border-green-500/20 dark:bg-green-500/20 dark:text-green-400 dark:border-green-500/30',
+  FAILED: 'bg-red-500/10 text-red-500 border-red-500/20 dark:bg-red-500/20 dark:text-red-400 dark:border-red-500/30',
+  DELETED: 'bg-gray-500/10 text-gray-500 border-gray-500/20 dark:bg-gray-500/20 dark:text-gray-400 dark:border-gray-500/30'
 };
 
 const statusLabels = {
@@ -256,14 +256,14 @@ export function BackupRestorePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Sauvegarde et Restauration</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold">Sauvegarde et Restauration</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">
             Gestion des sauvegardes et restauration du système
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           <Dialog open={isCreateBackupDialogOpen} onOpenChange={setIsCreateBackupDialogOpen}>
             <DialogTrigger asChild>
               <Button>
@@ -271,7 +271,7 @@ export function BackupRestorePage() {
                 Nouvelle Sauvegarde
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="responsive-modal-lg">
               <DialogHeader>
                 <DialogTitle>Créer une sauvegarde</DialogTitle>
                 <DialogDescription>
@@ -318,7 +318,7 @@ export function BackupRestorePage() {
 
                 <div>
                   <Label>Données à inclure</Label>
-                  <div className="grid grid-cols-2 gap-2 mt-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
                     {backupIncludeOptions.map(option => (
                       <div key={option.value} className="flex items-center space-x-2">
                         <Checkbox
@@ -359,7 +359,7 @@ export function BackupRestorePage() {
                 Configuration
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="responsive-modal-lg">
               <DialogHeader>
                 <DialogTitle>Configuration des sauvegardes</DialogTitle>
                 <DialogDescription>
@@ -370,7 +370,7 @@ export function BackupRestorePage() {
                 <div className="space-y-4">
                   <div>
                     <Label>Planification</Label>
-                    <div className="grid grid-cols-2 gap-2 mt-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
                       <Select
                         value={backupConfig.schedule?.frequency || 'DAILY'}
                         onValueChange={(value: any) =>
@@ -484,7 +484,7 @@ export function BackupRestorePage() {
                       Tester la connexion
                     </Button>
                     {connectionTest && (
-                      <Badge className={connectionTest.success ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
+                      <Badge className={connectionTest.success ? 'bg-green-500/10 text-green-500 border-green-500/20 dark:bg-green-500/20 dark:text-green-400 dark:border-green-500/30' : 'bg-red-500/10 text-red-500 border-red-500/20 dark:bg-red-500/20 dark:text-red-400 dark:border-red-500/30'}>
                         {connectionTest.success ? 'Connexion réussie' : 'Échec de connexion'}
                       </Badge>
                     )}
@@ -517,7 +517,7 @@ export function BackupRestorePage() {
       </div>
 
       {statistics && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total des sauvegardes</CardTitle>
@@ -596,7 +596,8 @@ export function BackupRestorePage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Table>
+              <div className="responsive-table-wrapper">
+                <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Nom</TableHead>
@@ -683,7 +684,7 @@ export function BackupRestorePage() {
                                   <div className="space-y-4">
                                     <div>
                                       <Label>Données à restaurer</Label>
-                                      <div className="grid grid-cols-2 gap-2 mt-2">
+                                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
                                         {backupIncludeOptions
                                           .filter(option => backup.includes.includes(option.value))
                                           .map(option => (
@@ -753,6 +754,7 @@ export function BackupRestorePage() {
                   ))}
                 </TableBody>
               </Table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -766,7 +768,8 @@ export function BackupRestorePage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Table>
+              <div className="responsive-table-wrapper">
+                <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Sauvegarde</TableHead>
@@ -792,11 +795,11 @@ export function BackupRestorePage() {
                         </TableCell>
                         <TableCell>
                           <Badge className={
-                            job.status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
-                            job.status === 'FAILED' ? 'bg-red-100 text-red-800' :
-                            job.status === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-800' :
-                            job.status === 'CANCELLED' ? 'bg-gray-100 text-gray-800' :
-                            'bg-yellow-100 text-yellow-800'
+                            job.status === 'COMPLETED' ? 'bg-green-500/10 text-green-500 border-green-500/20 dark:bg-green-500/20 dark:text-green-400 dark:border-green-500/30' :
+                            job.status === 'FAILED' ? 'bg-red-500/10 text-red-500 border-red-500/20 dark:bg-red-500/20 dark:text-red-400 dark:border-red-500/30' :
+                            job.status === 'IN_PROGRESS' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20 dark:bg-blue-500/20 dark:text-blue-400 dark:border-blue-500/30' :
+                            job.status === 'CANCELLED' ? 'bg-gray-500/10 text-gray-500 border-gray-500/20 dark:bg-gray-500/20 dark:text-gray-400 dark:border-gray-500/30' :
+                            'bg-yellow-500/10 text-yellow-500 border-yellow-500/20 dark:bg-yellow-500/20 dark:text-yellow-400 dark:border-yellow-500/30'
                           }>
                             {statusLabels[job.status] || job.status}
                           </Badge>
@@ -835,7 +838,9 @@ export function BackupRestorePage() {
                               </Button>
                             )}
                             {job.status === 'FAILED' && job.errorMessage && (
-                              <AlertTriangle className="w-4 h-4 text-red-500" title={job.errorMessage} />
+                              <div title={job.errorMessage}>
+                                <AlertTriangle className="w-4 h-4 text-red-500 dark:text-red-400" />
+                              </div>
                             )}
                           </div>
                         </TableCell>
@@ -844,6 +849,7 @@ export function BackupRestorePage() {
                   })}
                 </TableBody>
               </Table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -893,7 +899,7 @@ export function BackupRestorePage() {
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm">Sauvegardes échouées</span>
-                    <span className="font-medium text-red-600">{statistics?.failedBackups || 0}</span>
+                    <span className="font-medium text-red-600 dark:text-red-400">{statistics?.failedBackups || 0}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm">Taille moyenne</span>

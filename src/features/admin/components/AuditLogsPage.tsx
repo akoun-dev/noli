@@ -34,10 +34,10 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 const severityColors = {
-  LOW: 'bg-green-100 text-green-800 border-green-200',
-  MEDIUM: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-  HIGH: 'bg-orange-100 text-orange-800 border-orange-200',
-  CRITICAL: 'bg-red-100 text-red-800 border-red-200'
+  LOW: 'bg-green-500/10 text-green-500 border-green-500/20 dark:bg-green-500/20 dark:text-green-400 dark:border-green-500/30',
+  MEDIUM: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20 dark:bg-yellow-500/20 dark:text-yellow-400 dark:border-yellow-500/30',
+  HIGH: 'bg-orange-500/10 text-orange-500 border-orange-500/20 dark:bg-orange-500/20 dark:text-orange-400 dark:border-orange-500/30',
+  CRITICAL: 'bg-red-500/10 text-red-500 border-red-500/20 dark:bg-red-500/20 dark:text-red-400 dark:border-red-500/30'
 };
 
 const severityLabels = {
@@ -174,14 +174,14 @@ export function AuditLogsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Journaux d'Audit</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold">Journaux d'Audit</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">
             Surveillance complète des activités du système
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           <Button
             variant="outline"
             onClick={() => handleExport('CSV')}
@@ -210,7 +210,7 @@ export function AuditLogsPage() {
 
         <TabsContent value="logs" className="space-y-4">
           {statistics && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Total des journaux</CardTitle>
@@ -224,10 +224,10 @@ export function AuditLogsPage() {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Alertes critiques</CardTitle>
-                  <AlertTriangle className="h-4 w-4 text-red-500" />
+                  <AlertTriangle className="h-4 w-4 text-red-500 dark:text-red-400" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-red-500">
+                  <div className="text-2xl font-bold text-red-500 dark:text-red-400">
                     {statistics.criticalLogs}
                   </div>
                 </CardContent>
@@ -267,7 +267,7 @@ export function AuditLogsPage() {
               <CardTitle>Filtres de recherche</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="flex gap-2">
                   <Input
                     placeholder="Rechercher par email..."
@@ -340,18 +340,19 @@ export function AuditLogsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Timestamp</TableHead>
-                    <TableHead>Utilisateur</TableHead>
-                    <TableHead>Action</TableHead>
-                    <TableHead>Ressource</TableHead>
-                    <TableHead>Adresse IP</TableHead>
-                    <TableHead>Sévérité</TableHead>
-                    <TableHead>Détails</TableHead>
-                  </TableRow>
-                </TableHeader>
+              <div className="responsive-table-wrapper">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="whitespace-nowrap">Timestamp</TableHead>
+                      <TableHead className="whitespace-nowrap">Utilisateur</TableHead>
+                      <TableHead className="whitespace-nowrap">Action</TableHead>
+                      <TableHead className="whitespace-nowrap">Ressource</TableHead>
+                      <TableHead className="whitespace-nowrap">Adresse IP</TableHead>
+                      <TableHead className="whitespace-nowrap">Sévérité</TableHead>
+                      <TableHead className="whitespace-nowrap">Détails</TableHead>
+                    </TableRow>
+                  </TableHeader>
                 <TableBody>
                   {loading ? (
                     <TableRow>
@@ -423,14 +424,16 @@ export function AuditLogsPage() {
                   )}
                 </TableBody>
               </Table>
+              </div>
 
               {totalPages > 1 && (
-                <div className="flex justify-center mt-4 gap-2">
+                <div className="flex flex-col sm:flex-row sm:justify-center sm:items-center items-center mt-4 gap-2">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                     disabled={currentPage === 1}
+                    className="w-full sm:w-auto"
                   >
                     Précédent
                   </Button>
@@ -442,6 +445,7 @@ export function AuditLogsPage() {
                     size="sm"
                     onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                     disabled={currentPage === totalPages}
+                    className="w-full sm:w-auto"
                   >
                     Suivant
                   </Button>
@@ -566,7 +570,7 @@ export function AuditLogsPage() {
         </TabsContent>
 
         <TabsContent value="security" className="space-y-4">
-          <Alert>
+          <Alert className="responsive-alert">
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>Alertes de sécurité</AlertTitle>
             <AlertDescription>
@@ -575,44 +579,44 @@ export function AuditLogsPage() {
           </Alert>
 
           {statistics && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card className="border-red-200">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <Card className="border-red-500/20 bg-red-500/5 dark:border-red-500/30 dark:bg-red-500/10">
                 <CardHeader>
-                  <CardTitle className="text-red-700">Alertes critiques</CardTitle>
+                  <CardTitle className="text-red-500 dark:text-red-400">Alertes critiques</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold text-red-600">
+                  <div className="text-3xl font-bold text-red-500 dark:text-red-400">
                     {statistics.criticalLogs}
                   </div>
-                  <p className="text-sm text-red-600 mt-2">
+                  <p className="text-sm text-red-500/80 dark:text-red-400/80 mt-2">
                     Nécessitent une attention immédiate
                   </p>
                 </CardContent>
               </Card>
 
-              <Card className="border-orange-200">
+              <Card className="border-orange-500/20 bg-orange-500/5 dark:border-orange-500/30 dark:bg-orange-500/10">
                 <CardHeader>
-                  <CardTitle className="text-orange-700">Alertes élevées</CardTitle>
+                  <CardTitle className="text-orange-500 dark:text-orange-400">Alertes élevées</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold text-orange-600">
+                  <div className="text-3xl font-bold text-orange-500 dark:text-orange-400">
                     {statistics.highLogs}
                   </div>
-                  <p className="text-sm text-orange-600 mt-2">
+                  <p className="text-sm text-orange-500/80 dark:text-orange-400/80 mt-2">
                     À surveiller attentivement
                   </p>
                 </CardContent>
               </Card>
 
-              <Card className="border-yellow-200">
+              <Card className="border-yellow-500/20 bg-yellow-500/5 dark:border-yellow-500/30 dark:bg-yellow-500/10">
                 <CardHeader>
-                  <CardTitle className="text-yellow-700">Alertes moyennes</CardTitle>
+                  <CardTitle className="text-yellow-500 dark:text-yellow-400">Alertes moyennes</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold text-yellow-600">
+                  <div className="text-3xl font-bold text-yellow-500 dark:text-yellow-400">
                     {statistics.mediumLogs}
                   </div>
-                  <p className="text-sm text-yellow-600 mt-2">
+                  <p className="text-sm text-yellow-500/80 dark:text-yellow-400/80 mt-2">
                     Vérification recommandée
                   </p>
                 </CardContent>
@@ -634,14 +638,14 @@ export function AuditLogsPage() {
                       key={log.id}
                       className={`p-4 rounded-lg border ${
                         log.severity === 'CRITICAL'
-                          ? 'bg-red-50 border-red-200'
-                          : 'bg-orange-50 border-orange-200'
+                          ? 'bg-red-500/5 border-red-500/20 dark:bg-red-500/10 dark:border-red-500/30'
+                          : 'bg-orange-500/5 border-orange-500/20 dark:bg-orange-500/10 dark:border-orange-500/30'
                       }`}
                     >
                       <div className="flex justify-between items-start mb-2">
                         <div className="flex items-center gap-2">
                           <AlertTriangle className={`w-4 h-4 ${
-                            log.severity === 'CRITICAL' ? 'text-red-600' : 'text-orange-600'
+                            log.severity === 'CRITICAL' ? 'text-red-500 dark:text-red-400' : 'text-orange-500 dark:text-orange-400'
                           }`} />
                           <span className="font-medium">
                             {actionLabels[log.action] || log.action}
@@ -661,7 +665,7 @@ export function AuditLogsPage() {
                         <summary className="cursor-pointer hover:text-foreground">
                           Détails de l'événement
                         </summary>
-                        <pre className="mt-2 text-xs bg-white p-2 rounded border">
+                        <pre className="mt-2 text-xs bg-muted p-2 rounded border">
                           {JSON.stringify(log.details, null, 2)}
                         </pre>
                       </details>

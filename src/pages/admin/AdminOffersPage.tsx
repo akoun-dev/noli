@@ -244,41 +244,41 @@ export const AdminOffersPage: React.FC = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
-        return <Badge className="bg-green-100 text-green-800">Actif</Badge>;
+        return <Badge variant="outline" className="border-green-200 bg-green-50 text-green-800 dark:border-green-500/30 dark:bg-green-500/20 dark:text-green-400">Actif</Badge>;
       case 'inactive':
-        return <Badge className="bg-gray-100 text-gray-800">Inactif</Badge>;
+        return <Badge variant="outline" className="border-gray-200 bg-gray-50 text-gray-800 dark:border-gray-500/30 dark:bg-gray-500/20 dark:text-gray-400">Inactif</Badge>;
       case 'pending':
-        return <Badge className="bg-yellow-100 text-yellow-800">En attente</Badge>;
+        return <Badge variant="outline" className="border-yellow-200 bg-yellow-50 text-yellow-800 dark:border-yellow-500/30 dark:bg-yellow-500/20 dark:text-yellow-400">En attente</Badge>;
       case 'draft':
-        return <Badge className="bg-blue-100 text-blue-800">Brouillon</Badge>;
+        return <Badge variant="outline" className="border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/20 dark:text-blue-400">Brouillon</Badge>;
       default:
-        return <Badge>{status}</Badge>;
+        return <Badge variant="outline">{status}</Badge>;
     }
   };
 
   const getPriorityBadge = (priority: string) => {
     switch (priority) {
       case 'high':
-        return <Badge className="bg-red-100 text-red-800">Haute</Badge>;
+        return <Badge variant="outline" className="border-red-200 bg-red-50 text-red-800 dark:border-red-500/30 dark:bg-red-500/20 dark:text-red-400">Haute</Badge>;
       case 'medium':
-        return <Badge className="bg-yellow-100 text-yellow-800">Moyenne</Badge>;
+        return <Badge variant="outline" className="border-yellow-200 bg-yellow-50 text-yellow-800 dark:border-yellow-500/30 dark:bg-yellow-500/20 dark:text-yellow-400">Moyenne</Badge>;
       case 'low':
-        return <Badge className="bg-green-100 text-green-800">Basse</Badge>;
+        return <Badge variant="outline" className="border-green-200 bg-green-50 text-green-800 dark:border-green-500/30 dark:bg-green-500/20 dark:text-green-400">Basse</Badge>;
       default:
-        return <Badge>{priority}</Badge>;
+        return <Badge variant="outline">{priority}</Badge>;
     }
   };
 
   const getInsurerStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
-        return <Badge className="bg-green-100 text-green-800">Actif</Badge>;
+        return <Badge variant="outline" className="border-green-200 bg-green-50 text-green-800 dark:border-green-500/30 dark:bg-green-500/20 dark:text-green-400">Actif</Badge>;
       case 'inactive':
-        return <Badge className="bg-red-100 text-red-800">Inactif</Badge>;
+        return <Badge variant="outline" className="border-red-200 bg-red-50 text-red-800 dark:border-red-500/30 dark:bg-red-500/20 dark:text-red-400">Inactif</Badge>;
       case 'pending':
-        return <Badge className="bg-yellow-100 text-yellow-800">En attente</Badge>;
+        return <Badge variant="outline" className="border-yellow-200 bg-yellow-50 text-yellow-800 dark:border-yellow-500/30 dark:bg-yellow-500/20 dark:text-yellow-400">En attente</Badge>;
       default:
-        return <Badge>{status}</Badge>;
+        return <Badge variant="outline">{status}</Badge>;
     }
   };
 
@@ -320,28 +320,28 @@ export const AdminOffersPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">Gestion des Offres</h1>
-          <p className="text-gray-600">Gérez toutes les offres d'assurance de la plateforme</p>
+          <p className="text-muted-foreground">Gérez toutes les offres d'assurance de la plateforme</p>
         </div>
-        <div className="flex space-x-2">
-          <Button variant="outline" onClick={exportOffers}>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <Button variant="outline" onClick={exportOffers} className="w-full sm:w-auto">
             <Download className="h-4 w-4 mr-2" />
             Exporter
           </Button>
-          <Button variant="outline" onClick={importOffers}>
+          <Button variant="outline" onClick={importOffers} className="w-full sm:w-auto">
             <Upload className="h-4 w-4 mr-2" />
             Importer
           </Button>
           <Dialog>
             <DialogTrigger asChild>
-              <Button>
+              <Button className="w-full sm:w-auto">
                 <Plus className="h-4 w-4 mr-2" />
                 Nouvelle offre
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Créer une nouvelle offre</DialogTitle>
               </DialogHeader>
@@ -352,19 +352,19 @@ export const AdminOffersPage: React.FC = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Offres</p>
-                <p className="text-2xl font-bold text-blue-600">{totalOffers}</p>
+                <p className="text-sm font-medium text-muted-foreground">Total Offres</p>
+                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{totalOffers}</p>
                 <div className="flex items-center space-x-1">
-                  <TrendingUp className="h-3 w-3 text-green-600" />
-                  <span className="text-xs text-green-600">+12%</span>
+                  <TrendingUp className="h-3 w-3 text-green-600 dark:text-green-400" />
+                  <span className="text-xs text-green-600 dark:text-green-400">+12%</span>
                 </div>
               </div>
-              <BarChart3 className="h-8 w-8 text-blue-600" />
+              <BarChart3 className="h-8 w-8 text-blue-600 dark:text-blue-400" />
             </div>
           </CardContent>
         </Card>
@@ -373,14 +373,14 @@ export const AdminOffersPage: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Offres Actives</p>
-                <p className="text-2xl font-bold text-green-600">{activeOffers}</p>
+                <p className="text-sm font-medium text-muted-foreground">Offres Actives</p>
+                <p className="text-2xl font-bold text-green-600 dark:text-green-400">{activeOffers}</p>
                 <div className="flex items-center space-x-1">
-                  <TrendingUp className="h-3 w-3 text-green-600" />
-                  <span className="text-xs text-green-600">+3</span>
+                  <TrendingUp className="h-3 w-3 text-green-600 dark:text-green-400" />
+                  <span className="text-xs text-green-600 dark:text-green-400">+3</span>
                 </div>
               </div>
-              <CheckCircle className="h-8 w-8 text-green-600" />
+              <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
             </div>
           </CardContent>
         </Card>
@@ -389,14 +389,14 @@ export const AdminOffersPage: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Clics Totaux</p>
-                <p className="text-2xl font-bold text-purple-600">{totalClicks.toLocaleString()}</p>
+                <p className="text-sm font-medium text-muted-foreground">Clics Totaux</p>
+                <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{totalClicks.toLocaleString()}</p>
                 <div className="flex items-center space-x-1">
-                  <TrendingUp className="h-3 w-3 text-purple-600" />
-                  <span className="text-xs text-purple-600">+23%</span>
+                  <TrendingUp className="h-3 w-3 text-purple-600 dark:text-purple-400" />
+                  <span className="text-xs text-purple-600 dark:text-purple-400">+23%</span>
                 </div>
               </div>
-              <MousePointer className="h-8 w-8 text-purple-600" />
+              <MousePointer className="h-8 w-8 text-purple-600 dark:text-purple-400" />
             </div>
           </CardContent>
         </Card>
@@ -405,14 +405,14 @@ export const AdminOffersPage: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Taux Conversion</p>
-                <p className="text-2xl font-bold text-orange-600">{overallConversionRate}%</p>
+                <p className="text-sm font-medium text-muted-foreground">Taux Conversion</p>
+                <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{overallConversionRate}%</p>
                 <div className="flex items-center space-x-1">
-                  <TrendingUp className="h-3 w-3 text-green-600" />
-                  <span className="text-xs text-green-600">+2.3%</span>
+                  <TrendingUp className="h-3 w-3 text-green-600 dark:text-green-400" />
+                  <span className="text-xs text-green-600 dark:text-green-400">+2.3%</span>
                 </div>
               </div>
-              <Target className="h-8 w-8 text-orange-600" />
+              <Target className="h-8 w-8 text-orange-600 dark:text-orange-400" />
             </div>
           </CardContent>
         </Card>
@@ -420,29 +420,29 @@ export const AdminOffersPage: React.FC = () => {
 
       {/* Main Content */}
       <Tabs defaultValue="offers" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="offers">Offres</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 sm:w-auto">
+          <TabsTrigger value="offers" className="text-xs sm:text-sm">Offres</TabsTrigger>
+          <TabsTrigger value="analytics" className="text-xs sm:text-sm">Analytics</TabsTrigger>
         </TabsList>
 
         {/* Offers Tab */}
         <TabsContent value="offers" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>Liste des Offres</span>
-                <div className="flex space-x-2">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <CardTitle className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+                <span className="text-lg">Liste des Offres</span>
+                <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
+                  <div className="relative flex-1 sm:flex-initial">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                     <Input
                       placeholder="Rechercher une offre..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10 w-64"
+                      className="pl-10 w-full sm:w-64"
                     />
                   </div>
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-32">
+                    <SelectTrigger className="w-full sm:w-32">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -454,7 +454,7 @@ export const AdminOffersPage: React.FC = () => {
                     </SelectContent>
                   </Select>
                   <Select value={insurerFilter} onValueChange={setInsurerFilter}>
-                    <SelectTrigger className="w-40">
+                    <SelectTrigger className="w-full sm:w-40">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -467,7 +467,7 @@ export const AdminOffersPage: React.FC = () => {
                     </SelectContent>
                   </Select>
                   <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                    <SelectTrigger className="w-32">
+                    <SelectTrigger className="w-full sm:w-32">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -483,64 +483,64 @@ export const AdminOffersPage: React.FC = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full">
+              <div className="responsive-table-wrapper">
+                <table className="w-full min-w-[700px]">
                   <thead>
                     <tr className="border-b">
-                      <th className="text-left p-4">Offre</th>
-                      <th className="text-left p-4">Assureur</th>
-                      <th className="text-left p-4">Prix</th>
-                      <th className="text-left p-4">Statut</th>
-                      <th className="text-left p-4">Performance</th>
-                      <th className="text-left p-4">Notes</th>
-                      <th className="text-left p-4">Actions</th>
+                      <th className="text-left p-2 sm:p-4">Offre</th>
+                      <th className="text-left p-2 sm:p-4">Assureur</th>
+                      <th className="text-left p-2 sm:p-4">Prix</th>
+                      <th className="text-left p-2 sm:p-4">Statut</th>
+                      <th className="text-left p-2 sm:p-4 hidden md:table-cell">Performance</th>
+                      <th className="text-left p-2 sm:p-4 hidden lg:table-cell">Notes</th>
+                      <th className="text-left p-2 sm:p-4">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredOffers.map((offer) => (
-                      <tr key={offer.id} className="border-b hover:bg-gray-50">
-                        <td className="p-4">
+                      <tr key={offer.id} className="border-b hover:bg-accent">
+                        <td className="p-2 sm:p-4">
                           <div>
-                            <div className="font-medium">{offer.title}</div>
-                            <div className="text-sm text-gray-500">{offer.category}</div>
+                            <div className="font-medium text-sm">{offer.title}</div>
+                            <div className="text-xs text-muted-foreground">{offer.category}</div>
                             <div className="flex flex-wrap gap-1 mt-1">
                               {offer.tags.slice(0, 2).map((tag, index) => (
-                                <Badge key={index} className="text-xs bg-blue-100 text-blue-800">
+                                <Badge key={index} className="text-xs bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400" style={{ fontSize: '0.65rem' }}>
                                   {tag}
                                 </Badge>
                               ))}
                               {offer.tags.length > 2 && (
-                                <Badge className="text-xs bg-gray-100 text-gray-800">
+                                <Badge className="text-xs bg-gray-100 text-gray-800 dark:bg-gray-500/20 dark:text-gray-400" style={{ fontSize: '0.65rem' }}>
                                   +{offer.tags.length - 2}
                                 </Badge>
                               )}
                             </div>
                           </div>
                         </td>
-                        <td className="p-4">
+                        <td className="p-2 sm:p-4">
                           <div className="flex items-center space-x-2">
-                            <Shield className="h-4 w-4 text-blue-600" />
+                            <Shield className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />
                             <div>
-                              <div className="font-medium">{offer.insurer}</div>
-                              <div className="text-xs text-gray-500">
-                                {getInsurerStatusBadge(insurers.find(i => i.id === offer.insurerId)?.status || 'unknown')}
+                              <div className="font-medium text-sm">{offer.insurer}</div>
+                              <div className="text-xs text-muted-foreground sm:hidden">
+                                {offer.price.toLocaleString()} {offer.currency}
                               </div>
                             </div>
                           </div>
                         </td>
-                        <td className="p-4">
-                          <div className="font-medium">{offer.price.toLocaleString()} {offer.currency}</div>
-                          <div className="text-sm text-gray-500">
+                        <td className="p-2 sm:p-4">
+                          <div className="font-medium text-sm">{offer.price.toLocaleString()} {offer.currency}</div>
+                          <div className="text-xs text-muted-foreground hidden sm:block">
                             {offer.validUntil ? `Valide jusqu'au ${offer.validUntil}` : 'Sans limite'}
                           </div>
                         </td>
-                        <td className="p-4">
-                          <div className="flex items-center space-x-2">
+                        <td className="p-2 sm:p-4">
+                          <div className="flex flex-col gap-1">
                             {getStatusBadge(offer.status)}
                             {getPriorityBadge(offer.priority)}
                           </div>
                         </td>
-                        <td className="p-4">
+                        <td className="p-2 sm:p-4 hidden md:table-cell">
                           <div className="space-y-1">
                             <div className="text-sm">
                               <span className="font-medium">{offer.clicks}</span> clics
@@ -553,25 +553,25 @@ export const AdminOffersPage: React.FC = () => {
                             </div>
                           </div>
                         </td>
-                        <td className="p-4">
+                        <td className="p-2 sm:p-4 hidden lg:table-cell">
                           <div className="flex items-center space-x-2">
                             <div className="flex">
                               {renderStars(offer.averageRating)}
                             </div>
-                            <span className="text-sm text-gray-500">
+                            <span className="text-sm text-muted-foreground">
                               ({offer.reviewCount})
                             </span>
                           </div>
                         </td>
-                        <td className="p-4">
-                          <div className="flex space-x-2">
+                        <td className="p-2 sm:p-4">
+                          <div className="flex space-x-1 sm:space-x-2">
                             <Dialog>
                               <DialogTrigger asChild>
-                                <Button variant="outline" size="sm">
+                                <Button variant="outline" size="sm" className="h-8 w-8 p-0 sm:h-auto sm:w-auto sm:p-2">
                                   <Eye className="h-3 w-3" />
                                 </Button>
                               </DialogTrigger>
-                              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                              <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto">
                                 <DialogHeader>
                                   <DialogTitle>Détails de l'offre</DialogTitle>
                                 </DialogHeader>
@@ -580,11 +580,11 @@ export const AdminOffersPage: React.FC = () => {
                             </Dialog>
                             <Dialog>
                               <DialogTrigger asChild>
-                                <Button variant="outline" size="sm" onClick={() => setSelectedOffer(offer)}>
+                                <Button variant="outline" size="sm" onClick={() => setSelectedOffer(offer)} className="h-8 w-8 p-0 sm:h-auto sm:w-auto sm:p-2">
                                   <Edit className="h-3 w-3" />
                                 </Button>
                               </DialogTrigger>
-                              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                              <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto">
                                 <DialogHeader>
                                   <DialogTitle>Modifier l'offre</DialogTitle>
                                 </DialogHeader>
@@ -598,6 +598,7 @@ export const AdminOffersPage: React.FC = () => {
                                 setSelectedOffer(offer);
                                 setShowDuplicateDialog(true);
                               }}
+                              className="h-8 w-8 p-0 sm:h-auto sm:w-auto sm:p-2"
                             >
                               <Copy className="h-3 w-3" />
                             </Button>
@@ -608,6 +609,7 @@ export const AdminOffersPage: React.FC = () => {
                                 setSelectedOffer(offer);
                                 setShowDeleteDialog(true);
                               }}
+                              className="h-8 w-8 p-0 sm:h-auto sm:w-auto sm:p-2"
                             >
                               <Trash2 className="h-3 w-3" />
                             </Button>
@@ -624,7 +626,7 @@ export const AdminOffersPage: React.FC = () => {
 
         {/* Analytics Tab */}
         <TabsContent value="analytics" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
             <Card>
               <CardHeader>
                 <CardTitle>Performance des offres</CardTitle>
@@ -637,35 +639,35 @@ export const AdminOffersPage: React.FC = () => {
                       <div key={analytics.offerId} className="p-4 border rounded-lg">
                         <div className="flex items-center justify-between mb-3">
                           <h4 className="font-medium">{offer?.title}</h4>
-                          <Badge className="bg-blue-100 text-blue-800">
+                          <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400">
                             {analytics.period}
                           </Badge>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <div className="text-sm text-gray-600">Vues</div>
+                            <div className="text-sm text-muted-foreground">Vues</div>
                             <div className="text-lg font-bold">{analytics.views.toLocaleString()}</div>
                           </div>
                           <div>
-                            <div className="text-sm text-gray-600">Clics</div>
+                            <div className="text-sm text-muted-foreground">Clics</div>
                             <div className="text-lg font-bold">{analytics.clicks.toLocaleString()}</div>
                           </div>
                           <div>
-                            <div className="text-sm text-gray-600">Conversions</div>
+                            <div className="text-sm text-muted-foreground">Conversions</div>
                             <div className="text-lg font-bold">{analytics.conversions}</div>
                           </div>
                           <div>
-                            <div className="text-sm text-gray-600">Revenus</div>
+                            <div className="text-sm text-muted-foreground">Revenus</div>
                             <div className="text-lg font-bold">{(analytics.revenue / 1000000).toFixed(1)}M FCFA</div>
                           </div>
                         </div>
                         <div className="mt-3 grid grid-cols-2 gap-4">
                           <div>
-                            <div className="text-sm text-gray-600">CTR</div>
+                            <div className="text-sm text-muted-foreground">CTR</div>
                             <div className="font-medium">{analytics.ctr.toFixed(1)}%</div>
                           </div>
                           <div>
-                            <div className="text-sm text-gray-600">Taux conversion</div>
+                            <div className="text-sm text-muted-foreground">Taux conversion</div>
                             <div className="font-medium">{analytics.conversionRate.toFixed(1)}%</div>
                           </div>
                         </div>
@@ -698,12 +700,12 @@ export const AdminOffersPage: React.FC = () => {
                           </div>
                           <div>
                             <div className="font-medium">{offer.title}</div>
-                            <div className="text-sm text-gray-500">{offer.insurer}</div>
+                            <div className="text-sm text-muted-foreground">{offer.insurer}</div>
                           </div>
                         </div>
                         <div className="text-right">
-                          <div className="font-bold text-green-600">{offer.conversionRate.toFixed(1)}%</div>
-                          <div className="text-sm text-gray-500">{offer.conversions} conversions</div>
+                          <div className="font-bold text-green-600 dark:text-green-400">{offer.conversionRate.toFixed(1)}%</div>
+                          <div className="text-sm text-muted-foreground">{offer.conversions} conversions</div>
                         </div>
                       </div>
                     ))}
@@ -716,7 +718,7 @@ export const AdminOffersPage: React.FC = () => {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent>
+        <DialogContent className="max-w-[95vw] sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Confirmer la suppression</DialogTitle>
           </DialogHeader>
@@ -745,13 +747,13 @@ export const AdminOffersPage: React.FC = () => {
 
       {/* Duplicate Confirmation Dialog */}
       <Dialog open={showDuplicateDialog} onOpenChange={setShowDuplicateDialog}>
-        <DialogContent>
+        <DialogContent className="max-w-[95vw] sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Dupliquer l'offre</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <p>Voulez-vous créer une copie de l'offre "{selectedOffer?.title}"?</p>
-            <p className="text-sm text-gray-600">Une nouvelle offre sera créée avec les mêmes caractéristiques mais avec le statut "brouillon".</p>
+            <p className="text-sm text-muted-foreground">Une nouvelle offre sera créée avec les mêmes caractéristiques mais avec le statut "brouillon".</p>
             <div className="flex justify-end space-x-2">
               <Button variant="outline" onClick={() => setShowDuplicateDialog(false)}>
                 Annuler
@@ -864,7 +866,7 @@ const OfferForm: React.FC<{ offer?: any; insurers: any[]; categories: any[] }> =
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <Label htmlFor="title">Titre de l'offre *</Label>
           <Input
@@ -902,7 +904,7 @@ const OfferForm: React.FC<{ offer?: any; insurers: any[]; categories: any[] }> =
         />
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div>
           <Label htmlFor="insurerId">Assureur *</Label>
           <Select value={formData.insurerId} onValueChange={(value) => setFormData({ ...formData, insurerId: value })}>
@@ -943,7 +945,7 @@ const OfferForm: React.FC<{ offer?: any; insurers: any[]; categories: any[] }> =
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div>
           <Label htmlFor="status">Statut</Label>
           <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
@@ -1033,7 +1035,7 @@ const OfferForm: React.FC<{ offer?: any; insurers: any[]; categories: any[] }> =
                   <SelectItem key={pkg.id} value={pkg.id}>
                     <div>
                       <div className="font-medium">{pkg.name}</div>
-                      <div className="text-xs text-gray-500">{pkg.description} - {pkg.basePrice.toLocaleString()} FCFA</div>
+                      <div className="text-xs text-muted-foreground">{pkg.description} - {pkg.basePrice.toLocaleString()} FCFA</div>
                     </div>
                   </SelectItem>
                 ))}
@@ -1047,9 +1049,9 @@ const OfferForm: React.FC<{ offer?: any; insurers: any[]; categories: any[] }> =
         <Label>Garanties {offerType === 'PACK' ? '(incluses dans le package)' : '(sélectionnez celles à inclure)'}</Label>
         <div className="border rounded-lg p-3 max-h-56 overflow-auto">
           {filteredGuarantees.length === 0 && (
-            <div className="text-sm text-gray-500">Aucune garantie disponible pour la catégorie sélectionnée.</div>
+            <div className="text-sm text-muted-foreground">Aucune garantie disponible pour la catégorie sélectionnée.</div>
           )}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {filteredGuarantees.map(g => {
               const checked = selectedGuaranteeIds.includes(g.id);
               const disabled = offerType === 'PACK';
@@ -1071,7 +1073,7 @@ const OfferForm: React.FC<{ offer?: any; insurers: any[]; categories: any[] }> =
                     />
                     <div>
                       <div className="text-sm font-medium">{g.name}</div>
-                      <div className="text-xs text-gray-500">{g.description}</div>
+                      <div className="text-xs text-muted-foreground">{g.description}</div>
                     </div>
                   </div>
                   <div className="text-xs font-medium text-right">
@@ -1087,14 +1089,14 @@ const OfferForm: React.FC<{ offer?: any; insurers: any[]; categories: any[] }> =
             })}
           </div>
         </div>
-        <div className="text-sm text-gray-600">
+        <div className="text-sm text-muted-foreground">
           {offerType === 'PACK' && selectedPackageId ? (
             <span>Prix du package: <span className="font-semibold">{pricing.toLocaleString()} {formData.currency}</span></span>
           ) : (
             <span>Prix estimé avec garanties: <span className="font-semibold">{pricing.toLocaleString()} {formData.currency}</span></span>
           )}
           {offerType === 'PACK' && selectedPackageId && (
-            <div className="text-xs text-blue-600 mt-1">
+            <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
               {packages.find(p => p.id === selectedPackageId)?.guarantees.length} garanties incluses
             </div>
           )}
@@ -1136,48 +1138,48 @@ const OfferDetails: React.FC<{ offer: any }> = ({ offer }) => {
       <div className="flex items-start justify-between">
         <div>
           <h3 className="text-xl font-bold">{offer.title}</h3>
-          <p className="text-gray-600 mt-1">{offer.description}</p>
+          <p className="text-muted-foreground mt-1">{offer.description}</p>
           <div className="flex items-center space-x-2 mt-2">
             <Badge className="capitalize">{offer.category}</Badge>
-            <Badge className={
-              offer.status === 'active' ? 'bg-green-100 text-green-800' :
-              offer.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-              offer.status === 'draft' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
+            <Badge variant="outline" className={
+              offer.status === 'active' ? 'border-green-200 bg-green-50 text-green-800 dark:border-green-500/30 dark:bg-green-500/20 dark:text-green-400' :
+              offer.status === 'pending' ? 'border-yellow-200 bg-yellow-50 text-yellow-800 dark:border-yellow-500/30 dark:bg-yellow-500/20 dark:text-yellow-400' :
+              offer.status === 'draft' ? 'border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/20 dark:text-blue-400' : 'border-gray-200 bg-gray-50 text-gray-800 dark:border-gray-500/30 dark:bg-gray-500/20 dark:text-gray-400'
             }>
               {offer.status}
             </Badge>
           </div>
         </div>
         <div className="text-right">
-          <div className="text-2xl font-bold text-blue-600">{offer.price.toLocaleString()} {offer.currency}</div>
-          <div className="text-sm text-gray-500">
+          <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{offer.price.toLocaleString()} {offer.currency}</div>
+          <div className="text-sm text-muted-foreground">
             {offer.validUntil ? `Valide jusqu'au ${offer.validUntil}` : 'Sans limite de temps'}
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
         <div>
           <h4 className="font-semibold mb-2">Informations générales</h4>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-gray-600">Assureur:</span>
+              <span className="text-muted-foreground">Assureur:</span>
               <span className="font-medium">{offer.insurer}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Visibilité:</span>
+              <span className="text-muted-foreground">Visibilité:</span>
               <span className="font-medium capitalize">{offer.visibility}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Priorité:</span>
+              <span className="text-muted-foreground">Priorité:</span>
               <span className="font-medium capitalize">{offer.priority}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Créé le:</span>
+              <span className="text-muted-foreground">Créé le:</span>
               <span className="font-medium">{offer.createdAt}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Modifié le:</span>
+              <span className="text-muted-foreground">Modifié le:</span>
               <span className="font-medium">{offer.updatedAt}</span>
             </div>
           </div>
@@ -1187,19 +1189,19 @@ const OfferDetails: React.FC<{ offer: any }> = ({ offer }) => {
           <h4 className="font-semibold mb-2">Performance</h4>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-gray-600">Clics:</span>
+              <span className="text-muted-foreground">Clics:</span>
               <span className="font-medium">{offer.clicks.toLocaleString()}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Conversions:</span>
+              <span className="text-muted-foreground">Conversions:</span>
               <span className="font-medium">{offer.conversions}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Taux conversion:</span>
-              <span className="font-medium text-green-600">{offer.conversionRate.toFixed(1)}%</span>
+              <span className="text-muted-foreground">Taux conversion:</span>
+              <span className="font-medium text-green-600 dark:text-green-400">{offer.conversionRate.toFixed(1)}%</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Note moyenne:</span>
+              <span className="text-muted-foreground">Note moyenne:</span>
               <div className="flex items-center space-x-1">
                 <div className="flex">
                   {Array.from({ length: 5 }, (_, i) => (
@@ -1213,7 +1215,7 @@ const OfferDetails: React.FC<{ offer: any }> = ({ offer }) => {
               </div>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Avis:</span>
+              <span className="text-muted-foreground">Avis:</span>
               <span className="font-medium">{offer.reviewCount}</span>
             </div>
           </div>
@@ -1222,10 +1224,10 @@ const OfferDetails: React.FC<{ offer: any }> = ({ offer }) => {
 
       <div>
         <h4 className="font-semibold mb-2">Couvertures</h4>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {offer.coverage.map((coverage: string, index: number) => (
-            <div key={index} className="flex items-center space-x-2 p-2 bg-gray-50 rounded">
-              <CheckCircle className="h-4 w-4 text-green-600" />
+            <div key={index} className="flex items-center space-x-2 p-2 bg-gray-50 dark:bg-gray-800/50 rounded">
+              <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
               <span className="text-sm">{coverage}</span>
             </div>
           ))}
@@ -1234,10 +1236,10 @@ const OfferDetails: React.FC<{ offer: any }> = ({ offer }) => {
 
       <div>
         <h4 className="font-semibold mb-2">Fonctionnalités</h4>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {offer.features.map((feature: string, index: number) => (
-            <div key={index} className="flex items-center space-x-2 p-2 bg-blue-50 rounded">
-              <Zap className="h-4 w-4 text-blue-600" />
+            <div key={index} className="flex items-center space-x-2 p-2 bg-blue-50 dark:bg-blue-950/30 rounded">
+              <Zap className="h-4 w-4 text-blue-600 dark:text-blue-400" />
               <span className="text-sm">{feature}</span>
             </div>
           ))}
@@ -1249,7 +1251,7 @@ const OfferDetails: React.FC<{ offer: any }> = ({ offer }) => {
           <h4 className="font-semibold mb-2">Tags</h4>
           <div className="flex flex-wrap gap-2">
             {offer.tags.map((tag: string, index: number) => (
-              <Badge key={index} className="bg-blue-100 text-blue-800">
+              <Badge key={index} className="bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400">
                 {tag}
               </Badge>
             ))}

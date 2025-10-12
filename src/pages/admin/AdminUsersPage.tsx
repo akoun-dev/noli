@@ -67,13 +67,13 @@ export const AdminUsersPage: React.FC = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
-        return <Badge className="bg-green-100 text-green-800">Actif</Badge>;
+        return <Badge className="bg-green-100 text-green-800 dark:bg-green-500/20 dark:text-green-400">Actif</Badge>;
       case 'inactive':
-        return <Badge className="bg-gray-100 text-gray-800">Inactif</Badge>;
+        return <Badge className="bg-gray-100 text-gray-800 dark:bg-gray-500/20 dark:text-gray-400">Inactif</Badge>;
       case 'pending':
-        return <Badge className="bg-yellow-100 text-yellow-800">En attente</Badge>;
+        return <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-500/20 dark:text-yellow-400">En attente</Badge>;
       case 'suspended':
-        return <Badge className="bg-red-100 text-red-800">Suspendu</Badge>;
+        return <Badge className="bg-red-100 text-red-800 dark:bg-red-500/20 dark:text-red-400">Suspendu</Badge>;
       default:
         return <Badge>{status}</Badge>;
     }
@@ -82,11 +82,11 @@ export const AdminUsersPage: React.FC = () => {
   const getRoleBadge = (role: string) => {
     switch (role) {
       case 'ADMIN':
-        return <Badge className="bg-purple-100 text-purple-800">Admin</Badge>;
+        return <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-500/20 dark:text-purple-400">Admin</Badge>;
       case 'INSURER':
-        return <Badge className="bg-blue-100 text-blue-800">Assureur</Badge>;
+        return <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400">Assureur</Badge>;
       case 'USER':
-        return <Badge className="bg-gray-100 text-gray-800">Utilisateur</Badge>;
+        return <Badge className="bg-gray-100 text-gray-800 dark:bg-gray-500/20 dark:text-gray-400">Utilisateur</Badge>;
       default:
         return <Badge>{role}</Badge>;
     }
@@ -125,12 +125,12 @@ export const AdminUsersPage: React.FC = () => {
   return (
     <div className="space-y-6 w-full">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">Gestion des Utilisateurs</h1>
-          <p className="text-gray-600">Gérez tous les utilisateurs de la plateforme</p>
+          <p className="text-muted-foreground">Gérez tous les utilisateurs de la plateforme</p>
         </div>
-        <div className="flex space-x-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           <Button variant="outline" onClick={handleExportUsers}>
             <Download className="h-4 w-4 mr-2" />
             Exporter
@@ -146,7 +146,7 @@ export const AdminUsersPage: React.FC = () => {
                 Ajouter un utilisateur
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="responsive-modal-lg">
               <DialogHeader>
                 <DialogTitle>Ajouter un nouvel utilisateur</DialogTitle>
               </DialogHeader>
@@ -157,17 +157,17 @@ export const AdminUsersPage: React.FC = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         {stats && (
           <>
             <Card>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Total Utilisateurs</p>
-                    <p className="text-2xl font-bold text-blue-600">{stats.total}</p>
+                    <p className="text-sm font-medium text-muted-foreground">Total Utilisateurs</p>
+                    <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.total}</p>
                   </div>
-                  <Users className="h-8 w-8 text-blue-600" />
+                  <Users className="h-8 w-8 text-blue-600 dark:text-blue-400" />
                 </div>
               </CardContent>
             </Card>
@@ -176,10 +176,10 @@ export const AdminUsersPage: React.FC = () => {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Utilisateurs Actifs</p>
-                    <p className="text-2xl font-bold text-green-600">{stats.active}</p>
+                    <p className="text-sm font-medium text-muted-foreground">Utilisateurs Actifs</p>
+                    <p className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.active}</p>
                   </div>
-                  <CheckCircle className="h-8 w-8 text-green-600" />
+                  <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
                 </div>
               </CardContent>
             </Card>
@@ -188,10 +188,10 @@ export const AdminUsersPage: React.FC = () => {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">En attente</p>
-                    <p className="text-2xl font-bold text-yellow-600">{stats.pending}</p>
+                    <p className="text-sm font-medium text-muted-foreground">En attente</p>
+                    <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{stats.pending}</p>
                   </div>
-                  <Shield className="h-8 w-8 text-yellow-600" />
+                  <Shield className="h-8 w-8 text-yellow-600 dark:text-yellow-400" />
                 </div>
               </CardContent>
             </Card>
@@ -200,10 +200,10 @@ export const AdminUsersPage: React.FC = () => {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Suspendus</p>
-                    <p className="text-2xl font-bold text-red-600">{stats.suspended}</p>
+                    <p className="text-sm font-medium text-muted-foreground">Suspendus</p>
+                    <p className="text-2xl font-bold text-red-600 dark:text-red-400">{stats.suspended}</p>
                   </div>
-                  <Ban className="h-8 w-8 text-red-600" />
+                  <Ban className="h-8 w-8 text-red-600 dark:text-red-400" />
                 </div>
               </CardContent>
             </Card>
@@ -214,11 +214,11 @@ export const AdminUsersPage: React.FC = () => {
       {/* Filters and Search */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <CardTitle>Liste des Utilisateurs</CardTitle>
             {selectedUsers.length > 0 && (
-              <div className="flex items-center space-x-2">
-                <span className="text-sm text-gray-600">{selectedUsers.length} sélectionnés</span>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                <span className="text-sm text-muted-foreground">{selectedUsers.length} sélectionnés</span>
                 <Select onValueChange={(value) => handleBulkAction(value)}>
                   <SelectTrigger className="w-40">
                     <SelectValue placeholder="Actions groupées" />
@@ -233,10 +233,10 @@ export const AdminUsersPage: React.FC = () => {
               </div>
             )}
           </div>
-          <div className="flex space-x-4">
+          <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 h-4 w-4" />
                 <Input
                   placeholder="Rechercher par nom, email..."
                   value={searchTerm}
@@ -273,11 +273,11 @@ export const AdminUsersPage: React.FC = () => {
         <CardContent>
           {usersLoading ? (
             <div className="flex justify-center items-center h-64">
-              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+              <Loader2 className="h-8 w-8 animate-spin text-blue-600 dark:text-blue-400" />
               <span className="ml-2">Chargement des utilisateurs...</span>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="responsive-table-wrapper">
               <table className="w-full">
               <thead>
                 <tr className="border-b">
@@ -303,7 +303,7 @@ export const AdminUsersPage: React.FC = () => {
               </thead>
               <tbody>
                 {users.map((user) => (
-                  <tr key={user.id} className="border-b hover:bg-gray-50">
+                  <tr key={user.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-800/50">
                     <td className="p-4">
                       <input
                         type="checkbox"
@@ -332,7 +332,7 @@ export const AdminUsersPage: React.FC = () => {
                               : `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Nom non spécifié'
                             }
                           </div>
-                          <div className="text-sm text-gray-500">{user.email}</div>
+                          <div className="text-sm text-gray-500 dark:text-gray-400">{user.email}</div>
                         </div>
                       </div>
                     </td>
@@ -340,13 +340,13 @@ export const AdminUsersPage: React.FC = () => {
                       <div className="space-y-1">
                         {user.phone && (
                           <div className="flex items-center space-x-2 text-sm">
-                            <Phone className="h-3 w-3 text-gray-400" />
+                            <Phone className="h-3 w-3 text-gray-400 dark:text-gray-500" />
                             <span>{user.phone}</span>
                           </div>
                         )}
                         {user.address && (
                           <div className="flex items-center space-x-2 text-sm">
-                            <MapPin className="h-3 w-3 text-gray-400" />
+                            <MapPin className="h-3 w-3 text-gray-400 dark:text-gray-500" />
                             <span>{user.address}</span>
                           </div>
                         )}
@@ -359,23 +359,23 @@ export const AdminUsersPage: React.FC = () => {
                         <div className="text-sm">
                           <span className="font-medium">{user.quotesCount}</span> devis
                         </div>
-                        <div className="text-xs text-gray-500">
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
                           {user.conversionRate}% conversion
                         </div>
-                        <div className="text-xs text-gray-500">
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
                           Dernière connexion: {user.lastLogin}
                         </div>
                       </div>
                     </td>
                     <td className="p-4">
-                      <div className="flex space-x-2">
+                      <div className="flex flex-col sm:flex-row gap-2">
                         <Dialog>
                           <DialogTrigger asChild>
                             <Button variant="outline" size="sm">
                               <Eye className="h-3 w-3" />
                             </Button>
                           </DialogTrigger>
-                          <DialogContent className="max-w-2xl">
+                          <DialogContent className="responsive-modal-lg">
                             <DialogHeader>
                               <DialogTitle>Détails de l'utilisateur</DialogTitle>
                             </DialogHeader>
@@ -388,7 +388,7 @@ export const AdminUsersPage: React.FC = () => {
                               <Edit className="h-3 w-3" />
                             </Button>
                           </DialogTrigger>
-                          <DialogContent className="max-w-2xl">
+                          <DialogContent className="responsive-modal-lg">
                             <DialogHeader>
                               <DialogTitle>Modifier l'utilisateur</DialogTitle>
                             </DialogHeader>
@@ -438,8 +438,8 @@ export const AdminUsersPage: React.FC = () => {
           </DialogHeader>
           <div className="space-y-4">
             <p>Êtes-vous sûr de vouloir supprimer l'utilisateur {selectedUser?.firstName} {selectedUser?.lastName}?</p>
-            <p className="text-sm text-red-600">Cette action est irréversible.</p>
-            <div className="flex justify-end space-x-2">
+            <p className="text-sm text-red-600 dark:text-red-400">Cette action est irréversible.</p>
+            <div className="flex flex-col sm:flex-row sm:justify-end gap-2">
               <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
                 Annuler
               </Button>
@@ -525,7 +525,7 @@ const UserForm: React.FC<{ user?: User }> = ({ user }) => {
           />
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <Label htmlFor="firstName">Prénom</Label>
             <Input
@@ -572,7 +572,7 @@ const UserForm: React.FC<{ user?: User }> = ({ user }) => {
           onChange={(e) => setFormData({ ...formData, address: e.target.value })}
         />
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <Label htmlFor="role">Rôle</Label>
           <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value as 'USER' | 'INSURER' | 'ADMIN' })}>
@@ -601,7 +601,7 @@ const UserForm: React.FC<{ user?: User }> = ({ user }) => {
           </Select>
         </div>
       </div>
-      <div className="flex justify-end space-x-2">
+      <div className="flex flex-col sm:flex-row sm:justify-end gap-2">
         <Button type="submit" disabled={createUser.isPending || updateUser.isPending}>
           {createUser.isPending || updateUser.isPending ? (
             <>
@@ -641,51 +641,51 @@ const UserDetails: React.FC<{ user: User }> = ({ user }) => {
         </div>
         <div>
           <h3 className="text-lg font-semibold">{getDisplayName()}</h3>
-          <p className="text-gray-600">{user.email}</p>
+          <p className="text-gray-600 dark:text-gray-400">{user.email}</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <Label className="text-sm font-medium text-gray-600">Rôle</Label>
+          <Label className="text-sm font-medium text-gray-600 dark:text-gray-400">Rôle</Label>
           <div className="mt-1">{user.role}</div>
         </div>
         <div>
-          <Label className="text-sm font-medium text-gray-600">Statut</Label>
+          <Label className="text-sm font-medium text-gray-600 dark:text-gray-400">Statut</Label>
           <div className="mt-1">{user.status}</div>
         </div>
         <div>
-          <Label className="text-sm font-medium text-gray-600">Date de création</Label>
+          <Label className="text-sm font-medium text-gray-600 dark:text-gray-400">Date de création</Label>
           <div className="mt-1">{user.createdAt}</div>
         </div>
         <div>
-          <Label className="text-sm font-medium text-gray-600">Dernière connexion</Label>
+          <Label className="text-sm font-medium text-gray-600 dark:text-gray-400">Dernière connexion</Label>
           <div className="mt-1">{user.lastLogin}</div>
         </div>
       </div>
 
       {user.phone && (
         <div>
-          <Label className="text-sm font-medium text-gray-600">Téléphone</Label>
+          <Label className="text-sm font-medium text-gray-600 dark:text-gray-400">Téléphone</Label>
           <div className="mt-1">{user.phone}</div>
         </div>
       )}
 
       {user.address && (
         <div>
-          <Label className="text-sm font-medium text-gray-600">Adresse</Label>
+          <Label className="text-sm font-medium text-gray-600 dark:text-gray-400">Adresse</Label>
           <div className="mt-1">{user.address}</div>
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="p-4 bg-blue-50 rounded-lg">
-          <div className="text-2xl font-bold text-blue-600">{user.quotesCount}</div>
-          <div className="text-sm text-blue-600">Devis créés</div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+          <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{user.quotesCount}</div>
+          <div className="text-sm text-blue-600 dark:text-blue-400">Devis créés</div>
         </div>
-        <div className="p-4 bg-green-50 rounded-lg">
-          <div className="text-2xl font-bold text-green-600">{user.conversionRate}%</div>
-          <div className="text-sm text-green-600">Taux de conversion</div>
+        <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+          <div className="text-2xl font-bold text-green-600 dark:text-green-400">{user.conversionRate}%</div>
+          <div className="text-sm text-green-600 dark:text-green-400">Taux de conversion</div>
         </div>
       </div>
     </div>

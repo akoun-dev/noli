@@ -306,6 +306,169 @@ All colors MUST be HSL.
   .responsive-footer {
     @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8;
   }
+
+  /* Grilles spécialisées pour l'administration */
+  .admin-stats-grid {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4;
+  }
+
+  .admin-dashboard-grid {
+    @apply grid grid-cols-1 lg:grid-cols-3 gap-6;
+  }
+
+  .admin-two-column {
+    @apply grid grid-cols-1 lg:grid-cols-2 gap-6;
+  }
+
+  .admin-three-column {
+    @apply grid grid-cols-1 md:grid-cols-3 gap-4;
+  }
+
+  /* Actions responsives */
+  .responsive-actions {
+    @apply flex flex-col sm:flex-row gap-2 sm:gap-3;
+  }
+
+  .responsive-actions-reverse {
+    @apply flex flex-col sm:flex-row-reverse gap-2 sm:gap-3;
+  }
+
+  /* Cards responsives avec variations */
+  .responsive-card-hover {
+    @apply p-4 sm:p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200;
+  }
+
+  .responsive-card-compact {
+    @apply p-3 sm:p-4 rounded-md shadow-sm;
+  }
+
+  .responsive-card-spacious {
+    @apply p-6 sm:p-8 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200;
+  }
+
+  /* Header responsive amélioré */
+  .responsive-header-compact {
+    @apply flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4;
+  }
+
+  .responsive-header-spacious {
+    @apply flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6;
+  }
+
+  /* Navigation responsive améliorée */
+  .responsive-nav-horizontal {
+    @apply flex flex-wrap gap-2 sm:gap-3;
+  }
+
+  .responsive-nav-vertical {
+    @apply flex flex-col sm:flex-row gap-2 sm:gap-3;
+  }
+
+  /* Filtres responsifs améliorés */
+  .responsive-filters-grid {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3;
+  }
+
+  .responsive-filters-flex {
+    @apply flex flex-col sm:flex-row sm:items-center gap-3 flex-wrap;
+  }
+
+  /* Tables responsives améliorées */
+  .responsive-table-enhanced {
+    @apply overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 shadow-sm rounded-lg border;
+  }
+
+  .responsive-table-dense {
+    @apply overflow-x-auto -mx-2 px-2 sm:mx-0 sm:px-0 text-sm;
+  }
+
+  /* Modales responsives améliorées */
+  .responsive-modal-mobile {
+    @apply w-full max-w-full mx-0 sm:mx-auto sm:max-w-md rounded-none sm:rounded-lg;
+  }
+
+  .responsive-modal-desktop {
+    @apply w-full max-w-lg sm:max-w-2xl mx-4 sm:mx-auto;
+  }
+
+  .responsive-modal-full {
+    @apply w-full h-full max-w-full mx-0 rounded-none sm:max-w-5xl sm:mx-auto sm:h-auto sm:rounded-lg;
+  }
+
+  /* Badges responsifs améliorés */
+  .responsive-badge-compact {
+    @apply text-xs px-2 py-1 leading-none;
+  }
+
+  .responsive-badge-normal {
+    @apply text-xs px-2.5 py-0.5;
+  }
+
+  .responsive-badge-large {
+    @apply text-sm px-3 py-1;
+  }
+
+  /* Alertes responsives améliorées */
+  .responsive-alert-compact {
+    @apply p-3 text-sm leading-tight;
+  }
+
+  .responsive-alert-normal {
+    @apply p-4 text-sm;
+  }
+
+  .responsive-alert-spacious {
+    @apply p-6 text-base leading-relaxed;
+  }
+
+  /* Progress bars responsives */
+  .responsive-progress {
+    @apply w-full h-2 sm:h-3;
+  }
+
+  .responsive-progress-compact {
+    @apply w-full h-1.5;
+  }
+
+  .responsive-progress-large {
+    @apply w-full h-4;
+  }
+
+  /* Charts et métriques responsives */
+  .responsive-chart-container {
+    @apply w-full h-64 sm:h-80 lg:h-96;
+  }
+
+  .responsive-metric-grid {
+    @apply grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4;
+  }
+
+  /* Animations responsives */
+  .responsive-animation {
+    @apply transition-all duration-200 ease-in-out;
+  }
+
+  .responsive-animation-slow {
+    @apply transition-all duration-300 ease-in-out;
+  }
+
+  /* Espacements responsifs améliorés */
+  .responsive-section {
+    @apply space-y-4 sm:space-y-6 lg:space-y-8;
+  }
+
+  .responsive-subsection {
+    @apply space-y-3 sm:space-y-4;
+  }
+
+  /* Conteneurs spécialisés */
+  .responsive-admin-container {
+    @apply w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6;
+  }
+
+  .responsive-dashboard-container {
+    @apply w-full max-w-full mx-auto px-0 py-4 sm:px-4 sm:py-6;
+  }
 }
 
 /* Media queries spécifiques pour l'orientation */

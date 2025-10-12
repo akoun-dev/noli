@@ -205,21 +205,21 @@ const AdminSettingsPage = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">Paramètres du Système</h1>
-          <p className="text-gray-600">Configurez les paramètres de l'application NOLI</p>
+          <p className="text-gray-600 dark:text-gray-400">Configurez les paramètres de l'application NOLI</p>
         </div>
-        <div className="flex space-x-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           <Button variant="outline" onClick={handleExportSettings}>
             <Download className="w-4 h-4 mr-2" />
-            Exporter
+            <span className="hidden sm:inline">Exporter</span>
           </Button>
           <label htmlFor="import-settings">
             <Button variant="outline" asChild>
               <span>
                 <Upload className="w-4 h-4 mr-2" />
-                Importer
+                <span className="hidden sm:inline">Importer</span>
               </span>
             </Button>
           </label>
@@ -232,7 +232,7 @@ const AdminSettingsPage = () => {
           />
           <Button variant="outline" onClick={handleResetSettings}>
             <RotateCcw className="w-4 h-4 mr-2" />
-            Réinitialiser
+            <span className="hidden sm:inline">Réinitialiser</span>
           </Button>
           <Button onClick={handleSaveSettings} disabled={isSaving}>
             <Save className="w-4 h-4 mr-2" />
@@ -242,26 +242,26 @@ const AdminSettingsPage = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
           <TabsTrigger value="general" className="flex items-center space-x-2">
             <Settings className="w-4 h-4" />
-            <span>Général</span>
+            <span className="hidden sm:inline">Général</span>
           </TabsTrigger>
           <TabsTrigger value="users" className="flex items-center space-x-2">
             <Users className="w-4 h-4" />
-            <span>Utilisateurs</span>
+            <span className="hidden sm:inline">Utilisateurs</span>
           </TabsTrigger>
           <TabsTrigger value="security" className="flex items-center space-x-2">
             <Shield className="w-4 h-4" />
-            <span>Sécurité</span>
+            <span className="hidden sm:inline">Sécurité</span>
           </TabsTrigger>
           <TabsTrigger value="notifications" className="flex items-center space-x-2">
             <Bell className="w-4 h-4" />
-            <span>Notifications</span>
+            <span className="hidden sm:inline">Notifications</span>
           </TabsTrigger>
           <TabsTrigger value="appearance" className="flex items-center space-x-2">
             <Palette className="w-4 h-4" />
-            <span>Apparence</span>
+            <span className="hidden sm:inline">Apparence</span>
           </TabsTrigger>
         </TabsList>
 
@@ -275,7 +275,7 @@ const AdminSettingsPage = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="siteName">Nom du site</Label>
                   <Input
@@ -302,7 +302,7 @@ const AdminSettingsPage = () => {
                   onChange={(e) => setSystemSettings({ ...systemSettings, siteDescription: e.target.value })}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="contactPhone">Téléphone contact</Label>
                   <Input
@@ -428,7 +428,7 @@ const AdminSettingsPage = () => {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
                   <Label htmlFor="senderName">Nom de l'expéditeur</Label>
                   <Input
@@ -597,7 +597,7 @@ const AdminSettingsPage = () => {
               <div className="space-y-6">
                 <div>
                   <h4 className="text-lg font-semibold mb-4">Politique de mots de passe</h4>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="p-4 border rounded-lg">
                       <div className="flex items-center justify-between mb-2">
                         <span className="font-medium">Longueur minimale</span>
@@ -605,15 +605,15 @@ const AdminSettingsPage = () => {
                       </div>
                       <div className="flex items-center justify-between mb-2">
                         <span className="font-medium">Majuscules requises</span>
-                        {systemSettings.passwordPolicy.requireUppercase ? <Check className="h-4 w-4 text-green-500" /> : <X className="h-4 w-4 text-red-500" />}
+                        {systemSettings.passwordPolicy.requireUppercase ? <Check className="h-4 w-4 text-green-500 dark:text-green-400" /> : <X className="h-4 w-4 text-red-500 dark:text-red-400" />}
                       </div>
                       <div className="flex items-center justify-between mb-2">
                         <span className="font-medium">Chiffres requis</span>
-                        {systemSettings.passwordPolicy.requireNumbers ? <Check className="h-4 w-4 text-green-500" /> : <X className="h-4 w-4 text-red-500" />}
+                        {systemSettings.passwordPolicy.requireNumbers ? <Check className="h-4 w-4 text-green-500 dark:text-green-400" /> : <X className="h-4 w-4 text-red-500 dark:text-red-400" />}
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="font-medium">Caractères spéciaux</span>
-                        {systemSettings.passwordPolicy.requireSpecialChars ? <Check className="h-4 w-4 text-green-500" /> : <X className="h-4 w-4 text-red-500" />}
+                        {systemSettings.passwordPolicy.requireSpecialChars ? <Check className="h-4 w-4 text-green-500 dark:text-green-400" /> : <X className="h-4 w-4 text-red-500 dark:text-red-400" />}
                       </div>
                     </div>
                     <div className="p-4 border rounded-lg">
@@ -800,7 +800,7 @@ const AdminSettingsPage = () => {
             <CardContent className="space-y-6">
               <div className="space-y-4">
                 <h4 className="text-lg font-semibold">Thème et langage</h4>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="theme">Thème</Label>
                     <Select value={uiSettings.theme} onValueChange={(value: 'light' | 'dark' | 'auto') => setUISettings({ ...uiSettings, theme: value })}>
@@ -833,7 +833,7 @@ const AdminSettingsPage = () => {
 
               <div className="space-y-4">
                 <h4 className="text-lg font-semibold">Format et timezone</h4>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="dateFormat">Format de date</Label>
                     <Select value={uiSettings.dateFormat} onValueChange={(value) => setUISettings({ ...uiSettings, dateFormat: value })}>

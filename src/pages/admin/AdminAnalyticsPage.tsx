@@ -121,7 +121,7 @@ export const AdminAnalyticsPage: React.FC = () => {
       target: '300ms',
       unit: 'ms',
       status: systemHealth && systemHealth.responseTime <= 300 ? 'excellent' : 'good',
-      trend: 'improving',
+      trend: 'up',
       change: systemHealth ? `-${300 - systemHealth.responseTime}ms` : '-55ms',
       description: 'Temps moyen pour obtenir les résultats de comparaison'
     },
@@ -190,7 +190,13 @@ export const AdminAnalyticsPage: React.FC = () => {
     }
   ];
 
-  const timeSeriesData: TimeSeriesData[] = activityData || [
+  const timeSeriesData: TimeSeriesData[] = activityData ? activityData.map(item => ({
+    date: item.date,
+    users: item.newUsers || 0,
+    quotes: item.newQuotes || 0,
+    conversions: item.newPolicies || 0,
+    clicks: Math.floor((item.newUsers || 0) * 0.08)
+  })) : [
     { date: '2024-01-15', users: 1250, quotes: 340, conversions: 58, clicks: 95 },
     { date: '2024-01-16', users: 1320, quotes: 365, conversions: 62, clicks: 102 },
     { date: '2024-01-17', users: 1180, quotes: 312, conversions: 54, clicks: 87 },
@@ -203,26 +209,26 @@ export const AdminAnalyticsPage: React.FC = () => {
     switch (status) {
       case 'excellent':
       case 'good':
-        return 'text-green-600';
+        return 'text-green-600 dark:text-green-400';
       case 'warning':
-        return 'text-yellow-600';
+        return 'text-yellow-600 dark:text-yellow-400';
       case 'critical':
-        return 'text-red-600';
+        return 'text-red-600 dark:text-red-400';
       default:
-        return 'text-gray-600';
+        return 'text-gray-600 dark:text-gray-400';
     }
   };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'excellent':
-        return <Badge className="bg-green-100 text-green-800">Excellent</Badge>;
+        return <Badge className="bg-green-100 text-green-800 dark:bg-green-500/20 dark:text-green-400">Excellent</Badge>;
       case 'good':
-        return <Badge className="bg-blue-100 text-blue-800">Bon</Badge>;
+        return <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400">Bon</Badge>;
       case 'warning':
-        return <Badge className="bg-yellow-100 text-yellow-800">Attention</Badge>;
+        return <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-500/20 dark:text-yellow-400">Attention</Badge>;
       case 'critical':
-        return <Badge className="bg-red-100 text-red-800">Critique</Badge>;
+        return <Badge className="bg-red-100 text-red-800 dark:bg-red-500/20 dark:text-red-400">Critique</Badge>;
       default:
         return <Badge>{status}</Badge>;
     }
@@ -232,14 +238,14 @@ export const AdminAnalyticsPage: React.FC = () => {
     switch (trend) {
       case 'up':
       case 'improving':
-        return <TrendingUp className="h-4 w-4 text-green-600" />;
+        return <TrendingUp className="h-4 w-4 text-green-600 dark:text-green-400" />;
       case 'down':
       case 'degrading':
-        return <TrendingDown className="h-4 w-4 text-red-600" />;
+        return <TrendingDown className="h-4 w-4 text-red-600 dark:text-red-400" />;
       case 'stable':
-        return <Minus className="h-4 w-4 text-gray-600" />;
+        return <Minus className="h-4 w-4 text-gray-600 dark:text-gray-400" />;
       default:
-        return <Activity className="h-4 w-4 text-gray-600" />;
+        return <Activity className="h-4 w-4 text-gray-600 dark:text-gray-400" />;
     }
   };
 
@@ -263,14 +269,14 @@ export const AdminAnalyticsPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">Tableau de Bord Statistiques</h1>
-          <p className="text-gray-600">Indicateurs clés de performance et analytics</p>
+          <p className="text-muted-foreground">Indicateurs clés de performance et analytics</p>
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
           <Select value={timeRange} onValueChange={setTimeRange}>
-            <SelectTrigger className="w-32">
+            <SelectTrigger className="w-full sm:w-32">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -282,11 +288,11 @@ export const AdminAnalyticsPage: React.FC = () => {
           </Select>
           <Button variant="outline" onClick={() => exportReport.mutate({ reportType: 'comprehensive', period: timeRange as '7d' | '30d' | '90d' })}>
             <Download className="h-4 w-4 mr-2" />
-            Exporter
+            <span className="hidden sm:inline">Exporter</span>
           </Button>
           <Button variant="outline">
             <RefreshCw className="h-4 w-4 mr-2" />
-            Actualiser
+            <span className="hidden sm:inline">Actualiser</span>
           </Button>
         </div>
       </div>
@@ -297,7 +303,7 @@ export const AdminAnalyticsPage: React.FC = () => {
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <span>Indicateurs Clés de Performance</span>
-              <Target className="h-5 w-5 text-blue-600" />
+              <Target className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -307,7 +313,7 @@ export const AdminAnalyticsPage: React.FC = () => {
                   <div className="flex items-center justify-between mb-2">
                     <div>
                       <h4 className="font-medium">{kpi.name}</h4>
-                      <p className="text-sm text-gray-600">{kpi.description}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">{kpi.description}</p>
                     </div>
                     {getStatusBadge(kpi.status)}
                   </div>
@@ -318,14 +324,14 @@ export const AdminAnalyticsPage: React.FC = () => {
                         {kpi.value}
                       </span>
                       {getTrendIcon(kpi.trend)}
-                      <span className="text-sm text-green-600">{kpi.change}</span>
+                      <span className="text-sm text-green-600 dark:text-green-400">{kpi.change}</span>
                     </div>
-                    <div className="text-sm text-gray-500">
+                    <div className="text-sm text-gray-500 dark:text-gray-400">
                       Cible: {kpi.target}
                     </div>
                   </div>
 
-                  <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                     <div
                       className={`h-2 rounded-full ${
                         kpi.status === 'excellent' ? 'bg-green-600' :
@@ -351,7 +357,7 @@ export const AdminAnalyticsPage: React.FC = () => {
             <div className="space-y-4">
               <div className="p-4 border rounded-lg">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="font-medium text-green-600">Excellent</span>
+                  <span className="font-medium text-green-600 dark:text-green-400">Excellent</span>
                   <span className="text-sm">{kpiDistribution.excellent.toFixed(0)}%</span>
                 </div>
                 <Progress value={kpiDistribution.excellent} className="h-3" />
@@ -359,7 +365,7 @@ export const AdminAnalyticsPage: React.FC = () => {
 
               <div className="p-4 border rounded-lg">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="font-medium text-blue-600">Bon</span>
+                  <span className="font-medium text-blue-600 dark:text-blue-400">Bon</span>
                   <span className="text-sm">{kpiDistribution.good.toFixed(0)}%</span>
                 </div>
                 <Progress value={kpiDistribution.good} className="h-3" />
@@ -367,7 +373,7 @@ export const AdminAnalyticsPage: React.FC = () => {
 
               <div className="p-4 border rounded-lg">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="font-medium text-yellow-600">Attention</span>
+                  <span className="font-medium text-yellow-600 dark:text-yellow-400">Attention</span>
                   <span className="text-sm">{kpiDistribution.warning.toFixed(0)}%</span>
                 </div>
                 <Progress value={kpiDistribution.warning} className="h-3" />
@@ -375,16 +381,16 @@ export const AdminAnalyticsPage: React.FC = () => {
 
               <div className="p-4 border rounded-lg">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="font-medium text-red-600">Critique</span>
+                  <span className="font-medium text-red-600 dark:text-red-400">Critique</span>
                   <span className="text-sm">{kpiDistribution.critical.toFixed(0)}%</span>
                 </div>
                 <Progress value={kpiDistribution.critical} className="h-3" />
               </div>
 
-              <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+              <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                 <div className="flex items-center space-x-2">
-                  <Award className="h-5 w-5 text-blue-600" />
-                  <span className="font-medium text-blue-800">
+                  <Award className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  <span className="font-medium text-blue-800 dark:text-blue-200">
                     {kpis.filter(k => k.status === 'excellent' || k.status === 'good').length}/{kpis.length} KPIs atteints
                   </span>
                 </div>
@@ -396,9 +402,9 @@ export const AdminAnalyticsPage: React.FC = () => {
 
       {/* Main Analytics Tabs */}
       <Tabs defaultValue="conversion" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="conversion">Entonnoir de conversion</TabsTrigger>
-          <TabsTrigger value="performance">Performance technique</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
+          <TabsTrigger value="conversion">Entonnoir</TabsTrigger>
+          <TabsTrigger value="performance">Performance</TabsTrigger>
           <TabsTrigger value="trends">Tendances</TabsTrigger>
           <TabsTrigger value="realtime">Temps réel</TabsTrigger>
         </TabsList>
@@ -417,23 +423,23 @@ export const AdminAnalyticsPage: React.FC = () => {
                       <div className="flex items-center justify-between">
                         <span className="font-medium">{stage.stage}</span>
                         <div className="flex items-center space-x-4">
-                          <span className="text-sm text-gray-600">{stage.count.toLocaleString()}</span>
+                          <span className="text-sm text-gray-600 dark:text-gray-400">{stage.count.toLocaleString()}</span>
                           <span className="text-sm font-medium">{stage.percentage.toFixed(1)}%</span>
                           {stage.target > 0 && (
-                            <Badge className={stage.percentage >= stage.target ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
+                            <Badge className={stage.percentage >= stage.target ? 'bg-green-100 text-green-800 dark:bg-green-500/20 dark:text-green-400' : 'bg-red-100 text-red-800 dark:bg-red-500/20 dark:text-red-400'}>
                               Cible: {stage.target}%
                             </Badge>
                           )}
                         </div>
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-4">
+                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4">
                         <div
                           className="h-4 rounded-full bg-gradient-to-r from-blue-500 to-purple-600"
                           style={{ width: `${stage.percentage}%` }}
                         />
                       </div>
                       {index > 0 && (
-                        <div className="text-xs text-red-600">
+                        <div className="text-xs text-red-600 dark:text-red-400">
                           Taux d'abandon: {stage.dropRate.toFixed(1)}%
                         </div>
                       )}
@@ -452,9 +458,9 @@ export const AdminAnalyticsPage: React.FC = () => {
                   <div className="p-3 bg-green-50 rounded-lg">
                     <div className="flex items-center space-x-2 mb-2">
                       <CheckCircle className="h-4 w-4 text-green-600" />
-                      <span className="font-medium text-green-800">Points forts</span>
+                      <span className="font-medium text-green-800 dark:text-green-200">Points forts</span>
                     </div>
-                    <ul className="text-sm text-green-700 space-y-1">
+                    <ul className="text-sm text-green-700 dark:text-green-300 space-y-1">
                       <li>• Taux de complétion formulaire supérieur à la cible</li>
                       <li>• Excellent taux de conversion final</li>
                       <li>• Temps de réponse optimal</li>
@@ -464,9 +470,9 @@ export const AdminAnalyticsPage: React.FC = () => {
                   <div className="p-3 bg-yellow-50 rounded-lg">
                     <div className="flex items-center space-x-2 mb-2">
                       <AlertTriangle className="h-4 w-4 text-yellow-600" />
-                      <span className="font-medium text-yellow-800">À améliorer</span>
+                      <span className="font-medium text-yellow-800 dark:text-yellow-200">À améliorer</span>
                     </div>
-                    <ul className="text-sm text-yellow-700 space-y-1">
+                    <ul className="text-sm text-yellow-700 dark:text-yellow-300 space-y-1">
                       <li>• 30% d'abandon au démarrage du formulaire</li>
                       <li>• Taux de clics pourrait être optimisé</li>
                     </ul>
@@ -475,9 +481,9 @@ export const AdminAnalyticsPage: React.FC = () => {
                   <div className="p-3 bg-blue-50 rounded-lg">
                     <div className="flex items-center space-x-2 mb-2">
                       <Target className="h-4 w-4 text-blue-600" />
-                      <span className="font-medium text-blue-800">Objectifs</span>
+                      <span className="font-medium text-blue-800 dark:text-blue-200">Objectifs</span>
                     </div>
-                    <ul className="text-sm text-blue-700 space-y-1">
+                    <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
                       <li>• Réduire l'abandon initial à 25%</li>
                       <li>• Augmenter les clics à 30%</li>
                       <li>• Maintenir la conversion actuelle</li>
@@ -505,9 +511,9 @@ export const AdminAnalyticsPage: React.FC = () => {
                         <div className="flex items-center space-x-2">
                           {getTrendIcon(metric.trend)}
                           <Badge className={
-                            metric.status === 'good' ? 'bg-green-100 text-green-800' :
-                            metric.status === 'warning' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-red-100 text-red-800'
+                            metric.status === 'good' ? 'bg-green-100 text-green-800 dark:bg-green-500/20 dark:text-green-400' :
+                            metric.status === 'warning' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-500/20 dark:text-yellow-400' :
+                            'bg-red-100 text-red-800 dark:bg-red-500/20 dark:text-red-400'
                           }>
                             {metric.status === 'good' ? 'Bon' : metric.status === 'warning' ? 'Attention' : 'Critique'}
                           </Badge>
@@ -520,11 +526,11 @@ export const AdminAnalyticsPage: React.FC = () => {
                         }`}>
                           {metric.value}{metric.unit}
                         </span>
-                        <span className="text-sm text-gray-500">
+                        <span className="text-sm text-gray-500 dark:text-gray-400">
                           Cible: {metric.target}{metric.unit}
                         </span>
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                         <div
                           className={`h-2 rounded-full ${
                             metric.status === 'good' ? 'bg-green-600' :
@@ -549,40 +555,40 @@ export const AdminAnalyticsPage: React.FC = () => {
                 <div className="space-y-4">
                   <div className="p-4 bg-green-50 rounded-lg">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium text-green-800">Disponibilité</span>
-                      <span className="text-2xl font-bold text-green-600">99.8%</span>
+                      <span className="font-medium text-green-800 dark:text-green-200">Disponibilité</span>
+                      <span className="text-2xl font-bold text-green-600 dark:text-green-400">99.8%</span>
                     </div>
-                    <div className="text-sm text-green-700">
+                    <div className="text-sm text-green-700 dark:text-green-300">
                       Temps d'arrêt: 1h 45min ce mois-ci
                     </div>
                   </div>
 
                   <div className="p-4 bg-blue-50 rounded-lg">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium text-blue-800">Temps de réponse moyen</span>
-                      <span className="text-2xl font-bold text-blue-600">245ms</span>
+                      <span className="font-medium text-blue-800 dark:text-blue-200">Temps de réponse moyen</span>
+                      <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">245ms</span>
                     </div>
-                    <div className="text-sm text-blue-700">
+                    <div className="text-sm text-blue-700 dark:text-blue-300">
                       Amélioration de 15% ce mois-ci
                     </div>
                   </div>
 
                   <div className="p-4 bg-yellow-50 rounded-lg">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium text-yellow-800">Taux d'erreur</span>
-                      <span className="text-2xl font-bold text-yellow-600">0.5%</span>
+                      <span className="font-medium text-yellow-800 dark:text-yellow-200">Taux d'erreur</span>
+                      <span className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">0.5%</span>
                     </div>
-                    <div className="text-sm text-yellow-700">
+                    <div className="text-sm text-yellow-700 dark:text-yellow-300">
                       Stable par rapport au mois dernier
                     </div>
                   </div>
 
                   <div className="p-4 bg-purple-50 rounded-lg">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium text-purple-800">Utilisation ressources</span>
-                      <span className="text-2xl font-bold text-purple-600">56%</span>
+                      <span className="font-medium text-purple-800 dark:text-purple-200">Utilisation ressources</span>
+                      <span className="text-2xl font-bold text-purple-600 dark:text-purple-400">56%</span>
                     </div>
-                    <div className="text-sm text-purple-700">
+                    <div className="text-sm text-purple-700 dark:text-purple-300">
                       CPU: 45%, Mémoire: 68%, Disque: 54%
                     </div>
                   </div>
@@ -601,41 +607,41 @@ export const AdminAnalyticsPage: React.FC = () => {
             <CardContent>
               <div className="space-y-4">
                 {/* This would typically include a chart component */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="p-4 border rounded-lg">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-gray-600">Utilisateurs actifs</span>
-                      <TrendingUp className="h-4 w-4 text-green-600" />
+                      <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Utilisateurs actifs</span>
+                      <TrendingUp className="h-4 w-4 text-green-600 dark:text-green-400" />
                     </div>
-                    <div className="text-2xl font-bold text-blue-600">12,543</div>
-                    <div className="text-sm text-green-600">+12% vs mois dernier</div>
+                    <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">12,543</div>
+                    <div className="text-sm text-green-600 dark:text-green-400">+12% vs mois dernier</div>
                   </div>
 
                   <div className="p-4 border rounded-lg">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-gray-600">Devis générés</span>
-                      <TrendingUp className="h-4 w-4 text-green-600" />
+                      <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Devis générés</span>
+                      <TrendingUp className="h-4 w-4 text-green-600 dark:text-green-400" />
                     </div>
-                    <div className="text-2xl font-bold text-purple-600">45,678</div>
-                    <div className="text-sm text-green-600">+23% vs mois dernier</div>
+                    <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">45,678</div>
+                    <div className="text-sm text-green-600 dark:text-green-400">+23% vs mois dernier</div>
                   </div>
 
                   <div className="p-4 border rounded-lg">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-gray-600">Conversions</span>
-                      <TrendingUp className="h-4 w-4 text-green-600" />
+                      <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Conversions</span>
+                      <TrendingUp className="h-4 w-4 text-green-600 dark:text-green-400" />
                     </div>
-                    <div className="text-2xl font-bold text-green-600">8,456</div>
-                    <div className="text-sm text-green-600">+18.5% vs mois dernier</div>
+                    <div className="text-2xl font-bold text-green-600 dark:text-green-400">8,456</div>
+                    <div className="text-sm text-green-600 dark:text-green-400">+18.5% vs mois dernier</div>
                   </div>
 
                   <div className="p-4 border rounded-lg">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-gray-600">Revenus générés</span>
-                      <TrendingUp className="h-4 w-4 text-green-600" />
+                      <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Revenus générés</span>
+                      <TrendingUp className="h-4 w-4 text-green-600 dark:text-green-400" />
                     </div>
-                    <div className="text-2xl font-bold text-orange-600">1.2M FCFA</div>
-                    <div className="text-sm text-green-600">+25% vs mois dernier</div>
+                    <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">1.2M FCFA</div>
+                    <div className="text-sm text-green-600 dark:text-green-400">+25% vs mois dernier</div>
                   </div>
                 </div>
               </div>
@@ -649,7 +655,7 @@ export const AdminAnalyticsPage: React.FC = () => {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
-                  <Zap className="h-5 w-5 text-yellow-500" />
+                  <Zap className="h-5 w-5 text-yellow-500 dark:text-yellow-400" />
                   <span>Activité en temps réel</span>
                 </CardTitle>
               </CardHeader>
@@ -657,19 +663,19 @@ export const AdminAnalyticsPage: React.FC = () => {
                 <div className="space-y-4">
                   <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
                     <span className="font-medium">Utilisateurs en ligne</span>
-                    <span className="text-2xl font-bold text-blue-600">342</span>
+                    <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">342</span>
                   </div>
                   <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
                     <span className="font-medium">Formulaires actifs</span>
-                    <span className="text-2xl font-bold text-green-600">28</span>
+                    <span className="text-2xl font-bold text-green-600 dark:text-green-400">28</span>
                   </div>
                   <div className="flex justify-between items-center p-3 bg-purple-50 rounded-lg">
                     <span className="font-medium">Comparaisons en cours</span>
-                    <span className="text-2xl font-bold text-purple-600">15</span>
+                    <span className="text-2xl font-bold text-purple-600 dark:text-purple-400">15</span>
                   </div>
                   <div className="flex justify-between items-center p-3 bg-orange-50 rounded-lg">
                     <span className="font-medium">Clics cette heure</span>
-                    <span className="text-2xl font-bold text-orange-600">127</span>
+                    <span className="text-2xl font-bold text-orange-600 dark:text-orange-400">127</span>
                   </div>
                 </div>
               </CardContent>
@@ -683,33 +689,33 @@ export const AdminAnalyticsPage: React.FC = () => {
                 <div className="space-y-3">
                   <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
                     <div className="flex items-center space-x-2">
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                      <span className="font-medium text-green-800">Système opérationnel</span>
-                      <span className="text-xs text-green-600 ml-auto">Il y a 2 min</span>
+                      <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+                      <span className="font-medium text-green-800 dark:text-green-200">Système opérationnel</span>
+                      <span className="text-xs text-green-600 dark:text-green-400 ml-auto">Il y a 2 min</span>
                     </div>
-                    <div className="text-sm text-green-700 mt-1">
+                    <div className="text-sm text-green-700 dark:text-green-300 mt-1">
                       Tous les services fonctionnent normalement
                     </div>
                   </div>
 
                   <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                     <div className="flex items-center space-x-2">
-                      <AlertTriangle className="h-4 w-4 text-yellow-600" />
-                      <span className="font-medium text-yellow-800">Pic d'activité</span>
-                      <span className="text-xs text-yellow-600 ml-auto">Il y a 5 min</span>
+                      <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                      <span className="font-medium text-yellow-800 dark:text-yellow-200">Pic d'activité</span>
+                      <span className="text-xs text-yellow-600 dark:text-yellow-400 ml-auto">Il y a 5 min</span>
                     </div>
-                    <div className="text-sm text-yellow-700 mt-1">
+                    <div className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
                       Trafic 40% supérieur à la normale - performances maintenues
                     </div>
                   </div>
 
                   <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
                     <div className="flex items-center space-x-2">
-                      <Activity className="h-4 w-4 text-blue-600" />
-                      <span className="font-medium text-blue-800">Nouveau record</span>
-                      <span className="text-xs text-blue-600 ml-auto">Il y a 15 min</span>
+                      <Activity className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                      <span className="font-medium text-blue-800 dark:text-blue-200">Nouveau record</span>
+                      <span className="text-xs text-blue-600 dark:text-blue-400 ml-auto">Il y a 15 min</span>
                     </div>
-                    <div className="text-sm text-blue-700 mt-1">
+                    <div className="text-sm text-blue-700 dark:text-blue-300 mt-1">
                       Nombre de comparaisons aujourd'hui: 1,234
                     </div>
                   </div>

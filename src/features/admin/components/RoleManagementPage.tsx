@@ -200,10 +200,10 @@ export function RoleManagementPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Gestion des Rôles</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold">Gestion des Rôles</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">
             Administration des rôles et permissions du système
           </p>
         </div>
@@ -214,7 +214,7 @@ export function RoleManagementPage() {
               Nouveau Rôle
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogContent className="responsive-modal-lg max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Créer un nouveau rôle</DialogTitle>
               <DialogDescription>
@@ -222,7 +222,7 @@ export function RoleManagementPage() {
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="role-name">Nom du rôle</Label>
                   <Input
@@ -267,7 +267,7 @@ export function RoleManagementPage() {
                       <h4 className="font-medium text-sm text-muted-foreground mb-2">
                         {group.label}
                       </h4>
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
                         {group.permissions.map(permission => (
                           <div key={permission.id} className="flex items-center space-x-2">
                             <Checkbox
@@ -378,17 +378,18 @@ export function RoleManagementPage() {
                 />
               </div>
 
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nom</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Permissions</TableHead>
-                    <TableHead>Statut</TableHead>
-                    <TableHead>Utilisateurs</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
+              <div className="responsive-table-wrapper">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="whitespace-nowrap">Nom</TableHead>
+                      <TableHead className="whitespace-nowrap">Description</TableHead>
+                      <TableHead className="whitespace-nowrap">Permissions</TableHead>
+                      <TableHead className="whitespace-nowrap">Statut</TableHead>
+                      <TableHead className="whitespace-nowrap">Utilisateurs</TableHead>
+                      <TableHead className="whitespace-nowrap">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
                 <TableBody>
                   {filteredRoles.map((role) => {
                     const userCount = statistics?.usersByRole.find((item: any) => item.roleId === role.id)?.userCount || 0;
@@ -403,7 +404,7 @@ export function RoleManagementPage() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge className={role.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
+                          <Badge className={role.isActive ? 'bg-green-500/10 text-green-500 border-green-500/20 dark:bg-green-500/20 dark:text-green-400 dark:border-green-500/30' : 'bg-red-500/10 text-red-500 border-red-500/20 dark:bg-red-500/20 dark:text-red-400 dark:border-red-500/30'}>
                             {role.isActive ? 'Actif' : 'Inactif'}
                           </Badge>
                         </TableCell>
@@ -432,6 +433,7 @@ export function RoleManagementPage() {
                   })}
                 </TableBody>
               </Table>
+            </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -449,7 +451,7 @@ export function RoleManagementPage() {
                 {groupedPermissions.map(group => (
                   <div key={group.category}>
                     <h3 className="text-lg font-semibold mb-3">{group.label}</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                       {group.permissions.map(permission => (
                         <div key={permission.id} className="p-3 border rounded-lg">
                           <div className="flex items-center justify-between mb-2">
@@ -595,7 +597,7 @@ export function RoleManagementPage() {
       </Tabs>
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="responsive-modal-lg max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Modifier le rôle</DialogTitle>
             <DialogDescription>
@@ -604,7 +606,7 @@ export function RoleManagementPage() {
           </DialogHeader>
           {selectedRole && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="edit-role-name">Nom du rôle</Label>
                   <Input
@@ -631,7 +633,7 @@ export function RoleManagementPage() {
                       <h4 className="font-medium text-sm text-muted-foreground mb-2">
                         {group.label}
                       </h4>
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
                         {group.permissions.map(permission => (
                           <div key={permission.id} className="flex items-center space-x-2">
                             <Checkbox

@@ -292,17 +292,17 @@ export const AdminTarificationPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Tarification & Garanties</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold">Tarification & Garanties</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">
             Gérez les garanties, packages et grilles de tarification
           </p>
         </div>
       </div>
 
       {statistics && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Garanties</CardTitle>
@@ -362,11 +362,11 @@ export const AdminTarificationPage: React.FC = () => {
       )}
 
       <Tabs defaultValue="guarantees" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="guarantees">Garanties</TabsTrigger>
-          <TabsTrigger value="packages">Packages</TabsTrigger>
-          <TabsTrigger value="grids">Grilles de Tarification</TabsTrigger>
-          <TabsTrigger value="statistics">Statistiques</TabsTrigger>
+        <TabsList className="grid grid-cols-2 sm:grid-cols-4 w-full">
+          <TabsTrigger value="guarantees" className="text-xs sm:text-sm">Garanties</TabsTrigger>
+          <TabsTrigger value="packages" className="text-xs sm:text-sm">Packages</TabsTrigger>
+          <TabsTrigger value="grids" className="text-xs sm:text-sm">Grilles</TabsTrigger>
+          <TabsTrigger value="statistics" className="text-xs sm:text-sm">Statistiques</TabsTrigger>
         </TabsList>
 
         <TabsContent value="guarantees" className="space-y-4">
@@ -381,7 +381,7 @@ export const AdminTarificationPage: React.FC = () => {
                       Nouvelle Garantie
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                  <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[80vh] overflow-y-auto">
                     <DialogHeader>
                       <DialogTitle>Créer une nouvelle garantie</DialogTitle>
                       <DialogDescription>
@@ -389,7 +389,7 @@ export const AdminTarificationPage: React.FC = () => {
                       </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <Label htmlFor="guarantee-name">Nom de la garantie</Label>
                           <Input
@@ -422,7 +422,7 @@ export const AdminTarificationPage: React.FC = () => {
                         />
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <Label>Catégorie</Label>
                           <Select
@@ -466,7 +466,7 @@ export const AdminTarificationPage: React.FC = () => {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <Label>Taux (%)</Label>
                           <Input
@@ -488,7 +488,7 @@ export const AdminTarificationPage: React.FC = () => {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <Label>Montant minimum (FCFA)</Label>
                           <Input
@@ -544,16 +544,18 @@ export const AdminTarificationPage: React.FC = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center space-x-2 mb-4">
-                <Search className="w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="Rechercher une garantie..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="max-w-sm"
-                />
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mb-4">
+                <div className="relative flex-1 sm:flex-initial">
+                  <Search className="absolute left-3 top-1/2 w-4 h-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Rechercher une garantie..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 w-full sm:max-w-sm"
+                  />
+                </div>
                 <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                  <SelectTrigger className="w-48">
+                  <SelectTrigger className="w-full sm:w-48">
                     <SelectValue placeholder="Filtrer par catégorie" />
                   </SelectTrigger>
                   <SelectContent>
@@ -567,24 +569,25 @@ export const AdminTarificationPage: React.FC = () => {
                 </Select>
               </div>
 
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Garantie</TableHead>
-                    <TableHead>Catégorie</TableHead>
-                    <TableHead>Méthode de calcul</TableHead>
-                    <TableHead>Taux/Montant</TableHead>
-                    <TableHead>Statut</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
+              <div className="responsive-table-wrapper">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="p-2">Garantie</TableHead>
+                      <TableHead className="p-2 hidden sm:table-cell">Catégorie</TableHead>
+                      <TableHead className="p-2 hidden md:table-cell">Méthode de calcul</TableHead>
+                      <TableHead className="p-2">Taux/Montant</TableHead>
+                      <TableHead className="p-2">Statut</TableHead>
+                      <TableHead className="p-2">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
                 <TableBody>
                   {filteredGuarantees.map((guarantee) => (
                     <TableRow key={guarantee.id}>
-                      <TableCell>
+                      <TableCell className="p-2">
                         <div>
-                          <div className="font-medium">{guarantee.name}</div>
-                          <div className="text-sm text-muted-foreground">Code: {guarantee.code}</div>
+                          <div className="font-medium text-sm">{guarantee.name}</div>
+                          <div className="text-xs text-muted-foreground">Code: {guarantee.code}</div>
                           {guarantee.description && (
                             <div className="text-xs text-muted-foreground max-w-xs truncate">
                               {guarantee.description}
@@ -592,18 +595,18 @@ export const AdminTarificationPage: React.FC = () => {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
+                      <TableCell className="p-2 hidden sm:table-cell">
+                        <Badge variant="outline" className="text-xs">
                           {categories.find(c => c.value === guarantee.category)?.label}
                         </Badge>
                       </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
+                      <TableCell className="p-2 hidden md:table-cell">
+                        <div className="text-xs">
                           {calculationMethods.find(m => m.value === guarantee.calculationMethod)?.label}
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
+                      <TableCell className="p-2">
+                        <div className="text-xs">
                           {guarantee.rate ? (
                             guarantee.calculationMethod === 'FIXED_AMOUNT' ? (
                               `${guarantee.rate.toLocaleString()} FCFA`
@@ -620,39 +623,43 @@ export const AdminTarificationPage: React.FC = () => {
                           </div>
                         )}
                       </TableCell>
-                      <TableCell>
-                        <Badge className={guarantee.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
-                          {guarantee.isActive ? 'Active' : 'Inactive'}
-                        </Badge>
-                        {!guarantee.isOptional && (
-                          <Badge className="bg-blue-100 text-blue-800 ml-2">
-                            Obligatoire
+                      <TableCell className="p-2">
+                        <div className="flex flex-col gap-1">
+                          <Badge className={guarantee.isActive ? 'bg-green-100 text-green-800 dark:bg-green-500/20 dark:text-green-400' : 'bg-red-100 text-red-800 dark:bg-red-500/20 dark:text-red-400'} style={{ fontSize: '0.7rem' }}>
+                            {guarantee.isActive ? 'Active' : 'Inactive'}
                           </Badge>
-                        )}
+                          {!guarantee.isOptional && (
+                            <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400" style={{ fontSize: '0.7rem' }}>
+                              Obligatoire
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
+                      <TableCell className="p-2">
+                        <div className="flex items-center space-x-1 sm:space-x-2">
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => openEditGuaranteeDialog(guarantee)}
+                            className="h-8 w-8 p-0 sm:h-auto sm:w-auto sm:p-2"
                           >
-                            <Edit className="w-4 h-4" />
+                            <Edit className="w-3 h-3 sm:w-4 sm:h-4" />
                           </Button>
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => handleToggleGuarantee(guarantee.id)}
+                            className="h-8 w-8 p-0 sm:h-auto sm:w-auto sm:p-2"
                           >
-                            {guarantee.isActive ? <XCircle className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
+                            {guarantee.isActive ? <XCircle className="w-3 h-3 sm:w-4 sm:h-4" /> : <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />}
                           </Button>
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => handleDeleteGuarantee(guarantee.id)}
-                            className="text-red-600 hover:text-red-700"
+                            className="text-red-600 hover:text-red-700 h-8 w-8 p-0 sm:h-auto sm:w-auto sm:p-2"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
                           </Button>
                         </div>
                       </TableCell>
@@ -660,6 +667,7 @@ export const AdminTarificationPage: React.FC = () => {
                   ))}
                 </TableBody>
               </Table>
+            </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -676,7 +684,7 @@ export const AdminTarificationPage: React.FC = () => {
                       Nouveau Package
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                  <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[80vh] overflow-y-auto">
                     <DialogHeader>
                       <DialogTitle>Créer un nouveau package</DialogTitle>
                       <DialogDescription>
@@ -684,7 +692,7 @@ export const AdminTarificationPage: React.FC = () => {
                       </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <Label htmlFor="package-name">Nom du package</Label>
                           <Input
@@ -729,7 +737,7 @@ export const AdminTarificationPage: React.FC = () => {
 
                       <div>
                         <Label>Garanties incluses</Label>
-                        <div className="grid grid-cols-2 gap-2 mt-2 max-h-48 overflow-y-auto border rounded-lg p-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2 max-h-48 overflow-y-auto border rounded-lg p-3">
                           {guarantees.filter(g => g.isActive).map(guarantee => (
                             <div key={guarantee.id} className="flex items-center space-x-2">
                               <Checkbox
@@ -772,41 +780,44 @@ export const AdminTarificationPage: React.FC = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center space-x-2 mb-4">
-                <Search className="w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="Rechercher un package..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="max-w-sm"
-                />
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mb-4">
+                <div className="relative flex-1 sm:flex-initial">
+                  <Search className="absolute left-3 top-1/2 w-4 h-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Rechercher un package..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 w-full sm:max-w-sm"
+                  />
+                </div>
               </div>
 
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Package</TableHead>
-                    <TableHead>Prix de base</TableHead>
-                    <TableHead>Prix total</TableHead>
-                    <TableHead>Garanties</TableHead>
-                    <TableHead>Statut</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
+              <div className="responsive-table-wrapper">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="p-2">Package</TableHead>
+                      <TableHead className="p-2 hidden sm:table-cell">Prix de base</TableHead>
+                      <TableHead className="p-2">Prix total</TableHead>
+                      <TableHead className="p-2 hidden md:table-cell">Garanties</TableHead>
+                      <TableHead className="p-2">Statut</TableHead>
+                      <TableHead className="p-2">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
                 <TableBody>
                   {filteredPackages.map((pkg) => (
                     <TableRow key={pkg.id}>
-                      <TableCell>
+                      <TableCell className="p-2">
                         <div>
-                          <div className="font-medium flex items-center gap-2">
+                          <div className="font-medium flex items-center gap-2 text-sm">
                             {pkg.name}
                             {pkg.isPopular && (
-                              <Badge className="bg-yellow-100 text-yellow-800">
+                              <Badge variant="outline" className="border-yellow-200 bg-yellow-50 text-yellow-800" style={{ fontSize: '0.7rem' }}>
                                 Populaire
                               </Badge>
                             )}
                           </div>
-                          <div className="text-sm text-muted-foreground">Code: {pkg.code}</div>
+                          <div className="text-xs text-muted-foreground">Code: {pkg.code}</div>
                           {pkg.description && (
                             <div className="text-xs text-muted-foreground max-w-xs truncate">
                               {pkg.description}
@@ -814,18 +825,18 @@ export const AdminTarificationPage: React.FC = () => {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
+                      <TableCell className="p-2 hidden sm:table-cell">
+                        <div className="text-xs">
                           {pkg.basePrice.toLocaleString()} FCFA
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <div className="font-medium">
+                      <TableCell className="p-2">
+                        <div className="font-medium text-sm">
                           {pkg.totalPrice.toLocaleString()} FCFA
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
+                      <TableCell className="p-2 hidden md:table-cell">
+                        <div className="text-xs">
                           {pkg.guarantees.length} garantie(s)
                         </div>
                         <div className="text-xs text-muted-foreground">
@@ -836,34 +847,36 @@ export const AdminTarificationPage: React.FC = () => {
                           {pkg.guarantees.length > 2 && '...'}
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <Badge className={pkg.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
+                      <TableCell className="p-2">
+                        <Badge variant="outline" className={pkg.isActive ? 'border-green-200 bg-green-50 text-green-800' : 'border-red-200 bg-red-50 text-red-800'} style={{ fontSize: '0.7rem' }}>
                           {pkg.isActive ? 'Actif' : 'Inactif'}
                         </Badge>
                       </TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
+                      <TableCell className="p-2">
+                        <div className="flex items-center space-x-1 sm:space-x-2">
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => openEditPackageDialog(pkg)}
+                            className="h-8 w-8 p-0 sm:h-auto sm:w-auto sm:p-2"
                           >
-                            <Edit className="w-4 h-4" />
+                            <Edit className="w-3 h-3 sm:w-4 sm:h-4" />
                           </Button>
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => handleTogglePackage(pkg.id)}
+                            className="h-8 w-8 p-0 sm:h-auto sm:w-auto sm:p-2"
                           >
-                            {pkg.isActive ? <XCircle className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
+                            {pkg.isActive ? <XCircle className="w-3 h-3 sm:w-4 sm:h-4" /> : <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />}
                           </Button>
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => handleDeletePackage(pkg.id)}
-                            className="text-red-600 hover:text-red-700"
+                            className="text-red-600 hover:text-red-700 h-8 w-8 p-0 sm:h-auto sm:w-auto sm:p-2"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
                           </Button>
                         </div>
                       </TableCell>
@@ -871,6 +884,7 @@ export const AdminTarificationPage: React.FC = () => {
                   ))}
                 </TableBody>
               </Table>
+            </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -884,7 +898,7 @@ export const AdminTarificationPage: React.FC = () => {
             </AlertDescription>
           </Alert>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -998,7 +1012,7 @@ export const AdminTarificationPage: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="statistics" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
             <Card>
               <CardHeader>
                 <CardTitle>Garanties les plus utilisées</CardTitle>
@@ -1070,7 +1084,7 @@ export const AdminTarificationPage: React.FC = () => {
               <CardTitle>Configuration des méthodes de calcul</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {calculationMethods.map(method => (
                   <div key={method.value} className="p-4 border rounded-lg">
                     <h4 className="font-medium mb-2">{method.label}</h4>
@@ -1090,7 +1104,7 @@ export const AdminTarificationPage: React.FC = () => {
 
       {/* Dialog pour modifier une garantie */}
       <Dialog open={isEditGuaranteeDialogOpen} onOpenChange={setIsEditGuaranteeDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Modifier la garantie</DialogTitle>
             <DialogDescription>
@@ -1098,7 +1112,7 @@ export const AdminTarificationPage: React.FC = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="edit-guarantee-name">Nom de la garantie</Label>
                 <Input
@@ -1128,7 +1142,7 @@ export const AdminTarificationPage: React.FC = () => {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label>Catégorie</Label>
                 <Select
@@ -1196,7 +1210,7 @@ export const AdminTarificationPage: React.FC = () => {
 
       {/* Dialog pour modifier un package */}
       <Dialog open={isEditPackageDialogOpen} onOpenChange={setIsEditPackageDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Modifier le package</DialogTitle>
             <DialogDescription>
@@ -1204,7 +1218,7 @@ export const AdminTarificationPage: React.FC = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="edit-package-name">Nom du package</Label>
                 <Input
@@ -1245,7 +1259,7 @@ export const AdminTarificationPage: React.FC = () => {
 
             <div>
               <Label>Garanties incluses</Label>
-              <div className="grid grid-cols-2 gap-2 mt-2 max-h-48 overflow-y-auto border rounded-lg p-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2 max-h-48 overflow-y-auto border rounded-lg p-3">
                 {guarantees.filter(g => g.isActive).map(guarantee => (
                   <div key={guarantee.id} className="flex items-center space-x-2">
                     <Checkbox

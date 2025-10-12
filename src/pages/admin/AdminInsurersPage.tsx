@@ -108,15 +108,15 @@ const AdminInsurersPage = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
-        return <Badge className="bg-green-100 text-green-800">Actif</Badge>;
+        return <Badge variant="outline" className="border-green-200 bg-green-50 text-green-800 dark:border-green-500/30 dark:bg-green-500/20 dark:text-green-400">Actif</Badge>;
       case 'inactive':
-        return <Badge className="bg-gray-100 text-gray-800">Inactif</Badge>;
+        return <Badge variant="outline" className="border-gray-200 bg-gray-50 text-gray-800 dark:border-gray-500/30 dark:bg-gray-500/20 dark:text-gray-400">Inactif</Badge>;
       case 'pending':
-        return <Badge className="bg-yellow-100 text-yellow-800">En attente</Badge>;
+        return <Badge variant="outline" className="border-yellow-200 bg-yellow-50 text-yellow-800 dark:border-yellow-500/30 dark:bg-yellow-500/20 dark:text-yellow-400">En attente</Badge>;
       case 'suspended':
-        return <Badge className="bg-red-100 text-red-800">Suspendu</Badge>;
+        return <Badge variant="outline" className="border-red-200 bg-red-50 text-red-800 dark:border-red-500/30 dark:bg-red-500/20 dark:text-red-400">Suspendu</Badge>;
       default:
-        return <Badge>{status}</Badge>;
+        return <Badge variant="outline">{status}</Badge>;
     }
   };
 
@@ -157,7 +157,7 @@ const AdminInsurersPage = () => {
 
     return (
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="col-span-2">
             <Label htmlFor="companyName">Nom de l'entreprise</Label>
             <Input
@@ -220,7 +220,7 @@ const AdminInsurersPage = () => {
           </div>
           <div>
             <Label htmlFor="status">Statut</Label>
-            <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
+            <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value as 'active' | 'inactive' | 'pending' | 'suspended' })}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -252,7 +252,7 @@ const AdminInsurersPage = () => {
           </div>
           <div>
             <h3 className="text-lg font-semibold">{insurer.companyName}</h3>
-            <p className="text-gray-600">{insurer.email}</p>
+            <p className="text-muted-foreground">{insurer.email}</p>
           </div>
         </div>
 
@@ -342,14 +342,14 @@ const AdminInsurersPage = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold">Gestion des Assureurs</h1>
-          <p className="text-gray-600">Gérez les compagnies d'assurance partenaires</p>
+          <p className="text-muted-foreground">Gérez les compagnies d'assurance partenaires</p>
         </div>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button className="w-full sm:w-auto">
               <Plus className="w-4 h-4 mr-2" />
               Ajouter un assureur
             </Button>
@@ -367,7 +367,7 @@ const AdminInsurersPage = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center space-x-4">
@@ -432,20 +432,20 @@ const AdminInsurersPage = () => {
       {/* Filters */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Liste des Assureurs</CardTitle>
-            <div className="flex items-center space-x-2">
-              <div className="relative">
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+            <CardTitle className="text-lg">Liste des Assureurs</CardTitle>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto">
+              <div className="relative flex-1 sm:flex-initial">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                 <Input
                   placeholder="Rechercher un assureur..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 w-64"
+                  className="pl-10 w-full sm:w-64"
                 />
               </div>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-40">
+                <SelectTrigger className="w-full sm:w-40">
                   <SelectValue placeholder="Statut" />
                 </SelectTrigger>
                 <SelectContent>
@@ -464,7 +464,7 @@ const AdminInsurersPage = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-12">
+                  <TableHead className="w-12 p-2">
                     <Checkbox
                       checked={selectedInsurers.length === filteredInsurers.length}
                       onCheckedChange={(checked) => {
@@ -476,20 +476,20 @@ const AdminInsurersPage = () => {
                       }}
                     />
                   </TableHead>
-                  <TableHead>Assureur</TableHead>
-                  <TableHead>Contact</TableHead>
-                  <TableHead>Statut</TableHead>
-                  <TableHead>Devis reçus</TableHead>
-                  <TableHead>Offres</TableHead>
-                  <TableHead>Taux conversion</TableHead>
-                  <TableHead>Date création</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="p-2">Assureur</TableHead>
+                  <TableHead className="p-2 hidden sm:table-cell">Contact</TableHead>
+                  <TableHead className="p-2">Statut</TableHead>
+                  <TableHead className="p-2 hidden md:table-cell">Devis reçus</TableHead>
+                  <TableHead className="p-2 hidden lg:table-cell">Offres</TableHead>
+                  <TableHead className="p-2 hidden xl:table-cell">Taux conversion</TableHead>
+                  <TableHead className="p-2 hidden xl:table-cell">Date création</TableHead>
+                  <TableHead className="p-2 text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredInsurers.map((insurer) => (
                   <TableRow key={insurer.id}>
-                    <TableCell>
+                    <TableCell className="p-2">
                       <Checkbox
                         checked={selectedInsurers.includes(insurer.id)}
                         onCheckedChange={(checked) => {
@@ -501,18 +501,18 @@ const AdminInsurersPage = () => {
                         }}
                       />
                     </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-medium">
+                    <TableCell className="p-2">
+                      <div className="flex items-center space-x-2 sm:space-x-3">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-medium text-xs sm:text-sm">
                           {insurer.companyName.substring(0, 2).toUpperCase()}
                         </div>
                         <div>
-                          <div className="font-medium">{insurer.companyName}</div>
-                          <div className="text-sm text-gray-500">{insurer.email}</div>
+                          <div className="font-medium text-sm">{insurer.companyName}</div>
+                          <div className="text-xs text-gray-500 sm:hidden">{insurer.phone}</div>
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="p-2 hidden sm:table-cell">
                       <div className="space-y-1">
                         {insurer.phone && (
                           <div className="flex items-center space-x-2 text-sm">
@@ -528,50 +528,53 @@ const AdminInsurersPage = () => {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>
-                      {getStatusBadge(insurer.status)}
-                      {insurer.status === 'pending' && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="ml-2"
-                          onClick={() => handleApproveInsurer(insurer.id)}
-                        >
-                          Approuver
-                        </Button>
-                      )}
+                    <TableCell className="p-2">
+                      <div className="flex flex-col sm:flex-row gap-1 sm:gap-2">
+                        {getStatusBadge(insurer.status)}
+                        {insurer.status === 'pending' && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleApproveInsurer(insurer.id)}
+                            className="h-8 px-2 text-xs"
+                          >
+                            Approuver
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="p-2 hidden md:table-cell">
                       <div className="text-center">
                         <div className="font-medium">{insurer.quotesCount}</div>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="p-2 hidden lg:table-cell">
                       <div className="text-center">
                         <div className="font-medium">{insurer.offersCount}</div>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="p-2 hidden xl:table-cell">
                       <div className="text-center">
                         <div className="font-medium">{insurer.conversionRate}%</div>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="p-2 hidden xl:table-cell">
                       <div className="text-sm text-gray-500">{insurer.createdAt}</div>
                     </TableCell>
-                    <TableCell>
-                      <div className="flex justify-end space-x-2">
+                    <TableCell className="p-2">
+                      <div className="flex justify-end space-x-1 sm:space-x-2">
                         <Dialog open={!!viewingInsurer} onOpenChange={(open) => !open && setViewingInsurer(null)}>
                           <DialogTrigger asChild>
                             <Button
                               size="sm"
                               variant="outline"
                               onClick={() => setViewingInsurer(insurer)}
+                              className="h-8 w-8 p-0 sm:h-auto sm:w-auto sm:p-2"
                             >
-                              <Eye className="h-4 w-4" />
+                              <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
                             </Button>
                           </DialogTrigger>
-                          <DialogContent className="max-w-2xl">
+                          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                             <DialogHeader>
                               <DialogTitle>Détails de l'assureur</DialogTitle>
                             </DialogHeader>
@@ -585,11 +588,12 @@ const AdminInsurersPage = () => {
                               size="sm"
                               variant="outline"
                               onClick={() => setEditingInsurer(insurer)}
+                              className="h-8 w-8 p-0 sm:h-auto sm:w-auto sm:p-2"
                             >
-                              <Edit className="h-4 w-4" />
+                              <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
                             </Button>
                           </DialogTrigger>
-                          <DialogContent className="max-w-2xl">
+                          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                             <DialogHeader>
                               <DialogTitle>Modifier l'assureur</DialogTitle>
                             </DialogHeader>
@@ -601,8 +605,9 @@ const AdminInsurersPage = () => {
                           size="sm"
                           variant="outline"
                           onClick={() => handleDeleteInsurer(insurer.id)}
+                          className="h-8 w-8 p-0 sm:h-auto sm:w-auto sm:p-2"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                         </Button>
                       </div>
                     </TableCell>
