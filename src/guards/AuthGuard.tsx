@@ -4,14 +4,16 @@ import { useAuth } from '@/contexts/AuthContext';
 
 interface AuthGuardProps {
   requiredRole?: 'USER' | 'INSURER' | 'ADMIN';
+  requiredPermission?: string;
   redirectTo?: string;
 }
 
 export const AuthGuard: React.FC<AuthGuardProps> = ({
   requiredRole,
+  requiredPermission,
   redirectTo = '/auth/connexion',
 }) => {
-  const { isAuthenticated, user, isLoading } = useAuth();
+  const { isAuthenticated, user, isLoading, hasPermission } = useAuth();
   const location = useLocation();
 
   // Handle role-based redirects after login
@@ -44,6 +46,7 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({
     return <Navigate to={redirectTo} state={{ from: location }} replace />;
   }
 
+  // Check role requirement
   if (requiredRole && user?.role !== requiredRole) {
     // Redirect to appropriate dashboard based on role
     const redirectMap = {
@@ -52,6 +55,11 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({
       ADMIN: '/admin/tableau-de-bord',
     };
     return <Navigate to={redirectMap[user.role]} replace />;
+  }
+
+  // Check permission requirement
+  if (requiredPermission && !hasPermission(requiredPermission)) {
+    return <Navigate to="/unauthorized" replace />;
   }
 
   return <Outlet />;

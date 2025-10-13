@@ -1,10 +1,9 @@
 import { User, LoginCredentials, RegisterData } from '@/types';
-import { getUserByEmail, validateCredentials } from '../mock/users';
+import { supabaseHelpers, supabase } from '@/lib/supabase';
 
 export interface AuthResponse {
   user: User;
-  token: string;
-  refreshToken: string;
+  session: any;
 }
 
 export class AuthService {
@@ -18,197 +17,270 @@ export class AuthService {
   }
 
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      const data = await supabaseHelpers.signIn(credentials.email, credentials.password);
+      
+      // Récupérer le profil complet avec les permissions
+      const profile = await supabaseHelpers.getProfile(data.user?.id);
+      
+      if (!profile) {
+        throw new Error('Profil utilisateur non trouvé');
+      }
 
-    const user = validateCredentials(credentials.email, credentials.password);
+      // Logger la connexion
+      await supabaseHelpers.logAction('LOGIN', 'session', data.user?.id);
 
-    if (!user) {
-      throw new Error('Email ou mot de passe incorrect');
+      const user: User = {
+        id: profile.id,
+        email: profile.email,
+        firstName: profile.first_name,
+        lastName: profile.last_name,
+        companyName: profile.company_name,
+        role: profile.role,
+        phone: profile.phone,
+        avatar: profile.avatar_url,
+        createdAt: profile.created_at,
+        updatedAt: profile.updated_at,
+      };
+
+      return {
+        user,
+        session: data.session,
+      };
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
     }
-
-    // Generate mock tokens
-    const token = this.generateToken(user);
-    const refreshToken = this.generateRefreshToken();
-
-    // Store tokens in localStorage for persistence
-    localStorage.setItem('noli:auth_token', token);
-    localStorage.setItem('noli:refresh_token', refreshToken);
-    localStorage.setItem('noli:user', JSON.stringify(user));
-
-    return {
-      user,
-      token,
-      refreshToken,
-    };
   }
 
   async register(data: RegisterData): Promise<AuthResponse> {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    try {
+      // S'inscrire avec Supabase Auth
+      const authData = await supabaseHelpers.signUp(data.email, data.password, {
+        first_name: data.firstName,
+        last_name: data.lastName,
+        phone: data.phone,
+        role: 'USER', // Default role for new registrations
+      });
 
-    // Check if user already exists
-    const existingUser = getUserByEmail(data.email);
-    if (existingUser) {
-      throw new Error('Un compte avec cet email existe déjà');
+      if (!authData.user) {
+        throw new Error('Erreur lors de la création du compte');
+      }
+
+      // Logger la création du compte
+      await supabaseHelpers.logAction('ACCOUNT_CREATED', 'profile', authData.user.id);
+
+      const user: User = {
+        id: authData.user.id,
+        email: data.email,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        role: 'USER',
+        phone: data.phone,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      return {
+        user,
+        session: authData.session,
+      };
+    } catch (error) {
+      console.error('Register error:', error);
+      throw error;
     }
+  }
 
-    // Create new user
-    const newUser: User = {
-      id: Date.now().toString(),
-      email: data.email,
-      firstName: data.firstName,
-      lastName: data.lastName,
-      role: 'USER', // Default role for new registrations
-      phone: data.phone,
-      avatar: '👤',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    // Generate tokens
-    const token = this.generateToken(newUser);
-    const refreshToken = this.generateRefreshToken();
-
-    // Store in localStorage
-    localStorage.setItem('noli:auth_token', token);
-    localStorage.setItem('noli:refresh_token', refreshToken);
-    localStorage.setItem('noli:user', JSON.stringify(newUser));
-
-    return {
-      user: newUser,
-      token,
-      refreshToken,
-    };
+  async loginWithOAuth(provider: 'google' | 'facebook' | 'github'): Promise<void> {
+    try {
+      await supabaseHelpers.signInWithOAuth(provider);
+    } catch (error) {
+      console.error('OAuth login error:', error);
+      throw error;
+    }
   }
 
   async refreshToken(): Promise<AuthResponse> {
-    const refreshToken = localStorage.getItem('noli:refresh_token');
-    const userStr = localStorage.getItem('noli:user');
+    try {
+      const { data: { session }, error } = await supabase.auth.refreshSession();
+      
+      if (error) throw error;
+      if (!session?.user) throw new Error('Session invalide');
 
-    if (!refreshToken || !userStr) {
-      throw new Error('Session expirée. Veuillez vous reconnecter.');
+      // Récupérer le profil mis à jour
+      const profile = await supabaseHelpers.getProfile(session.user.id);
+      
+      if (!profile) {
+        throw new Error('Profil utilisateur non trouvé');
+      }
+
+      const user: User = {
+        id: profile.id,
+        email: profile.email,
+        firstName: profile.first_name,
+        lastName: profile.last_name,
+        companyName: profile.company_name,
+        role: profile.role,
+        phone: profile.phone,
+        avatar: profile.avatar_url,
+        createdAt: profile.created_at,
+        updatedAt: profile.updated_at,
+      };
+
+      return {
+        user,
+        session,
+      };
+    } catch (error) {
+      console.error('Refresh token error:', error);
+      throw error;
     }
-
-    const user = JSON.parse(userStr) as User;
-
-    // Generate new tokens
-    const newToken = this.generateToken(user);
-    const newRefreshToken = this.generateRefreshToken();
-
-    // Update localStorage
-    localStorage.setItem('noli:auth_token', newToken);
-    localStorage.setItem('noli:refresh_token', newRefreshToken);
-
-    return {
-      user,
-      token: newToken,
-      refreshToken: newRefreshToken,
-    };
   }
 
   async logout(): Promise<void> {
-    // Clear all auth-related items from localStorage
-    localStorage.removeItem('noli:auth_token');
-    localStorage.removeItem('noli:refresh_token');
-    localStorage.removeItem('noli:user');
+    try {
+      // Logger la déconnexion avant de se déconnecter
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabaseHelpers.logAction('LOGOUT', 'session', user.id);
+      }
+      
+      await supabaseHelpers.signOut();
+    } catch (error) {
+      console.error('Logout error:', error);
+      throw error;
+    }
   }
 
   async forgotPassword(email: string): Promise<void> {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    const user = getUserByEmail(email);
-    if (!user) {
-      // In a real app, you might want to still return success for security
-      // to prevent email enumeration attacks
-      throw new Error('Aucun compte associé à cet email');
-    }
-
-    // In a real app, you would:
-    // 1. Generate a reset token
-    // 2. Store it with expiration
-    // 3. Send email with reset link
-    // For demo purposes, we'll just store the reset request
-    const resetToken = this.generateResetToken();
-    localStorage.setItem(`noli:reset_token:${email}`, resetToken);
-    localStorage.setItem(`noli:reset_token_time:${email}`, Date.now().toString());
-
-    console.log(`[DEMO] Reset token for ${email}: ${resetToken}`);
-  }
-
-  async resetPassword(email: string, newPassword: string, token: string): Promise<void> {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    // Verify reset token exists and is not expired (24 hours)
-    const storedToken = localStorage.getItem(`noli:reset_token:${email}`);
-    const tokenTime = localStorage.getItem(`noli:reset_token_time:${email}`);
-
-    if (!storedToken || !tokenTime || storedToken !== token) {
-      throw new Error('Token de réinitialisation invalide');
-    }
-
-    const tokenAge = Date.now() - parseInt(tokenTime);
-    const maxAge = 24 * 60 * 60 * 1000; // 24 hours
-
-    if (tokenAge > maxAge) {
-      localStorage.removeItem(`noli:reset_token:${email}`);
-      localStorage.removeItem(`noli:reset_token_time:${email}`);
-      throw new Error('Token de réinitialisation expiré');
-    }
-
-    // Get user and update password (in real app, this would be in a database)
-    const user = getUserByEmail(email);
-    if (!user) {
-      throw new Error('Utilisateur non trouvé');
-    }
-
-    // Clear reset token
-    localStorage.removeItem(`noli:reset_token:${email}`);
-    localStorage.removeItem(`noli:reset_token_time:${email}`);
-
-    // In a real app, you would update the user's password in the database
-    // For demo purposes, we'll just log the change
-    console.log(`[DEMO] Password updated for ${email}`);
-  }
-
-  getCurrentUser(): User | null {
-    const userStr = localStorage.getItem('noli:user');
-    if (!userStr) return null;
-
     try {
-      return JSON.parse(userStr) as User;
-    } catch {
+      // Créer un token de reset personnalisé
+      const resetToken = await supabaseHelpers.createPasswordResetToken(email);
+      
+      // Envoyer l'email de reset via Supabase
+      await supabaseHelpers.resetPassword(email);
+      
+      console.log(`[DEBUG] Reset token created for ${email}: ${resetToken}`);
+    } catch (error) {
+      console.error('Forgot password error:', error);
+      throw error;
+    }
+  }
+
+  async resetPassword(token: string, newPassword: string): Promise<void> {
+    try {
+      await supabaseHelpers.usePasswordResetToken(token, newPassword);
+    } catch (error) {
+      console.error('Reset password error:', error);
+      throw error;
+    }
+  }
+
+  async updateProfile(updates: Partial<User>): Promise<User> {
+    try {
+      const profile = await supabaseHelpers.updateProfile({
+        first_name: updates.firstName,
+        last_name: updates.lastName,
+        company_name: updates.companyName,
+        phone: updates.phone,
+        avatar_url: updates.avatar,
+      });
+
+      // Logger la mise à jour du profil
+      await supabaseHelpers.logAction('PROFILE_UPDATE', 'profile', profile.id, updates);
+
+      const user: User = {
+        id: profile.id,
+        email: profile.email,
+        firstName: profile.first_name,
+        lastName: profile.last_name,
+        companyName: profile.company_name,
+        role: profile.role,
+        phone: profile.phone,
+        avatar: profile.avatar_url,
+        createdAt: profile.created_at,
+        updatedAt: profile.updated_at,
+      };
+
+      return user;
+    } catch (error) {
+      console.error('Update profile error:', error);
+      throw error;
+    }
+  }
+
+  async getCurrentUser(): Promise<User | null> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) return null;
+
+      const profile = await supabaseHelpers.getProfile(user.id);
+      
+      if (!profile) return null;
+
+      return {
+        id: profile.id,
+        email: profile.email,
+        firstName: profile.first_name,
+        lastName: profile.last_name,
+        companyName: profile.company_name,
+        role: profile.role,
+        phone: profile.phone,
+        avatar: profile.avatar_url,
+        createdAt: profile.created_at,
+        updatedAt: profile.updated_at,
+      };
+    } catch (error) {
+      console.error('Get current user error:', error);
       return null;
     }
   }
 
-  isAuthenticated(): boolean {
-    return !!localStorage.getItem('noli:auth_token') && !!this.getCurrentUser();
+  async isAuthenticated(): Promise<boolean> {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      return !!session && !!session.user;
+    } catch (error) {
+      console.error('Check auth error:', error);
+      return false;
+    }
   }
 
-  private generateToken(user: User): string {
-    // Mock JWT token - in real app, use proper JWT library
-    const header = btoa(JSON.stringify({ typ: 'JWT', alg: 'HS256' }));
-    const payload = btoa(JSON.stringify({
-      sub: user.id,
-      email: user.email,
-      role: user.role,
-      exp: Date.now() + (24 * 60 * 60 * 1000), // 24 hours
-      iat: Date.now(),
-    }));
-    const signature = btoa('mock-signature');
-
-    return `${header}.${payload}.${signature}`;
+  async getUserPermissions(): Promise<string[]> {
+    try {
+      return await supabaseHelpers.getUserPermissions();
+    } catch (error) {
+      console.error('Get permissions error:', error);
+      return [];
+    }
   }
 
-  private generateRefreshToken(): string {
-    return `refresh_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  async hasPermission(permission: string): Promise<boolean> {
+    try {
+      return await supabaseHelpers.hasPermission(permission);
+    } catch (error) {
+      console.error('Check permission error:', error);
+      return false;
+    }
   }
 
-  private generateResetToken(): string {
-    return `reset_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  async getUserSessions(): Promise<any[]> {
+    try {
+      return await supabaseHelpers.getUserSessions();
+    } catch (error) {
+      console.error('Get sessions error:', error);
+      return [];
+    }
+  }
+
+  async revokeSession(sessionId: string): Promise<void> {
+    try {
+      await supabaseHelpers.revokeSession(sessionId);
+    } catch (error) {
+      console.error('Revoke session error:', error);
+      throw error;
+    }
   }
 }
 
