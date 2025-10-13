@@ -114,6 +114,65 @@ export class AuthService {
     localStorage.removeItem('noli:user');
   }
 
+  async forgotPassword(email: string): Promise<void> {
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    const user = getUserByEmail(email);
+    if (!user) {
+      // In a real app, you might want to still return success for security
+      // to prevent email enumeration attacks
+      throw new Error('Aucun compte associé à cet email');
+    }
+
+    // In a real app, you would:
+    // 1. Generate a reset token
+    // 2. Store it with expiration
+    // 3. Send email with reset link
+    // For demo purposes, we'll just store the reset request
+    const resetToken = this.generateResetToken();
+    localStorage.setItem(`noli:reset_token:${email}`, resetToken);
+    localStorage.setItem(`noli:reset_token_time:${email}`, Date.now().toString());
+
+    console.log(`[DEMO] Reset token for ${email}: ${resetToken}`);
+  }
+
+  async resetPassword(email: string, newPassword: string, token: string): Promise<void> {
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Verify reset token exists and is not expired (24 hours)
+    const storedToken = localStorage.getItem(`noli:reset_token:${email}`);
+    const tokenTime = localStorage.getItem(`noli:reset_token_time:${email}`);
+
+    if (!storedToken || !tokenTime || storedToken !== token) {
+      throw new Error('Token de réinitialisation invalide');
+    }
+
+    const tokenAge = Date.now() - parseInt(tokenTime);
+    const maxAge = 24 * 60 * 60 * 1000; // 24 hours
+
+    if (tokenAge > maxAge) {
+      localStorage.removeItem(`noli:reset_token:${email}`);
+      localStorage.removeItem(`noli:reset_token_time:${email}`);
+      throw new Error('Token de réinitialisation expiré');
+    }
+
+    // Get user and update password (in real app, this would be in a database)
+    const user = getUserByEmail(email);
+    if (!user) {
+      throw new Error('Utilisateur non trouvé');
+    }
+
+    // Clear reset token
+    localStorage.removeItem(`noli:reset_token:${email}`);
+    localStorage.removeItem(`noli:reset_token_time:${email}`);
+
+    // In a real app, you would update the user's password in the database
+    // For demo purposes, we'll just log the change
+    console.log(`[DEMO] Password updated for ${email}`);
+  }
+
   getCurrentUser(): User | null {
     const userStr = localStorage.getItem('noli:user');
     if (!userStr) return null;
@@ -146,6 +205,10 @@ export class AuthService {
 
   private generateRefreshToken(): string {
     return `refresh_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  private generateResetToken(): string {
+    return `reset_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 }
 

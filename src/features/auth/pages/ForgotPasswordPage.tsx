@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { authService } from "@/data/api/authService";
 import { useToast } from "@/hooks/use-toast";
 import { forgotPasswordSchema, type ForgotPasswordFormData } from "@/lib/zod-schemas";
 
@@ -19,7 +20,7 @@ const ForgotPasswordPage = () => {
 
   const [errors, setErrors] = useState<Partial<ForgotPasswordFormData>>({});
   const [isLoading, setIsLoading] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -57,13 +58,12 @@ const ForgotPasswordPage = () => {
 
     setIsLoading(true);
     try {
-      // Simulate API call for password reset
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await authService.forgotPassword(formData.email);
 
-      setIsSuccess(true);
+      setIsSubmitted(true);
       toast({
         title: "Email envoyé",
-        description: "Un email de réinitialisation vous a été envoyé",
+        description: "Un email de réinitialisation a été envoyé à votre adresse email",
         variant: "success",
       });
     } catch (error) {
@@ -76,6 +76,67 @@ const ForgotPasswordPage = () => {
       setIsLoading(false);
     }
   };
+
+  if (isSubmitted) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-primary/5 px-4">
+        <div className="w-full max-w-md space-y-6">
+          {/* Logo */}
+          <Link to="/" className="flex items-center justify-center gap-2">
+            <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center">
+              <Shield className="w-7 h-7 text-primary-foreground" />
+            </div>
+            <div className="flex flex-col">
+              <span className="font-bold text-2xl">NOLI</span>
+              <span className="text-xs text-muted-foreground">Assurance Auto</span>
+            </div>
+          </Link>
+
+          <Card className="shadow-xl">
+            <CardContent className="pt-6">
+              <div className="text-center space-y-4">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+                  <CheckCircle className="w-8 h-8 text-green-600" />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-xl font-semibold">Email envoyé avec succès!</h3>
+                  <p className="text-muted-foreground">
+                    Nous avons envoyé un email de réinitialisation à:
+                  </p>
+                  <p className="font-medium text-primary">{formData.email}</p>
+                </div>
+                <div className="space-y-2 text-sm text-muted-foreground">
+                  <p>
+                    Vérifiez votre boîte de réception et suivez les instructions
+                    pour réinitialiser votre mot de passe.
+                  </p>
+                  <p>
+                    Si vous ne recevez pas l'email dans quelques minutes,
+                    vérifiez votre dossier de spam.
+                  </p>
+                </div>
+                <div className="pt-4 space-y-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsSubmitted(false)}
+                    className="w-full"
+                  >
+                    Renvoyer l'email
+                  </Button>
+                  <Link to="/auth/connexion">
+                    <Button variant="ghost" className="w-full">
+                      <ArrowLeft className="w-4 h-4 mr-2" />
+                      Retour à la connexion
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-primary/5 px-4">
@@ -93,74 +154,50 @@ const ForgotPasswordPage = () => {
 
         <Card className="shadow-xl">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold text-center">Mot de passe oublié</CardTitle>
+            <CardTitle className="text-2xl font-bold text-center">
+              Mot de passe oublié
+            </CardTitle>
             <p className="text-muted-foreground text-center">
               Entrez votre email pour recevoir un lien de réinitialisation
             </p>
           </CardHeader>
 
           <CardContent className="space-y-4">
-            {!isSuccess ? (
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Email Field */}
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      id="email"
-                      name="email"
-                      type="email"
-                      placeholder="votre@email.com"
-                      value={formData.email}
-                      onChange={handleInputChange}
-                      className={`pl-10 ${errors.email ? "border-destructive" : ""}`}
-                      disabled={isLoading}
-                    />
-                  </div>
-                  {errors.email && (
-                    <div className="flex items-center gap-1 text-sm text-destructive">
-                      <AlertCircle className="h-4 w-4" />
-                      <span>{errors.email}</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Submit Button */}
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? "Envoi en cours..." : "Envoyer le lien de réinitialisation"}
-                </Button>
-              </form>
-            ) : (
-              <div className="space-y-4">
-                <Alert className="border-green-200 bg-green-50 text-green-800">
-                  <CheckCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    Un email de réinitialisation a été envoyé à {formData.email}.
-                    Veuillez vérifier votre boîte de réception et suivre les instructions.
-                  </AlertDescription>
-                </Alert>
-
-                <div className="text-center text-sm text-muted-foreground">
-                  Vous n'avez pas reçu l'email? Vérifiez vos spams ou{" "}
-                  <button
-                    onClick={() => setIsSuccess(false)}
-                    className="text-primary hover:underline"
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Email Field */}
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    placeholder="votre@email.com"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    className={`pl-10 ${errors.email ? "border-destructive" : ""}`}
                     disabled={isLoading}
-                  >
-                    essayez à nouveau
-                  </button>
+                  />
                 </div>
+                {errors.email && (
+                  <div className="flex items-center gap-1 text-sm text-destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <span>{errors.email}</span>
+                  </div>
+                )}
               </div>
-            )}
+
+              {/* Submit Button */}
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? "Envoi en cours..." : "Envoyer l'email de réinitialisation"}
+              </Button>
+            </form>
 
             {/* Back to Login */}
             <div className="text-center">
-              <Link
-                to="/auth/connexion"
-                className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
-              >
-                <ArrowLeft className="h-4 w-4" />
+              <Link to="/auth/connexion" className="inline-flex items-center text-sm text-primary hover:underline">
+                <ArrowLeft className="w-4 h-4 mr-1" />
                 Retour à la connexion
               </Link>
             </div>
