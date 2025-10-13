@@ -105,8 +105,17 @@ export const insuranceNeedsSchema = z.object({
   options: z.array(z.string()).default([]),
 });
 
+export const forgotPasswordSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .email("Email invalide")
+    .min(1, "L'email est requis"),
+});
+
 export type LoginFormData = z.infer<typeof loginSchema>;
 export type RegisterFormData = z.infer<typeof registerSchema>;
 export type PersonalInfoFormData = z.infer<typeof personalInfoSchema>;
 export type VehicleInfoFormData = z.infer<typeof vehicleInfoSchema>;
 export type InsuranceNeedsFormData = z.infer<typeof insuranceNeedsSchema>;
+export type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;

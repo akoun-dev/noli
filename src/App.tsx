@@ -22,6 +22,7 @@ import NotFound from "@/pages/NotFound";
 // Auth Pages
 import LoginPage from "@/features/auth/pages/LoginPage";
 import RegisterPage from "@/features/auth/pages/RegisterPage";
+import ForgotPasswordPage from "@/features/auth/pages/ForgotPasswordPage";
 
 // Dashboard Pages
 import UserDashboardPage from "@/pages/user/UserDashboardPage";
@@ -76,6 +77,7 @@ const App = () => (
               {/* Auth Routes */}
               <Route path="/auth/connexion" element={<LoginPage />} />
               <Route path="/auth/inscription" element={<RegisterPage />} />
+              <Route path="/auth/mot-de-passe-oublie" element={<ForgotPasswordPage />} />
 
               {/* Comparison Routes */}
               <Route path="/comparer" element={<ComparisonPage />} />
