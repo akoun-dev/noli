@@ -1,0 +1,4 @@
+- API URL: http://127.0.0.1:54321
+- Studio URL: http://127.0.0.1:54323 (interface d'administration)
+- Database URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+- Mailpit URL: http://127.0.0.1:54324 (test d'emails)

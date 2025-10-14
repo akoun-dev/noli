@@ -1,10 +1,25 @@
--- Migration: 004_create_functions.sql
--- Création des fonctions et triggers pour l'authentification
+-- Migration: 006_create_auth_functions.sql
+-- Création des fonctions d'authentification et de gestion
+
+-- Vérifier que les tables existent avant de créer les fonctions
+DO $$
+BEGIN
+  -- Vérifier que la table profiles existe
+  IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'profiles' AND table_schema = 'public') THEN
+    RAISE EXCEPTION 'La table profiles n''existe pas. Veuillez exécuter les migrations 001, 002, 003 d''abord.';
+  END IF;
+
+  -- Vérifier que la table audit_logs existe
+  IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'audit_logs' AND table_schema = 'public') THEN
+    RAISE EXCEPTION 'La table audit_logs n''existe pas. Veuillez exécuter les migrations 001, 002, 003 d''abord.';
+  END IF;
+END $$;
 
 -- Fonction pour créer automatiquement un profil lors de l'inscription
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
+  -- Insérer le profil
   INSERT INTO public.profiles (id, email, first_name, last_name, role)
   VALUES (
     NEW.id,
@@ -13,26 +28,19 @@ BEGIN
     COALESCE(NEW.raw_user_meta_data->>'last_name', ''),
     COALESCE(NEW.raw_user_meta_data->>'role', 'USER')
   );
-  
-  -- Logger la création du compte
-  INSERT INTO public.audit_logs (
-    user_id, 
-    action, 
-    resource, 
-    resource_id, 
-    metadata
-  ) VALUES (
-    NEW.id,
+
+  -- Logger la création du compte (seulement si la table audit_logs existe)
+  PERFORM public.log_user_action_safe(
     'ACCOUNT_CREATED',
     'profile',
     NEW.id::text,
     jsonb_build_object(
       'email', NEW.email,
       'role', COALESCE(NEW.raw_user_meta_data->>'role', 'USER'),
-      'provider', NEW.app_metadata->>'provider'
+      'provider', COALESCE(NEW.raw_app_meta_data->>'provider', 'email')
     )
   );
-  
+
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -42,8 +50,8 @@ CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
--- Fonction pour logger les actions des utilisateurs
-CREATE OR REPLACE FUNCTION public.log_user_action(
+-- Fonction sécurisée pour logger les actions (avec gestion d'erreurs)
+CREATE OR REPLACE FUNCTION public.log_user_action_safe(
   user_action TEXT,
   resource_name TEXT DEFAULT NULL,
   resource_id_value TEXT DEFAULT NULL,
@@ -51,23 +59,35 @@ CREATE OR REPLACE FUNCTION public.log_user_action(
 )
 RETURNS VOID AS $$
 BEGIN
-  INSERT INTO public.audit_logs (
-    user_id, 
-    action, 
-    resource, 
-    resource_id, 
-    ip_address, 
-    user_agent, 
-    metadata
-  ) VALUES (
-    auth.uid(),
-    user_action,
-    resource_name,
-    resource_id_value,
-    inet_client_addr(),
-    current_setting('request.headers', true)::json->>'user-agent',
-    metadata_value
-  );
+  -- Vérifier si la table audit_logs existe
+  IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'audit_logs' AND table_schema = 'public') THEN
+    RETURN;
+  END IF;
+
+  -- Logger l'action avec gestion d'erreurs
+  BEGIN
+    INSERT INTO public.audit_logs (
+      user_id,
+      action,
+      resource,
+      resource_id,
+      ip_address,
+      user_agent,
+      metadata
+    ) VALUES (
+      COALESCE(auth.uid(), NULL),
+      user_action,
+      resource_name,
+      resource_id_value,
+      inet_client_addr(),
+      COALESCE(current_setting('request.headers', true)::json->>'user-agent', ''),
+      metadata_value
+    );
+  EXCEPTION WHEN OTHERS THEN
+    -- Si l'insertion échoue (pas d'utilisateur authentifié, table inexistante, etc.)
+    -- On ignore silencieusement l'erreur pour ne pas bloquer le processus
+    NULL;
+  END;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -80,33 +100,33 @@ DECLARE
 BEGIN
   -- Récupérer l'utilisateur
   SELECT * INTO user_record FROM public.profiles WHERE email = user_email AND is_active = true;
-  
+
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Utilisateur non trouvé';
   END IF;
-  
+
   -- Générer un token unique
   reset_token := encode(gen_random_bytes(32), 'hex');
-  
+
   -- Insérer le token de reset
   INSERT INTO public.password_reset_tokens (
-    user_id, 
-    token, 
+    user_id,
+    token,
     expires_at
   ) VALUES (
     user_record.id,
     reset_token,
     NOW() + INTERVAL '1 hour' -- Token valide 1 heure
   );
-  
+
   -- Logger la demande de reset
-  PERFORM public.log_user_action(
+  PERFORM public.log_user_action_safe(
     'PASSWORD_RESET_REQUESTED',
     'profile',
     user_record.id::text,
     jsonb_build_object('email', user_email)
   );
-  
+
   RETURN reset_token;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -118,29 +138,29 @@ DECLARE
   token_record public.password_reset_tokens%ROWTYPE;
 BEGIN
   -- Récupérer le token
-  SELECT * INTO token_record FROM public.password_reset_tokens 
+  SELECT * INTO token_record FROM public.password_reset_tokens
   WHERE token = token_value AND used = false AND expires_at > NOW();
-  
+
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Token invalide ou expiré';
   END IF;
-  
+
   -- Marquer le token comme utilisé
-  UPDATE public.password_reset_tokens 
-  SET used = true 
+  UPDATE public.password_reset_tokens
+  SET used = true
   WHERE id = token_record.id;
-  
+
   -- Logger l'utilisation du token
-  PERFORM public.log_user_action(
+  PERFORM public.log_user_action_safe(
     'PASSWORD_RESET_COMPLETED',
     'profile',
     token_record.user_id::text,
     jsonb_build_object('token_used', token_value)
   );
-  
+
   -- Note: Le changement de mot de passe sera géré par Supabase Auth
   -- Cette fonction sert principalement à la validation et au logging
-  
+
   RETURN true;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -164,30 +184,42 @@ RETURNS TABLE (
   permissions TEXT[]
 ) AS $$
 DECLARE
-  target_user UUID := COALESCE(user_uuid, auth.uid());
+  auth_user_uuid UUID := NULL;
+  target_user UUID := user_uuid;
   user_permissions TEXT[] := ARRAY[]::TEXT[];
 BEGIN
+  -- Essayer d'obtenir l'utilisateur authentifié actuel
+  BEGIN
+    auth_user_uuid := auth.uid();
+  EXCEPTION WHEN OTHERS THEN
+    -- En cas d'erreur (pas de session, migration, etc.), on continue sans utilisateur
+    auth_user_uuid := NULL;
+  END;
+
+  -- Si aucun utilisateur spécifié, utiliser l'utilisateur actuel
+  target_user := COALESCE(target_user, auth_user_uuid);
+
   -- Vérifier si l'utilisateur a le droit d'accéder à ce profil
   IF target_user IS NULL THEN
     RAISE EXCEPTION 'Utilisateur non authentifié';
   END IF;
-  
+
   -- Si ce n'est pas son propre profil, vérifier les permissions
-  IF target_user != auth.uid() THEN
+  IF auth_user_uuid IS NOT NULL AND target_user != auth_user_uuid THEN
     IF NOT EXISTS (
-      SELECT 1 FROM public.profiles 
-      WHERE id = auth.uid() AND role = 'ADMIN' AND is_active = true
+      SELECT 1 FROM public.profiles
+      WHERE id = auth_user_uuid AND role = 'ADMIN' AND is_active = true
     ) THEN
       RAISE EXCEPTION 'Permission refusée';
     END IF;
   END IF;
-  
+
   -- Déterminer les permissions selon le rôle
-  PERFORM public.get_user_permissions(target_user) INTO user_permissions;
-  
+  SELECT * INTO user_permissions FROM public.get_user_permissions(target_user);
+
   -- Retourner le profil et les permissions
   RETURN QUERY
-  SELECT 
+  SELECT
     p.id,
     p.email,
     p.first_name,
@@ -216,11 +248,11 @@ DECLARE
 BEGIN
   -- Récupérer le rôle de l'utilisateur
   SELECT role INTO user_role FROM public.profiles WHERE id = user_uuid AND is_active = true;
-  
+
   IF NOT FOUND THEN
     RETURN ARRAY[]::TEXT[];
   END IF;
-  
+
   -- Définir les permissions selon le rôle
   CASE user_role
     WHEN 'USER' THEN
@@ -261,7 +293,7 @@ BEGIN
         'manage:system'
       ];
   END CASE;
-  
+
   RETURN user_permissions;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -270,9 +302,22 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE OR REPLACE FUNCTION public.user_has_permission(permission_name TEXT, target_user UUID DEFAULT NULL)
 RETURNS BOOLEAN AS $$
 DECLARE
+  auth_user_uuid UUID := NULL;
   user_permissions TEXT[];
 BEGIN
-  user_permissions := public.get_user_permissions(COALESCE(target_user, auth.uid()));
+  -- Essayer d'obtenir l'utilisateur authentifié actuel
+  BEGIN
+    auth_user_uuid := COALESCE(target_user, auth.uid());
+  EXCEPTION WHEN OTHERS THEN
+    -- En cas d'erreur (pas de session, migration, etc.), utiliser l'utilisateur cible
+    auth_user_uuid := target_user;
+  END;
+
+  IF auth_user_uuid IS NULL THEN
+    RETURN false;
+  END IF;
+
+  user_permissions := public.get_user_permissions(auth_user_uuid);
   RETURN permission_name = ANY(user_permissions);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -281,12 +326,12 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE OR REPLACE FUNCTION public.log_user_login()
 RETURNS TRIGGER AS $$
 BEGIN
-  PERFORM public.log_user_action(
+  PERFORM public.log_user_action_safe(
     'LOGIN',
     'session',
     NEW.id::text,
     jsonb_build_object(
-      'provider', NEW.raw_user_meta_data->>'provider',
+      'provider', COALESCE(NEW.raw_app_meta_data->>'provider', 'email'),
       'last_sign_in', NEW.last_sign_in_at
     )
   );
@@ -298,7 +343,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE OR REPLACE FUNCTION public.log_user_logout()
 RETURNS TRIGGER AS $$
 BEGIN
-  PERFORM public.log_user_action(
+  PERFORM public.log_user_action_safe(
     'LOGOUT',
     'session',
     OLD.id::text,
@@ -307,12 +352,3 @@ BEGIN
   RETURN OLD;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Commentaires pour documenter les fonctions
-COMMENT ON FUNCTION public.handle_new_user() IS 'Crée automatiquement un profil lors de l''inscription';
-COMMENT ON FUNCTION public.log_user_action() IS 'Enregistre une action dans les logs d''audit';
-COMMENT ON FUNCTION public.create_password_reset_token() IS 'Génère un token de réinitialisation de mot de passe';
-COMMENT ON FUNCTION public.use_password_reset_token() IS 'Valide et utilise un token de reset';
-COMMENT ON FUNCTION public.get_user_profile() IS 'Retourne le profil utilisateur avec ses permissions';
-COMMENT ON FUNCTION public.get_user_permissions() IS 'Retourne les permissions selon le rôle';
-COMMENT ON FUNCTION public.user_has_permission() IS 'Vérifie si un utilisateur a une permission spécifique';
