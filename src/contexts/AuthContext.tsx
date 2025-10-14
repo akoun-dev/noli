@@ -36,21 +36,59 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Initialiser l'authentification avec Supabase
     const initializeAuth = async () => {
       try {
+        console.log('🔍 Initializing auth...');
+
+        // Vérifier d'abord le localStorage (clé par défaut de Supabase)
+        const storedToken = localStorage.getItem('supabase.auth.token');
+        console.log('💾 Stored token in localStorage:', storedToken ? 'Present' : 'Missing');
+        if (storedToken) {
+          console.log('📄 Token preview:', storedToken.substring(0, 50) + '...');
+        }
+
         // Vérifier la session actuelle
-        const { data: { session } } = await supabase.auth.getSession();
-        
+        const { data: { session }, error } = await supabase.auth.getSession();
+
+        console.log('📋 Session check result:', {
+          hasSession: !!session,
+          hasUser: !!session?.user,
+          userId: session?.user?.id,
+          error
+        });
+
         if (session?.user) {
-          // Récupérer le profil complet
-          const user = await authService.getCurrentUser();
-          const permissions = await authService.getUserPermissions();
-          
+          // Pour l'initialisation, utiliser directement les données de la session
+          // pour éviter les problèmes avec les appels RPC au chargement
+          const user: User = {
+            id: session.user.id,
+            email: session.user.email || '',
+            firstName: session.user.user_metadata?.first_name || '',
+            lastName: session.user.user_metadata?.last_name || '',
+            companyName: session.user.user_metadata?.company || '',
+            role: session.user.user_metadata?.role || 'USER',
+            phone: session.user.phone || '',
+            avatar: session.user.user_metadata?.avatar_url || '',
+            createdAt: new Date(session.user.created_at),
+            updatedAt: new Date(),
+          };
+
+          console.log('✅ Setting user state for:', session.user.email);
           setState({
             user,
             isAuthenticated: true,
             isLoading: false,
-            permissions,
+            permissions: [], // Sera chargé plus tard si nécessaire
           });
+
+          // Essayer de charger les permissions en arrière-plan sans bloquer
+          try {
+            const permissions = await authService.getUserPermissions();
+            console.log('🔐 Permissions loaded:', permissions.length);
+            setState(prev => ({ ...prev, permissions }));
+          } catch (error) {
+            console.warn('Could not load permissions on init:', error);
+          }
         } else {
+          console.log('❌ No session found, setting unauthenticated state');
           setState(prev => ({ ...prev, isLoading: false }));
         }
       } catch (error) {
@@ -64,27 +102,47 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Écouter les changements de session Supabase
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.id);
-        
+        console.log('🔄 Auth state changed:', {
+          event,
+          userId: session?.user?.id,
+          hasSession: !!session,
+          userEmail: session?.user?.email
+        });
+
         if (event === 'SIGNED_IN' && session?.user) {
+          console.log('🎯 Processing SIGNED_IN event for:', session.user.email);
+
+          // Utiliser directement les données de la session pour éviter les problèmes RPC
+          // lors de l'actualisation de page
+          const user: User = {
+            id: session.user.id,
+            email: session.user.email || '',
+            firstName: session.user.user_metadata?.first_name || '',
+            lastName: session.user.user_metadata?.last_name || '',
+            companyName: session.user.user_metadata?.company || '',
+            role: session.user.user_metadata?.role || 'USER',
+            phone: session.user.phone || '',
+            avatar: session.user.user_metadata?.avatar_url || '',
+            createdAt: new Date(session.user.created_at),
+            updatedAt: new Date(),
+          };
+
+          console.log('🚀 Setting state from session data (no RPC calls)');
+          setState({
+            user,
+            isAuthenticated: true,
+            isLoading: false,
+            permissions: [], // Sera chargé en arrière-plan
+          });
+
+          // Charger les permissions en arrière-plan sans bloquer
           try {
-            const user = await authService.getCurrentUser();
+            console.log('🔐 Loading permissions in background...');
             const permissions = await authService.getUserPermissions();
-            
-            setState({
-              user,
-              isAuthenticated: true,
-              isLoading: false,
-              permissions,
-            });
+            console.log('✅ Background permissions loaded:', permissions.length);
+            setState(prev => ({ ...prev, permissions }));
           } catch (error) {
-            console.error('Error getting user profile after sign in:', error);
-            setState({
-              user: null,
-              isAuthenticated: false,
-              isLoading: false,
-              permissions: [],
-            });
+            console.warn('⚠️ Could not load permissions in background:', error);
           }
         } else if (event === 'SIGNED_OUT') {
           setState({

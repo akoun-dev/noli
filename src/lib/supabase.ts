@@ -13,7 +13,7 @@ export const supabase: SupabaseClient<Database> = createClient<Database>(supabas
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true,
-    flowType: 'pkce', // Recommended for web apps
+    // Utiliser la configuration par défaut de Supabase pour le stockage
   },
   db: {
     schema: 'public',
@@ -86,13 +86,31 @@ export const supabaseHelpers = {
 
   // Profil utilisateur
   async getProfile(userId?: string) {
+    // Utiliser l'ID de l'utilisateur connecté si aucun ID n'est fourni
+    const targetUserId = userId || (await supabase.auth.getUser()).data.user?.id;
+
+    if (!targetUserId) {
+      console.warn('getProfile: No user ID provided or available');
+      return null;
+    }
+
     const { data, error } = await supabase
-      .rpc('get_user_profile', { 
-        user_uuid: userId 
+      .rpc('get_user_profile', {
+        user_uuid: targetUserId
       });
-    
-    if (error) throw error;
-    return data?.[0];
+
+    if (error) {
+      console.error('getProfile RPC error:', error);
+      // Ne pas throw l'erreur pour éviter de bloquer l'authentification
+      return null;
+    }
+
+    // La fonction retourne un tableau, prendre le premier élément
+    if (Array.isArray(data) && data.length > 0) {
+      return data[0];
+    }
+
+    return null;
   },
 
   async updateProfile(updates: Record<string, any>) {
@@ -112,13 +130,31 @@ export const supabaseHelpers = {
 
   // Permissions
   async getUserPermissions(userId?: string) {
+    // Utiliser l'ID de l'utilisateur connecté si aucun ID n'est fourni
+    const targetUserId = userId || (await supabase.auth.getUser()).data.user?.id;
+
+    if (!targetUserId) {
+      console.warn('getUserPermissions: No user ID provided or available');
+      return [];
+    }
+
     const { data, error } = await supabase
-      .rpc('get_user_permissions', { 
-        user_uuid: userId 
+      .rpc('get_user_permissions', {
+        user_uuid: targetUserId
       });
-    
-    if (error) throw error;
-    return data;
+
+    if (error) {
+      console.error('getUserPermissions RPC error:', error);
+      // Ne pas throw l'erreur pour éviter de bloquer l'authentification
+      return [];
+    }
+
+    // get_user_permissions retourne un tableau de permissions
+    if (Array.isArray(data) && data.length > 0) {
+      return data;
+    }
+
+    return [];
   },
 
   async hasPermission(permission: string, userId?: string) {

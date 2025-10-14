@@ -1,9 +1,11 @@
-  Mot de passe universel : password123
-  
-  - jean.konan@noli.com (USER) ✅ Testé et fonctionnel
-  - marie.toure@noli.com (USER)
-  - kouakou.bamba@noli.com (USER)
-  - contact@assurauto.ci (INSURER)
-  - admin@sunuassurance.ci (INSURER)
-  - commercial@nsia.ci (INSURER)
-  - admin@noliassurance.com (ADMIN)
+  Résumé des identifiants corrects :
+
+  | Rôle    | Email                   | Mot de passe  |
+  |---------|-------------------------|---------------|
+  | ADMIN   | admin@noliassurance.com | NoliTest2024! |
+  | USER    | jean.konan@noli.com     | NoliTest2024! |
+  | USER    | marie.toure@noli.com    | NoliTest2024! |
+  | USER    | kouakou.bamba@noli.com  | NoliTest2024! |
+  | INSURER | contact@assurauto.ci    | NoliTest2024! |
+  | INSURER | admin@sunuassurance.ci  | NoliTest2024! |
+  | INSURER | commercial@nsia.ci      | NoliTest2024! |
