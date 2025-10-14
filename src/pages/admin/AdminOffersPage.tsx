@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +9,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Plus,
   Edit,
@@ -34,55 +36,16 @@ import {
   MoreHorizontal,
   Activity,
   Target,
-  Zap
+  Zap,
+  AlertCircle,
+  RefreshCw
 } from 'lucide-react';
 import { guaranteeService } from '@/features/tarification/services/guaranteeService';
 import { pricingService } from '@/features/tarification/services/pricingService';
+import { offerService, type Offer, type Insurer, type OfferAnalytics, type OfferFormData, type OfferStats } from '@/features/admin/services/offerService';
 import type { Guarantee, InsurancePackage } from '@/types/tarification';
+import { toast } from 'sonner';
 
-interface Offer {
-  id: string;
-  title: string;
-  description: string;
-  insurer: string;
-  insurerId: string;
-  price: number;
-  currency: string;
-  category: string;
-  coverage: string[];
-  features: string[];
-  status: 'active' | 'inactive' | 'pending' | 'draft';
-  visibility: 'public' | 'private';
-  createdAt: string;
-  updatedAt: string;
-  validUntil?: string;
-  clicks: number;
-  conversions: number;
-  conversionRate: number;
-  averageRating: number;
-  reviewCount: number;
-  tags: string[];
-  priority: 'low' | 'medium' | 'high';
-}
-
-interface Insurer {
-  id: string;
-  name: string;
-  logo?: string;
-  status: 'active' | 'inactive' | 'pending';
-}
-
-interface OfferAnalytics {
-  offerId: string;
-  period: string;
-  views: number;
-  clicks: number;
-  conversions: number;
-  revenue: number;
-  ctr: number; // Click-through rate
-  conversionRate: number;
-  averagePosition: number;
-}
 
 export const AdminOffersPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -93,137 +56,72 @@ export const AdminOffersPage: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
+  
+  // Data states
+  const [offers, setOffers] = useState<Offer[]>([]);
+  const [insurers, setInsurers] = useState<Insurer[]>([]);
+  const [offerAnalytics, setOfferAnalytics] = useState<OfferAnalytics[]>([]);
+  const [offerStats, setOfferStats] = useState<OfferStats | null>(null);
+  const [apiCategories, setApiCategories] = useState<Array<{ value: string; label: string }>>([]);
+  
+  // UI states
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
 
-  // Mock data
-  const insurers: Insurer[] = [
-    { id: '1', name: 'NSIA Assurance', status: 'active' },
-    { id: '2', name: 'AXA Côte d\'Ivoire', status: 'active' },
-    { id: '3', name: 'SUNU Assurances', status: 'active' },
-    { id: '4', name: 'Allianz CI', status: 'pending' },
-  ];
-
-  const offers: Offer[] = [
-    {
-      id: '1',
-      title: 'Assurance Auto Standard',
-      description: 'Couverture complète pour votre véhicule avec assistance 24/7',
-      insurer: 'NSIA Assurance',
-      insurerId: '1',
-      price: 150000,
-      currency: 'FCFA',
-      category: 'auto',
-      coverage: ['Responsabilité civile', 'Dégâts matériels', 'Bris de glace', 'Vol', 'Incendie'],
-      features: ['Assistance 24/7', 'Véhicule de remplacement', 'Protection juridique', 'Dépannage 0km'],
-      status: 'active',
-      visibility: 'public',
-      createdAt: '2024-01-15',
-      updatedAt: '2024-01-20',
-      clicks: 234,
-      conversions: 45,
-      conversionRate: 19.2,
-      averageRating: 4.2,
-      reviewCount: 28,
-      tags: ['popular', 'best-value', 'premium'],
-      priority: 'high'
-    },
-    {
-      id: '2',
-      title: 'Assurance Tous Risques',
-      description: 'Protection maximale pour votre véhicule et ses occupants',
-      insurer: 'AXA Côte d\'Ivoire',
-      insurerId: '2',
-      price: 250000,
-      currency: 'FCFA',
-      category: 'auto',
-      coverage: ['Tous risques', 'Dommages corporels', 'Catastrophes naturelles', 'Actes de terrorisme'],
-      features: ['Garantie valeur à neuf', 'Conducteur additionnel', 'Protection bagages', 'Assurance voyage'],
-      status: 'active',
-      visibility: 'public',
-      createdAt: '2024-01-12',
-      updatedAt: '2024-01-18',
-      validUntil: '2024-12-31',
-      clicks: 189,
-      conversions: 38,
-      conversionRate: 20.1,
-      averageRating: 4.5,
-      reviewCount: 15,
-      tags: ['premium', 'comprehensive', 'luxury'],
-      priority: 'high'
-    },
-    {
-      id: '3',
-      title: 'Assurance Éco',
-      description: 'Solution économique avec couverture essentielle',
-      insurer: 'SUNU Assurances',
-      insurerId: '3',
-      price: 120000,
-      currency: 'FCFA',
-      category: 'auto',
-      coverage: ['Responsabilité civile', 'Dégâts matériels tiers'],
-      features: ['Assistance basique', 'Dépannage limité'],
-      status: 'pending',
-      visibility: 'public',
-      createdAt: '2024-01-18',
-      updatedAt: '2024-01-18',
-      clicks: 0,
-      conversions: 0,
-      conversionRate: 0,
-      averageRating: 0,
-      reviewCount: 0,
-      tags: ['economy', 'basic'],
-      priority: 'medium'
-    },
-    {
-      id: '4',
-      title: 'Assurance Moto Pro',
-      description: 'Protection spécialisée pour les professionnels à deux roues',
-      insurer: 'NSIA Assurance',
-      insurerId: '1',
-      price: 85000,
-      currency: 'FCFA',
-      category: 'moto',
-      coverage: ['Responsabilité civile', 'Vol', 'Incendie', 'Dégâts matériels'],
-      features: ['Équipements protégés', 'Assistance 24/7', 'Protection juridique'],
-      status: 'draft',
-      visibility: 'private',
-      createdAt: '2024-01-10',
-      updatedAt: '2024-01-15',
-      clicks: 0,
-      conversions: 0,
-      conversionRate: 0,
-      averageRating: 0,
-      reviewCount: 0,
-      tags: ['professional', 'moto'],
-      priority: 'low'
+  // Load data
+  const loadData = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const [offersData, insurersData, statsData, categoriesData] = await Promise.all([
+        offerService.getOffers(),
+        offerService.getInsurers(),
+        offerService.getOfferStats(),
+        offerService.getCategories()
+      ]);
+      
+      setOffers(offersData);
+      setInsurers(insurersData);
+      setOfferStats(statsData);
+      setApiCategories(categoriesData);
+    } catch (err) {
+      console.error('Error loading offers data:', err);
+      setError('Erreur lors du chargement des données. Veuillez réessayer.');
+      toast.error('Erreur lors du chargement des données');
+    } finally {
+      setIsLoading(false);
     }
-  ];
+  };
 
-  const offerAnalytics: OfferAnalytics[] = [
-    {
-      offerId: '1',
-      period: '30d',
-      views: 1234,
-      clicks: 234,
-      conversions: 45,
-      revenue: 6750000,
-      ctr: 18.9,
-      conversionRate: 19.2,
-      averagePosition: 2.3
-    },
-    {
-      offerId: '2',
-      period: '30d',
-      views: 987,
-      clicks: 189,
-      conversions: 38,
-      revenue: 9500000,
-      ctr: 19.1,
-      conversionRate: 20.1,
-      averagePosition: 1.8
+  // Load analytics data
+  const loadAnalytics = async () => {
+    try {
+      setAnalyticsLoading(true);
+      const analyticsData = await offerService.getAllOffersAnalytics();
+      setOfferAnalytics(analyticsData);
+    } catch (err) {
+      console.error('Error loading analytics:', err);
+      toast.error('Erreur lors du chargement des analytics');
+    } finally {
+      setAnalyticsLoading(false);
     }
-  ];
+  };
 
-  const categories = [
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  useEffect(() => {
+    if (offers.length > 0) {
+      loadAnalytics();
+    }
+  }, [offers.length]);
+
+  // Use API categories if available, otherwise use fallback categories
+  const categories = apiCategories.length > 0 ? apiCategories : [
     { value: 'auto', label: 'Auto' },
     { value: 'moto', label: 'Moto' },
     { value: 'habitation', label: 'Habitation' },
@@ -282,24 +180,72 @@ export const AdminOffersPage: React.FC = () => {
     }
   };
 
-  const handleOfferAction = (action: string, offerId: string) => {
-    console.log(`${action} offer ${offerId}`);
-    // Implement action logic
+  const handleOfferAction = async (action: string, offerId: string) => {
+    try {
+      switch (action) {
+        case 'delete':
+          await offerService.deleteOffer(offerId);
+          toast.success('Offre supprimée avec succès');
+          break;
+        case 'duplicate':
+          await offerService.duplicateOffer(offerId);
+          toast.success('Offre dupliquée avec succès');
+          break;
+        default:
+          console.log(`Unknown action: ${action} for offer ${offerId}`);
+      }
+      loadData(); // Refresh data
+    } catch (err) {
+      console.error(`Error ${action} offer:`, err);
+      toast.error(`Erreur lors de l'action: ${action}`);
+    }
   };
 
-  const duplicateOffer = (offerId: string) => {
-    console.log(`Duplicating offer ${offerId}`);
-    setShowDuplicateDialog(false);
+  const duplicateOffer = async (offerId: string) => {
+    try {
+      await offerService.duplicateOffer(offerId);
+      toast.success('Offre dupliquée avec succès');
+      setShowDuplicateDialog(false);
+      loadData(); // Refresh data
+    } catch (err) {
+      console.error('Error duplicating offer:', err);
+      toast.error('Erreur lors de la duplication de l\'offre');
+    }
   };
 
-  const exportOffers = () => {
-    console.log('Exporting offers data');
-    // Implement export logic
+  const exportOffers = async () => {
+    try {
+      const blob = await offerService.exportOffers('csv');
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'offers.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Offres exportées avec succès');
+    } catch (err) {
+      console.error('Error exporting offers:', err);
+      toast.error('Erreur lors de l\'exportation des offres');
+    }
   };
 
-  const importOffers = () => {
-    console.log('Import offers dialog');
-    // Implement import logic
+  const importOffers = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const result = await offerService.importOffers(file);
+      if (result.success > 0) {
+        toast.success(`${result.success} offres importées avec succès`);
+      }
+      if (result.errors.length > 0) {
+        toast.error(`${result.errors.length} erreurs lors de l'importation`);
+      }
+      loadData(); // Refresh data
+    } catch (err) {
+      console.error('Error importing offers:', err);
+      toast.error('Erreur lors de l\'importation des offres');
+    }
   };
 
   const renderStars = (rating: number) => {
@@ -311,10 +257,10 @@ export const AdminOffersPage: React.FC = () => {
     ));
   };
 
-  const totalOffers = offers.length;
-  const activeOffers = offers.filter(o => o.status === 'active').length;
-  const totalClicks = offers.reduce((sum, offer) => sum + offer.clicks, 0);
-  const totalConversions = offers.reduce((sum, offer) => sum + offer.conversions, 0);
+  const totalOffers = offerStats?.total || 0;
+  const activeOffers = offerStats?.active || 0;
+  const totalClicks = offerStats?.totalClicks || 0;
+  const totalConversions = offerStats?.totalConversions || 0;
   const overallConversionRate = totalClicks > 0 ? (totalConversions / totalClicks * 100).toFixed(1) : 0;
 
   return (
@@ -330,10 +276,20 @@ export const AdminOffersPage: React.FC = () => {
             <Download className="h-4 w-4 mr-2" />
             Exporter
           </Button>
-          <Button variant="outline" onClick={importOffers} className="w-full sm:w-auto">
-            <Upload className="h-4 w-4 mr-2" />
-            Importer
-          </Button>
+          <label>
+            <Button variant="outline" className="w-full sm:w-auto" asChild>
+              <span>
+                <Upload className="h-4 w-4 mr-2" />
+                Importer
+              </span>
+            </Button>
+            <input
+              type="file"
+              accept=".csv,.xlsx,.xls"
+              onChange={importOffers}
+              className="hidden"
+            />
+          </label>
           <Dialog>
             <DialogTrigger asChild>
               <Button className="w-full sm:w-auto">
@@ -353,69 +309,89 @@ export const AdminOffersPage: React.FC = () => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Offres</p>
-                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{totalOffers}</p>
-                <div className="flex items-center space-x-1">
-                  <TrendingUp className="h-3 w-3 text-green-600 dark:text-green-400" />
-                  <span className="text-xs text-green-600 dark:text-green-400">+12%</span>
+        {isLoading ? (
+          // Loading skeletons for stats cards
+          Array.from({ length: 4 }).map((_, index) => (
+            <Card key={index}>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-8 w-16" />
+                    <Skeleton className="h-3 w-20" />
+                  </div>
+                  <Skeleton className="h-8 w-8 rounded" />
                 </div>
-              </div>
-              <BarChart3 className="h-8 w-8 text-blue-600 dark:text-blue-400" />
-            </div>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
+          ))
+        ) : (
+          <>
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Total Offres</p>
+                    <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{totalOffers}</p>
+                    <div className="flex items-center space-x-1">
+                      <TrendingUp className="h-3 w-3 text-green-600 dark:text-green-400" />
+                      <span className="text-xs text-green-600 dark:text-green-400">+12%</span>
+                    </div>
+                  </div>
+                  <BarChart3 className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+                </div>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Offres Actives</p>
-                <p className="text-2xl font-bold text-green-600 dark:text-green-400">{activeOffers}</p>
-                <div className="flex items-center space-x-1">
-                  <TrendingUp className="h-3 w-3 text-green-600 dark:text-green-400" />
-                  <span className="text-xs text-green-600 dark:text-green-400">+3</span>
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Offres Actives</p>
+                    <p className="text-2xl font-bold text-green-600 dark:text-green-400">{activeOffers}</p>
+                    <div className="flex items-center space-x-1">
+                      <TrendingUp className="h-3 w-3 text-green-600 dark:text-green-400" />
+                      <span className="text-xs text-green-600 dark:text-green-400">+3</span>
+                    </div>
+                  </div>
+                  <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
                 </div>
-              </div>
-              <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
-            </div>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Clics Totaux</p>
-                <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{totalClicks.toLocaleString()}</p>
-                <div className="flex items-center space-x-1">
-                  <TrendingUp className="h-3 w-3 text-purple-600 dark:text-purple-400" />
-                  <span className="text-xs text-purple-600 dark:text-purple-400">+23%</span>
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Clics Totaux</p>
+                    <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{totalClicks.toLocaleString()}</p>
+                    <div className="flex items-center space-x-1">
+                      <TrendingUp className="h-3 w-3 text-purple-600 dark:text-purple-400" />
+                      <span className="text-xs text-purple-600 dark:text-purple-400">+23%</span>
+                    </div>
+                  </div>
+                  <MousePointer className="h-8 w-8 text-purple-600 dark:text-purple-400" />
                 </div>
-              </div>
-              <MousePointer className="h-8 w-8 text-purple-600 dark:text-purple-400" />
-            </div>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Taux Conversion</p>
-                <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{overallConversionRate}%</p>
-                <div className="flex items-center space-x-1">
-                  <TrendingUp className="h-3 w-3 text-green-600 dark:text-green-400" />
-                  <span className="text-xs text-green-600 dark:text-green-400">+2.3%</span>
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Taux Conversion</p>
+                    <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{overallConversionRate}%</p>
+                    <div className="flex items-center space-x-1">
+                      <TrendingUp className="h-3 w-3 text-green-600 dark:text-green-400" />
+                      <span className="text-xs text-green-600 dark:text-green-400">+2.3%</span>
+                    </div>
+                  </div>
+                  <Target className="h-8 w-8 text-orange-600 dark:text-orange-400" />
                 </div>
-              </div>
-              <Target className="h-8 w-8 text-orange-600 dark:text-orange-400" />
-            </div>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
 
       {/* Main Content */}
@@ -483,6 +459,13 @@ export const AdminOffersPage: React.FC = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
+              {error && (
+                <Alert className="mb-4" variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+              
               <div className="responsive-table-wrapper">
                 <table className="w-full min-w-[700px]">
                   <thead>
@@ -497,7 +480,51 @@ export const AdminOffersPage: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredOffers.map((offer) => (
+                    {isLoading ? (
+                      // Loading skeletons for table rows
+                      Array.from({ length: 5 }).map((_, index) => (
+                        <tr key={index} className="border-b">
+                          <td className="p-2 sm:p-4">
+                            <div className="space-y-2">
+                              <Skeleton className="h-4 w-40" />
+                              <Skeleton className="h-3 w-24" />
+                            </div>
+                          </td>
+                          <td className="p-2 sm:p-4">
+                            <div className="flex items-center space-x-2">
+                              <Skeleton className="h-3 w-3" />
+                              <Skeleton className="h-4 w-32" />
+                            </div>
+                          </td>
+                          <td className="p-2 sm:p-4">
+                            <Skeleton className="h-4 w-20" />
+                          </td>
+                          <td className="p-2 sm:p-4">
+                            <Skeleton className="h-6 w-16 rounded" />
+                          </td>
+                          <td className="p-2 sm:p-4 hidden md:table-cell">
+                            <div className="space-y-1">
+                              <Skeleton className="h-3 w-8" />
+                              <Skeleton className="h-3 w-16" />
+                            </div>
+                          </td>
+                          <td className="p-2 sm:p-4 hidden lg:table-cell">
+                            <div className="flex items-center space-x-2">
+                              <Skeleton className="h-4 w-4" />
+                              <Skeleton className="h-3 w-8" />
+                            </div>
+                          </td>
+                          <td className="p-2 sm:p-4">
+                            <div className="flex space-x-1 sm:space-x-2">
+                              <Skeleton className="h-8 w-8 p-0 sm:h-auto sm:w-auto sm:p-2 rounded" />
+                              <Skeleton className="h-8 w-8 p-0 sm:h-auto sm:w-auto sm:p-2 rounded" />
+                              <Skeleton className="h-8 w-8 p-0 sm:h-auto sm:w-auto sm:p-2 rounded" />
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      filteredOffers.map((offer) => (
                       <tr key={offer.id} className="border-b hover:bg-accent">
                         <td className="p-2 sm:p-4">
                           <div>
@@ -616,7 +643,8 @@ export const AdminOffersPage: React.FC = () => {
                           </div>
                         </td>
                       </tr>
-                    ))}
+                    ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -632,49 +660,70 @@ export const AdminOffersPage: React.FC = () => {
                 <CardTitle>Performance des offres</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {offerAnalytics.map((analytics) => {
-                    const offer = offers.find(o => o.id === analytics.offerId);
-                    return (
-                      <div key={analytics.offerId} className="p-4 border rounded-lg">
+                {analyticsLoading ? (
+                  <div className="space-y-4">
+                    {Array.from({ length: 3 }).map((_, index) => (
+                      <div key={index} className="p-4 border rounded-lg">
                         <div className="flex items-center justify-between mb-3">
-                          <h4 className="font-medium">{offer?.title}</h4>
-                          <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400">
-                            {analytics.period}
-                          </Badge>
+                          <Skeleton className="h-5 w-32" />
+                          <Skeleton className="h-5 w-16 rounded" />
                         </div>
                         <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <div className="text-sm text-muted-foreground">Vues</div>
-                            <div className="text-lg font-bold">{analytics.views.toLocaleString()}</div>
-                          </div>
-                          <div>
-                            <div className="text-sm text-muted-foreground">Clics</div>
-                            <div className="text-lg font-bold">{analytics.clicks.toLocaleString()}</div>
-                          </div>
-                          <div>
-                            <div className="text-sm text-muted-foreground">Conversions</div>
-                            <div className="text-lg font-bold">{analytics.conversions}</div>
-                          </div>
-                          <div>
-                            <div className="text-sm text-muted-foreground">Revenus</div>
-                            <div className="text-lg font-bold">{(analytics.revenue / 1000000).toFixed(1)}M FCFA</div>
-                          </div>
-                        </div>
-                        <div className="mt-3 grid grid-cols-2 gap-4">
-                          <div>
-                            <div className="text-sm text-muted-foreground">CTR</div>
-                            <div className="font-medium">{analytics.ctr.toFixed(1)}%</div>
-                          </div>
-                          <div>
-                            <div className="text-sm text-muted-foreground">Taux conversion</div>
-                            <div className="font-medium">{analytics.conversionRate.toFixed(1)}%</div>
-                          </div>
+                          {Array.from({ length: 4 }).map((_, i) => (
+                            <div key={i}>
+                              <Skeleton className="h-3 w-16 mb-1" />
+                              <Skeleton className="h-6 w-20" />
+                            </div>
+                          ))}
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {offerAnalytics.map((analytics) => {
+                      const offer = offers.find(o => o.id === analytics.offerId);
+                      return (
+                        <div key={analytics.offerId} className="p-4 border rounded-lg">
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="font-medium">{offer?.title}</h4>
+                            <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400">
+                              {analytics.period}
+                            </Badge>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <div className="text-sm text-muted-foreground">Vues</div>
+                              <div className="text-lg font-bold">{analytics.views.toLocaleString()}</div>
+                            </div>
+                            <div>
+                              <div className="text-sm text-muted-foreground">Clics</div>
+                              <div className="text-lg font-bold">{analytics.clicks.toLocaleString()}</div>
+                            </div>
+                            <div>
+                              <div className="text-sm text-muted-foreground">Conversions</div>
+                              <div className="text-lg font-bold">{analytics.conversions}</div>
+                            </div>
+                            <div>
+                              <div className="text-sm text-muted-foreground">Revenus</div>
+                              <div className="text-lg font-bold">{(analytics.revenue / 1000000).toFixed(1)}M FCFA</div>
+                            </div>
+                          </div>
+                          <div className="mt-3 grid grid-cols-2 gap-4">
+                            <div>
+                              <div className="text-sm text-muted-foreground">CTR</div>
+                              <div className="font-medium">{analytics.ctr.toFixed(1)}%</div>
+                            </div>
+                            <div>
+                              <div className="text-sm text-muted-foreground">Taux conversion</div>
+                              <div className="font-medium">{analytics.conversionRate.toFixed(1)}%</div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -683,33 +732,53 @@ export const AdminOffersPage: React.FC = () => {
                 <CardTitle>Top des offres performantes</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {offers
-                    .filter(o => o.status === 'active')
-                    .sort((a, b) => b.conversionRate - a.conversionRate)
-                    .slice(0, 5)
-                    .map((offer, index) => (
-                      <div key={offer.id} className="flex items-center justify-between p-3 border rounded-lg">
+                {isLoading ? (
+                  <div className="space-y-4">
+                    {Array.from({ length: 5 }).map((_, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
                         <div className="flex items-center space-x-3">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold ${
-                            index === 0 ? 'bg-yellow-500' :
-                            index === 1 ? 'bg-gray-400' :
-                            index === 2 ? 'bg-orange-600' : 'bg-blue-500'
-                          }`}>
-                            {index + 1}
-                          </div>
-                          <div>
-                            <div className="font-medium">{offer.title}</div>
-                            <div className="text-sm text-muted-foreground">{offer.insurer}</div>
+                          <Skeleton className="h-8 w-8 rounded-full" />
+                          <div className="space-y-2">
+                            <Skeleton className="h-4 w-32" />
+                            <Skeleton className="h-3 w-24" />
                           </div>
                         </div>
-                        <div className="text-right">
-                          <div className="font-bold text-green-600 dark:text-green-400">{offer.conversionRate.toFixed(1)}%</div>
-                          <div className="text-sm text-muted-foreground">{offer.conversions} conversions</div>
+                        <div className="text-right space-y-2">
+                          <Skeleton className="h-5 w-16" />
+                          <Skeleton className="h-3 w-24" />
                         </div>
                       </div>
                     ))}
-                </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {offers
+                      .filter(o => o.status === 'active')
+                      .sort((a, b) => b.conversionRate - a.conversionRate)
+                      .slice(0, 5)
+                      .map((offer, index) => (
+                        <div key={offer.id} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div className="flex items-center space-x-3">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold ${
+                              index === 0 ? 'bg-yellow-500' :
+                              index === 1 ? 'bg-gray-400' :
+                              index === 2 ? 'bg-orange-600' : 'bg-blue-500'
+                            }`}>
+                              {index + 1}
+                            </div>
+                            <div>
+                              <div className="font-medium">{offer.title}</div>
+                              <div className="text-sm text-muted-foreground">{offer.insurer}</div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-bold text-green-600 dark:text-green-400">{offer.conversionRate.toFixed(1)}%</div>
+                            <div className="text-sm text-muted-foreground">{offer.conversions} conversions</div>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -844,10 +913,32 @@ const OfferForm: React.FC<{ offer?: any; insurers: any[]; categories: any[] }> =
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [selectedOffer, setSelectedOffer] = useState<any>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Form submitted:', formData);
-    // Implement form submission logic
+    setIsSubmitting(true);
+    
+    try {
+      if (offer) {
+        await offerService.updateOffer(offer.id, formData);
+        toast.success('Offre mise à jour avec succès');
+      } else {
+        await offerService.createOffer(formData);
+        toast.success('Offre créée avec succès');
+      }
+      
+      setIsCreateDialogOpen(false);
+      setSelectedOffer(null);
+      // The parent component will handle data refresh
+    } catch (err) {
+      console.error('Error saving offer:', err);
+      toast.error(offer ? 'Erreur lors de la mise à jour de l\'offre' : 'Erreur lors de la création de l\'offre');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const filteredGuarantees = React.useMemo(() => {
@@ -1123,8 +1214,17 @@ const OfferForm: React.FC<{ offer?: any; insurers: any[]; categories: any[] }> =
       </div>
 
       <div className="flex justify-end space-x-2">
-        <Button type="submit">
-          {offer ? 'Mettre à jour' : 'Créer'}
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? (
+            <>
+              <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+              {offer ? 'Mise à jour...' : 'Création...'}
+            </>
+          ) : (
+            <>
+              {offer ? 'Mettre à jour' : 'Créer'}
+            </>
+          )}
         </Button>
       </div>
     </form>

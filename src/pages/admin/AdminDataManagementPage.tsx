@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { toast } from 'sonner';
 import {
   Database,
   Upload,
@@ -33,44 +34,16 @@ import {
   TrendingDown,
   Minus
 } from 'lucide-react';
-
-interface ImportJob {
-  id: string;
-  fileName: string;
-  type: 'users' | 'insurers' | 'offers' | 'quotes';
-  status: 'pending' | 'processing' | 'completed' | 'failed';
-  progress: number;
-  totalRecords: number;
-  processedRecords: number;
-  errors: number;
-  warnings: number;
-  createdAt: string;
-  completedAt?: string;
-  errorDetails?: string[];
-}
-
-interface DataValidation {
-  id: string;
-  entityType: 'users' | 'insurers' | 'offers' | 'quotes';
-  validationDate: string;
-  totalRecords: number;
-  validRecords: number;
-  invalidRecords: number;
-  warnings: number;
-  criticalIssues: number;
-  status: 'passed' | 'failed' | 'warning';
-  details: string[];
-}
-
-interface UpdateHistory {
-  id: string;
-  entity: string;
-  action: 'create' | 'update' | 'delete' | 'import' | 'export';
-  user: string;
-  timestamp: string;
-  details: string;
-  status: 'success' | 'failed' | 'pending';
-}
+import { adminDataApi } from '@/api/services/adminDataApi';
+import type {
+  ImportJob,
+  DataValidation,
+  UpdateHistory,
+  DataQualityMetrics,
+  ImportRequest,
+  ValidationRequest,
+  ExportRequest
+} from '@/api/services/adminDataApi';
 
 export const AdminDataManagementPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('validation');
@@ -78,116 +51,52 @@ export const AdminDataManagementPage: React.FC = () => {
   const [importType, setImportType] = useState('users');
   const [showImportDialog, setShowImportDialog] = useState(false);
 
-  // Mock data
-  const importJobs: ImportJob[] = [
-    {
-      id: '1',
-      fileName: 'utilisateurs_import.csv',
-      type: 'users',
-      status: 'completed',
-      progress: 100,
-      totalRecords: 1250,
-      processedRecords: 1250,
-      errors: 12,
-      warnings: 45,
-      createdAt: '2024-01-20 10:30',
-      completedAt: '2024-01-20 10:45'
-    },
-    {
-      id: '2',
-      fileName: 'assureurs_data.xlsx',
-      type: 'insurers',
-      status: 'processing',
-      progress: 65,
-      totalRecords: 28,
-      processedRecords: 18,
-      errors: 0,
-      warnings: 3,
-      createdAt: '2024-01-20 09:15'
-    },
-    {
-      id: '3',
-      fileName: 'offres_janvier.csv',
-      type: 'offers',
-      status: 'failed',
-      progress: 30,
-      totalRecords: 156,
-      processedRecords: 47,
-      errors: 25,
-      warnings: 12,
-      createdAt: '2024-01-19 14:20',
-      errorDetails: ['Format de date invalide', 'Champs obligatoires manquants']
-    }
-  ];
+  // États pour les données API
+  const [importJobs, setImportJobs] = useState<ImportJob[]>([]);
+  const [dataValidations, setDataValidations] = useState<DataValidation[]>([]);
+  const [updateHistory, setUpdateHistory] = useState<UpdateHistory[]>([]);
+  const [qualityMetrics, setQualityMetrics] = useState<DataQualityMetrics | null>(null);
 
-  const dataValidations: DataValidation[] = [
-    {
-      id: '1',
-      entityType: 'users',
-      validationDate: '2024-01-20 08:00',
-      totalRecords: 12543,
-      validRecords: 12489,
-      invalidRecords: 54,
-      warnings: 123,
-      criticalIssues: 2,
-      status: 'warning',
-      details: ['54 adresses email invalides', '23 numéros de téléphone mal formatés', '2 utilisateurs sans nom']
-    },
-    {
-      id: '2',
-      entityType: 'insurers',
-      validationDate: '2024-01-20 08:00',
-      totalRecords: 28,
-      validRecords: 28,
-      invalidRecords: 0,
-      warnings: 0,
-      criticalIssues: 0,
-      status: 'passed',
-      details: ['Toutes les données sont valides']
-    },
-    {
-      id: '3',
-      entityType: 'offers',
-      validationDate: '2024-01-20 08:00',
-      totalRecords: 456,
-      validRecords: 445,
-      invalidRecords: 11,
-      warnings: 8,
-      criticalIssues: 3,
-      status: 'failed',
-      details: ['11 offres sans prix', '8 descriptions trop courtes', '3 assureurs inactifs']
-    }
-  ];
+  // États de chargement
+  const [loading, setLoading] = useState(true);
+  const [importLoading, setImportLoading] = useState(false);
+  const [validationLoading, setValidationLoading] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
 
-  const updateHistory: UpdateHistory[] = [
-    {
-      id: '1',
-      entity: 'Utilisateurs',
-      action: 'import',
-      user: 'Admin',
-      timestamp: '2024-01-20 10:45',
-      details: 'Import de 1250 utilisateurs',
-      status: 'success'
-    },
-    {
-      id: '2',
-      entity: 'Offres',
-      action: 'update',
-      user: 'Admin',
-      timestamp: '2024-01-20 09:30',
-      details: 'Mise à jour des prix des offres',
-      status: 'success'
-    },
-    {
-      id: '3',
-      entity: 'Assureurs',
-      action: 'create',
-      user: 'Admin',
-      timestamp: '2024-01-20 08:15',
-      details: 'Création de l\'assureur NSIA Assurance',
-      status: 'pending'
+  // Charger les données au montage du composant
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const [jobsResponse, validationsResponse, historyResponse, metricsResponse] = await Promise.all([
+        adminDataApi.getImportJobs(),
+        adminDataApi.getDataValidations(),
+        adminDataApi.getUpdateHistory(),
+        adminDataApi.getDataQualityMetrics()
+      ]);
+
+      if (jobsResponse.success) {
+        setImportJobs(jobsResponse.data || []);
+      }
+      if (validationsResponse.success) {
+        setDataValidations(validationsResponse.data || []);
+      }
+      if (historyResponse.success) {
+        setUpdateHistory(historyResponse.data || []);
+      }
+      if (metricsResponse.success) {
+        setQualityMetrics(metricsResponse.data);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des données:', error);
+      toast.error('Erreur lors du chargement des données');
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -243,20 +152,100 @@ export const AdminDataManagementPage: React.FC = () => {
     }
   };
 
-  const startImport = () => {
+  const startImport = async () => {
     if (!selectedFile) return;
-    console.log('Starting import:', selectedFile.name, 'Type:', importType);
-    setShowImportDialog(false);
-    setSelectedFile(null);
+    
+    try {
+      setImportLoading(true);
+      const request: ImportRequest = {
+        file: selectedFile,
+        type: importType as 'users' | 'insurers' | 'offers' | 'quotes'
+      };
+      
+      const response = await adminDataApi.startImport(request);
+      
+      if (response.success) {
+        toast.success('Import démarré avec succès');
+        setShowImportDialog(false);
+        setSelectedFile(null);
+        // Recharger les données pour voir le nouvel import
+        loadData();
+      } else {
+        toast.error('Erreur lors du démarrage de l\'import');
+      }
+    } catch (error) {
+      console.error('Erreur lors de l\'import:', error);
+      toast.error('Erreur lors de l\'import');
+    } finally {
+      setImportLoading(false);
+    }
   };
 
-  const runValidation = (entityType: string) => {
-    console.log('Running validation for:', entityType);
+  const runValidation = async (entityType: string) => {
+    try {
+      setValidationLoading(true);
+      const request: ValidationRequest = {
+        entityType: entityType as 'users' | 'insurers' | 'offers' | 'quotes' | 'all'
+      };
+      
+      const response = await adminDataApi.runValidation(request);
+      
+      if (response.success) {
+        toast.success(`Validation ${entityType === 'all' ? 'générale' : entityType} démarrée`);
+        // Recharger les données pour voir la nouvelle validation
+        loadData();
+      } else {
+        toast.error('Erreur lors du démarrage de la validation');
+      }
+    } catch (error) {
+      console.error('Erreur lors de la validation:', error);
+      toast.error('Erreur lors de la validation');
+    } finally {
+      setValidationLoading(false);
+    }
   };
 
-  const exportData = (entityType: string) => {
-    console.log('Exporting data for:', entityType);
+  const exportData = async (entityType: string) => {
+    try {
+      setExportLoading(true);
+      const request: ExportRequest = {
+        entityType: entityType as 'users' | 'insurers' | 'offers' | 'quotes' | 'all',
+        format: 'csv'
+      };
+      
+      const response = await adminDataApi.exportData(request);
+      
+      if (response.success && response.data?.downloadUrl) {
+        // Télécharger le fichier
+        const link = document.createElement('a');
+        link.href = response.data.downloadUrl;
+        link.download = `${entityType}_export.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        toast.success('Export réussi');
+      } else {
+        toast.error('Erreur lors de l\'export');
+      }
+    } catch (error) {
+      console.error('Erreur lors de l\'export:', error);
+      toast.error('Erreur lors de l\'export');
+    } finally {
+      setExportLoading(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="flex items-center space-x-2">
+          <RefreshCw className="h-6 w-6 animate-spin" />
+          <span className="text-lg">Chargement des données...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -269,7 +258,7 @@ export const AdminDataManagementPage: React.FC = () => {
       <div className="flex w-full sm:w-auto">
         <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
           <DialogTrigger asChild>
-            <Button className="w-full sm:w-auto">
+            <Button className="w-full sm:w-auto" disabled={importLoading}>
               <Upload className="h-4 w-4 mr-2" />
               Importer des données
             </Button>
@@ -299,6 +288,7 @@ export const AdminDataManagementPage: React.FC = () => {
                     type="file"
                     accept=".csv,.xlsx,.xls"
                     onChange={handleFileUpload}
+                    disabled={importLoading}
                   />
                 </div>
                 {selectedFile && (
@@ -310,11 +300,21 @@ export const AdminDataManagementPage: React.FC = () => {
                   </Alert>
                 )}
                 <div className="flex justify-end space-x-2">
-                  <Button variant="outline" onClick={() => setShowImportDialog(false)}>
+                  <Button variant="outline" onClick={() => setShowImportDialog(false)} disabled={importLoading}>
                     Annuler
                   </Button>
-                  <Button onClick={startImport} disabled={!selectedFile}>
-                    Démarrer l'import
+                  <Button onClick={startImport} disabled={!selectedFile || importLoading}>
+                    {importLoading ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                        Import en cours...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-4 w-4 mr-2" />
+                        Démarrer l'import
+                      </>
+                    )}
                   </Button>
                 </div>
               </div>
@@ -330,10 +330,14 @@ export const AdminDataManagementPage: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Qualité globale</p>
-                <p className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400">96.8%</p>
+                <p className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400">
+                  {qualityMetrics?.globalQuality ? `${qualityMetrics.globalQuality}%` : '96.8%'}
+                </p>
                 <div className="flex items-center space-x-1">
-                  {getTrendIcon('up')}
-                  <span className="text-xs text-green-600 dark:text-green-400">+2.3%</span>
+                  {getTrendIcon(qualityMetrics?.trends?.quality || 'up')}
+                  <span className="text-xs text-green-600 dark:text-green-400">
+                    {qualityMetrics?.globalQuality ? '+2.3%' : '+2.3%'}
+                  </span>
                 </div>
               </div>
               <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 text-green-600 dark:text-green-400" />
@@ -346,9 +350,11 @@ export const AdminDataManagementPage: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Erreurs critiques</p>
-                <p className="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400">5</p>
+                <p className="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400">
+                  {qualityMetrics?.criticalErrors || 5}
+                </p>
                 <div className="flex items-center space-x-1">
-                  {getTrendIcon('down')}
+                  {getTrendIcon(qualityMetrics?.trends?.errors || 'down')}
                   <span className="text-xs text-green-600 dark:text-green-400">-3</span>
                 </div>
               </div>
@@ -362,9 +368,11 @@ export const AdminDataManagementPage: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Avertissements</p>
-                <p className="text-xl sm:text-2xl font-bold text-yellow-600 dark:text-yellow-400">131</p>
+                <p className="text-xl sm:text-2xl font-bold text-yellow-600 dark:text-yellow-400">
+                  {qualityMetrics?.warnings || 131}
+                </p>
                 <div className="flex items-center space-x-1">
-                  {getTrendIcon('stable')}
+                  {getTrendIcon(qualityMetrics?.trends?.warnings || 'stable')}
                   <span className="text-xs text-gray-600 dark:text-gray-400">0</span>
                 </div>
               </div>
@@ -378,8 +386,12 @@ export const AdminDataManagementPage: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Dernière validation</p>
-                <p className="text-sm font-bold text-blue-600 dark:text-blue-400">Il y a 2h</p>
-                <div className="text-xs text-gray-500 dark:text-gray-400">20/01/2024 08:00</div>
+                <p className="text-sm font-bold text-blue-600 dark:text-blue-400">
+                  {qualityMetrics?.lastValidation || 'Il y a 2h'}
+                </p>
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  {new Date().toLocaleDateString('fr-FR')}
+                </div>
               </div>
               <RefreshCw className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600 dark:text-blue-400" />
             </div>

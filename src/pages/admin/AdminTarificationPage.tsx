@@ -17,6 +17,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { toast } from 'sonner';
 import { guaranteeService } from '@/features/tarification/services/guaranteeService';
 import {
   Guarantee,
@@ -51,7 +52,19 @@ import { fr } from 'date-fns/locale';
 export const AdminTarificationPage: React.FC = () => {
   const [guarantees, setGuarantees] = useState<Guarantee[]>([]);
   const [packages, setPackages] = useState<InsurancePackage[]>([]);
-  const [statistics, setStatistics] = useState<any>(null);
+  const [statistics, setStatistics] = useState<{
+    totalGuarantees: number;
+    activeGuarantees: number;
+    totalPackages: number;
+    activePackages: number;
+    averagePackagePrice: number;
+    priceRange: { min: number; max: number };
+    mostUsedGuarantees: Array<{
+      guaranteeId: string;
+      guaranteeName: string;
+      usageCount: number;
+    }>;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
@@ -97,6 +110,7 @@ export const AdminTarificationPage: React.FC = () => {
       setStatistics(statsData);
     } catch (error) {
       console.error('Error loading data:', error);
+      toast.error('Erreur lors du chargement des données de tarification');
     } finally {
       setLoading(false);
     }
@@ -105,6 +119,7 @@ export const AdminTarificationPage: React.FC = () => {
   const handleCreateGuarantee = async () => {
     try {
       if (!newGuarantee.name || !newGuarantee.code || !newGuarantee.description) {
+        toast.error('Veuillez remplir tous les champs obligatoires');
         return;
       }
 
@@ -118,9 +133,11 @@ export const AdminTarificationPage: React.FC = () => {
         calculationMethod: 'FIXED_AMOUNT',
         isOptional: true
       });
+      toast.success('Garantie créée avec succès');
       loadData();
     } catch (error) {
       console.error('Error creating guarantee:', error);
+      toast.error('Erreur lors de la création de la garantie');
     }
   };
 
@@ -1019,7 +1036,11 @@ export const AdminTarificationPage: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {statistics?.mostUsedGuarantees?.map((item: any, index: number) => (
+                  {statistics?.mostUsedGuarantees?.map((item: {
+                    guaranteeId: string;
+                    guaranteeName: string;
+                    usageCount: number;
+                  }, index: number) => (
                     <div key={item.guaranteeId} className="flex justify-between items-center">
                       <div className="flex items-center gap-3">
                         <span className="text-sm font-medium text-muted-foreground">

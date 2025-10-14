@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Settings,
   Users,
@@ -19,7 +19,8 @@ import {
   Check,
   X,
   AlertTriangle,
-  Info
+  Info,
+  RefreshCw
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,65 +34,28 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-
-interface SystemSettings {
-  siteName: string;
-  siteDescription: string;
-  adminEmail: string;
-  contactPhone: string;
-  contactAddress: string;
-  maintenanceMode: boolean;
-  debugMode: boolean;
-  registrationEnabled: boolean;
-  emailVerification: boolean;
-  sessionTimeout: number;
-  maxLoginAttempts: number;
-  passwordPolicy: {
-    minLength: number;
-    requireUppercase: boolean;
-    requireNumbers: boolean;
-    requireSpecialChars: boolean;
-    expireDays: number;
-  };
-}
-
-interface EmailSettings {
-  smtpHost: string;
-  smtpPort: number;
-  smtpUsername: string;
-  smtpPassword: string;
-  senderName: string;
-  senderEmail: string;
-  encryption: 'none' | 'ssl' | 'tls';
-}
-
-interface NotificationSettings {
-  emailNotifications: boolean;
-  pushNotifications: boolean;
-  smsNotifications: boolean;
-  newUserRegistration: boolean;
-  insurerApproval: boolean;
-  quoteRequests: boolean;
-  systemAlerts: boolean;
-  marketingEmails: boolean;
-}
-
-interface UISettings {
-  theme: 'light' | 'dark' | 'auto';
-  language: string;
-  dateFormat: string;
-  timezone: string;
-  itemsPerPage: number;
-  sidebarCollapsed: boolean;
-  showTooltips: boolean;
-  animationsEnabled: boolean;
-}
+import { adminSettingsApi } from "@/api/services/adminSettingsApi";
+import type {
+  SystemSettings,
+  EmailSettings,
+  NotificationSettings,
+  UISettings,
+  SettingsExport,
+  SettingsImport,
+  TestEmailRequest,
+  TestSmsRequest,
+  BackupRequest,
+  Backup
+} from "@/api/services/adminSettingsApi";
 
 const AdminSettingsPage = () => {
   const [activeTab, setActiveTab] = useState('general');
   const [isSaving, setIsSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [testEmailLoading, setTestEmailLoading] = useState(false);
+  const [testSmsLoading, setTestSmsLoading] = useState(false);
 
-  // System Settings State
+  // États pour les données API
   const [systemSettings, setSystemSettings] = useState<SystemSettings>({
     siteName: 'NOLI Assurance',
     siteDescription: 'Plateforme de comparaison d\'assurance auto',
@@ -113,7 +77,6 @@ const AdminSettingsPage = () => {
     }
   });
 
-  // Email Settings State
   const [emailSettings, setEmailSettings] = useState<EmailSettings>({
     smtpHost: 'smtp.gmail.com',
     smtpPort: 587,
@@ -124,7 +87,6 @@ const AdminSettingsPage = () => {
     encryption: 'tls'
   });
 
-  // Notification Settings State
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>({
     emailNotifications: true,
     pushNotifications: true,
@@ -136,7 +98,6 @@ const AdminSettingsPage = () => {
     marketingEmails: false
   });
 
-  // UI Settings State
   const [uiSettings, setUISettings] = useState<UISettings>({
     theme: 'light',
     language: 'fr',
@@ -148,59 +109,184 @@ const AdminSettingsPage = () => {
     animationsEnabled: true
   });
 
+  // Charger les données au montage du composant
+  useEffect(() => {
+    loadSettings();
+  }, []);
+
+  const loadSettings = async () => {
+    try {
+      setLoading(true);
+      const [systemResponse, emailResponse, notificationResponse, uiResponse] = await Promise.all([
+        adminSettingsApi.getSystemSettings(),
+        adminSettingsApi.getEmailSettings(),
+        adminSettingsApi.getNotificationSettings(),
+        adminSettingsApi.getUISettings()
+      ]);
+
+      if (systemResponse.success) {
+        setSystemSettings(systemResponse.data);
+      }
+      if (emailResponse.success) {
+        setEmailSettings(emailResponse.data);
+      }
+      if (notificationResponse.success) {
+        setNotificationSettings(notificationResponse.data);
+      }
+      if (uiResponse.success) {
+        setUISettings(uiResponse.data);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des paramètres:', error);
+      toast.error('Erreur lors du chargement des paramètres');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSaveSettings = async () => {
     setIsSaving(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Sauvegarder tous les paramètres
+      await Promise.all([
+        adminSettingsApi.updateSystemSettings(systemSettings),
+        adminSettingsApi.updateEmailSettings(emailSettings),
+        adminSettingsApi.updateNotificationSettings(notificationSettings),
+        adminSettingsApi.updateUISettings(uiSettings)
+      ]);
       toast.success('Paramètres sauvegardés avec succès');
     } catch (error) {
+      console.error('Erreur lors de la sauvegarde des paramètres:', error);
       toast.error('Erreur lors de la sauvegarde des paramètres');
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleResetSettings = () => {
+  const handleResetSettings = async () => {
     if (confirm('Êtes-vous sûr de vouloir réinitialiser tous les paramètres ?')) {
-      // Reset to default values
-      toast.info('Paramètres réinitialisés aux valeurs par défaut');
+      try {
+        await adminSettingsApi.resetSettings();
+        toast.info('Paramètres réinitialisés aux valeurs par défaut');
+        loadSettings(); // Recharger les paramètres
+      } catch (error) {
+        console.error('Erreur lors de la réinitialisation:', error);
+        toast.error('Erreur lors de la réinitialisation des paramètres');
+      }
     }
   };
 
-  const handleExportSettings = () => {
-    const settings = {
-      system: systemSettings,
-      email: emailSettings,
-      notifications: notificationSettings,
-      ui: uiSettings
-    };
-
-    const blob = new Blob([JSON.stringify(settings, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'noli-settings-backup.json';
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success('Paramètres exportés avec succès');
+  const handleExportSettings = async () => {
+    try {
+      const response = await adminSettingsApi.exportSettings();
+      if (response.success && response.data) {
+        const blob = new Blob([JSON.stringify(response.data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'noli-settings-backup.json';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        toast.success('Paramètres exportés avec succès');
+      }
+    } catch (error) {
+      console.error('Erreur lors de l\'exportation:', error);
+      toast.error('Erreur lors de l\'exportation des paramètres');
+    }
   };
 
-  const handleImportSettings = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImportSettings = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const settings = JSON.parse(e.target?.result as string);
-        toast.success('Paramètres importés avec succès');
-      } catch (error) {
-        toast.error('Erreur lors de l\'importation des paramètres');
-      }
-    };
-    reader.readAsText(file);
+    try {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const settings = JSON.parse(e.target?.result as string);
+          const request: SettingsImport = {
+            settings,
+            overwriteExisting: true,
+            sections: ['system', 'email', 'notifications', 'ui']
+          };
+          
+          const response = await adminSettingsApi.importSettings(request);
+          if (response.success) {
+            toast.success(`Paramètres importés avec succès: ${response.data.imported.join(', ')}`);
+            loadSettings(); // Recharger les paramètres
+          } else {
+            toast.error(`Erreur lors de l'importation: ${response.data.errors.join(', ')}`);
+          }
+        } catch (error) {
+          toast.error('Erreur lors de l\'importation des paramètres');
+        }
+      };
+      reader.readAsText(file);
+    } catch (error) {
+      console.error('Erreur lors de la lecture du fichier:', error);
+      toast.error('Erreur lors de la lecture du fichier');
+    }
   };
+
+  const handleTestEmail = async () => {
+    setTestEmailLoading(true);
+    try {
+      const request: TestEmailRequest = {
+        to: systemSettings.adminEmail,
+        subject: 'Test email configuration',
+        template: 'custom',
+        customContent: 'Ceci est un email de test pour vérifier la configuration SMTP.'
+      };
+      
+      const response = await adminSettingsApi.testEmailSettings(request);
+      if (response.success) {
+        toast.success(response.data.message);
+      } else {
+        toast.error(response.data.message);
+      }
+    } catch (error) {
+      console.error('Erreur lors du test email:', error);
+      toast.error('Erreur lors du test email');
+    } finally {
+      setTestEmailLoading(false);
+    }
+  };
+
+  const handleTestSms = async () => {
+    setTestSmsLoading(true);
+    try {
+      const request: TestSmsRequest = {
+        to: systemSettings.contactPhone,
+        message: 'Ceci est un SMS de test pour vérifier la configuration SMS.',
+        template: 'custom'
+      };
+      
+      const response = await adminSettingsApi.testSmsProvider('twilio', request);
+      if (response.success) {
+        toast.success(response.data.message);
+      } else {
+        toast.error(response.data.message);
+      }
+    } catch (error) {
+      console.error('Erreur lors du test SMS:', error);
+      toast.error('Erreur lors du test SMS');
+    } finally {
+      setTestSmsLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="flex items-center space-x-2">
+          <RefreshCw className="h-6 w-6 animate-spin" />
+          <span className="text-lg">Chargement des paramètres...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

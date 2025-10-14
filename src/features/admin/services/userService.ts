@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { supabase } from '@/lib/supabase';
 
 // Types
 export interface User {
@@ -53,222 +54,315 @@ export interface UserStats {
   };
 }
 
-// Mock data
-const mockUsers: User[] = [
-  {
-    id: '1',
-    firstName: 'Jean',
-    lastName: 'Kouadio',
-    email: 'jean.kouadio@email.com',
-    phone: '+225 07 12 34 56 78',
-    address: 'Abidjan, Cocody',
-    role: 'USER',
-    status: 'active',
-    createdAt: '2024-01-15',
-    lastLogin: '2024-01-20',
-    profileCompleted: true,
-    quotesCount: 12,
-    conversionRate: 25
-  },
-  {
-    id: '2',
-    firstName: 'Marie',
-    lastName: 'Amani',
-    email: 'marie.amani@email.com',
-    phone: '+225 05 98 76 54 32',
-    role: 'USER',
-    status: 'active',
-    createdAt: '2024-01-10',
-    lastLogin: '2024-01-19',
-    profileCompleted: false,
-    quotesCount: 8,
-    conversionRate: 15
-  },
-  {
-    id: '3',
-    companyName: 'NSIA Assurance',
-    email: 'contact@nsia.ci',
-    phone: '+225 21 25 40 00',
-    role: 'INSURER',
-    status: 'pending',
-    createdAt: '2024-01-18',
-    lastLogin: '2024-01-18',
-    profileCompleted: true,
-    quotesCount: 0,
-    conversionRate: 0
-  },
-  {
-    id: '4',
-    firstName: 'Kouakou',
-    lastName: 'Yao',
-    email: 'kouakou.yao@email.com',
-    role: 'USER',
-    status: 'suspended',
-    createdAt: '2024-01-05',
-    lastLogin: '2024-01-15',
-    profileCompleted: true,
-    quotesCount: 5,
-    conversionRate: 10
-  },
-  {
-    id: '5',
-    firstName: 'Admin',
-    lastName: 'System',
-    email: 'admin@noliassurance.ci',
-    role: 'ADMIN',
-    status: 'active',
-    createdAt: '2024-01-01',
-    lastLogin: '2024-01-20',
-    profileCompleted: true,
-    quotesCount: 0,
-    conversionRate: 0
-  }
-];
+// Helper functions pour la conversion des données
+const mapProfileToUser = (profile: any): User => {
+  const isActive = profile.is_active;
+  const status = isActive ? 'active' :
+    profile.role === 'INSURER' && !profile.is_active ? 'pending' : 'inactive';
 
-const mockStats: UserStats = {
-  total: mockUsers.length,
-  active: mockUsers.filter(u => u.status === 'active').length,
-  inactive: mockUsers.filter(u => u.status === 'inactive').length,
-  pending: mockUsers.filter(u => u.status === 'pending').length,
-  suspended: mockUsers.filter(u => u.status === 'suspended').length,
-  byRole: {
-    USER: mockUsers.filter(u => u.role === 'USER').length,
-    INSURER: mockUsers.filter(u => u.role === 'INSURER').length,
-    ADMIN: mockUsers.filter(u => u.role === 'ADMIN').length,
-  }
+  return {
+    id: profile.id,
+    firstName: profile.first_name,
+    lastName: profile.last_name,
+    companyName: profile.company_name,
+    email: profile.email,
+    phone: profile.phone,
+    address: profile.address,
+    role: profile.role,
+    status: status as any,
+    createdAt: profile.created_at,
+    lastLogin: profile.last_login || profile.created_at,
+    profileCompleted: !!(profile.first_name && profile.last_name && profile.phone),
+    quotesCount: 0, // Sera calculé séparément
+    conversionRate: 0 // Sera calculé séparément
+  };
 };
 
 // API Functions
 export const fetchUsers = async (filters?: UserFilters): Promise<User[]> => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 800));
+  try {
+    let query = supabase
+      .from('profiles')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-  let filteredUsers = [...mockUsers];
+    // Appliquer les filtres
+    if (filters?.search) {
+      const searchLower = filters.search.toLowerCase();
+      query = query.or(
+        `first_name.ilike.%${searchLower}%,last_name.ilike.%${searchLower}%,company_name.ilike.%${searchLower}%,email.ilike.%${searchLower}%`
+      );
+    }
 
-  if (filters?.search) {
-    const searchLower = filters.search.toLowerCase();
-    filteredUsers = filteredUsers.filter(user =>
-      (user.firstName?.toLowerCase().includes(searchLower) || '') ||
-      (user.lastName?.toLowerCase().includes(searchLower) || '') ||
-      (user.companyName?.toLowerCase().includes(searchLower) || '') ||
-      user.email.toLowerCase().includes(searchLower)
+    if (filters?.status && filters.status !== 'all') {
+      if (filters.status === 'pending') {
+        query = query.eq('role', 'INSURER').eq('is_active', false);
+      } else if (filters.status === 'active') {
+        query = query.eq('is_active', true);
+      } else if (filters.status === 'inactive') {
+        query = query.eq('is_active', false).not('role', 'eq', 'INSURER');
+      } else if (filters.status === 'suspended') {
+        query = query.eq('is_active', false);
+      }
+    }
+
+    if (filters?.role && filters.role !== 'all') {
+      query = query.eq('role', filters.role);
+    }
+
+    const { data: profiles, error } = await query;
+
+    if (error) {
+      console.error('Error fetching users:', error);
+      throw error;
+    }
+
+    // Convertir les profils en utilisateurs et ajouter les statistiques
+    const users = await Promise.all(
+      profiles.map(async (profile) => {
+        const user = mapProfileToUser(profile);
+
+        // Récupérer le nombre de quotes pour cet utilisateur
+        const { count: quotesCount } = await supabase
+          .from('quotes')
+          .select('*', { count: 'exact' })
+          .eq('user_id', profile.id)
+          .single();
+
+        // Récupérer le nombre de polices approuvées
+        const { count: policiesCount } = await supabase
+          .from('quotes')
+          .select('*', { count: 'exact' })
+          .eq('user_id', profile.id)
+          .eq('status', 'approved')
+          .single();
+
+        user.quotesCount = quotesCount || 0;
+        user.conversionRate = quotesCount && quotesCount > 0
+          ? Math.round(((policiesCount || 0) / quotesCount) * 10000) / 100
+          : 0;
+
+        return user;
+      })
     );
-  }
 
-  if (filters?.status && filters.status !== 'all') {
-    filteredUsers = filteredUsers.filter(user => user.status === filters.status);
-  }
+    return users;
 
-  if (filters?.role && filters.role !== 'all') {
-    filteredUsers = filteredUsers.filter(user => user.role === filters.role);
+  } catch (error) {
+    console.error('Error in fetchUsers:', error);
+    throw error;
   }
-
-  return filteredUsers;
 };
 
 export const fetchUserStats = async (): Promise<UserStats> => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 500));
-  return mockStats;
+  try {
+    // Récupérer les statistiques par rôle
+    const { data: userStats, error } = await supabase
+      .from('profiles')
+      .select('role, is_active');
+
+    if (error) {
+      console.error('Error fetching user stats:', error);
+      throw error;
+    }
+
+    const stats = {
+      total: userStats?.length || 0,
+      active: userStats?.filter(u => u.is_active).length || 0,
+      inactive: userStats?.filter(u => !u.is_active && u.role !== 'INSURER').length || 0,
+      pending: userStats?.filter(u => u.role === 'INSURER' && !u.is_active).length || 0,
+      suspended: 0, // Pas encore implémenté dans la base
+      byRole: {
+        USER: userStats?.filter(u => u.role === 'USER').length || 0,
+        INSURER: userStats?.filter(u => u.role === 'INSURER').length || 0,
+        ADMIN: userStats?.filter(u => u.role === 'ADMIN').length || 0,
+      }
+    };
+
+    return stats;
+
+  } catch (error) {
+    console.error('Error in fetchUserStats:', error);
+    throw error;
+  }
 };
 
 export const createUser = async (userData: CreateUserRequest): Promise<User> => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  try {
+    // Utiliser la fonction RPC admin_create_user
+    const { data, error } = await supabase.rpc('admin_create_user', {
+      email_param: userData.email,
+      first_name_param: userData.firstName,
+      last_name_param: userData.lastName,
+      company_name_param: userData.companyName,
+      phone_param: userData.phone,
+      role_param: userData.role,
+      is_active_param: userData.status === 'active'
+    });
 
-  const newUser: User = {
-    id: Date.now().toString(),
-    ...userData,
-    createdAt: new Date().toISOString().split('T')[0],
-    lastLogin: new Date().toISOString().split('T')[0],
-    profileCompleted: false,
-    quotesCount: 0,
-    conversionRate: 0
-  };
+    if (error) {
+      console.error('Error creating user:', error);
+      throw error;
+    }
 
-  mockUsers.push(newUser);
-  return newUser;
+    if (!data || data.length === 0 || !data[0].success) {
+      throw new Error(data?.[0]?.message || 'Erreur lors de la création de l\'utilisateur');
+    }
+
+    // Récupérer le profil créé
+    const { data: profile, error: fetchError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', data[0].user_id)
+      .single();
+
+    if (fetchError) {
+      console.error('Error fetching created user:', fetchError);
+      throw fetchError;
+    }
+
+    return mapProfileToUser(profile);
+
+  } catch (error) {
+    console.error('Error in createUser:', error);
+    throw error;
+  }
 };
 
 export const updateUser = async (userData: UpdateUserRequest): Promise<User> => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  try {
+    // Utiliser la fonction RPC admin_update_user
+    const updates: any = {};
 
-  const userIndex = mockUsers.findIndex(u => u.id === userData.id);
-  if (userIndex === -1) {
-    throw new Error('Utilisateur non trouvé');
+    if (userData.firstName !== undefined) updates.first_name = userData.firstName;
+    if (userData.lastName !== undefined) updates.last_name = userData.lastName;
+    if (userData.companyName !== undefined) updates.company_name = userData.companyName;
+    if (userData.phone !== undefined) updates.phone = userData.phone;
+    if (userData.address !== undefined) updates.address = userData.address;
+    if (userData.role !== undefined) updates.role = userData.role;
+    if (userData.status !== undefined) updates.is_active = userData.status === 'active';
+
+    const { data, error } = await supabase.rpc('admin_update_user', {
+      user_id_param: userData.id,
+      updates: updates
+    });
+
+    if (error) {
+      console.error('Error updating user:', error);
+      throw error;
+    }
+
+    if (!data || data.length === 0 || !data[0].success) {
+      throw new Error(data?.[0]?.message || 'Erreur lors de la mise à jour de l\'utilisateur');
+    }
+
+    // Récupérer le profil mis à jour
+    const { data: profile, error: fetchError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userData.id)
+      .single();
+
+    if (fetchError) {
+      console.error('Error fetching updated user:', fetchError);
+      throw fetchError;
+    }
+
+    return mapProfileToUser(profile);
+
+  } catch (error) {
+    console.error('Error in updateUser:', error);
+    throw error;
   }
-
-  const updatedUser = { ...mockUsers[userIndex], ...userData };
-  mockUsers[userIndex] = updatedUser;
-  return updatedUser;
 };
 
 export const deleteUser = async (userId: string): Promise<void> => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 800));
+  try {
+    // Utiliser la fonction RPC admin_delete_user
+    const { data, error } = await supabase.rpc('admin_delete_user', {
+      user_id_param: userId
+    });
 
-  const userIndex = mockUsers.findIndex(u => u.id === userId);
-  if (userIndex === -1) {
-    throw new Error('Utilisateur non trouvé');
+    if (error) {
+      console.error('Error deleting user:', error);
+      throw error;
+    }
+
+    if (!data || data.length === 0 || !data[0].success) {
+      throw new Error(data?.[0]?.message || 'Erreur lors de la suppression de l\'utilisateur');
+    }
+
+  } catch (error) {
+    console.error('Error in deleteUser:', error);
+    throw error;
   }
-
-  mockUsers.splice(userIndex, 1);
 };
 
 export const bulkUpdateUsers = async (userIds: string[], action: 'activate' | 'suspend' | 'delete'): Promise<{ success: number; failed: number }> => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 1500));
+  try {
+    let success = 0;
+    let failed = 0;
 
-  let success = 0;
-  let failed = 0;
+    for (const userId of userIds) {
+      try {
+        if (action === 'delete') {
+          await deleteUser(userId);
+        } else {
+          const isActive = action === 'activate';
+          const { data, error } = await supabase.rpc('admin_update_user', {
+            user_id_param: userId,
+            updates: { is_active: isActive }
+          });
 
-  for (const userId of userIds) {
-    try {
-      const userIndex = mockUsers.findIndex(u => u.id === userId);
-      if (userIndex === -1) {
+          if (error || !data?.[0]?.success) {
+            failed++;
+          } else {
+            success++;
+          }
+        }
+      } catch (error) {
+        console.error(`Error processing user ${userId}:`, error);
         failed++;
-        continue;
       }
-
-      if (action === 'delete') {
-        mockUsers.splice(userIndex, 1);
-      } else {
-        mockUsers[userIndex].status = action === 'activate' ? 'active' : 'suspended';
-      }
-      success++;
-    } catch (error) {
-      failed++;
     }
-  }
 
-  return { success, failed };
+    return { success, failed };
+
+  } catch (error) {
+    console.error('Error in bulkUpdateUsers:', error);
+    throw error;
+  }
 };
 
 export const exportUsers = async (filters?: UserFilters): Promise<Blob> => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 2000));
+  try {
+    const users = await fetchUsers(filters);
 
-  const users = await fetchUsers(filters);
+    // Create CSV content
+    const headers = ['ID', 'Nom', 'Email', 'Téléphone', 'Rôle', 'Statut', 'Date de création', 'Dernière connexion', 'Nombre de devis', 'Taux conversion'];
+    const rows = users.map(user => [
+      user.id,
+      user.role === 'INSURER' ? user.companyName || '' : `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+      user.email,
+      user.phone || '',
+      user.role,
+      user.status,
+      new Date(user.createdAt).toLocaleDateString('fr-FR'),
+      new Date(user.lastLogin).toLocaleDateString('fr-FR'),
+      user.quotesCount.toString(),
+      `${user.conversionRate}%`
+    ]);
 
-  // Create CSV content
-  const headers = ['ID', 'Nom', 'Email', 'Téléphone', 'Rôle', 'Statut', 'Date de création', 'Dernière connexion'];
-  const rows = users.map(user => [
-    user.id,
-    user.role === 'INSURER' ? user.companyName || '' : `${user.firstName || ''} ${user.lastName || ''}`.trim(),
-    user.email,
-    user.phone || '',
-    user.role,
-    user.status,
-    user.createdAt,
-    user.lastLogin
-  ]);
+    const csvContent = [headers, ...rows]
+      .map(row => row.map(cell => `"${cell}"`).join(','))
+      .join('\n');
 
-  const csvContent = [headers, ...rows]
-    .map(row => row.map(cell => `"${cell}"`).join(','))
-    .join('\n');
+    return new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
 
-  return new Blob([csvContent], { type: 'text/csv' });
+  } catch (error) {
+    console.error('Error in exportUsers:', error);
+    throw error;
+  }
 };
 
 // React Query Hooks

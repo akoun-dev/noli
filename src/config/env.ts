@@ -2,7 +2,7 @@ export const ENV_CONFIG = {
   development: {
     apiUrl: 'http://localhost:3001/api',
     debug: true,
-    mockData: true,
+    mockData: false,
   },
   production: {
     apiUrl: import.meta.env.VITE_API_URL || 'https://api.noliassurance.com/api',

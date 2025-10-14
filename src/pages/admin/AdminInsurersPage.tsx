@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Plus, Search, Filter, MoreHorizontal, Edit, Trash2, Eye, Phone, MapPin, Calendar, Building, Shield, Car } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Plus, Search, Filter, MoreHorizontal, Edit, Trash2, Eye, Phone, MapPin, Calendar, Building, Shield, Car, AlertCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -12,25 +12,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
+import { insurerService, type Insurer, type InsurerFormData } from "@/features/admin/services/insurerService";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
-interface Insurer {
-  id: string;
-  companyName: string;
-  email: string;
-  phone?: string;
-  address?: string;
-  role: 'INSURER';
-  status: 'active' | 'inactive' | 'pending' | 'suspended';
-  createdAt: string;
-  lastLogin: string;
-  profileCompleted: boolean;
-  quotesCount: number;
-  offersCount: number;
-  conversionRate: number;
-  description?: string;
-  website?: string;
-  licenseNumber?: string;
-}
 
 const AdminInsurersPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -39,64 +24,30 @@ const AdminInsurersPage = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingInsurer, setEditingInsurer] = useState<Insurer | null>(null);
   const [viewingInsurer, setViewingInsurer] = useState<Insurer | null>(null);
+  const [insurers, setInsurers] = useState<Insurer[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Mock insurer data
-  const insurers: Insurer[] = [
-    {
-      id: '3',
-      companyName: 'NSIA Assurance',
-      email: 'contact@nsia.ci',
-      phone: '+225 21 25 40 00',
-      address: 'Abidjan, Cocody',
-      role: 'INSURER',
-      status: 'pending',
-      createdAt: '2024-01-18',
-      lastLogin: '2024-01-18',
-      profileCompleted: true,
-      quotesCount: 0,
-      offersCount: 15,
-      conversionRate: 0,
-      description: 'Compagnie d\'assurance ivoirienne leader',
-      website: 'https://www.nsia-assurance.com',
-      licenseNumber: 'LIC-2024-001'
-    },
-    {
-      id: '6',
-      companyName: 'AXA Côte d\'Ivoire',
-      email: 'contact@axa.ci',
-      phone: '+225 21 25 50 00',
-      address: 'Abidjan, Plateau',
-      role: 'INSURER',
-      status: 'active',
-      createdAt: '2024-01-15',
-      lastLogin: '2024-01-19',
-      profileCompleted: true,
-      quotesCount: 12,
-      offersCount: 22,
-      conversionRate: 25,
-      description: 'Filiale ivoirienne du groupe AXA',
-      website: 'https://www.axa.ci',
-      licenseNumber: 'LIC-2024-002'
-    },
-    {
-      id: '7',
-      companyName: 'SUNU Assurances',
-      email: 'contact@sunu.ci',
-      phone: '+225 21 25 60 00',
-      address: 'Abidjan, Marcory',
-      role: 'INSURER',
-      status: 'active',
-      createdAt: '2024-01-12',
-      lastLogin: '2024-01-18',
-      profileCompleted: true,
-      quotesCount: 8,
-      offersCount: 17,
-      conversionRate: 20,
-      description: 'Compagnie d\'assurance panafricaine',
-      website: 'https://www.sunu.com',
-      licenseNumber: 'LIC-2024-003'
+  // Load insurers data
+  const loadInsurers = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const data = await insurerService.getInsurers();
+      setInsurers(data);
+    } catch (err) {
+      console.error('Error loading insurers:', err);
+      setError('Erreur lors du chargement des assureurs. Veuillez réessayer.');
+      toast.error('Erreur lors du chargement des assureurs');
+    } finally {
+      setIsLoading(false);
     }
-  ];
+  };
+
+  useEffect(() => {
+    loadInsurers();
+  }, []);
 
   const filteredInsurers = insurers.filter(insurer => {
     const matchesSearch = insurer.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -120,23 +71,46 @@ const AdminInsurersPage = () => {
     }
   };
 
-  const handleStatusChange = (insurerId: string, newStatus: string) => {
-    console.log(`Changing status for insurer ${insurerId} to ${newStatus}`);
-    toast.success('Statut mis à jour avec succès');
+  const handleStatusChange = async (insurerId: string, newStatus: Insurer['status']) => {
+    try {
+      await insurerService.updateInsurerStatus(insurerId, newStatus);
+      toast.success('Statut mis à jour avec succès');
+      loadInsurers(); // Refresh data
+    } catch (err) {
+      console.error('Error updating insurer status:', err);
+      toast.error('Erreur lors de la mise à jour du statut');
+    }
   };
 
-  const handleDeleteInsurer = (insurerId: string) => {
-    console.log(`Deleting insurer ${insurerId}`);
-    toast.success('Assureur supprimé avec succès');
+  const handleDeleteInsurer = async (insurerId: string) => {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cet assureur ?')) {
+      return;
+    }
+
+    try {
+      await insurerService.deleteInsurer(insurerId);
+      toast.success('Assureur supprimé avec succès');
+      loadInsurers(); // Refresh data
+    } catch (err) {
+      console.error('Error deleting insurer:', err);
+      toast.error('Erreur lors de la suppression de l\'assureur');
+    }
   };
 
-  const handleApproveInsurer = (insurerId: string) => {
-    handleStatusChange(insurerId, 'active');
+  const handleApproveInsurer = async (insurerId: string) => {
+    try {
+      await insurerService.approveInsurer(insurerId);
+      toast.success('Assureur approuvé avec succès');
+      loadInsurers(); // Refresh data
+    } catch (err) {
+      console.error('Error approving insurer:', err);
+      toast.error('Erreur lors de l\'approbation de l\'assureur');
+    }
   };
 
   // Insurer Form Component
   const InsurerForm: React.FC<{ insurer?: Insurer }> = ({ insurer }) => {
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<InsurerFormData>({
       companyName: insurer?.companyName || '',
       email: insurer?.email || '',
       phone: insurer?.phone || '',
@@ -144,15 +118,31 @@ const AdminInsurersPage = () => {
       description: insurer?.description || '',
       website: insurer?.website || '',
       licenseNumber: insurer?.licenseNumber || '',
-      status: insurer?.status || 'pending' as 'active' | 'inactive' | 'pending' | 'suspended'
+      status: insurer?.status || 'pending'
     });
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
-      console.log('Form submitted:', formData);
-      toast.success(insurer ? 'Assureur mis à jour' : 'Assureur créé');
-      setIsCreateDialogOpen(false);
-      setEditingInsurer(null);
+      setIsSubmitting(true);
+      
+      try {
+        if (insurer) {
+          await insurerService.updateInsurer(insurer.id, formData);
+          toast.success('Assureur mis à jour avec succès');
+        } else {
+          await insurerService.createInsurer(formData);
+          toast.success('Assureur créé avec succès');
+        }
+        
+        setIsCreateDialogOpen(false);
+        setEditingInsurer(null);
+        loadInsurers(); // Refresh data
+      } catch (err) {
+        console.error('Error saving insurer:', err);
+        toast.error(insurer ? 'Erreur lors de la mise à jour de l\'assureur' : 'Erreur lors de la création de l\'assureur');
+      } finally {
+        setIsSubmitting(false);
+      }
     };
 
     return (
@@ -234,8 +224,17 @@ const AdminInsurersPage = () => {
           </div>
         </div>
         <DialogFooter>
-          <Button type="submit">
-            {insurer ? 'Mettre à jour' : 'Créer'}
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                {insurer ? 'Mise à jour...' : 'Création...'}
+              </>
+            ) : (
+              <>
+                {insurer ? 'Mettre à jour' : 'Créer'}
+              </>
+            )}
           </Button>
         </DialogFooter>
       </form>
@@ -368,65 +367,84 @@ const AdminInsurersPage = () => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-4">
-              <Building className="h-8 w-8 text-blue-600" />
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Assureurs</p>
-                <p className="text-2xl font-bold">{insurers.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-4">
-              <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
-                <div className="h-4 w-4 bg-green-600 rounded-full"></div>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-600">Actifs</p>
-                <p className="text-2xl font-bold">{insurers.filter(i => i.status === 'active').length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-4">
-              <div className="h-8 w-8 bg-yellow-100 rounded-full flex items-center justify-center">
-                <div className="h-4 w-4 bg-yellow-600 rounded-full"></div>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-600">En attente</p>
-                <p className="text-2xl font-bold">{insurers.filter(i => i.status === 'pending').length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-4">
-              <Calendar className="h-8 w-8 text-purple-600" />
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Devis</p>
-                <p className="text-2xl font-bold">{insurers.reduce((sum, i) => sum + i.quotesCount, 0)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-4">
-              <Car className="h-8 w-8 text-teal-600" />
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Offres</p>
-                <p className="text-2xl font-bold">{insurers.reduce((sum, i) => sum + i.offersCount, 0)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {isLoading ? (
+          // Loading skeletons for stats cards
+          Array.from({ length: 4 }).map((_, index) => (
+            <Card key={index}>
+              <CardContent className="p-6">
+                <div className="flex items-center space-x-4">
+                  <Skeleton className="h-8 w-8 rounded" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-8 w-16" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        ) : (
+          <>
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center space-x-4">
+                  <Building className="h-8 w-8 text-blue-600" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Total Assureurs</p>
+                    <p className="text-2xl font-bold">{insurers.length}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center space-x-4">
+                  <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
+                    <div className="h-4 w-4 bg-green-600 rounded-full"></div>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Actifs</p>
+                    <p className="text-2xl font-bold">{insurers.filter(i => i.status === 'active').length}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center space-x-4">
+                  <div className="h-8 w-8 bg-yellow-100 rounded-full flex items-center justify-center">
+                    <div className="h-4 w-4 bg-yellow-600 rounded-full"></div>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">En attente</p>
+                    <p className="text-2xl font-bold">{insurers.filter(i => i.status === 'pending').length}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center space-x-4">
+                  <Calendar className="h-8 w-8 text-purple-600" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Total Devis</p>
+                    <p className="text-2xl font-bold">{insurers.reduce((sum, i) => sum + i.quotesCount, 0)}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center space-x-4">
+                  <Car className="h-8 w-8 text-teal-600" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Total Offres</p>
+                    <p className="text-2xl font-bold">{insurers.reduce((sum, i) => sum + i.offersCount, 0)}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
 
       {/* Filters */}
@@ -460,6 +478,13 @@ const AdminInsurersPage = () => {
           </div>
         </CardHeader>
         <CardContent>
+          {error && (
+            <Alert className="mb-4" variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -487,7 +512,54 @@ const AdminInsurersPage = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredInsurers.map((insurer) => (
+                {isLoading ? (
+                  // Loading skeletons for table rows
+                  Array.from({ length: 5 }).map((_, index) => (
+                    <TableRow key={index}>
+                      <TableCell className="p-2">
+                        <Skeleton className="h-4 w-4" />
+                      </TableCell>
+                      <TableCell className="p-2">
+                        <div className="flex items-center space-x-2 sm:space-x-3">
+                          <Skeleton className="h-8 w-8 sm:h-10 sm:w-10 rounded-full" />
+                          <div className="space-y-2">
+                            <Skeleton className="h-4 w-32" />
+                            <Skeleton className="h-3 w-24" />
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="p-2 hidden sm:table-cell">
+                        <div className="space-y-2">
+                          <Skeleton className="h-3 w-24" />
+                          <Skeleton className="h-3 w-32" />
+                        </div>
+                      </TableCell>
+                      <TableCell className="p-2">
+                        <Skeleton className="h-6 w-16 rounded" />
+                      </TableCell>
+                      <TableCell className="p-2 hidden md:table-cell">
+                        <Skeleton className="h-4 w-8" />
+                      </TableCell>
+                      <TableCell className="p-2 hidden lg:table-cell">
+                        <Skeleton className="h-4 w-8" />
+                      </TableCell>
+                      <TableCell className="p-2 hidden xl:table-cell">
+                        <Skeleton className="h-4 w-8" />
+                      </TableCell>
+                      <TableCell className="p-2 hidden xl:table-cell">
+                        <Skeleton className="h-4 w-20" />
+                      </TableCell>
+                      <TableCell className="p-2">
+                        <div className="flex justify-end space-x-1 sm:space-x-2">
+                          <Skeleton className="h-8 w-8 sm:h-auto sm:w-auto sm:p-2 rounded" />
+                          <Skeleton className="h-8 w-8 sm:h-auto sm:w-auto sm:p-2 rounded" />
+                          <Skeleton className="h-8 w-8 sm:h-auto sm:w-auto sm:p-2 rounded" />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  filteredInsurers.map((insurer) => (
                   <TableRow key={insurer.id}>
                     <TableCell className="p-2">
                       <Checkbox
@@ -612,7 +684,8 @@ const AdminInsurersPage = () => {
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>

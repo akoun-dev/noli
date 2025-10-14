@@ -32,6 +32,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { OfferFormModal } from '@/components/insurer/OfferFormModal';
 import { CSVImportModal } from '@/components/insurer/CSVImportModal';
+import { useInsurerOffers, useCreateInsurerOffer, useUpdateInsurerOffer, useDeleteInsurerOffer } from '@/features/insurer/services/offerService';
 
 interface Offer {
   id: string;
@@ -51,124 +52,84 @@ export const InsurerOffersPage: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [editingOffer, setEditingOffer] = useState<Offer | null>(null);
-  const [offers, setOffers] = useState<Offer[]>([
-    {
-      id: '1',
-      name: 'Assurance Tiers Simple',
-      type: 'Tiers Simple',
-      price: 45000,
-      coverage: 'Responsabilité civile',
-      status: 'active',
-      customers: 456,
-      conversion: 92,
-      lastUpdated: '2024-01-15',
-      description: 'Couverture de base obligatoire'
-    },
-    {
-      id: '2',
-      name: 'Tiers + Vol et Incendie',
-      type: 'Tiers +',
-      price: 85000,
-      coverage: 'RC + Vol + Incendie',
-      status: 'active',
-      customers: 234,
-      conversion: 87,
-      lastUpdated: '2024-01-14',
-      description: 'Protection étendue avec vol et incendie'
-    },
-    {
-      id: '3',
-      name: 'Tous Risques Premium',
-      type: 'Tous Risques',
-      price: 150000,
-      coverage: 'Protection complète',
-      status: 'inactive',
-      customers: 123,
-      conversion: 78,
-      lastUpdated: '2024-01-10',
-      description: 'Couverture maximale tous risques'
-    },
-    {
-      id: '4',
-      name: 'Jeune Conducteur',
-      type: 'Tiers +',
-      price: 65000,
-      coverage: 'RC + Assistance',
-      status: 'active',
-      customers: 89,
-      conversion: 85,
-      lastUpdated: '2024-01-12',
-      description: 'Offre spéciale pour jeunes conducteurs'
-    }
-  ]);
+  const { data: serverOffers = [], isLoading } = useInsurerOffers();
+  const createMutation = useCreateInsurerOffer();
+  const updateMutation = useUpdateInsurerOffer();
+  const deleteMutation = useDeleteInsurerOffer();
 
-  const filteredOffers = offers.filter(offer =>
+  const filteredOffers = serverOffers.map((o: any) => ({
+    id: o.id,
+    name: o.name,
+    type: (o.contract_type === 'all_risks' ? 'Tous Risques' : o.contract_type === 'third_party_plus' ? 'Tiers +' : 'Tiers') as Offer['type'],
+    price: o.price_min || 0,
+    coverage: o.description || '',
+    status: o.is_active ? 'active' : 'inactive',
+    customers: 0,
+    conversion: 0,
+    lastUpdated: new Date(o.updated_at).toISOString().split('T')[0],
+    description: o.description || '',
+  })).filter(offer =>
     offer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     offer.type.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const toggleOfferStatus = (offerId: string) => {
-    setOffers(offers.map(offer =>
-      offer.id === offerId
-        ? { ...offer, status: offer.status === 'active' ? 'inactive' : 'active' }
-        : offer
-    ));
+  const toggleOfferStatus = async (offerId: string) => {
+    const current = serverOffers.find((o: any) => o.id === offerId);
+    await updateMutation.mutateAsync({ id: offerId, input: { isActive: !current?.is_active } as any });
   };
 
-  const deleteOffer = (offerId: string) => {
-    setOffers(offers.filter(offer => offer.id !== offerId));
+  const deleteOffer = async (offerId: string) => {
+    await deleteMutation.mutateAsync(offerId);
   };
 
-  const handleCreateOffer = (data: any) => {
-    const newOffer: Offer = {
-      id: Date.now().toString(),
+  const handleCreateOffer = async (data: any) => {
+    await createMutation.mutateAsync({
       name: data.name,
       type: data.type,
       price: data.price,
       coverage: data.coverage,
-      status: 'active',
-      customers: 0,
-      conversion: 0,
-      lastUpdated: new Date().toISOString().split('T')[0],
       description: data.description,
-    };
-    setOffers([...offers, newOffer]);
+      deductible: data.deductible,
+      maxCoverage: data.maxCoverage,
+      duration: data.duration,
+      features: data.features || [],
+      conditions: data.conditions || '',
+      isActive: true,
+    });
   };
 
-  const handleEditOffer = (data: any) => {
-    if (editingOffer) {
-      const updatedOffers = offers.map(offer =>
-        offer.id === editingOffer.id
-          ? {
-              ...offer,
-              name: data.name,
-              type: data.type,
-              price: data.price,
-              coverage: data.coverage,
-              description: data.description,
-              lastUpdated: new Date().toISOString().split('T')[0],
-            }
-          : offer
-      );
-      setOffers(updatedOffers);
-      setEditingOffer(null);
+  const handleEditOffer = async (data: any) => {
+    if (!editingOffer) return;
+    await updateMutation.mutateAsync({
+      id: editingOffer.id,
+      input: {
+        name: data.name,
+        type: data.type,
+        price: data.price,
+        description: data.description,
+        deductible: data.deductible,
+        maxCoverage: data.maxCoverage,
+        features: data.features || [],
+      } as any,
+    });
+    setEditingOffer(null);
+  };
+
+  const handleImportOffers = async (importedOffers: any[]) => {
+    // Bulk create sequentially for simplicity
+    for (const offer of importedOffers) {
+      await createMutation.mutateAsync({
+        name: offer.name,
+        type: offer.type,
+        price: offer.price,
+        coverage: offer.coverage,
+        description: offer.description,
+        deductible: offer.deductible || 0,
+        maxCoverage: offer.maxCoverage || 0,
+        duration: offer.duration || 12,
+        features: offer.features || [],
+      });
     }
-  };
-
-  const handleImportOffers = (importedOffers: any[]) => {
-    const newOffers = importedOffers.map((offer, index) => ({
-      id: `imported-${Date.now()}-${index}`,
-      name: offer.name,
-      type: offer.type,
-      price: offer.price,
-      coverage: offer.coverage,
-      status: 'active' as const,
-      customers: 0,
-      conversion: 0,
-      lastUpdated: new Date().toISOString().split('T')[0],
-      description: offer.description,
-    }));
-    setOffers([...offers, ...newOffers]);
   };
 
   const exportOffers = () => {
@@ -240,7 +201,7 @@ export const InsurerOffersPage: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Total offres</p>
-                <p className="text-2xl font-bold">{offers.length}</p>
+                <p className="text-2xl font-bold">{serverOffers.length}</p>
               </div>
               <div className="bg-blue-100 p-2 rounded-lg">
                 <svg className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -257,7 +218,7 @@ export const InsurerOffersPage: React.FC = () => {
               <div>
                 <p className="text-sm font-medium text-gray-600">Offres actives</p>
                 <p className="text-2xl font-bold text-green-600">
-                  {offers.filter(o => o.status === 'active').length}
+                  {filteredOffers.filter(o => o.status === 'active').length}
                 </p>
               </div>
               <div className="bg-green-100 p-2 rounded-lg">

@@ -1,213 +1,270 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { QuoteWithDetails, QuoteHistoryFilters, QuoteHistoryStats, ComparisonRequest } from '../types/quote';
+import { QuoteWithDetails, QuoteHistoryFilters, QuoteHistoryStats } from '../types/quote';
 import { PDFService } from '../../../services/pdfService';
 import { NotificationService } from '../../../services/notificationService';
-
-// Mock data for development
-const mockComparisonData: ComparisonRequest = {
-  personalInfo: {
-    firstName: 'Jean',
-    lastName: 'Dupont',
-    email: 'jean.dupont@example.com',
-    phone: '+2250712345678',
-    birthDate: new Date('1990-01-01'),
-    licenseDate: new Date('2015-01-01'),
-    hasAccidents: false,
-    accidentCount: 0,
-    usage: 'personal' as const,
-    annualKm: 15000,
-  },
-  vehicleInfo: {
-    vehicleType: 'voiture',
-    brand: 'Toyota',
-    model: 'Corolla',
-    year: 2020,
-    fiscalPower: 7,
-    registration: 'AB1234CD',
-    value: 8000000,
-  },
-  insuranceNeeds: {
-    coverageType: 'tous_risques',
-    options: [],
-    monthlyBudget: 125000,
-    franchise: 50000,
-  },
-};
-
-const mockQuotes: QuoteWithDetails[] = [
-  {
-    id: '1',
-    userId: 'user1',
-    offerId: 'offer1',
-    comparisonData: mockComparisonData,
-    price: 125000,
-    status: 'approved',
-    createdAt: '2024-01-15T10:30:00Z',
-    expiresAt: '2024-02-15T10:30:00Z',
-    insurerName: 'NSIA Assurance',
-    insurerLogo: '/logos/nsia.png',
-    vehicleInfo: {
-      brand: 'Toyota',
-      model: 'Corolla',
-      year: 2020,
-      registration: 'AB1234CD',
-    },
-    coverageName: 'Tous Risques',
-    updatedAt: '2024-01-16T14:20:00Z',
-  },
-  {
-    id: '2',
-    userId: 'user1',
-    offerId: 'offer2',
-    comparisonData: { ...mockComparisonData, vehicleInfo: { ...mockComparisonData.vehicleInfo, brand: 'Honda', model: 'Civic', registration: 'AB5678EF' } },
-    price: 98000,
-    status: 'pending',
-    createdAt: '2024-01-18T09:15:00Z',
-    expiresAt: '2024-02-18T09:15:00Z',
-    insurerName: 'SUNU Assurances',
-    insurerLogo: '/logos/sunu.png',
-    vehicleInfo: {
-      brand: 'Honda',
-      model: 'Civic',
-      year: 2019,
-      registration: 'AB5678EF',
-    },
-    coverageName: 'Tiers Plus',
-    updatedAt: '2024-01-18T09:15:00Z',
-  },
-  {
-    id: '3',
-    userId: 'user1',
-    offerId: 'offer3',
-    comparisonData: { ...mockComparisonData, vehicleInfo: { ...mockComparisonData.vehicleInfo, brand: 'Peugeot', model: '308', registration: 'AB9012GH' } },
-    price: 110000,
-    status: 'rejected',
-    createdAt: '2024-01-10T14:45:00Z',
-    expiresAt: '2024-02-10T14:45:00Z',
-    insurerName: 'AXA Côte d\'Ivoire',
-    insurerLogo: '/logos/axa.png',
-    vehicleInfo: {
-      brand: 'Peugeot',
-      model: '308',
-      year: 2021,
-      registration: 'AB9012GH',
-    },
-    coverageName: 'Tiers',
-    updatedAt: '2024-01-12T11:30:00Z',
-  },
-];
-
-const mockStats: QuoteHistoryStats = {
-  totalQuotes: 3,
-  pendingQuotes: 1,
-  approvedQuotes: 1,
-  rejectedQuotes: 1,
-  expiredQuotes: 0,
-  averageProcessingTime: 2.5,
-};
+import { supabase } from '@/lib/supabase';
 
 // API functions
 export const fetchUserQuotes = async (filters?: QuoteHistoryFilters): Promise<QuoteWithDetails[]> => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
 
-  let filteredQuotes = [...mockQuotes];
+  const { data, error } = await supabase
+    .from('quote_offers')
+    .select(`
+      id,
+      price,
+      status,
+      created_at,
+      updated_at,
+      offer_id,
+      offer:offer_id ( name, contract_type, insurer:insurer_id ( name, logo_url ) ),
+      quote:quote_id ( user_id, vehicle_data, coverage_requirements, valid_until )
+    `)
+    .eq('quote.user_id', user.id)
+    .order('created_at', { ascending: false });
 
+  if (error) throw error;
+
+  let results: QuoteWithDetails[] = (data || []).map((q: any) => {
+    const vehicle = q.quote?.vehicle_data || {};
+    const needs = q.quote?.coverage_requirements || {};
+    const coverageMap: Record<string, string> = {
+      all_risks: 'Tous Risques',
+      third_party_plus: 'Tiers +',
+      basic: 'Tiers',
+      comprehensive: 'Complet',
+    };
+
+    return {
+      id: q.id,
+      userId: q.quote?.user_id,
+      offerId: q.offer_id,
+      // Minimal comparisonData for compatibility
+      comparisonData: {
+        personalInfo: {
+          firstName: '',
+          lastName: '',
+          email: '',
+          phone: '',
+          birthDate: new Date(),
+          licenseDate: new Date(),
+          hasAccidents: false,
+          accidentCount: 0,
+          usage: (needs.usage || 'personal') as any,
+          annualKm: needs.annual_km || 0,
+        },
+        vehicleInfo: {
+          vehicleType: vehicle.vehicle_type || 'voiture',
+          brand: vehicle.brand || '',
+          model: vehicle.model || '',
+          year: vehicle.year || 0,
+          fiscalPower: 0,
+          registration: vehicle.registration || '',
+          value: vehicle.value || 0,
+        },
+        insuranceNeeds: {
+          coverageType: (needs.coverage_type || 'tiers') as any,
+          options: [],
+          monthlyBudget: 0,
+          franchise: 0,
+        }
+      },
+      price: (q.price || 0) * 12, // afficher prix annuel
+      status: String(q.status || 'PENDING').toLowerCase() as any,
+      createdAt: q.created_at,
+      expiresAt: q.quote?.valid_until || q.created_at,
+      insurerName: q.offer?.insurer?.name || 'Assureur',
+      insurerLogo: q.offer?.insurer?.logo_url || '',
+      vehicleInfo: {
+        brand: vehicle.brand || '',
+        model: vehicle.model || '',
+        year: vehicle.year || 0,
+        registration: vehicle.registration || '',
+      },
+      coverageName: coverageMap[String(q.offer?.contract_type || '').toLowerCase()] || (q.offer?.contract_type || ''),
+      updatedAt: q.updated_at || q.created_at,
+    } as QuoteWithDetails;
+  });
+
+  // Filters
   if (filters?.status) {
-    filteredQuotes = filteredQuotes.filter(quote => quote.status === filters.status);
+    results = results.filter(r => r.status === filters.status);
   }
-
   if (filters?.dateRange) {
-    filteredQuotes = filteredQuotes.filter(quote => {
-      const quoteDate = new Date(quote.createdAt);
-      return quoteDate >= filters.dateRange!.start && quoteDate <= filters.dateRange!.end;
+    results = results.filter(r => {
+      const d = new Date(r.createdAt);
+      return d >= filters.dateRange!.start && d <= filters.dateRange!.end;
     });
   }
-
   if (filters?.insurer) {
-    filteredQuotes = filteredQuotes.filter(quote =>
-      quote.insurerName.toLowerCase().includes(filters.insurer!.toLowerCase())
-    );
+    const s = filters.insurer.toLowerCase();
+    results = results.filter(r => r.insurerName.toLowerCase().includes(s));
   }
 
-  return filteredQuotes.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  return results;
 };
 
 export const fetchQuoteStats = async (): Promise<QuoteHistoryStats> => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 500));
-  return mockStats;
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { totalQuotes: 0, pendingQuotes: 0, approvedQuotes: 0, rejectedQuotes: 0, expiredQuotes: 0, averageProcessingTime: 0 };
+
+  const { data, error } = await supabase
+    .from('quote_offers')
+    .select('status, created_at, updated_at, quote:quote_id ( user_id )')
+    .eq('quote.user_id', user.id);
+  if (error) throw error;
+
+  const total = data?.length || 0;
+  const byStatus = (data || []).reduce((acc: any, q: any) => {
+    const s = String(q.status || 'PENDING').toLowerCase();
+    acc[s] = (acc[s] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  // Rough average processing time (approved and rejected)
+  const durations: number[] = (data || [])
+    .filter((q: any) => ['APPROVED', 'REJECTED'].includes(String(q.status).toUpperCase()) && q.updated_at)
+    .map((q: any) => (new Date(q.updated_at).getTime() - new Date(q.created_at).getTime()) / (1000 * 60 * 60 * 24));
+  const avg = durations.length ? durations.reduce((a, b) => a + b, 0) / durations.length : 0;
+
+  return {
+    totalQuotes: total,
+    pendingQuotes: byStatus['pending'] || 0,
+    approvedQuotes: byStatus['approved'] || 0,
+    rejectedQuotes: byStatus['rejected'] || 0,
+    expiredQuotes: byStatus['expired'] || 0,
+    averageProcessingTime: Math.round(avg * 10) / 10,
+  };
 };
 
 export const downloadQuotePdf = async (quoteId: string): Promise<void> => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 1500));
+  // Charger les données nécessaires
+  const { data, error } = await supabase
+    .from('quote_offers')
+    .select(`
+      id,
+      price,
+      created_at,
+      offer:offer_id ( name, insurer:insurer_id ( name ) ),
+      quote:quote_id ( personal_data, vehicle_data, coverage_requirements )
+    `)
+    .eq('id', quoteId)
+    .single();
+  if (error || !data) throw error || new Error('Devis non trouvé');
 
-  // Get the quote from mock data
-  const quote = mockQuotes.find(q => q.id === quoteId);
-  if (!quote) {
-    throw new Error('Devis non trouvé');
-  }
+  const vehicle = data.quote?.vehicle_data || {};
+  const personal = data.quote?.personal_data || {};
+  const needs = data.quote?.coverage_requirements || {};
 
-  // Generate and download PDF
-  PDFService.downloadPDF(quote);
+  const pdf = new PDFService();
+  const blob = await pdf.generateQuotePDF({
+    id: data.id,
+    createdAt: new Date(data.created_at),
+    customerInfo: {
+      fullName: personal.full_name || '',
+      email: personal.email || '',
+      phone: personal.phone || '',
+      address: personal.address || '',
+      birthDate: personal.birth_date ? new Date(personal.birth_date) : new Date(),
+      licenseNumber: personal.license_number || '',
+      licenseDate: personal.license_date ? new Date(personal.license_date) : new Date(),
+    },
+    vehicleInfo: {
+      brand: vehicle.brand || '',
+      model: vehicle.model || '',
+      year: vehicle.year || 0,
+      registrationNumber: vehicle.registration || '',
+      vehicleType: vehicle.vehicle_type || 'voiture',
+      fuelType: vehicle.fuel_type || '',
+      value: vehicle.value || 0,
+    },
+    insuranceInfo: {
+      insurer: data.offer?.insurer?.name || 'Assureur',
+      offerName: data.offer?.name || 'Offre',
+      coverageType: needs.coverage_type || 'tiers',
+      price: { monthly: data.price, annual: data.price * 12 },
+      franchise: 0,
+      features: [],
+      guarantees: {},
+    },
+    personalInfo: {
+      usage: needs.usage || 'personal',
+      annualKilometers: needs.annual_km || 0,
+      parkingType: needs.parking_type || '',
+      historyClaims: needs.history_claims || '',
+    }
+  });
+
+  // Télécharger
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `devis-assurance-${data.id}.pdf`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 };
 
 export const sendQuoteNotifications = async (quoteId: string, channels: ('email' | 'whatsapp' | 'sms')[] = ['email', 'whatsapp']): Promise<void> => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  const { data, error } = await supabase
+    .from('quote_offers')
+    .select(`
+      id,
+      price,
+      offer:offer_id ( name, insurer:insurer_id ( name ) ),
+      quote:quote_id ( personal_data )
+    `)
+    .eq('id', quoteId)
+    .single();
+  if (error || !data) throw error || new Error('Devis non trouvé');
 
-  // Get the quote from mock data
-  const quote = mockQuotes.find(q => q.id === quoteId);
-  if (!quote) {
-    throw new Error('Devis non trouvé');
-  }
+  const personal = data.quote?.personal_data || {};
 
-  // Send notifications
   await NotificationService.sendNotification(
     channels,
     {
-      email: quote.comparisonData.personalInfo.email,
-      phone: quote.comparisonData.personalInfo.phone
+      email: personal.email || '',
+      phone: personal.phone || ''
     },
     'quoteGenerated',
     {
-      firstName: quote.comparisonData.personalInfo.firstName,
-      quoteId: quote.id,
-      price: quote.price,
-      insurerName: quote.insurerName,
-      downloadUrl: `${window.location.origin}/devis/${quote.id}`
+      firstName: (personal.full_name || '').split(' ')[0] || '',
+      quoteId: data.id,
+      price: (data.price || 0) * 12,
+      insurerName: data.offer?.insurer?.name || 'Assureur',
+      downloadUrl: `${window.location.origin}/devis/${data.id}`
     }
   );
 };
 
 export const updateQuoteStatus = async (quoteId: string, status: 'approved' | 'rejected' | 'pending'): Promise<void> => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 1500));
+  const map: Record<string, string> = { approved: 'APPROVED', rejected: 'REJECTED', pending: 'PENDING' };
+  const { error } = await supabase
+    .from('quote_offers')
+    .update({ status: map[status] as any })
+    .eq('id', quoteId);
+  if (error) throw error;
 
-  // Update quote status in mock data
-  const quote = mockQuotes.find(q => q.id === quoteId);
-  if (!quote) {
-    throw new Error('Devis non trouvé');
-  }
-
-  quote.status = status;
-
-  // Send notification if approved
   if (status === 'approved') {
+    // Charger données pour notification
+    const { data } = await supabase
+      .from('quote_offers')
+      .select('id, offer:offer_id ( insurer:insurer_id ( name ) ), quote:quote_id ( personal_data )')
+      .eq('id', quoteId)
+      .single();
+    const personal = data?.quote?.personal_data || {};
     await NotificationService.sendNotification(
       ['email', 'whatsapp'],
-      {
-        email: quote.comparisonData.personalInfo.email,
-        phone: quote.comparisonData.personalInfo.phone
-      },
+      { email: personal.email || '', phone: personal.phone || '' },
       'quoteApproved',
       {
-        firstName: quote.comparisonData.personalInfo.firstName,
-        quoteId: quote.id,
-        insurerName: quote.insurerName,
-        nextSteps: 'Veuillez préparer votre pièce d\'identité, permis de conduire et carte grise pour la finalisation du contrat.'
+        firstName: (personal.full_name || '').split(' ')[0] || '',
+        quoteId,
+        insurerName: data?.offer?.insurer?.name || 'Assureur',
+        nextSteps: "Veuillez préparer votre pièce d'identité, permis de conduire et carte grise pour la finalisation du contrat.",
       }
     );
   }

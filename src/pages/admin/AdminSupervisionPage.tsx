@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { toast } from 'sonner';
 import {
   Users,
   Shield,
@@ -24,65 +25,75 @@ import {
   Edit,
   Trash2,
   Ban,
-  MoreHorizontal
+  MoreHorizontal,
+  RefreshCw
 } from 'lucide-react';
-
-interface User {
-  id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  role: 'USER' | 'INSURER' | 'ADMIN';
-  status: 'active' | 'inactive' | 'pending';
-  createdAt: string;
-  lastLogin: string;
-}
-
-interface Insurer {
-  id: string;
-  name: string;
-  email: string;
-  status: 'active' | 'inactive' | 'pending';
-  createdAt: string;
-  offersCount: number;
-  conversionRate: number;
-}
-
-interface Offer {
-  id: string;
-  title: string;
-  insurer: string;
-  price: number;
-  status: 'active' | 'inactive' | 'pending';
-  createdAt: string;
-  clicks: number;
-  conversions: number;
-}
+import { adminSupervisionApi } from '@/api/services/adminSupervisionApi';
+import type {
+  User,
+  Insurer,
+  Offer,
+  SupervisionStats,
+  KPI,
+  UserFilters,
+  InsurerFilters,
+  OfferFilters
+} from '@/api/services/adminSupervisionApi';
 
 export const AdminSupervisionPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [roleFilter, setRoleFilter] = useState('all');
 
-  // Mock data
-  const users: User[] = [
-    { id: '1', firstName: 'Jean', lastName: 'Kouadio', email: 'jean.kouadio@email.com', role: 'USER', status: 'active', createdAt: '2024-01-15', lastLogin: '2024-01-20' },
-    { id: '2', firstName: 'Marie', lastName: 'Amani', email: 'marie.amani@email.com', role: 'USER', status: 'active', createdAt: '2024-01-10', lastLogin: '2024-01-19' },
-    { id: '3', firstName: 'NSIA', lastName: 'Assurance', email: 'contact@nsia.ci', role: 'INSURER', status: 'pending', createdAt: '2024-01-18', lastLogin: '2024-01-18' },
-    { id: '4', firstName: 'AXA', lastName: 'Côte d\'Ivoire', email: 'contact@axa.ci', role: 'INSURER', status: 'active', createdAt: '2024-01-12', lastLogin: '2024-01-20' },
-  ];
+  // États pour les données API
+  const [users, setUsers] = useState<User[]>([]);
+  const [insurers, setInsurers] = useState<Insurer[]>([]);
+  const [offers, setOffers] = useState<Offer[]>([]);
+  const [stats, setStats] = useState<SupervisionStats | null>(null);
+  const [kpis, setKpis] = useState<KPI[]>([]);
 
-  const insurers: Insurer[] = [
-    { id: '1', name: 'NSIA Assurance', email: 'contact@nsia.ci', status: 'pending', createdAt: '2024-01-18', offersCount: 12, conversionRate: 15.5 },
-    { id: '2', name: 'AXA Côte d\'Ivoire', email: 'contact@axa.ci', status: 'active', createdAt: '2024-01-12', offersCount: 25, conversionRate: 18.2 },
-    { id: '3', name: 'SUNU Assurances', email: 'contact@sunu.ci', status: 'active', createdAt: '2024-01-08', offersCount: 18, conversionRate: 12.8 },
-  ];
+  // États de chargement
+  const [loading, setLoading] = useState(true);
+  const [exportLoading, setExportLoading] = useState(false);
 
-  const offers: Offer[] = [
-    { id: '1', title: 'Assurance Auto Standard', insurer: 'NSIA Assurance', price: 150000, status: 'active', createdAt: '2024-01-15', clicks: 234, conversions: 45 },
-    { id: '2', title: 'Assurance Tous Risques', insurer: 'AXA Côte d\'Ivoire', price: 250000, status: 'active', createdAt: '2024-01-12', clicks: 189, conversions: 38 },
-    { id: '3', title: 'Assurance Éco', insurer: 'SUNU Assurances', price: 120000, status: 'pending', createdAt: '2024-01-18', clicks: 0, conversions: 0 },
-  ];
+  // Charger les données au montage du composant
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const [usersResponse, insurersResponse, offersResponse, statsResponse, kpisResponse] = await Promise.all([
+        adminSupervisionApi.getUsers(),
+        adminSupervisionApi.getInsurers(),
+        adminSupervisionApi.getOffers(),
+        adminSupervisionApi.getSupervisionStats(),
+        adminSupervisionApi.getKPIs()
+      ]);
+
+      if (usersResponse.success) {
+        setUsers(usersResponse.data?.data || []);
+      }
+      if (insurersResponse.success) {
+        setInsurers(insurersResponse.data?.data || []);
+      }
+      if (offersResponse.success) {
+        setOffers(offersResponse.data?.data || []);
+      }
+      if (statsResponse.success) {
+        setStats(statsResponse.data);
+      }
+      if (kpisResponse.success) {
+        setKpis(kpisResponse.data || []);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des données:', error);
+      toast.error('Erreur lors du chargement des données');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -110,19 +121,86 @@ export const AdminSupervisionPage: React.FC = () => {
     }
   };
 
-  const stats = {
-    users: { total: 12543, active: 11234, new: 234 },
-    insurers: { total: 28, active: 25, pending: 3 },
-    offers: { total: 456, active: 389, pending: 12 },
-    quotes: { total: 45678, converted: 8456, conversionRate: 18.5 }
+  // Fonctions pour les actions
+  const handleExport = async () => {
+    try {
+      setExportLoading(true);
+      const response = await adminSupervisionApi.exportData({
+        entityType: 'users',
+        format: 'csv',
+        filters: { 
+          search: searchTerm, 
+          status: statusFilter === 'all' ? undefined : statusFilter as 'active' | 'inactive' | 'pending', 
+          role: roleFilter === 'all' ? undefined : roleFilter as 'USER' | 'INSURER' | 'ADMIN' 
+        }
+      });
+      
+      if (response.success && response.data?.downloadUrl) {
+        const link = document.createElement('a');
+        link.href = response.data.downloadUrl;
+        link.download = 'users_export.csv';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast.success('Export réussi');
+      }
+    } catch (error) {
+      console.error('Erreur lors de l\'export:', error);
+      toast.error('Erreur lors de l\'export');
+    } finally {
+      setExportLoading(false);
+    }
   };
 
-  const kpis = [
-    { label: 'Taux complétion formulaire', value: '78%', target: '70%', status: 'good' },
-    { label: 'Clic vers assureurs', value: '28%', target: '25%', status: 'good' },
-    { label: 'Conversion devis → souscription', value: '18.5%', target: '10%', status: 'excellent' },
-    { label: 'Temps de résultats', value: '2.3s', target: '3s', status: 'excellent' },
-  ];
+  const handleToggleUserStatus = async (userId: string) => {
+    try {
+      const response = await adminSupervisionApi.toggleUserStatus(userId);
+      if (response.success) {
+        toast.success('Statut de l\'utilisateur mis à jour');
+        loadData();
+      }
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du statut:', error);
+      toast.error('Erreur lors de la mise à jour du statut');
+    }
+  };
+
+  const handleApproveInsurer = async (insurerId: string) => {
+    try {
+      const response = await adminSupervisionApi.approveInsurer(insurerId);
+      if (response.success) {
+        toast.success('Assureur approuvé avec succès');
+        loadData();
+      }
+    } catch (error) {
+      console.error('Erreur lors de l\'approbation:', error);
+      toast.error('Erreur lors de l\'approbation');
+    }
+  };
+
+  const handleToggleOfferStatus = async (offerId: string) => {
+    try {
+      const response = await adminSupervisionApi.toggleOfferStatus(offerId);
+      if (response.success) {
+        toast.success('Statut de l\'offre mis à jour');
+        loadData();
+      }
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du statut:', error);
+      toast.error('Erreur lors de la mise à jour du statut');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="flex items-center space-x-2">
+          <RefreshCw className="h-6 w-6 animate-spin" />
+          <span className="text-lg">Chargement des données...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -131,9 +209,9 @@ export const AdminSupervisionPage: React.FC = () => {
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span>Indicateurs Clés de Performance</span>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={handleExport} disabled={exportLoading}>
               <Download className="h-3 w-3 mr-1" />
-              Exporter
+              {exportLoading ? 'Export en cours...' : 'Exporter'}
             </Button>
           </CardTitle>
         </CardHeader>
@@ -307,7 +385,7 @@ export const AdminSupervisionPage: React.FC = () => {
                             <Button variant="outline" size="sm" className="h-8 w-8 p-0 sm:h-auto sm:w-auto sm:p-2">
                               <Edit className="h-3 w-3" />
                             </Button>
-                            <Button variant="outline" size="sm" className="h-8 w-8 p-0 sm:h-auto sm:w-auto sm:p-2">
+                            <Button variant="outline" size="sm" className="h-8 w-8 p-0 sm:h-auto sm:w-auto sm:p-2" onClick={() => handleToggleUserStatus(user.id)}>
                               {user.status === 'active' ? <Ban className="h-3 w-3" /> : <CheckCircle className="h-3 w-3" />}
                             </Button>
                             <Button variant="outline" size="sm" className="h-8 w-8 p-0 sm:h-auto sm:w-auto sm:p-2">
@@ -383,7 +461,7 @@ export const AdminSupervisionPage: React.FC = () => {
                               <Edit className="h-3 w-3" />
                             </Button>
                             {insurer.status === 'pending' && (
-                              <Button size="sm" className="h-8 w-8 p-0 sm:h-auto sm:w-auto sm:p-2">
+                              <Button size="sm" className="h-8 w-8 p-0 sm:h-auto sm:w-auto sm:p-2" onClick={() => handleApproveInsurer(insurer.id)}>
                                 <CheckCircle className="h-3 w-3" />
                               </Button>
                             )}
@@ -453,8 +531,8 @@ export const AdminSupervisionPage: React.FC = () => {
                             <Button variant="outline" size="sm" className="h-8 w-8 p-0 sm:h-auto sm:w-auto sm:p-2">
                               <Edit className="h-3 w-3" />
                             </Button>
-                            <Button variant="outline" size="sm" className="h-8 w-8 p-0 sm:h-auto sm:w-auto sm:p-2">
-                              <Trash2 className="h-3 w-3" />
+                            <Button variant="outline" size="sm" className="h-8 w-8 p-0 sm:h-auto sm:w-auto sm:p-2" onClick={() => handleToggleOfferStatus(offer.id)}>
+                              {offer.status === 'active' ? <Ban className="h-3 w-3" /> : <CheckCircle className="h-3 w-3" />}
                             </Button>
                           </div>
                         </td>

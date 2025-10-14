@@ -1,5 +1,7 @@
 import { QuoteData } from '@/features/quotes/services/pdfService';
 import { notificationService } from './notificationService';
+import { supabase } from '@/lib/supabase';
+import type { Database } from '@/types/database';
 
 export interface QuoteRequest {
   customerInfo: {
@@ -57,189 +59,184 @@ export class QuoteService {
 
   // Simuler la génération de devis depuis plusieurs assureurs
   async generateQuotes(request: QuoteRequest): Promise<QuoteResponse[]> {
-    // Simuler un appel API
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Utilisateur non authentifié');
 
-    const mockQuotes: QuoteResponse[] = [
-      {
-        id: `quote-${Date.now()}-1`,
-        status: 'pending',
-        insurer: 'NSIA Assurances',
-        offerName: 'Tous Risques Premium',
-        price: {
-          monthly: 18500,
-          annual: 222000,
-        },
-        franchise: 50000,
-        features: [
-          'Assistance 24/7',
-          'Véhicule de remplacement',
-          'Protection conducteur',
-          'Bris de glace inclus',
-          'Vol et incendie',
-        ],
-        guarantees: {
-          assistance24h: true,
-          vehicleReplacement: true,
-          driverProtection: true,
-          glassBreakage: true,
-          legalProtection: false,
-          newVehicleValue: false,
-          internationalAssistance: false,
-        },
-        createdAt: new Date(),
-        validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 jours
-      },
-      {
-        id: `quote-${Date.now()}-2`,
-        status: 'pending',
-        insurer: 'SUNU Assurances',
-        offerName: 'Tiers Étendu',
-        price: {
-          monthly: 16200,
-          annual: 194400,
-        },
-        franchise: 75000,
-        features: [
-          'Responsabilité civile',
-          'Vol et incendie',
-          'Bris de glace',
-          'Assistance dépannage',
-        ],
-        guarantees: {
-          assistance24h: true,
-          vehicleReplacement: false,
-          driverProtection: false,
-          glassBreakage: true,
-          legalProtection: false,
-          newVehicleValue: false,
-          internationalAssistance: false,
-        },
-        createdAt: new Date(),
-        validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-      },
-      {
-        id: `quote-${Date.now()}-3`,
-        status: 'pending',
-        insurer: 'ATLANTIQUE Assurances',
-        offerName: 'Tous Risques Excellence',
-        price: {
-          monthly: 21000,
-          annual: 252000,
-        },
-        franchise: 30000,
-        features: [
-          'Tous risques premium',
-          'Assistance internationale',
-          'Véhicule de remplacement',
-          'Protection juridique',
-          'Valeur à neuf 2 ans',
-        ],
-        guarantees: {
-          assistance24h: true,
-          vehicleReplacement: true,
-          driverProtection: true,
-          glassBreakage: true,
-          legalProtection: true,
-          newVehicleValue: true,
-          internationalAssistance: true,
-        },
-        createdAt: new Date(),
-        validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-      },
-    ];
+    const categoryId = 'auto';
 
-    // Notifier l'utilisateur que les devis sont prêts
-    mockQuotes.forEach(quote => {
-      notificationService.notifyQuoteGenerated(quote.id, quote.insurer, quote.price.monthly);
+    const personal_data = {
+      full_name: request.customerInfo.fullName,
+      email: request.customerInfo.email,
+      phone: request.customerInfo.phone,
+      birth_date: request.customerInfo.birthDate,
+      license_number: request.customerInfo.licenseNumber,
+      license_date: request.customerInfo.licenseDate,
+      address: request.customerInfo.address
+    };
+
+    const vehicle_data = {
+      brand: request.vehicleInfo.brand,
+      model: request.vehicleInfo.model,
+      year: request.vehicleInfo.year,
+      registration: request.vehicleInfo.registrationNumber,
+      vehicle_type: request.vehicleInfo.vehicleType,
+      fuel_type: request.vehicleInfo.fuelType,
+      value: request.vehicleInfo.value
+    };
+
+    const coverage_requirements = {
+      coverage_type: request.insuranceNeeds.coverageType,
+      usage: request.insuranceNeeds.usage,
+      annual_km: request.insuranceNeeds.annualKilometers,
+      parking_type: request.insuranceNeeds.parkingType,
+      history_claims: request.insuranceNeeds.historyClaims
+    };
+
+    const { data: quote, error: quoteErr } = await supabase
+      .from('quotes')
+      .insert({
+        user_id: user.id,
+        category_id: categoryId,
+        status: 'PENDING',
+        personal_data,
+        vehicle_data,
+        coverage_requirements,
+        valid_until: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+      })
+      .select('*')
+      .single();
+    if (quoteErr || !quote) throw quoteErr || new Error('Erreur lors de la création du devis');
+
+    const { data: offers, error: offersErr } = await supabase
+      .from('insurance_offers')
+      .select('id, name, insurer_id, price_min, price_max, deductible, contract_type')
+      .eq('category_id', categoryId)
+      .eq('is_active', true)
+      .limit(3);
+    if (offersErr) throw offersErr;
+
+    const inserts: Database['public']['Tables']['quote_offers']['Insert'][] = (offers || []).map(o => {
+      const min = o.price_min ?? 50000;
+      const max = o.price_max ?? Math.max(min + 30000, min);
+      const base = Math.min(Math.max(min, (vehicle_data.value || 1000000) * 0.02), max);
+      const price = Math.round(base / 1000) * 1000;
+      return {
+        quote_id: quote.id,
+        offer_id: o.id,
+        insurer_id: o.insurer_id,
+        price,
+        status: 'PENDING',
+        notes: null,
+      };
     });
 
-    return mockQuotes;
+    if (inserts.length) {
+      const { error: insertErr } = await supabase.from('quote_offers').insert(inserts);
+      if (insertErr) throw insertErr;
+    }
+
+    const { data: result, error: fetchErr } = await supabase
+      .from('quote_offers')
+      .select(`
+        id,
+        price,
+        status,
+        created_at,
+        offer:offer_id ( name, deductible, insurer:insurer_id ( name ) ),
+        quote:quote_id ( valid_until )
+      `)
+      .eq('quote_id', quote.id);
+    if (fetchErr) throw fetchErr;
+
+    (result || []).forEach(q => {
+      notificationService.notifyQuoteGenerated(q.id, q.offer?.insurer?.name || 'Assureur', q.price);
+    });
+
+    return (result || []).map(q => ({
+      id: q.id,
+      status: (q.status || 'PENDING').toLowerCase() as any,
+      insurer: q.offer?.insurer?.name || 'Assureur',
+      offerName: q.offer?.name || 'Offre',
+      price: { monthly: q.price, annual: q.price * 12 },
+      franchise: q.offer?.deductible || 0,
+      features: [],
+      guarantees: {},
+      createdAt: new Date(q.created_at),
+      validUntil: new Date(q.quote?.valid_until || new Date()),
+    }));
   }
 
   // Accepter un devis
-  async acceptQuote(quoteId: string): Promise<boolean> {
-    // Simuler l'acceptation
-    await new Promise(resolve => setTimeout(resolve, 1500));
+  async acceptQuote(quoteOfferId: string): Promise<boolean> {
+    const { error } = await supabase
+      .from('quote_offers')
+      .update({ status: 'APPROVED' })
+      .eq('id', quoteOfferId);
+    if (error) throw error;
 
-    // Notifier l'acceptation
-    const quote = await this.getQuoteById(quoteId);
-    if (quote) {
-      notificationService.notifyQuoteApproved(quoteId, quote.insurer);
-    }
-
+    const quote = await this.getQuoteById(quoteOfferId);
+    if (quote) notificationService.notifyQuoteApproved(quoteOfferId, quote.insurer);
     return true;
   }
 
   // Obtenir un devis par ID
-  async getQuoteById(quoteId: string): Promise<QuoteResponse | null> {
-    // Simuler la récupération depuis une API
-    await new Promise(resolve => setTimeout(resolve, 500));
+  async getQuoteById(quoteOfferId: string): Promise<QuoteResponse | null> {
+    const { data, error } = await supabase
+      .from('quote_offers')
+      .select(`
+        id,
+        price,
+        status,
+        created_at,
+        quote:quote_id ( valid_until ),
+        offer:offer_id ( name, deductible, insurer:insurer_id ( name ) )
+      `)
+      .eq('id', quoteOfferId)
+      .single();
+    if (error) throw error;
+    if (!data) return null;
 
-    // Retourner un devis mock pour l'exemple
     return {
-      id: quoteId,
-      status: 'pending',
-      insurer: 'NSIA Assurances',
-      offerName: 'Tous Risques Premium',
-      price: {
-        monthly: 18500,
-        annual: 222000,
-      },
-      franchise: 50000,
-      features: [
-        'Assistance 24/7',
-        'Véhicule de remplacement',
-        'Protection conducteur',
-        'Bris de glace inclus',
-        'Vol et incendie',
-      ],
-      guarantees: {
-        assistance24h: true,
-        vehicleReplacement: true,
-        driverProtection: true,
-        glassBreakage: true,
-        legalProtection: false,
-        newVehicleValue: false,
-        internationalAssistance: false,
-      },
-      createdAt: new Date(),
-      validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      id: data.id,
+      status: (data.status || 'PENDING').toLowerCase() as any,
+      insurer: data.offer?.insurer?.name || 'Assureur',
+      offerName: data.offer?.name || 'Offre',
+      price: { monthly: data.price, annual: data.price * 12 },
+      franchise: data.offer?.deductible || 0,
+      features: [],
+      guarantees: {},
+      createdAt: new Date(data.created_at),
+      validUntil: new Date(data.quote?.valid_until || new Date()),
     };
   }
 
   // Obtenir tous les devis d'un utilisateur
   async getUserQuotes(userId: string): Promise<QuoteResponse[]> {
-    // Simuler la récupération
-    await new Promise(resolve => setTimeout(resolve, 800));
-
-    // Retourner des devis mock pour l'exemple
-    return [
-      {
-        id: 'quote-1',
-        status: 'approved',
-        insurer: 'NSIA Assurances',
-        offerName: 'Tous Risques Premium',
-        price: { monthly: 18500, annual: 222000 },
-        franchise: 50000,
-        features: ['Assistance 24/7', 'Véhicule de remplacement'],
-        guarantees: { assistance24h: true, vehicleReplacement: true },
-        createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-        validUntil: new Date(Date.now() + 25 * 24 * 60 * 60 * 1000),
-      },
-      {
-        id: 'quote-2',
-        status: 'pending',
-        insurer: 'SUNU Assurances',
-        offerName: 'Tiers Étendu',
-        price: { monthly: 16200, annual: 194400 },
-        franchise: 75000,
-        features: ['Responsabilité civile', 'Vol et incendie'],
-        guarantees: { assistance24h: true },
-        createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-        validUntil: new Date(Date.now() + 28 * 24 * 60 * 60 * 1000),
-      },
-    ];
+    const { data, error } = await supabase
+      .from('quote_offers')
+      .select(`
+        id,
+        price,
+        status,
+        created_at,
+        quote:quote_id ( user_id, valid_until ),
+        offer:offer_id ( name, insurer:insurer_id ( name ) )
+      `)
+      .eq('quote.user_id', userId)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return (data || []).map(q => ({
+      id: q.id,
+      status: (q.status || 'PENDING').toLowerCase() as any,
+      insurer: q.offer?.insurer?.name || 'Assureur',
+      offerName: q.offer?.name || 'Offre',
+      price: { monthly: q.price, annual: q.price * 12 },
+      franchise: 0,
+      features: [],
+      guarantees: {},
+      createdAt: new Date(q.created_at),
+      validUntil: new Date(q.quote?.valid_until || new Date()),
+    }));
   }
 
   // Vérifier les devis expirants
