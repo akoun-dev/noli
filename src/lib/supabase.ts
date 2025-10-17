@@ -1,5 +1,7 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/types/database';
+import { logger } from '@/lib/logger';
+import { UserMetadata, AuditMetadata } from '@/types/common';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -28,7 +30,7 @@ export const supabase: SupabaseClient<Database> = createClient<Database>(supabas
 // Helper functions pour les opérations courantes
 export const supabaseHelpers = {
   // Authentification
-  async signUp(email: string, password: string, metadata?: Record<string, any>) {
+  async signUp(email: string, password: string, metadata?: UserMetadata) {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -90,7 +92,7 @@ export const supabaseHelpers = {
     const targetUserId = userId || (await supabase.auth.getUser()).data.user?.id;
 
     if (!targetUserId) {
-      console.warn('getProfile: No user ID provided or available');
+      logger.warn('getProfile: No user ID provided or available');
       return null;
     }
 
@@ -100,7 +102,7 @@ export const supabaseHelpers = {
       });
 
     if (error) {
-      console.error('getProfile RPC error:', error);
+      logger.error('getProfile RPC error:', error);
       // Ne pas throw l'erreur pour éviter de bloquer l'authentification
       return null;
     }
@@ -113,7 +115,7 @@ export const supabaseHelpers = {
     return null;
   },
 
-  async updateProfile(updates: Record<string, any>) {
+  async updateProfile(updates: Partial<UserMetadata>) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Utilisateur non connecté');
 
@@ -134,7 +136,7 @@ export const supabaseHelpers = {
     const targetUserId = userId || (await supabase.auth.getUser()).data.user?.id;
 
     if (!targetUserId) {
-      console.warn('getUserPermissions: No user ID provided or available');
+      logger.warn('getUserPermissions: No user ID provided or available');
       return [];
     }
 
@@ -144,7 +146,7 @@ export const supabaseHelpers = {
       });
 
     if (error) {
-      console.error('getUserPermissions RPC error:', error);
+      logger.error('getUserPermissions RPC error:', error);
       // Ne pas throw l'erreur pour éviter de bloquer l'authentification
       return [];
     }
@@ -169,7 +171,7 @@ export const supabaseHelpers = {
   },
 
   // Audit logs
-  async logAction(action: string, resource?: string, resourceId?: string, metadata?: Record<string, any>) {
+  async logAction(action: string, resource?: string, resourceId?: string, metadata?: AuditMetadata) {
     const { error } = await supabase
       .rpc('log_user_action', {
         user_action: action,

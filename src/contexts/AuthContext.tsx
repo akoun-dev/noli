@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { User } from '@/types';
 import { authService } from '@/data/api/authService';
 import { supabase } from '@/lib/supabase';
+import { logger } from '@/lib/logger';
 
 export interface AuthState {
   user: User | null;
@@ -36,19 +37,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Initialiser l'authentification avec Supabase
     const initializeAuth = async () => {
       try {
-        console.log('🔍 Initializing auth...');
+        logger.auth('Initializing auth...');
 
         // Vérifier d'abord le localStorage (clé par défaut de Supabase)
         const storedToken = localStorage.getItem('supabase.auth.token');
-        console.log('💾 Stored token in localStorage:', storedToken ? 'Present' : 'Missing');
-        if (storedToken) {
-          console.log('📄 Token preview:', storedToken.substring(0, 50) + '...');
-        }
+        logger.debug('Stored token in localStorage:', storedToken ? 'Present' : 'Missing');
 
         // Vérifier la session actuelle
         const { data: { session }, error } = await supabase.auth.getSession();
 
-        console.log('📋 Session check result:', {
+        logger.auth('Session check result:', {
           hasSession: !!session,
           hasUser: !!session?.user,
           userId: session?.user?.id,
@@ -71,7 +69,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             updatedAt: new Date(),
           };
 
-          console.log('✅ Setting user state for:', session.user.email);
+          logger.auth('Setting user state for:', session.user.email);
           setState({
             user,
             isAuthenticated: true,
@@ -82,17 +80,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           // Essayer de charger les permissions en arrière-plan sans bloquer
           try {
             const permissions = await authService.getUserPermissions();
-            console.log('🔐 Permissions loaded:', permissions.length);
+            logger.auth('Permissions loaded:', permissions.length);
             setState(prev => ({ ...prev, permissions }));
           } catch (error) {
-            console.warn('Could not load permissions on init:', error);
+            logger.warn('Could not load permissions on init:', error);
           }
         } else {
-          console.log('❌ No session found, setting unauthenticated state');
+          logger.auth('No session found, setting unauthenticated state');
           setState(prev => ({ ...prev, isLoading: false }));
         }
       } catch (error) {
-        console.error('Auth initialization error:', error);
+        logger.error('Auth initialization error:', error);
         setState(prev => ({ ...prev, isLoading: false }));
       }
     };
@@ -102,7 +100,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Écouter les changements de session Supabase
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('🔄 Auth state changed:', {
+        logger.auth('Auth state changed:', {
           event,
           userId: session?.user?.id,
           hasSession: !!session,
@@ -110,7 +108,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         });
 
         if (event === 'SIGNED_IN' && session?.user) {
-          console.log('🎯 Processing SIGNED_IN event for:', session.user.email);
+          logger.auth('Processing SIGNED_IN event for:', session.user.email);
 
           // Utiliser directement les données de la session pour éviter les problèmes RPC
           // lors de l'actualisation de page
@@ -127,7 +125,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             updatedAt: new Date(),
           };
 
-          console.log('🚀 Setting state from session data (no RPC calls)');
+          logger.auth('Setting state from session data (no RPC calls)');
           setState({
             user,
             isAuthenticated: true,
@@ -137,12 +135,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
           // Charger les permissions en arrière-plan sans bloquer
           try {
-            console.log('🔐 Loading permissions in background...');
+            logger.auth('Loading permissions in background...');
             const permissions = await authService.getUserPermissions();
-            console.log('✅ Background permissions loaded:', permissions.length);
+            logger.auth('Background permissions loaded:', permissions.length);
             setState(prev => ({ ...prev, permissions }));
           } catch (error) {
-            console.warn('⚠️ Could not load permissions in background:', error);
+            logger.warn('Could not load permissions in background:', error);
           }
         } else if (event === 'SIGNED_OUT') {
           setState({
@@ -157,7 +155,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             const permissions = await authService.getUserPermissions();
             setState(prev => ({ ...prev, permissions }));
           } catch (error) {
-            console.error('Error refreshing permissions:', error);
+            logger.error('Error refreshing permissions:', error);
           }
         }
       }
@@ -220,7 +218,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       await authService.loginWithOAuth(provider);
       // Le redirigement et la mise à jour de l'état seront gérés par le callback OAuth
     } catch (error) {
-      console.error('OAuth login error:', error);
+      logger.error('OAuth login error:', error);
       throw error;
     }
   };
@@ -230,7 +228,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       await authService.logout();
     } catch (error) {
-      console.error('Logout error:', error);
+      logger.error('Logout error:', error);
     } finally {
       setState({
         user: null,
@@ -252,7 +250,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       return updatedUser;
     } catch (error) {
-      console.error('Update user error:', error);
+      logger.error('Update user error:', error);
       throw error;
     }
   };
@@ -269,7 +267,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         permissions,
       });
     } catch (error) {
-      console.error('Refresh token error:', error);
+      logger.error('Refresh token error:', error);
       setState({
         user: null,
         isAuthenticated: false,
@@ -288,7 +286,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       await authService.forgotPassword(email);
     } catch (error) {
-      console.error('Forgot password error:', error);
+      logger.error('Forgot password error:', error);
       throw error;
     }
   };
@@ -297,7 +295,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       await authService.resetPassword(token, newPassword);
     } catch (error) {
-      console.error('Reset password error:', error);
+      logger.error('Reset password error:', error);
       throw error;
     }
   };

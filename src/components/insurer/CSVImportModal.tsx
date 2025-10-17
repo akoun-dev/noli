@@ -22,24 +22,12 @@ import {
   X
 } from 'lucide-react';
 import Papa from 'papaparse';
+import { ParsedOffer, CSVRowData } from '@/types/insurance';
 
 interface CSVImportModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onImport: (offers: any[]) => void;
-}
-
-interface ParsedOffer {
-  name: string;
-  type: string;
-  price: number;
-  coverage: string;
-  description: string;
-  deductible?: number;
-  maxCoverage?: number;
-  duration?: number;
-  features?: string;
-  conditions?: string;
+  onImport: (offers: ParsedOffer[]) => void;
 }
 
 const SAMPLE_CSV_DATA = [
@@ -107,7 +95,7 @@ export const CSVImportModal: React.FC<CSVImportModalProps> = ({
       skipEmptyLines: true,
       complete: (results) => {
         try {
-          const data = results.data as any[];
+          const data = results.data as CSVRowData[];
           const newErrors: string[] = [];
           const validOffers: ParsedOffer[] = [];
 
