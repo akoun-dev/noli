@@ -21,7 +21,7 @@ This is a React-based insurance comparison platform called "Noli" built with Typ
 ## Development Commands
 
 ```bash
-# Start development server
+# Start development server (runs on localhost:8080)
 npm run dev
 
 # Build for production
@@ -35,6 +35,12 @@ npm run lint
 
 # Preview production build
 npm run preview
+
+# Testing
+npm run test              # Run tests in watch mode
+npm run test:ui           # Run tests with UI interface
+npm run test:run          # Run tests once
+npm run test:coverage     # Run tests with coverage report
 ```
 
 ## Architecture Overview
@@ -85,8 +91,10 @@ src/
 - **AuthContext** (`src/contexts/AuthContext.tsx`): Handles user authentication state
 - **AuthGuard** (`src/guards/AuthGuard.tsx`): Protects routes based on user roles
 - **RoleGuard** (`src/guards/RoleGuard.tsx`): Additional role-based protection
+- **Supabase Auth**: Primary authentication provider with email/password and social login
 - Token-based authentication with localStorage persistence
 - Automatic role-based redirects to appropriate dashboards
+- Row Level Security (RLS) implemented in Supabase for data access control
 
 ### Route Structure
 
@@ -114,10 +122,12 @@ src/
 
 ### Data Flow
 
+- **Supabase Client**: Primary database and authentication client
 - API services in `src/data/api/` (though some services are in `src/features/*/services/`)
-- TanStack Query for server state management
+- TanStack Query for server state management and caching
 - React contexts for global client state
 - Form state managed with React Hook Form
+- Database migrations in `/supabase/migrations/` for schema management
 
 ### State Management
 
@@ -133,14 +143,30 @@ src/
 - ESLint configuration for code quality
 - Components follow functional component pattern with hooks
 - Consistent error handling patterns across services
+- **Environment Configuration**: Use `.env.local` for development, `.env.production` for production
+- **Supabase Setup**: Configure Supabase URL and keys in environment variables
+- **Additional Dependencies**:
+  - `papaparse` for CSV processing
+  - `react-day-picker` for date handling
+  - `input-otp` for OTP inputs
+  - `vaul` for mobile-friendly modals
+  - `lovable-tagger` for development component tagging
 
 ### Testing
 
-No specific test framework is configured. Consider adding Jest/Vitest for unit testing and React Testing Library for component testing.
+- **Framework**: Vitest with jsdom environment
+- **Testing Library**: React Testing Library for component testing
+- **Configuration**: `vitest.config.ts` with React plugin and path aliases
+- **Test Setup**: `src/test/setup.ts` for global test configuration
+- **Coverage**: Built-in Vitest coverage reporting
+- **Test Files**: Place tests in `__tests__/` directories or `.test.ts/.test.tsx` files
 
 ### Build & Deployment
 
 - Vite for fast development and optimized builds
-- Production builds optimized with tree-shaking
-- Static asset optimization
-- Environment-specific configurations
+- Production builds optimized with manual chunking (vendor, router, ui, charts, forms, utils, pdf, supabase, query)
+- Development server runs on `localhost:8080` with host binding to `::`
+- Source maps enabled in development mode
+- Tree-shaking and static asset optimization
+- Environment-specific configurations (.env.local, .env.production)
+- **Supabase Integration**: Full database setup with migrations, RLS policies, and auth functions
