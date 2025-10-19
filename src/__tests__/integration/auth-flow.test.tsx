@@ -438,30 +438,34 @@ describe('Authentication Flow Integration', () => {
       vi.mocked(authService.forgotPassword).mockResolvedValue(undefined)
 
       // Create a state variable to track success
-      let resetSuccess = false
-      let resetError: string | null = null
+      const resetSuccess = false
+      const resetError: string | null = null
 
-      const ForgotPasswordPage = () => (
-        <div>
-          <h1>Mot de passe oublié</h1>
-          <input type='email' placeholder='Email' data-testid='email-input' />
-          <button
-            onClick={async () => {
-              const email = (screen.getByTestId('email-input') as HTMLInputElement).value
-              try {
-                await authService.forgotPassword(email)
-                resetSuccess = true
-              } catch (error) {
-                resetError = error instanceof Error ? error.message : 'Unknown error'
-              }
-            }}
-          >
-            Envoyer les instructions
-          </button>
-          {resetSuccess && <div>Instructions envoyées</div>}
-          {resetError && <div>{resetError}</div>}
-        </div>
-      )
+      const ForgotPasswordPage = () => {
+        const [success, setSuccess] = React.useState(false)
+        const [error, setError] = React.useState<string | null>(null)
+
+        const handleSubmit = async () => {
+          const email = (screen.getByTestId('email-input') as HTMLInputElement).value
+          try {
+            await authService.forgotPassword(email)
+            setSuccess(true)
+          } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+            setError(errorMessage)
+          }
+        }
+
+        return (
+          <div>
+            <h1>Mot de passe oublié</h1>
+            <input type='email' placeholder='Email' data-testid='email-input' />
+            <button onClick={handleSubmit}>Envoyer les instructions</button>
+            {success && <div data-testid='success-message'>Instructions envoyées</div>}
+            {error && <div data-testid='error-message'>{error}</div>}
+          </div>
+        )
+      }
 
       render(
         <TestWrapper>
@@ -474,7 +478,9 @@ describe('Authentication Flow Integration', () => {
         target: { value: 'test@example.com' },
       })
 
-      fireEvent.click(screen.getByText('Envoyer les instructions'))
+      await act(async () => {
+        fireEvent.click(screen.getByText('Envoyer les instructions'))
+      })
 
       // Assert password reset request
       await waitFor(() => {
@@ -483,7 +489,7 @@ describe('Authentication Flow Integration', () => {
 
       // Assert success message
       await waitFor(() => {
-        expect(screen.getByText(/Instructions envoyées/i)).toBeInTheDocument()
+        expect(screen.getByTestId('success-message')).toHaveTextContent('Instructions envoyées')
       })
     })
 
@@ -492,27 +498,30 @@ describe('Authentication Flow Integration', () => {
       vi.mocked(authService.forgotPassword).mockRejectedValue(new Error('Email non trouvé'))
 
       // Create a state variable to track error
-      let resetError: string | null = null
+      const resetError: string | null = null
 
-      const ForgotPasswordPage = () => (
-        <div>
-          <h1>Mot de passe oublié</h1>
-          <input type='email' placeholder='Email' data-testid='email-input' />
-          <button
-            onClick={async () => {
-              const email = (screen.getByTestId('email-input') as HTMLInputElement).value
-              try {
-                await authService.forgotPassword(email)
-              } catch (error) {
-                resetError = error instanceof Error ? error.message : 'Unknown error'
-              }
-            }}
-          >
-            Envoyer les instructions
-          </button>
-          {resetError && <div>{resetError}</div>}
-        </div>
-      )
+      const ForgotPasswordPage = () => {
+        const [error, setError] = React.useState<string | null>(null)
+
+        const handleSubmit = async () => {
+          const email = (screen.getByTestId('email-input') as HTMLInputElement).value
+          try {
+            await authService.forgotPassword(email)
+          } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+            setError(errorMessage)
+          }
+        }
+
+        return (
+          <div>
+            <h1>Mot de passe oublié</h1>
+            <input type='email' placeholder='Email' data-testid='email-input' />
+            <button onClick={handleSubmit}>Envoyer les instructions</button>
+            {error && <div data-testid='error-message'>{error}</div>}
+          </div>
+        )
+      }
 
       render(
         <TestWrapper>
@@ -525,11 +534,13 @@ describe('Authentication Flow Integration', () => {
         target: { value: 'nonexistent@example.com' },
       })
 
-      fireEvent.click(screen.getByText('Envoyer les instructions'))
+      await act(async () => {
+        fireEvent.click(screen.getByText('Envoyer les instructions'))
+      })
 
       // Assert error handling
       await waitFor(() => {
-        expect(screen.getByText(/Email non trouvé/i)).toBeInTheDocument()
+        expect(screen.getByTestId('error-message')).toHaveTextContent('Email non trouvé')
       })
     })
   })
