@@ -1,5 +1,6 @@
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { logger } from '@/lib/logger';
 
 export interface InsurerAlert {
   id: string;
@@ -17,7 +18,7 @@ export interface InsurerAlert {
   actionUrl?: string;
   actionText?: string;
   metadata?: {
-    [key: string]: any;
+    [key: string]: unknown;
   };
   resolvedAt?: Date;
   resolvedBy?: string;

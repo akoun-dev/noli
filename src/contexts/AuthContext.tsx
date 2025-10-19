@@ -169,10 +169,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const login = async (email: string, password: string) => {
+    console.log('🔐 AuthContext.login appelé avec:', email);
     setState(prev => ({ ...prev, isLoading: true }));
+
     try {
+      console.log('📞 Appel de authService.login...');
       const response = await authService.login({ email, password });
+      console.log('✅ authService.login réussi:', response.user);
+
+      console.log('📞 Chargement des permissions...');
       const permissions = await authService.getUserPermissions();
+      console.log('✅ Permissions chargées:', permissions);
 
       setState({
         user: response.user,
@@ -180,9 +187,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         isLoading: false,
         permissions,
       });
-      
+
+      console.log('🎉 État mis à jour, retour de l\'utilisateur:', response.user);
       return response.user;
     } catch (error) {
+      console.error('❌ Erreur dans AuthContext.login:', error);
       setState(prev => ({ ...prev, isLoading: false }));
       throw error;
     }

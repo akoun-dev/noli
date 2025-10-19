@@ -57,12 +57,21 @@ const LoginPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('🚀 LoginPage.handleSubmit appelé');
+    console.log('📧 Email:', formData.email);
+    console.log('🔑 Password:', formData.password ? '[REDACTED]' : 'EMPTY');
 
-    if (!validateForm()) return;
+    if (!validateForm()) {
+      console.log('❌ Validation du formulaire échouée');
+      return;
+    }
 
+    console.log('✅ Formulaire validé, début de la connexion...');
     setIsLoading(true);
     try {
+      console.log('📞 Appel de la fonction login du contexte...');
       const user = await login(formData.email, formData.password);
+      console.log('✅ Login réussi, utilisateur:', user);
 
       toast({
         title: "Connexion réussie",
@@ -70,33 +79,49 @@ const LoginPage = () => {
         variant: "success",
       });
 
+      console.log('🔄 Préparation de la redirection...');
       // Redirect by role after successful login
       const redirectMap: Record<typeof user.role, string> = {
         USER: '/tableau-de-bord',
         INSURER: '/assureur/tableau-de-bord',
         ADMIN: '/admin/tableau-de-bord',
       };
-      const fromPath = (location.state as any)?.from?.pathname as string | undefined;
+      console.log('🗺️ Map de redirection:', redirectMap);
+      console.log('👤 Rôle utilisateur:', user.role);
+
+      const fromPath = (location.state as { from?: { pathname?: string } })?.from?.pathname;
+      console.log('📍 From path:', fromPath);
+
+      const targetPath = fromPath || redirectMap[user.role];
+      console.log('🎯 Cible de redirection:', targetPath);
+
       if (fromPath) {
         if (user.role === 'ADMIN' && fromPath.startsWith('/admin/')) {
+          console.log('➡️ Redirection vers (admin/from):', fromPath);
           navigate(fromPath, { replace: true });
         } else if (user.role === 'INSURER' && fromPath.startsWith('/assureur/')) {
+          console.log('➡️ Redirection vers (insurer/from):', fromPath);
           navigate(fromPath, { replace: true });
         } else if (user.role === 'USER' && !fromPath.startsWith('/admin/') && !fromPath.startsWith('/assureur/')) {
+          console.log('➡️ Redirection vers (user/from):', fromPath);
           navigate(fromPath, { replace: true });
         } else {
+          console.log('➡️ Redirection vers (default/role):', redirectMap[user.role]);
           navigate(redirectMap[user.role], { replace: true });
         }
       } else {
+        console.log('➡️ Redirection vers (default):', redirectMap[user.role]);
         navigate(redirectMap[user.role], { replace: true });
       }
     } catch (error) {
+      console.error('❌ Erreur de connexion:', error);
       toast({
         title: "Erreur de connexion",
         description: error instanceof Error ? error.message : "Email ou mot de passe incorrect",
         variant: "destructive",
       });
     } finally {
+      console.log('🏁 Fin du processus de connexion');
       setIsLoading(false);
     }
   };

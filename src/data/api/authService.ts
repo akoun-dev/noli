@@ -4,7 +4,7 @@ import { logger } from '@/lib/logger';
 
 export interface AuthResponse {
   user: User;
-  session: any;
+  session: unknown;
 }
 
 export class AuthService {
@@ -18,18 +18,32 @@ export class AuthService {
   }
 
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
+    logger.auth('AuthService.login appelé avec email:', credentials.email);
+    
     try {
+      logger.auth('Étape 1: Appel de supabaseHelpers.signIn');
       const data = await supabaseHelpers.signIn(credentials.email, credentials.password);
       
+      logger.auth('Étape 2: signIn réussi, user ID:', data.user?.id);
+      
       // Récupérer le profil complet avec les permissions
+      logger.auth('Étape 3: Appel de getProfile pour user ID:', data.user?.id);
       const profile = await supabaseHelpers.getProfile(data.user?.id);
       
       if (!profile) {
+        logger.error('Étape 4: Profil utilisateur non trouvé pour:', data.user?.id);
         throw new Error('Profil utilisateur non trouvé');
       }
 
+      logger.auth('Étape 4: Profil trouvé, rôle:', profile.role);
+
       // Logger la connexion
-      await supabaseHelpers.logAction('LOGIN', 'session', data.user?.id);
+      try {
+        await supabaseHelpers.logAction('LOGIN', 'session', data.user?.id);
+        logger.auth('Étape 5: Action de connexion loggée');
+      } catch (logError) {
+        logger.warn('Étape 5: Impossible de logger l action de connexion:', logError);
+      }
 
       const user: User = {
         id: profile.id,
@@ -44,12 +58,17 @@ export class AuthService {
         updatedAt: profile.updated_at,
       };
 
+      logger.auth('Étape 6: Login complété avec succès pour:', user.email);
       return {
         user,
         session: data.session,
       };
     } catch (error) {
-      logger.error('Login error:', error);
+      logger.error('Login error dans AuthService:', error);
+      logger.error('Détails de l erreur de login:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      });
       throw error;
     }
   }
@@ -266,7 +285,7 @@ export class AuthService {
     }
   }
 
-  async getUserSessions(): Promise<any[]> {
+  async getUserSessions(): Promise<unknown[]> {
     try {
       return await supabaseHelpers.getUserSessions();
     } catch (error) {
