@@ -159,13 +159,18 @@ export class AuthService {
 
   async logout(): Promise<void> {
     try {
-      // Logger la déconnexion avant de se déconnecter
+      // Logger la déconnexion avant de se déconnecter (non bloquant)
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        await supabaseHelpers.logAction('LOGOUT', 'session', user.id);
+        try {
+          await supabaseHelpers.logAction('LOGOUT', 'session', user.id);
+        } catch (logError) {
+          logger.warn('Logout: Could not log action (non-critical):', logError);
+        }
       }
-      
+
       await supabaseHelpers.signOut();
+      logger.auth('Logout successful');
     } catch (error) {
       logger.error('Logout error:', error);
       throw error;

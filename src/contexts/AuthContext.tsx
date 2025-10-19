@@ -169,17 +169,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const login = async (email: string, password: string) => {
-    console.log('🔐 AuthContext.login appelé avec:', email);
+    logger.auth('🔐 AuthContext.login appelé avec:', email);
     setState(prev => ({ ...prev, isLoading: true }));
 
     try {
-      console.log('📞 Appel de authService.login...');
+      logger.auth('📞 Appel de authService.login...');
       const response = await authService.login({ email, password });
-      console.log('✅ authService.login réussi:', response.user);
+      logger.auth('✅ authService.login réussi:', response.user);
 
-      console.log('📞 Chargement des permissions...');
+      logger.auth('📞 Chargement des permissions...');
       const permissions = await authService.getUserPermissions();
-      console.log('✅ Permissions chargées:', permissions);
+      logger.auth('✅ Permissions chargées:', permissions);
 
       setState({
         user: response.user,
@@ -188,10 +188,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         permissions,
       });
 
-      console.log('🎉 État mis à jour, retour de l\'utilisateur:', response.user);
+      logger.auth('🎉 État mis à jour, retour de l\'utilisateur:', response.user);
       return response.user;
     } catch (error) {
-      console.error('❌ Erreur dans AuthContext.login:', error);
+      logger.error('❌ Erreur dans AuthContext.login:', error);
       setState(prev => ({ ...prev, isLoading: false }));
       throw error;
     }
@@ -236,18 +236,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = async () => {
+    logger.auth('🚪 AuthContext.logout appelé');
     setState(prev => ({ ...prev, isLoading: true }));
     try {
+      logger.auth('📞 Appel de authService.logout...');
       await authService.logout();
+      logger.auth('✅ authService.logout réussi');
     } catch (error) {
-      logger.error('Logout error:', error);
+      logger.error('❌ Erreur dans AuthContext.logout:', error);
     } finally {
+      logger.auth('🔄 Mise à jour de l\'état utilisateur...');
       setState({
         user: null,
         isAuthenticated: false,
         isLoading: false,
         permissions: [],
       });
+      logger.auth('✅ État de déconnexion finalisé');
     }
   };
 

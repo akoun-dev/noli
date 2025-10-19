@@ -127,9 +127,18 @@ export const supabaseHelpers = {
       }
 
       // Construire le profil à partir des métadonnées
+      // S'assurer que l'email du profil correspond à l'email d'authentification
+      const profileEmail = user.email || '';
+      const metadataEmail = user.user_metadata?.email || '';
+      const email = profileEmail || metadataEmail;
+
+      logger.auth('📧 Email utilisateur (auth):', profileEmail);
+      logger.auth('📧 Email métadonnées:', metadataEmail);
+      logger.auth('📧 Email final utilisé:', email);
+
       const profile = {
         id: user.id,
-        email: user.email || '',
+        email: email,
         first_name: user.user_metadata?.first_name || '',
         last_name: user.user_metadata?.last_name || '',
         role: user.user_metadata?.role || 'USER',
@@ -141,7 +150,7 @@ export const supabaseHelpers = {
         company_name: user.user_metadata?.company_name || ''
       };
 
-      logger.auth('Profil construit à partir des métadonnées:', profile);
+      logger.auth('✅ Profil construit à partir des métadonnées:', profile);
       return profile;
     } catch (err) {
       logger.error('Exception dans getProfile:', err);
