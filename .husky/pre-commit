@@ -6,17 +6,17 @@ echo "🔍 Running pre-commit hooks..."
 # Run lint-staged
 npx lint-staged
 
-# Check for console.log statements (excluding test files)
+# Check for console.log statements (excluding test files and husky scripts)
 echo "🚫 Checking for console.log statements..."
-if git diff --cached --name-only | xargs grep -l "console\.log" | grep -v "\.test\." | grep -v "\.spec\."; then
+if git diff --cached --name-only | xargs grep -l "console\.log" | grep -v "\.test\." | grep -v "\.spec\." | grep -v "\.husky/"; then
   echo "❌ Found console.log statements in staged files. Please remove them before committing."
   echo "💡 Use logger instead of console.log for debugging."
   exit 1
 fi
 
-# Check for TODO comments without ticket numbers
+# Check for TODO comments without ticket numbers (excluding husky scripts)
 echo "📝 Checking TODO comments..."
-if git diff --cached --name-only | xargs grep -n "TODO" | grep -v "TODO-[0-9]\+" | grep -v "TODO(#" ; then
+if git diff --cached --name-only | xargs grep -n "TODO" | grep -v "TODO-[0-9]\+" | grep -v "TODO(#" | grep -v "\.husky/" ; then
   echo "⚠️  Found TODO comments without ticket numbers."
   echo "💡 Please use TODO-XXXX or TODO(#XXXX) format where XXXX is the ticket number."
 fi
@@ -47,21 +47,39 @@ fi
 
 # Check for sensitive data patterns
 echo "🔒 Checking for sensitive data..."
-sensitive_patterns=(
-  "password.*="
-  "secret.*="
-  "token.*="
-  "api_key.*="
-  "private_key.*="
-)
+if git diff --cached --name-only | xargs grep -i "password.*=" | grep -v "\.example" | grep -v "\.template"; then
+  echo "❌ Found potential sensitive data in staged files:"
+  git diff --cached --name-only | xargs grep -i "password.*=" | grep -v "\.example" | grep -v "\.template"
+  echo "💡 Make sure sensitive data is properly secured!"
+  exit 1
+fi
 
-for pattern in "${sensitive_patterns[@]}"; do
-  if git diff --cached --name-only | xargs grep -i "$pattern" | grep -v "\.example" | grep -v "\.template"; then
-    echo "❌ Found potential sensitive data in staged files:"
-    git diff --cached --name-only | xargs grep -i "$pattern" | grep -v "\.example" | grep -v "\.template"
-    echo "💡 Make sure sensitive data is properly secured!"
-    exit 1
-  fi
-done
+if git diff --cached --name-only | xargs grep -i "secret.*=" | grep -v "\.example" | grep -v "\.template"; then
+  echo "❌ Found potential sensitive data in staged files:"
+  git diff --cached --name-only | xargs grep -i "secret.*=" | grep -v "\.example" | grep -v "\.template"
+  echo "💡 Make sure sensitive data is properly secured!"
+  exit 1
+fi
+
+if git diff --cached --name-only | xargs grep -i "token.*=" | grep -v "\.example" | grep -v "\.template"; then
+  echo "❌ Found potential sensitive data in staged files:"
+  git diff --cached --name-only | xargs grep -i "token.*=" | grep -v "\.example" | grep -v "\.template"
+  echo "💡 Make sure sensitive data is properly secured!"
+  exit 1
+fi
+
+if git diff --cached --name-only | xargs grep -i "api_key.*=" | grep -v "\.example" | grep -v "\.template"; then
+  echo "❌ Found potential sensitive data in staged files:"
+  git diff --cached --name-only | xargs grep -i "api_key.*=" | grep -v "\.example" | grep -v "\.template"
+  echo "💡 Make sure sensitive data is properly secured!"
+  exit 1
+fi
+
+if git diff --cached --name-only | xargs grep -i "private_key.*=" | grep -v "\.example" | grep -v "\.template"; then
+  echo "❌ Found potential sensitive data in staged files:"
+  git diff --cached --name-only | xargs grep -i "private_key.*=" | grep -v "\.example" | grep -v "\.template"
+  echo "💡 Make sure sensitive data is properly secured!"
+  exit 1
+fi
 
 echo "✅ Pre-commit checks passed!"
