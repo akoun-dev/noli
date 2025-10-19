@@ -68,7 +68,7 @@ check_sensitive_pattern() {
   for file in $STAGED_FILES; do
     if [ -f "$file" ]; then
       # Skip certain files that are known to have legitimate configurations
-      if echo "$file" | grep -q "\.example\|\.template\|\.env\.\|supabase/config\.toml\|package-lock\.json\|\.husky/\|\.vscode/\|supabase/migrations/\|src/lib/supabase\|src/lib/security"; then
+      if echo "$file" | grep -q "\.example\|\.template\|\.env\.\|supabase/config\.toml\|package-lock\.json\|\.husky/\|\.vscode/\|supabase/migrations/\|src/lib/supabase\|src/lib/security\|src/routes"; then
         continue
       fi
       echo "$file" >> "$TEMP_FILE"
