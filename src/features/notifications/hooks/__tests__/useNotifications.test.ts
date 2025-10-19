@@ -2,18 +2,28 @@ import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { useNotifications, NotificationData } from '../useNotifications';
 
-// Mock Notification API
+// Create a complete mock for Notification
 const mockNotification = {
   close: vi.fn(),
   onclick: null as (() => void) | null,
 };
 
+// Create a mock Notification constructor
+const MockNotificationConstructor = vi.fn().mockImplementation((title, options) => ({
+  ...mockNotification,
+  title,
+  ...options,
+}));
+
+// Create a mock object for static properties
+const MockNotification = {
+  ...MockNotificationConstructor,
+  requestPermission: vi.fn(),
+  permission: 'default' as 'default' | 'granted' | 'denied',
+};
+
 Object.defineProperty(window, 'Notification', {
-  value: vi.fn().mockImplementation((title, options) => ({
-    ...mockNotification,
-    title,
-    ...options,
-  })),
+  value: MockNotification,
   writable: true,
 });
 
@@ -73,13 +83,11 @@ describe('useNotifications', () => {
     localStorageMock.clear();
 
     // Reset Notification permission
-    Object.defineProperty(Notification, 'permission', {
-      value: 'default',
-      writable: true,
-    });
+    MockNotification.permission = 'default';
 
     // Reset window.Notification mock
-    vi.mocked(window.Notification).mockClear();
+    MockNotificationConstructor.mockClear();
+    MockNotification.requestPermission.mockClear();
   });
 
   afterEach(() => {
@@ -110,7 +118,10 @@ describe('useNotifications', () => {
     it('should detect when notifications are not supported', () => {
       // Arrange
       const originalNotification = window.Notification;
-      delete (window as Window & { Notification?: typeof Notification }).Notification;
+      Object.defineProperty(window, 'Notification', {
+        value: undefined,
+        writable: true,
+      });
 
       // Act
       const { result } = renderHook(() => useNotifications());
@@ -171,10 +182,7 @@ describe('useNotifications', () => {
 
     it('should set initial permission from Notification API', () => {
       // Arrange
-      Object.defineProperty(Notification, 'permission', {
-        value: 'granted',
-        writable: true,
-      });
+      MockNotification.permission = 'granted';
 
       // Act
       const { result } = renderHook(() => useNotifications());
@@ -187,7 +195,7 @@ describe('useNotifications', () => {
   describe('Permission management', () => {
     it('should request notification permission successfully', async () => {
       // Arrange
-      vi.mocked(Notification.requestPermission).mockResolvedValue('granted');
+      MockNotification.requestPermission.mockResolvedValue('granted');
 
       const { result } = renderHook(() => useNotifications());
 
@@ -199,12 +207,12 @@ describe('useNotifications', () => {
       // Assert
       expect(granted).toBe(true);
       expect(result.current.permission).toBe('granted');
-      expect(Notification.requestPermission).toHaveBeenCalled();
+      expect(MockNotification.requestPermission).toHaveBeenCalled();
     });
 
     it('should handle denied permission', async () => {
       // Arrange
-      vi.mocked(Notification.requestPermission).mockResolvedValue('denied');
+      MockNotification.requestPermission.mockResolvedValue('denied');
 
       const { result } = renderHook(() => useNotifications());
 
@@ -221,7 +229,10 @@ describe('useNotifications', () => {
     it('should return false when notifications are not supported', async () => {
       // Arrange
       const originalNotification = window.Notification;
-      delete (window as Window & { Notification?: typeof Notification }).Notification;
+      Object.defineProperty(window, 'Notification', {
+        value: undefined,
+        writable: true,
+      });
 
       const { result } = renderHook(() => useNotifications());
 
@@ -239,7 +250,7 @@ describe('useNotifications', () => {
 
     it('should handle permission request error', async () => {
       // Arrange
-      vi.mocked(Notification.requestPermission).mockRejectedValue(new Error('Permission denied'));
+      MockNotification.requestPermission.mockRejectedValue(new Error('Permission denied'));
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       const { result } = renderHook(() => useNotifications());
@@ -312,10 +323,7 @@ describe('useNotifications', () => {
 
     it('should create browser notification when permission granted and push enabled', () => {
       // Arrange
-      Object.defineProperty(Notification, 'permission', {
-        value: 'granted',
-        writable: true,
-      });
+      MockNotification.permission = 'granted';
 
       const { result } = renderHook(() => useNotifications());
 
@@ -346,7 +354,7 @@ describe('useNotifications', () => {
       });
 
       // Test notification click handler
-      const notification = vi.mocked(window.Notification).mock.results[0].value;
+      const notification = MockNotificationConstructor.mock.results[0].value;
       notification.onclick();
 
       expect(window.focus).toHaveBeenCalled();
@@ -355,10 +363,7 @@ describe('useNotifications', () => {
 
     it('should not create browser notification when permission denied', () => {
       // Arrange
-      Object.defineProperty(Notification, 'permission', {
-        value: 'denied',
-        writable: true,
-      });
+      MockNotification.permission = 'denied';
 
       const { result } = renderHook(() => useNotifications());
 
@@ -382,10 +387,7 @@ describe('useNotifications', () => {
 
     it('should not create browser notification when push disabled', () => {
       // Arrange
-      Object.defineProperty(Notification, 'permission', {
-        value: 'granted',
-        writable: true,
-      });
+      MockNotification.permission = 'granted';
 
       const { result } = renderHook(() => useNotifications());
 

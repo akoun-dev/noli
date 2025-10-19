@@ -405,8 +405,12 @@ describe('ComparisonHistoryService', () => {
       expect(result).toBeInstanceOf(Blob);
       expect(result.type).toBe('text/csv');
 
-      // Verify CSV content
-      const text = await result.text();
+      // Verify CSV content by converting blob to text
+      const text = await new Promise(resolve => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.readAsText(result);
+      });
       expect(text).toContain('Date');
       expect(text).toContain('Titre');
       expect(text).toContain('Véhicule');
@@ -420,7 +424,12 @@ describe('ComparisonHistoryService', () => {
       // Assert
       expect(result).toBeInstanceOf(Blob);
 
-      const text = await result.text();
+      // Verify CSV content by converting blob to text
+      const text = await new Promise(resolve => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.readAsText(result);
+      });
       expect(text).toContain('Toyota');
       expect(text).toContain('Honda');
     });

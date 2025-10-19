@@ -40,10 +40,15 @@ const mockSession = {
       role: 'USER',
       avatar_url: 'https://example.com/avatar.jpg',
     },
+    app_metadata: {},
+    aud: 'authenticated',
     phone: '+2250102030405',
     created_at: '2024-01-01T00:00:00Z',
   },
   access_token: 'mock-token',
+  refresh_token: 'mock-refresh-token',
+  expires_in: 3600,
+  token_type: 'bearer' as const,
 };
 
 // Test wrapper component
@@ -64,6 +69,8 @@ describe('AuthContext', () => {
     vi.mocked(supabase.auth.onAuthStateChange).mockReturnValue({
       data: {
         subscription: {
+          id: 'mock-subscription-id',
+          callback: vi.fn(),
           unsubscribe: vi.fn(),
         },
       },
@@ -127,7 +134,10 @@ describe('AuthContext', () => {
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
         expect(result.current.isAuthenticated).toBe(true);
-        expect(result.current.user).toEqual(mockUser);
+        // Compare user objects without updatedAt field since it's dynamic
+        const { updatedAt: _, ...expectedUser } = mockUser;
+        const { updatedAt: __, ...actualUser } = result.current.user!;
+        expect(actualUser).toEqual(expectedUser);
       });
 
       expect(logger.auth).toHaveBeenCalledWith('Initializing auth...');
@@ -230,7 +240,10 @@ describe('AuthContext', () => {
 
       // Assert
       expect(result.current.isAuthenticated).toBe(true);
-      expect(result.current.user).toEqual(mockUser);
+      // Compare user objects without updatedAt field since it's dynamic
+      const { updatedAt: _, ...expectedUser } = mockUser;
+      const { updatedAt: __, ...actualUser } = result.current.user!;
+      expect(actualUser).toEqual(expectedUser);
     });
 
     it('should handle SIGNED_OUT event', async () => {
