@@ -123,7 +123,7 @@ export function AuditLogsPage() {
       setLogs(result.logs);
       setTotal(result.total);
     } catch (error) {
-      console.error('Error loading audit logs:', error);
+      logger.error('Error loading audit logs:', error);
     } finally {
       setLoading(false);
     }
@@ -134,7 +134,7 @@ export function AuditLogsPage() {
       const stats = await auditService.getAuditStatistics();
       setStatistics(stats);
     } catch (error) {
-      console.error('Error loading statistics:', error);
+      logger.error('Error loading statistics:', error);
     }
   };
 
@@ -164,7 +164,7 @@ export function AuditLogsPage() {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      console.error('Error exporting logs:', error);
+      logger.error('Error exporting logs:', error);
     } finally {
       setExporting(false);
     }

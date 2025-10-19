@@ -44,7 +44,7 @@ export const QuotePDFGenerator: React.FC<QuotePDFGeneratorProps> = ({
       });
 
     } catch (error) {
-      console.error('Erreur lors de la génération du PDF:', error);
+      logger.error('Erreur lors de la génération du PDF:', error);
       showNotification({
         id: `pdf-error-${Date.now()}`,
         title: 'Erreur de génération PDF',
@@ -117,7 +117,7 @@ export const QuotePDFGenerator: React.FC<QuotePDFGeneratorProps> = ({
       }, 5000);
 
     } catch (error) {
-      console.error('Erreur lors du partage du PDF:', error);
+      logger.error('Erreur lors du partage du PDF:', error);
       showNotification({
         id: `share-error-${Date.now()}`,
         title: 'Erreur de partage',

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { logger } from '@/lib/logger';
 
 export interface NotificationData {
   id: string;
@@ -67,7 +68,7 @@ export const useNotifications = () => {
       setPermission(result);
       return result === 'granted';
     } catch (error) {
-      console.error('Erreur lors de la demande de permission:', error);
+      logger.error('Erreur lors de la demande de permission:', error);
       return false;
     }
   };
@@ -123,7 +124,7 @@ export const useNotifications = () => {
 
     try {
       // Simuler appel API WhatsApp
-      console.log('Envoi WhatsApp:', message);
+      logger.info('Envoi WhatsApp:', message);
 
       // Stocker pour debug
       const whatsappLogs = JSON.parse(localStorage.getItem('noli:whatsappLogs') || '[]');
@@ -134,13 +135,13 @@ export const useNotifications = () => {
       });
       localStorage.setItem('noli:whatsappLogs', JSON.stringify(whatsappLogs.slice(-10)));
     } catch (error) {
-      console.error('Erreur envoi WhatsApp:', error);
+      logger.error('Erreur envoi WhatsApp:', error);
     }
   };
 
   const sendEmailNotification = async (data: NotificationData) => {
     // Simuler l'envoi email
-    console.log('Envoi email:', {
+    logger.info('Envoi email:', {
       subject: data.title,
       body: data.message,
       type: data.type,

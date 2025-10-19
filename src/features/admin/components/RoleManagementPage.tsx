@@ -81,7 +81,7 @@ export function RoleManagementPage() {
       setPermissionCategories(categoriesData);
       setStatistics(stats);
     } catch (error) {
-      console.error('Error loading data:', error);
+      logger.error('Error loading data:', error);
     } finally {
       setLoading(false);
     }
@@ -107,7 +107,7 @@ export function RoleManagementPage() {
       setNewRole({ name: '', description: '', permissionIds: [] });
       loadData();
     } catch (error) {
-      console.error('Error creating role:', error);
+      logger.error('Error creating role:', error);
     }
   };
 
@@ -130,7 +130,7 @@ export function RoleManagementPage() {
       setEditRole({ name: '', description: '', permissionIds: [] });
       loadData();
     } catch (error) {
-      console.error('Error updating role:', error);
+      logger.error('Error updating role:', error);
     }
   };
 
@@ -143,7 +143,7 @@ export function RoleManagementPage() {
       await roleService.deleteRole(roleId);
       loadData();
     } catch (error) {
-      console.error('Error deleting role:', error);
+      logger.error('Error deleting role:', error);
     }
   };
 

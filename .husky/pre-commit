@@ -1,0 +1,67 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "🔍 Running pre-commit hooks..."
+
+# Run lint-staged
+npx lint-staged
+
+# Check for console.log statements (excluding test files)
+echo "🚫 Checking for console.log statements..."
+if git diff --cached --name-only | xargs grep -l "console\.log" | grep -v "\.test\." | grep -v "\.spec\."; then
+  echo "❌ Found console.log statements in staged files. Please remove them before committing."
+  echo "💡 Use logger instead of console.log for debugging."
+  exit 1
+fi
+
+# Check for TODO comments without ticket numbers
+echo "📝 Checking TODO comments..."
+if git diff --cached --name-only | xargs grep -n "TODO" | grep -v "TODO-[0-9]\+" | grep -v "TODO(#" ; then
+  echo "⚠️  Found TODO comments without ticket numbers."
+  echo "💡 Please use TODO-XXXX or TODO(#XXXX) format where XXXX is the ticket number."
+fi
+
+# Check for large files (>1MB)
+echo "📏 Checking for large files..."
+large_files=$(git diff --cached --name-only | xargs du -k | awk '$1 > 1024 {print $2}')
+if [ ! -z "$large_files" ]; then
+  echo "⚠️  Large files detected:"
+  echo "$large_files"
+  echo "💡 Consider using Git LFS for large binary files."
+fi
+
+# Run quick type check
+echo "🔍 Running TypeScript type check..."
+npx tsc --noEmit --skipLibCheck
+
+# Check if package-lock.json is up to date
+echo "📦 Checking package-lock.json..."
+if [ -f "package.json" ] && [ -f "package-lock.json" ]; then
+  npm ci --dry-run > /dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    echo "❌ package-lock.json is out of sync with package.json"
+    echo "💡 Run 'npm install' to update package-lock.json"
+    exit 1
+  fi
+fi
+
+# Check for sensitive data patterns
+echo "🔒 Checking for sensitive data..."
+sensitive_patterns=(
+  "password.*="
+  "secret.*="
+  "token.*="
+  "api_key.*="
+  "private_key.*="
+)
+
+for pattern in "${sensitive_patterns[@]}"; do
+  if git diff --cached --name-only | xargs grep -i "$pattern" | grep -v "\.example" | grep -v "\.template"; then
+    echo "❌ Found potential sensitive data in staged files:"
+    git diff --cached --name-only | xargs grep -i "$pattern" | grep -v "\.example" | grep -v "\.template"
+    echo "💡 Make sure sensitive data is properly secured!"
+    exit 1
+  fi
+done
+
+echo "✅ Pre-commit checks passed!"

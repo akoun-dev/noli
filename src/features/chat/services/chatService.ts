@@ -63,7 +63,7 @@ class ChatService {
   private connect() {
     try {
       // Simulation de connexion WebSocket
-      console.log('Connexion au chat WebSocket...');
+      logger.info('Connexion au chat WebSocket...');
 
       // Simuler une connexion réussie après 1 seconde
       setTimeout(() => {
@@ -120,7 +120,7 @@ class ChatService {
 
     try {
       // Simuler l'envoi du message
-      console.log('Message envoyé:', fullMessage);
+      logger.info('Message envoyé:', fullMessage);
 
       // Simuler une réponse automatique
       setTimeout(() => {
@@ -129,7 +129,7 @@ class ChatService {
 
       return fullMessage;
     } catch (error) {
-      console.error('Erreur lors de l\'envoi du message:', error);
+      logger.error('Erreur lors de l\'envoi du message:', error);
       throw error;
     }
   }
@@ -177,7 +177,7 @@ class ChatService {
       isTyping,
     };
 
-    console.log('Typing indicator:', indicator);
+    logger.info('Typing indicator:', indicator);
     // Simuler l'envoi de l'indicateur
     setTimeout(() => {
       this.callbacks.onTyping?.(indicator);
@@ -239,7 +239,7 @@ class ChatService {
 
   // Marquer les messages comme lus
   markAsRead(roomId: string, messageIds: string[]) {
-    console.log('Messages marqués comme lus:', { roomId, messageIds });
+    logger.info('Messages marqués comme lus:', { roomId, messageIds });
     // Implémentation réelle avec WebSocket
   }
 

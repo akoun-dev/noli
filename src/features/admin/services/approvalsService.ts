@@ -130,7 +130,7 @@ export const fetchPendingApprovals = async (): Promise<PendingApproval[]> => {
     });
 
   } catch (error) {
-    console.error('Error fetching pending approvals:', error);
+    logger.error('Error fetching pending approvals:', error);
     return [];
   }
 };
@@ -145,7 +145,7 @@ export const approveInsurer = async (insurerId: string): Promise<boolean> => {
       .eq('role', 'INSURER');
 
     if (error) {
-      console.error('Error approving insurer:', error);
+      logger.error('Error approving insurer:', error);
       return false;
     }
 
@@ -159,7 +159,7 @@ export const approveInsurer = async (insurerId: string): Promise<boolean> => {
 
     return true;
   } catch (error) {
-    console.error('Error in approveInsurer:', error);
+    logger.error('Error in approveInsurer:', error);
     return false;
   }
 };
@@ -173,7 +173,7 @@ export const approveOffer = async (offerId: string): Promise<boolean> => {
       .eq('id', offerId);
 
     if (error) {
-      console.error('Error approving offer:', error);
+      logger.error('Error approving offer:', error);
       return false;
     }
 
@@ -187,7 +187,7 @@ export const approveOffer = async (offerId: string): Promise<boolean> => {
 
     return true;
   } catch (error) {
-    console.error('Error in approveOffer:', error);
+    logger.error('Error in approveOffer:', error);
     return false;
   }
 };
@@ -218,7 +218,7 @@ export const rejectApproval = async (approval: PendingApproval, reason?: string)
 
       case 'user':
         // Pas de rejet pour les utilisateurs, juste une vérification manuelle
-        console.log(`User ${approval.name} marked as verified`);
+        logger.info(`User ${approval.name} marked as verified`);
         break;
     }
 
@@ -236,7 +236,7 @@ export const rejectApproval = async (approval: PendingApproval, reason?: string)
 
     return true;
   } catch (error) {
-    console.error('Error rejecting approval:', error);
+    logger.error('Error rejecting approval:', error);
     return false;
   }
 };

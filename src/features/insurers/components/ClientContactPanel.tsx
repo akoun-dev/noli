@@ -63,7 +63,7 @@ export const ClientContactPanel: React.FC<ClientContactPanelProps> = ({
       setMessage('');
       setSubject('');
     } catch (error) {
-      console.error('Erreur envoi message:', error);
+      logger.error('Erreur envoi message:', error);
     } finally {
       setIsSending(false);
     }

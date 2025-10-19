@@ -292,7 +292,7 @@ export class PricingService {
         }
       }
     } catch (error) {
-      console.error('Error evaluating condition:', error);
+      logger.error('Error evaluating condition:', error);
     }
     return false;
   }

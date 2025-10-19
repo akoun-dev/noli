@@ -88,7 +88,7 @@ export const AdminOffersPage: React.FC = () => {
       setOfferStats(statsData);
       setApiCategories(categoriesData);
     } catch (err) {
-      console.error('Error loading offers data:', err);
+      logger.error('Error loading offers data:', err);
       setError('Erreur lors du chargement des données. Veuillez réessayer.');
       toast.error('Erreur lors du chargement des données');
     } finally {
@@ -103,7 +103,7 @@ export const AdminOffersPage: React.FC = () => {
       const analyticsData = await offerService.getAllOffersAnalytics();
       setOfferAnalytics(analyticsData);
     } catch (err) {
-      console.error('Error loading analytics:', err);
+      logger.error('Error loading analytics:', err);
       toast.error('Erreur lors du chargement des analytics');
     } finally {
       setAnalyticsLoading(false);
@@ -192,11 +192,11 @@ export const AdminOffersPage: React.FC = () => {
           toast.success('Offre dupliquée avec succès');
           break;
         default:
-          console.log(`Unknown action: ${action} for offer ${offerId}`);
+          logger.info(`Unknown action: ${action} for offer ${offerId}`);
       }
       loadData(); // Refresh data
     } catch (err) {
-      console.error(`Error ${action} offer:`, err);
+      logger.error(`Error ${action} offer:`, err);
       toast.error(`Erreur lors de l'action: ${action}`);
     }
   };
@@ -208,7 +208,7 @@ export const AdminOffersPage: React.FC = () => {
       setShowDuplicateDialog(false);
       loadData(); // Refresh data
     } catch (err) {
-      console.error('Error duplicating offer:', err);
+      logger.error('Error duplicating offer:', err);
       toast.error('Erreur lors de la duplication de l\'offre');
     }
   };
@@ -224,7 +224,7 @@ export const AdminOffersPage: React.FC = () => {
       URL.revokeObjectURL(url);
       toast.success('Offres exportées avec succès');
     } catch (err) {
-      console.error('Error exporting offers:', err);
+      logger.error('Error exporting offers:', err);
       toast.error('Erreur lors de l\'exportation des offres');
     }
   };
@@ -243,7 +243,7 @@ export const AdminOffersPage: React.FC = () => {
       }
       loadData(); // Refresh data
     } catch (err) {
-      console.error('Error importing offers:', err);
+      logger.error('Error importing offers:', err);
       toast.error('Erreur lors de l\'importation des offres');
     }
   };
@@ -934,7 +934,7 @@ const OfferForm: React.FC<{ offer?: any; insurers: any[]; categories: any[] }> =
       setSelectedOffer(null);
       // The parent component will handle data refresh
     } catch (err) {
-      console.error('Error saving offer:', err);
+      logger.error('Error saving offer:', err);
       toast.error(offer ? 'Erreur lors de la mise à jour de l\'offre' : 'Erreur lors de la création de l\'offre');
     } finally {
       setIsSubmitting(false);

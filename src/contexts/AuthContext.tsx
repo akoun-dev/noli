@@ -3,6 +3,7 @@ import { User } from '@/types';
 import { authService } from '@/data/api/authService';
 import { supabase } from '@/lib/supabase';
 import { logger } from '@/lib/logger';
+import { secureAuthService } from '@/lib/secure-auth';
 
 export interface AuthState {
   user: User | null;
@@ -34,14 +35,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   });
 
   useEffect(() => {
-    // Initialiser l'authentification avec Supabase
+    // Initialiser l'authentification sécurisée avec Supabase
     const initializeAuth = async () => {
       try {
-        logger.auth('Initializing auth...');
+        logger.auth('Initializing secure auth...');
 
-        // Vérifier d'abord le localStorage (clé par défaut de Supabase)
-        const storedToken = localStorage.getItem('supabase.auth.token');
-        logger.debug('Stored token in localStorage:', storedToken ? 'Present' : 'Missing');
+        // Initialiser l'authentification sécurisée
+        secureAuthService.initializeSecureAuth();
+
+        // Nettoyer les anciens tokens localStorage et migrer vers les cookies
+        await secureAuthService.migrateToSecureStorage();
 
         // Vérifier la session actuelle
         const { data: { session }, error } = await supabase.auth.getSession();

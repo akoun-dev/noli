@@ -88,6 +88,28 @@ All colors MUST be HSL.
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Améliorations d'accessibilité globales */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Focus visible pour la navigation au clavier */
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2;
+  }
+
+  /* Masquer le outline par défaut mais le garder pour l'accessibilité */
+  :focus:not(:focus-visible) {
+    @apply outline-none;
+  }
+
+  /* S'assurer que le contenu est accessible */
+  [role="button"]:focus,
+  [role="link"]:focus,
+  [role="menuitem"]:focus {
+    @apply outline-none ring-2 ring-ring ring-offset-2;
+  }
 }
 
 @layer utilities {
@@ -527,14 +549,82 @@ All colors MUST be HSL.
   .touch-friendly {
     @apply min-h-[44px] min-w-[44px];
   }
-  
+
   .touch-target {
     @apply p-2;
   }
-  
+
   /* Augmenter la taille des cibles tactiles */
   button, a, input, select, textarea {
     @apply min-h-[44px];
+  }
+}
+
+/* Améliorations pour la navigation au clavier et le focus visible */
+.keyboard-navigation {
+  /* S'assurer que tous les éléments interactifs sont focusables */
+  button, a, input, textarea, select, [tabindex]:not([tabindex="-1"]) {
+    @apply focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background;
+  }
+
+  /* Améliorer le focus pour les éléments interactifs */
+  .focusable {
+    @apply focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2;
+  }
+
+  /* Focus visible uniquement pour la navigation au clavier */
+  .focus-visible-only {
+    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
+  }
+
+  /* Styles pour les liens */
+  a {
+    @apply focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2;
+  }
+
+  /* Styles pour les boutons */
+  button:focus-visible {
+    @apply ring-2 ring-ring ring-offset-2;
+  }
+
+  /* Styles pour les inputs */
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    @apply ring-2 ring-ring ring-offset-2 border-ring;
+  }
+
+  /* Navigation dans les tableaux */
+  table {
+    @apply focus:outline-none;
+  }
+
+  td:focus,
+  th:focus {
+    @apply outline-none ring-2 ring-ring ring-offset-1;
+  }
+
+  /* Navigation dans les listes */
+  li:focus {
+    @apply outline-none ring-2 ring-ring ring-offset-1;
+  }
+}
+
+/* Gestion du focus trap pour les modales et dialogues */
+.focus-trap {
+  /* Empêcher le focus de sortir du conteneur */
+  @apply focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2;
+}
+
+/* Styles pour les éléments désactivés */
+.disabled-focus {
+  @apply focus:outline-none focus:ring-0 cursor-not-allowed opacity-50;
+}
+
+/* Animation de focus douce */
+@media (prefers-reduced-motion: no-preference) {
+  .keyboard-navigation * {
+    @apply transition-all duration-200 ease-in-out;
   }
 }
 

@@ -266,7 +266,7 @@ export const CampaignManager: React.FC = () => {
           : c
       ));
     } catch (error) {
-      console.error('Erreur lancement campagne:', error);
+      logger.error('Erreur lancement campagne:', error);
     }
   };
 

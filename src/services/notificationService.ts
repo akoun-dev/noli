@@ -266,7 +266,7 @@ NOLI Assurance
     await new Promise(resolve => setTimeout(resolve, 1000));
 
     // Mock email sending - In production, integrate with real email service
-    console.log('📧 Email sent:', {
+    logger.info('📧 Email sent:', {
       to: template.to,
       subject: template.subject,
       preview: template.html.substring(0, 100) + '...'
@@ -287,7 +287,7 @@ NOLI Assurance
     await new Promise(resolve => setTimeout(resolve, 1500));
 
     // Mock WhatsApp sending - In production, integrate with WhatsApp Business API
-    console.log('💬 WhatsApp message sent:', {
+    logger.info('💬 WhatsApp message sent:', {
       to: message.to,
       message: message.message.substring(0, 100) + '...',
       mediaUrl: message.mediaUrl
@@ -308,7 +308,7 @@ NOLI Assurance
     await new Promise(resolve => setTimeout(resolve, 800));
 
     // Mock SMS sending - In production, integrate with SMS gateway
-    console.log('📱 SMS sent:', {
+    logger.info('📱 SMS sent:', {
       to: message.to,
       message: message.message
     });
@@ -365,9 +365,9 @@ NOLI Assurance
 
     try {
       await Promise.all(promises);
-      console.log(`Notifications sent via ${channels.join(', ')} to ${recipient.email || recipient.phone}`);
+      logger.info(`Notifications sent via ${channels.join(', ')} to ${recipient.email || recipient.phone}`);
     } catch (error) {
-      console.error('Error sending notifications:', error);
+      logger.error('Error sending notifications:', error);
       throw new Error('Erreur lors de l\'envoi des notifications');
     }
   }
@@ -391,7 +391,7 @@ NOLI Assurance
     const success = results.filter(result => result.status === 'fulfilled').length;
     const failed = results.filter(result => result.status === 'rejected').length;
 
-    console.log(`📊 Bulk notification results: ${success} sent, ${failed} failed`);
+    logger.info(`📊 Bulk notification results: ${success} sent, ${failed} failed`);
     return { success, failed };
   }
 }

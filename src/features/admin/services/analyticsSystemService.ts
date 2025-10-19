@@ -120,13 +120,13 @@ export const fetchUserStats = async (role?: string): Promise<UserStats[]> => {
     const { data, error } = await query;
 
     if (error) {
-      console.error('Error fetching user stats:', error);
+      logger.error('Error fetching user stats:', error);
       throw error;
     }
 
     return data || [];
   } catch (error) {
-    console.error('Error in fetchUserStats:', error);
+    logger.error('Error in fetchUserStats:', error);
     throw error;
   }
 };
@@ -138,13 +138,13 @@ export const fetchQuoteStats = async (): Promise<QuoteStats[]> => {
       .select('*');
 
     if (error) {
-      console.error('Error fetching quote stats:', error);
+      logger.error('Error fetching quote stats:', error);
       throw error;
     }
 
     return data || [];
   } catch (error) {
-    console.error('Error in fetchQuoteStats:', error);
+    logger.error('Error in fetchQuoteStats:', error);
     throw error;
   }
 };
@@ -156,13 +156,13 @@ export const fetchPolicyStats = async (): Promise<PolicyStats[]> => {
       .select('*');
 
     if (error) {
-      console.error('Error fetching policy stats:', error);
+      logger.error('Error fetching policy stats:', error);
       throw error;
     }
 
     return data || [];
   } catch (error) {
-    console.error('Error in fetchPolicyStats:', error);
+    logger.error('Error in fetchPolicyStats:', error);
     throw error;
   }
 };
@@ -174,13 +174,13 @@ export const fetchPaymentStats = async (): Promise<PaymentStats[]> => {
       .select('*');
 
     if (error) {
-      console.error('Error fetching payment stats:', error);
+      logger.error('Error fetching payment stats:', error);
       throw error;
     }
 
     return data || [];
   } catch (error) {
-    console.error('Error in fetchPaymentStats:', error);
+    logger.error('Error in fetchPaymentStats:', error);
     throw error;
   }
 };
@@ -193,13 +193,13 @@ export const fetchInsurerPerformance = async (): Promise<InsurerPerformance[]> =
       .order('active_premium_revenue', { ascending: false });
 
     if (error) {
-      console.error('Error fetching insurer performance:', error);
+      logger.error('Error fetching insurer performance:', error);
       throw error;
     }
 
     return data || [];
   } catch (error) {
-    console.error('Error in fetchInsurerPerformance:', error);
+    logger.error('Error in fetchInsurerPerformance:', error);
     throw error;
   }
 };
@@ -213,13 +213,13 @@ export const fetchDailyActivity = async (days = 30): Promise<DailyActivity[]> =>
       .limit(days);
 
     if (error) {
-      console.error('Error fetching daily activity:', error);
+      logger.error('Error fetching daily activity:', error);
       throw error;
     }
 
     return data || [];
   } catch (error) {
-    console.error('Error in fetchDailyActivity:', error);
+    logger.error('Error in fetchDailyActivity:', error);
     throw error;
   }
 };
@@ -232,7 +232,7 @@ export const fetchConversionFunnel = async (): Promise<ConversionFunnel> => {
       .single();
 
     if (error) {
-      console.error('Error fetching conversion funnel:', error);
+      logger.error('Error fetching conversion funnel:', error);
       throw error;
     }
 
@@ -245,7 +245,7 @@ export const fetchConversionFunnel = async (): Promise<ConversionFunnel> => {
       policiesIssued: 0,
     };
   } catch (error) {
-    console.error('Error in fetchConversionFunnel:', error);
+    logger.error('Error in fetchConversionFunnel:', error);
     throw error;
   }
 };
@@ -258,13 +258,13 @@ export const fetchCategoryTrends = async (): Promise<CategoryTrend[]> => {
       .order('total_quotes', { ascending: false });
 
     if (error) {
-      console.error('Error fetching category trends:', error);
+      logger.error('Error fetching category trends:', error);
       throw error;
     }
 
     return data || [];
   } catch (error) {
-    console.error('Error in fetchCategoryTrends:', error);
+    logger.error('Error in fetchCategoryTrends:', error);
     throw error;
   }
 };
@@ -321,7 +321,7 @@ export const fetchPlatformOverview = async (): Promise<PlatformOverview> => {
       monthlyGrowth: Math.round(avgGrowthRate * 100) / 100,
     };
   } catch (error) {
-    console.error('Error in fetchPlatformOverview:', error);
+    logger.error('Error in fetchPlatformOverview:', error);
     throw error;
   }
 };

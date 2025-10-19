@@ -88,7 +88,7 @@ export const AdminSupervisionPage: React.FC = () => {
         setKpis(kpisResponse.data || []);
       }
     } catch (error) {
-      console.error('Erreur lors du chargement des données:', error);
+      logger.error('Erreur lors du chargement des données:', error);
       toast.error('Erreur lors du chargement des données');
     } finally {
       setLoading(false);
@@ -145,7 +145,7 @@ export const AdminSupervisionPage: React.FC = () => {
         toast.success('Export réussi');
       }
     } catch (error) {
-      console.error('Erreur lors de l\'export:', error);
+      logger.error('Erreur lors de l\'export:', error);
       toast.error('Erreur lors de l\'export');
     } finally {
       setExportLoading(false);
@@ -160,7 +160,7 @@ export const AdminSupervisionPage: React.FC = () => {
         loadData();
       }
     } catch (error) {
-      console.error('Erreur lors de la mise à jour du statut:', error);
+      logger.error('Erreur lors de la mise à jour du statut:', error);
       toast.error('Erreur lors de la mise à jour du statut');
     }
   };
@@ -173,7 +173,7 @@ export const AdminSupervisionPage: React.FC = () => {
         loadData();
       }
     } catch (error) {
-      console.error('Erreur lors de l\'approbation:', error);
+      logger.error('Erreur lors de l\'approbation:', error);
       toast.error('Erreur lors de l\'approbation');
     }
   };
@@ -186,7 +186,7 @@ export const AdminSupervisionPage: React.FC = () => {
         loadData();
       }
     } catch (error) {
-      console.error('Erreur lors de la mise à jour du statut:', error);
+      logger.error('Erreur lors de la mise à jour du statut:', error);
       toast.error('Erreur lors de la mise à jour du statut');
     }
   };

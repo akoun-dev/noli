@@ -37,7 +37,7 @@ const AdminInsurersPage = () => {
       const data = await insurerService.getInsurers();
       setInsurers(data);
     } catch (err) {
-      console.error('Error loading insurers:', err);
+      logger.error('Error loading insurers:', err);
       setError('Erreur lors du chargement des assureurs. Veuillez réessayer.');
       toast.error('Erreur lors du chargement des assureurs');
     } finally {
@@ -77,7 +77,7 @@ const AdminInsurersPage = () => {
       toast.success('Statut mis à jour avec succès');
       loadInsurers(); // Refresh data
     } catch (err) {
-      console.error('Error updating insurer status:', err);
+      logger.error('Error updating insurer status:', err);
       toast.error('Erreur lors de la mise à jour du statut');
     }
   };
@@ -92,7 +92,7 @@ const AdminInsurersPage = () => {
       toast.success('Assureur supprimé avec succès');
       loadInsurers(); // Refresh data
     } catch (err) {
-      console.error('Error deleting insurer:', err);
+      logger.error('Error deleting insurer:', err);
       toast.error('Erreur lors de la suppression de l\'assureur');
     }
   };
@@ -103,7 +103,7 @@ const AdminInsurersPage = () => {
       toast.success('Assureur approuvé avec succès');
       loadInsurers(); // Refresh data
     } catch (err) {
-      console.error('Error approving insurer:', err);
+      logger.error('Error approving insurer:', err);
       toast.error('Erreur lors de l\'approbation de l\'assureur');
     }
   };
@@ -138,7 +138,7 @@ const AdminInsurersPage = () => {
         setEditingInsurer(null);
         loadInsurers(); // Refresh data
       } catch (err) {
-        console.error('Error saving insurer:', err);
+        logger.error('Error saving insurer:', err);
         toast.error(insurer ? 'Erreur lors de la mise à jour de l\'assureur' : 'Erreur lors de la création de l\'assureur');
       } finally {
         setIsSubmitting(false);

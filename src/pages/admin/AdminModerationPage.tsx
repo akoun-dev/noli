@@ -72,7 +72,7 @@ export const AdminModerationPage: React.FC = () => {
       setReports(reportsData);
       setModerationStats(statsData);
     } catch (err) {
-      console.error('Error loading moderation data:', err);
+      logger.error('Error loading moderation data:', err);
       setError('Erreur lors du chargement des données. Veuillez réessayer.');
       toast.error('Erreur lors du chargement des données');
     } finally {
@@ -86,7 +86,7 @@ export const AdminModerationPage: React.FC = () => {
       const logsData = await moderationService.getAuditLogs();
       setAuditLogs(logsData);
     } catch (err) {
-      console.error('Error loading audit logs:', err);
+      logger.error('Error loading audit logs:', err);
       toast.error('Erreur lors du chargement des journaux d\'audit');
     }
   };
@@ -117,11 +117,11 @@ export const AdminModerationPage: React.FC = () => {
           toast.success('Rapport rejeté avec succès');
           break;
         default:
-          console.log(`Unknown action: ${action} for report ${reportId}`);
+          logger.info(`Unknown action: ${action} for report ${reportId}`);
       }
       loadData(); // Refresh data
     } catch (err) {
-      console.error(`Error ${action} report:`, err);
+      logger.error(`Error ${action} report:`, err);
       toast.error(`Erreur lors de l'action: ${action}`);
     }
   };
@@ -142,7 +142,7 @@ export const AdminModerationPage: React.FC = () => {
           toast.success('Validation du contenu terminée');
           break;
         default:
-          console.log(`Unknown action: ${action} for content ${contentId}`);
+          logger.info(`Unknown action: ${action} for content ${contentId}`);
       }
       // Reload content items after action
       if (action === 'approve' || action === 'reject') {
@@ -150,7 +150,7 @@ export const AdminModerationPage: React.FC = () => {
         loadData();
       }
     } catch (err) {
-      console.error(`Error ${action} content:`, err);
+      logger.error(`Error ${action} content:`, err);
       toast.error(`Erreur lors de l'action: ${action}`);
     }
   };
@@ -876,7 +876,7 @@ const ReviewDetails: React.FC<{ review: Review; onClose: () => void }> = ({ revi
       onClose();
       // Parent component will handle data refresh
     } catch (err) {
-      console.error('Error approving review:', err);
+      logger.error('Error approving review:', err);
       toast.error('Erreur lors de l\'approbation de l\'avis');
     }
   };
@@ -888,7 +888,7 @@ const ReviewDetails: React.FC<{ review: Review; onClose: () => void }> = ({ revi
       onClose();
       // Parent component will handle data refresh
     } catch (err) {
-      console.error('Error rejecting review:', err);
+      logger.error('Error rejecting review:', err);
       toast.error('Erreur lors du rejet de l\'avis');
     }
   };

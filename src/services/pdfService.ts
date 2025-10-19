@@ -210,7 +210,7 @@ export class PDFService {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
     }).catch(error => {
-      console.error('Erreur lors de la génération du PDF:', error);
+      logger.error('Erreur lors de la génération du PDF:', error);
       throw new Error('Impossible de générer le PDF');
     });
   }

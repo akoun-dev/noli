@@ -91,7 +91,7 @@ export const AdminDataManagementPage: React.FC = () => {
         setQualityMetrics(metricsResponse.data);
       }
     } catch (error) {
-      console.error('Erreur lors du chargement des données:', error);
+      logger.error('Erreur lors du chargement des données:', error);
       toast.error('Erreur lors du chargement des données');
     } finally {
       setLoading(false);
@@ -174,7 +174,7 @@ export const AdminDataManagementPage: React.FC = () => {
         toast.error('Erreur lors du démarrage de l\'import');
       }
     } catch (error) {
-      console.error('Erreur lors de l\'import:', error);
+      logger.error('Erreur lors de l\'import:', error);
       toast.error('Erreur lors de l\'import');
     } finally {
       setImportLoading(false);
@@ -198,7 +198,7 @@ export const AdminDataManagementPage: React.FC = () => {
         toast.error('Erreur lors du démarrage de la validation');
       }
     } catch (error) {
-      console.error('Erreur lors de la validation:', error);
+      logger.error('Erreur lors de la validation:', error);
       toast.error('Erreur lors de la validation');
     } finally {
       setValidationLoading(false);
@@ -229,7 +229,7 @@ export const AdminDataManagementPage: React.FC = () => {
         toast.error('Erreur lors de l\'export');
       }
     } catch (error) {
-      console.error('Erreur lors de l\'export:', error);
+      logger.error('Erreur lors de l\'export:', error);
       toast.error('Erreur lors de l\'export');
     } finally {
       setExportLoading(false);

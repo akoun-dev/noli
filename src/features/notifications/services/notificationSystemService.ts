@@ -111,13 +111,13 @@ export const fetchNotifications = async (userId?: string, limit = 50): Promise<N
       .limit(limit);
 
     if (error) {
-      console.error('Error fetching notifications:', error);
+      logger.error('Error fetching notifications:', error);
       throw error;
     }
 
     return data || [];
   } catch (error) {
-    console.error('Error in fetchNotifications:', error);
+    logger.error('Error in fetchNotifications:', error);
     throw error;
   }
 };
@@ -140,13 +140,13 @@ export const fetchUnreadNotifications = async (userId?: string): Promise<Notific
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Error fetching unread notifications:', error);
+      logger.error('Error fetching unread notifications:', error);
       throw error;
     }
 
     return data || [];
   } catch (error) {
-    console.error('Error in fetchUnreadNotifications:', error);
+    logger.error('Error in fetchUnreadNotifications:', error);
     throw error;
   }
 };
@@ -167,13 +167,13 @@ export const fetchNotificationPreferences = async (userId?: string): Promise<Not
       .single();
 
     if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
-      console.error('Error fetching notification preferences:', error);
+      logger.error('Error fetching notification preferences:', error);
       throw error;
     }
 
     return data;
   } catch (error) {
-    console.error('Error in fetchNotificationPreferences:', error);
+    logger.error('Error in fetchNotificationPreferences:', error);
     throw error;
   }
 };
@@ -201,13 +201,13 @@ export const updateNotificationPreferences = async (
       .single();
 
     if (error) {
-      console.error('Error updating notification preferences:', error);
+      logger.error('Error updating notification preferences:', error);
       throw error;
     }
 
     return data;
   } catch (error) {
-    console.error('Error in updateNotificationPreferences:', error);
+    logger.error('Error in updateNotificationPreferences:', error);
     throw error;
   }
 };
@@ -219,13 +219,13 @@ export const markNotificationAsRead = async (notificationId: string): Promise<bo
     });
 
     if (error) {
-      console.error('Error marking notification as read:', error);
+      logger.error('Error marking notification as read:', error);
       throw error;
     }
 
     return data || false;
   } catch (error) {
-    console.error('Error in markNotificationAsRead:', error);
+    logger.error('Error in markNotificationAsRead:', error);
     throw error;
   }
 };
@@ -240,13 +240,13 @@ export const markAllNotificationsAsRead = async (userId?: string): Promise<numbe
     });
 
     if (error) {
-      console.error('Error marking all notifications as read:', error);
+      logger.error('Error marking all notifications as read:', error);
       throw error;
     }
 
     return data || 0;
   } catch (error) {
-    console.error('Error in markAllNotificationsAsRead:', error);
+    logger.error('Error in markAllNotificationsAsRead:', error);
     throw error;
   }
 };
@@ -266,7 +266,7 @@ export const createNotification = async (notification: CreateNotificationRequest
     });
 
     if (error) {
-      console.error('Error creating notification:', error);
+      logger.error('Error creating notification:', error);
       throw error;
     }
 
@@ -276,7 +276,7 @@ export const createNotification = async (notification: CreateNotificationRequest
 
     return data;
   } catch (error) {
-    console.error('Error in createNotification:', error);
+    logger.error('Error in createNotification:', error);
     throw error;
   }
 };
@@ -289,11 +289,11 @@ export const deleteNotification = async (notificationId: string): Promise<void> 
       .eq('id', notificationId);
 
     if (error) {
-      console.error('Error deleting notification:', error);
+      logger.error('Error deleting notification:', error);
       throw error;
     }
   } catch (error) {
-    console.error('Error in deleteNotification:', error);
+    logger.error('Error in deleteNotification:', error);
     throw error;
   }
 };
@@ -307,13 +307,13 @@ export const fetchNotificationTemplates = async (): Promise<NotificationTemplate
       .order('name');
 
     if (error) {
-      console.error('Error fetching notification templates:', error);
+      logger.error('Error fetching notification templates:', error);
       throw error;
     }
 
     return data || [];
   } catch (error) {
-    console.error('Error in fetchNotificationTemplates:', error);
+    logger.error('Error in fetchNotificationTemplates:', error);
     throw error;
   }
 };
@@ -335,13 +335,13 @@ export const fetchNotificationLogs = async (userId?: string, limit = 100): Promi
       .limit(limit);
 
     if (error) {
-      console.error('Error fetching notification logs:', error);
+      logger.error('Error fetching notification logs:', error);
       throw error;
     }
 
     return data || [];
   } catch (error) {
-    console.error('Error in fetchNotificationLogs:', error);
+    logger.error('Error in fetchNotificationLogs:', error);
     throw error;
   }
 };

@@ -28,7 +28,7 @@ async function getCurrentInsurerId(): Promise<string | null> {
     if (error) throw error;
     return (data as any) || null;
   } catch (e) {
-    console.error('getCurrentInsurerId error', e);
+    logger.error('getCurrentInsurerId error', e);
     return null;
   }
 }

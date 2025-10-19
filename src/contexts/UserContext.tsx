@@ -70,7 +70,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
       setProfile(mockProfile);
     } catch (error) {
-      console.error('Error fetching profile:', error);
+      logger.error('Error fetching profile:', error);
     } finally {
       setIsLoading(false);
     }
@@ -85,7 +85,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       const updatedProfile = { ...profile, ...profileData };
       setProfile(updatedProfile);
     } catch (error) {
-      console.error('Error updating profile:', error);
+      logger.error('Error updating profile:', error);
       throw error;
     } finally {
       setIsLoading(false);

@@ -1,0 +1,239 @@
+name: Notifications
+
+on:
+  workflow_run:
+    workflows: ["CI Pipeline", "Deploy Application"]
+    types:
+      - completed
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, closed, merged]
+
+env:
+  SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+  DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+
+jobs:
+  notify-slack:
+    name: Send Slack Notifications
+    runs-on: ubuntu-latest
+    if: env.SLACK_WEBHOOK_URL != ''
+
+    steps:
+      - name: Notify CI Success
+        if: github.event.workflow_run.conclusion == 'success'
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+            --data '{
+              "text": "✅ CI Pipeline Successful!",
+              "attachments": [{
+                "color": "good",
+                "fields": [
+                  {"title": "Repository", "value": "${{ github.repository }}", "short": true},
+                  {"title": "Branch", "value": "${{ github.ref_name }}", "short": true},
+                  {"title": "Commit", "value": "${{ github.sha }}", "short": true},
+                  {"title": "Actor", "value": "${{ github.actor }}", "short": true}
+                ],
+                "actions": [{
+                  "type": "button",
+                  "text": "View Workflow",
+                  "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                }]
+              }]
+            }' \
+            "$SLACK_WEBHOOK_URL"
+
+      - name: Notify CI Failure
+        if: github.event.workflow_run.conclusion == 'failure'
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+            --data '{
+              "text": "❌ CI Pipeline Failed!",
+              "attachments": [{
+                "color": "danger",
+                "fields": [
+                  {"title": "Repository", "value": "${{ github.repository }}", "short": true},
+                  {"title": "Branch", "value": "${{ github.ref_name }}", "short": true},
+                  {"title": "Commit", "value": "${{ github.sha }}", "short": true},
+                  {"title": "Actor", "value": "${{ github.actor }}", "short": true}
+                ],
+                "actions": [{
+                  "type": "button",
+                  "text": "View Failed Workflow",
+                  "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                }, {
+                  "type": "button",
+                  "text": "View Logs",
+                  "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}?logs"
+                }]
+              }]
+            }' \
+            "$SLACK_WEBHOOK_URL"
+
+      - name: Notify Deployment Success
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+            --data '{
+              "text": "🚀 Production Deployment Complete!",
+              "attachments": [{
+                "color": "#36a64f",
+                "fields": [
+                  {"title": "Repository", "value": "${{ github.repository }}", "short": true},
+                  {"title": "Commit", "value": "${{ github.sha }}", "short": true},
+                  {"title": "Deployed by", "value": "${{ github.actor }}", "short": true},
+                  {"title": "Environment", "value": "Production", "short": true}
+                ],
+                "actions": [{
+                  "type": "button",
+                  "text": "View Application",
+                  "url": "https://noli.ci"
+                }, {
+                  "type": "button",
+                  "text": "View Deployment",
+                  "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                }]
+              }]
+            }' \
+            "$SLACK_WEBHOOK_URL"
+
+      - name: Notify PR Opened
+        if: github.event_name == 'pull_request' && github.event.action == 'opened'
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+            --data '{
+              "text": "🔀 Pull Request Opened",
+              "attachments": [{
+                "color": "#3f51b5",
+                "fields": [
+                  {"title": "PR", "value": "#${{ github.event.number }}", "short": true},
+                  {"title": "Title", "value": "${{ github.event.pull_request.title }}", "short": false},
+                  {"title": "Author", "value": "${{ github.event.pull_request.user.login }}", "short": true},
+                  {"title": "Base Branch", "value": "${{ github.event.pull_request.base.ref }}", "short": true}
+                ],
+                "actions": [{
+                  "type": "button",
+                  "text": "View PR",
+                  "url": "${{ github.event.pull_request.html_url }}"
+                }]
+              }]
+            }' \
+            "$SLACK_WEBHOOK_URL"
+
+      - name: Notify PR Merged
+        if: github.event_name == 'pull_request' && github.event.action == 'merged'
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+            --data '{
+              "text": "✅ Pull Request Merged!",
+              "attachments": [{
+                "color": "good",
+                "fields": [
+                  {"title": "PR", "value": "#${{ github.event.number }}", "short": true},
+                  {"title": "Title", "value": "${{ github.event.pull_request.title }}", "short": false},
+                  {"title": "Author", "value": "${{ github.event.pull_request.user.login }}", "short": true},
+                  {"title": "Merged by", "value": "${{ github.actor }}", "short": true}
+                ],
+                "actions": [{
+                  "type": "button",
+                  "text": "View Commit",
+                  "url": "${{ github.event.pull_request.html_url }}"
+                }]
+              }]
+            }' \
+            "$SLACK_WEBHOOK_URL"
+
+  notify-discord:
+    name: Send Discord Notifications
+    runs-on: ubuntu-latest
+    if: env.DISCORD_WEBHOOK_URL != ''
+
+    steps:
+      - name: Notify CI Success
+        if: github.event.workflow_run.conclusion == 'success'
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+            --data '{
+              "embeds": [{
+                "title": "✅ CI Pipeline Successful!",
+                "color": 65280,
+                "fields": [
+                  {"name": "Repository", "value": "${{ github.repository }}", "inline": true},
+                  {"name": "Branch", "value": "${{ github.ref_name }}", "inline": true},
+                  {"name": "Commit", "value": "${{ github.sha }}", "inline": true},
+                  {"name": "Actor", "value": "${{ github.actor }}", "inline": true}
+                ],
+                "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+              }]
+            }' \
+            "$DISCORD_WEBHOOK_URL"
+
+      - name: Notify CI Failure
+        if: github.event.workflow_run.conclusion == 'failure'
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+            --data '{
+              "embeds": [{
+                "title": "❌ CI Pipeline Failed!",
+                "color": 16711680,
+                "fields": [
+                  {"name": "Repository", "value": "${{ github.repository }}", "inline": true},
+                  {"name": "Branch", "value": "${{ github.ref_name }}", "inline": true},
+                  {"name": "Commit", "value": "${{ github.sha }}", "inline": true},
+                  {"name": "Actor", "value": "${{ github.actor }}", "inline": true}
+                ],
+                "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+              }]
+            }' \
+            "$DISCORD_WEBHOOK_URL"
+
+      - name: Notify Deployment
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+            --data '{
+              "embeds": [{
+                "title": "🚀 Production Deployment Complete!",
+                "color": 3066993,
+                "fields": [
+                  {"name": "Repository", "value": "${{ github.repository }}", "inline": true},
+                  {"name": "Commit", "value": "${{ github.sha }}", "inline": true},
+                  {"name": "Deployed by", "value": "${{ github.actor }}", "inline": true},
+                  {"name": "Environment", "value": "Production", "inline": true}
+                ],
+                "url": "https://noli.ci"
+              }]
+            }' \
+            "$DISCORD_WEBHOOK_URL"
+
+  notify-email:
+    name: Send Email Notifications
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'failure'
+
+    steps:
+      - name: Send failure notification
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: "❌ CI Pipeline Failed - ${{ github.repository }}"
+          body: |
+            The CI pipeline has failed for ${{ github.repository }}.
+
+            Details:
+            - Branch: ${{ github.ref_name }}
+            - Commit: ${{ github.sha }}
+            - Actor: ${{ github.actor }}
+            - Workflow: ${{ github.workflow }}
+            - Run ID: ${{ github.run_id }}
+
+            Please check the workflow logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            This is an automated message from GitHub Actions.
+          to: ${{ secrets.NOTIFICATION_EMAIL }}
+          from: GitHub Actions

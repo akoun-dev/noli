@@ -128,7 +128,7 @@ const QuoteOptionsModal = ({ open, onOpenChange, offer }: QuoteOptionsModalProps
       }
 
     } catch (error) {
-      console.error('Erreur lors de la demande de devis:', error);
+      logger.error('Erreur lors de la demande de devis:', error);
       showNotification({
         id: `quote-error-${Date.now()}`,
         title: 'Erreur de demande',

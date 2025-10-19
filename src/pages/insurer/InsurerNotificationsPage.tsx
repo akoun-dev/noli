@@ -194,7 +194,7 @@ export const InsurerNotificationsPage: React.FC = () => {
 
   const handleAction = (notification: Notification) => {
     if (notification.action) {
-      console.log('Action:', notification.action.type, notification.action.data);
+      logger.info('Action:', notification.action.type, notification.action.data);
       // Here you would typically navigate or perform the action
     }
     markAsRead(notification.id);

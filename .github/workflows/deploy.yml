@@ -1,0 +1,268 @@
+name: Deploy Application
+
+on:
+  workflow_run:
+    workflows: ["CI Pipeline"]
+    types:
+      - completed
+    branches: [main, develop]
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop' || (github.ref == 'refs/heads/main' && github.event_name != 'push')
+    environment:
+      name: staging
+      url: https://staging.noli.ci
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run final tests
+        run: npm run test:run
+
+      - name: Build application
+        run: npm run build
+        env:
+          VITE_API_URL: ${{ secrets.STAGING_API_URL }}
+          VITE_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
+
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: '--prod'
+          working-directory: ./
+          alias-domains: staging.noli.ci
+
+      - name: Run smoke tests
+        run: |
+          echo "🧪 Running smoke tests on staging..."
+          sleep 30 # Wait for deployment to be ready
+
+          # Basic smoke tests
+          curl -f https://staging.noli.ci/ || exit 1
+          curl -f https://staging.noli.ci/auth/connexion || exit 1
+          curl -f https://staging.noli.ci/comparer || exit 1
+
+          echo "✅ Smoke tests passed"
+
+      - name: Notify deployment
+        run: |
+          echo "🚀 Staging deployment completed successfully!"
+          echo "URL: https://staging.noli.ci"
+          # Add Slack notification here
+
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment:
+      name: production
+      url: https://noli.ci
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run full test suite
+        run: npm run test:all
+
+      - name: Build application
+        run: npm run build
+        env:
+          VITE_API_URL: ${{ secrets.PRODUCTION_API_URL }}
+          VITE_SUPABASE_URL: ${{ secrets.PRODUCTION_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.PRODUCTION_SUPABASE_ANON_KEY }}
+
+      - name: Create production build artifact
+        run: |
+          tar -czf noli-production-${{ github.sha }}.tar.gz dist/
+          echo "Created production build: noli-production-${{ github.sha }}.tar.gz"
+
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.PRODUCTION_PROJECT_ID }}
+          vercel-args: '--prod'
+          working-directory: ./
+          alias-domains: noli.ci,www.noli.ci
+
+      - name: Run comprehensive smoke tests
+        run: |
+          echo "🧪 Running comprehensive smoke tests..."
+          sleep 60 # Wait for deployment to be fully ready
+
+          # Critical path tests
+          curl -f https://noli.ci/ || exit 1
+          curl -f https://noli.ci/auth/connexion || exit 1
+          curl -f https://noli.ci/comparer || exit 1
+          curl -f https://noli.ci/a-propos || exit 1
+          curl -f https://noli.ci/contact || exit 1
+
+          # Health checks
+          curl -f https://noli.ci/api/health || exit 1
+
+          echo "✅ All smoke tests passed"
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          body: |
+            🚀 **Noli Assurance Release ${{ github.ref_name }}**
+
+            ## 📦 Changes
+            - Automated deployment from CI/CD pipeline
+            - Build: ${{ github.sha }}
+
+            ## 🔗 Links
+            - **Production**: https://noli.ci
+            - **Staging**: https://staging.noli.ci
+
+            ## ✅ Tests
+            - Unit tests: ✅ Passed
+            - E2E tests: ✅ Passed
+            - Build: ✅ Successful
+
+            ---
+            Deployed with ❤️ by GitHub Actions
+
+      - name: Update deployment status
+        run: |
+          echo "🎉 Production deployment completed successfully!"
+          echo "URL: https://noli.ci"
+          echo "Version: ${{ github.sha }}"
+          # Add Slack notification here
+
+  rollback:
+    name: Rollback Production
+    runs-on: ubuntu-latest
+    if: failure() && needs.deploy-production.result == 'failure'
+    needs: deploy-production
+    environment: production
+
+    steps:
+      - name: Notify rollback initiation
+        run: |
+          echo "🚨 Production deployment failed! Initiating rollback..."
+          # Add Slack notification here
+
+      - name: Rollback Vercel deployment
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.PRODUCTION_PROJECT_ID }}
+          vercel-args: '--rollback'
+
+      - name: Verify rollback
+        run: |
+          echo "🔍 Verifying rollback..."
+          sleep 30
+          curl -f https://noli.ci/ || exit 1
+          echo "✅ Rollback verified successfully"
+
+      - name: Notify rollback completion
+        run: |
+          echo "✅ Rollback completed successfully!"
+          # Add Slack notification here
+
+  docker-deploy:
+    name: Build and Deploy Docker Image
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha,prefix={{branch}}-
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64,linux/arm64
+
+      - name: Deploy to Kubernetes
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          echo "🚀 Deploying to Kubernetes..."
+          # Add kubectl deployment commands here
+          # kubectl set image deployment/noli noli=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}

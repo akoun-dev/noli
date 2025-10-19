@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { UserBreadcrumb } from '@/components/common/BreadcrumbRenderer';
 import {
   FileText,
   Shield,
@@ -57,6 +58,9 @@ export const UserDashboardPage: React.FC = () => {
 
   return (
     <div className="space-y-4 sm:space-y-6">
+      {/* Breadcrumb */}
+      <UserBreadcrumb className="mb-4" />
+
       {/* Welcome Section */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg p-4 sm:p-6">
         <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-2">Bienvenue sur votre espace!</h1>

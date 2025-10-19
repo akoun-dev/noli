@@ -109,7 +109,7 @@ export const AdminTarificationPage: React.FC = () => {
       setPackages(packagesData);
       setStatistics(statsData);
     } catch (error) {
-      console.error('Error loading data:', error);
+      logger.error('Error loading data:', error);
       toast.error('Erreur lors du chargement des données de tarification');
     } finally {
       setLoading(false);
@@ -136,7 +136,7 @@ export const AdminTarificationPage: React.FC = () => {
       toast.success('Garantie créée avec succès');
       loadData();
     } catch (error) {
-      console.error('Error creating guarantee:', error);
+      logger.error('Error creating guarantee:', error);
       toast.error('Erreur lors de la création de la garantie');
     }
   };
@@ -158,7 +158,7 @@ export const AdminTarificationPage: React.FC = () => {
       });
       loadData();
     } catch (error) {
-      console.error('Error creating package:', error);
+      logger.error('Error creating package:', error);
     }
   };
 
@@ -181,7 +181,7 @@ export const AdminTarificationPage: React.FC = () => {
       });
       loadData();
     } catch (error) {
-      console.error('Error updating guarantee:', error);
+      logger.error('Error updating guarantee:', error);
     }
   };
 
@@ -203,7 +203,7 @@ export const AdminTarificationPage: React.FC = () => {
       });
       loadData();
     } catch (error) {
-      console.error('Error updating package:', error);
+      logger.error('Error updating package:', error);
     }
   };
 
@@ -216,7 +216,7 @@ export const AdminTarificationPage: React.FC = () => {
       await guaranteeService.deleteGuarantee(id);
       loadData();
     } catch (error) {
-      console.error('Error deleting guarantee:', error);
+      logger.error('Error deleting guarantee:', error);
     }
   };
 
@@ -229,7 +229,7 @@ export const AdminTarificationPage: React.FC = () => {
       await guaranteeService.deletePackage(id);
       loadData();
     } catch (error) {
-      console.error('Error deleting package:', error);
+      logger.error('Error deleting package:', error);
     }
   };
 
@@ -238,7 +238,7 @@ export const AdminTarificationPage: React.FC = () => {
       await guaranteeService.toggleGuarantee(id);
       loadData();
     } catch (error) {
-      console.error('Error toggling guarantee:', error);
+      logger.error('Error toggling guarantee:', error);
     }
   };
 
@@ -247,7 +247,7 @@ export const AdminTarificationPage: React.FC = () => {
       await guaranteeService.togglePackage(id);
       loadData();
     } catch (error) {
-      console.error('Error toggling package:', error);
+      logger.error('Error toggling package:', error);
     }
   };
 

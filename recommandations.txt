@@ -1,0 +1,7 @@
+1. Added Testing Section: Documented Vitest configuration, React Testing Library, and testing commands
+2. Updated Development Commands: Added all testing commands and specified dev server port (8080)
+3. Enhanced Authentication Section: Added Supabase Auth and RLS details
+4. Updated Build & Deployment: Documented manual chunking strategy and development server specifics
+5. Added Environment Configuration: Details about .env files and Supabase setup
+6. Listed Additional Dependencies: Important packages like papaparse, react-day-picker, input-otp, vaul, and lovable-tagger
+7. Enhanced Data Flow: Added Supabase client and database migrations information

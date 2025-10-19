@@ -60,7 +60,7 @@ export const DetailedAnalyticsDashboard: React.FC = () => {
       const data = await insurerAnalyticsService.getDetailedAnalytics('insurer-1', period);
       setAnalytics(data);
     } catch (error) {
-      console.error('Erreur chargement analytics:', error);
+      logger.error('Erreur chargement analytics:', error);
     } finally {
       setIsLoading(false);
     }
@@ -71,7 +71,7 @@ export const DetailedAnalyticsDashboard: React.FC = () => {
       const data = await insurerAnalyticsService.getRealTimeAnalytics('insurer-1');
       setRealTimeData(data);
     } catch (error) {
-      console.error('Erreur chargement données temps réel:', error);
+      logger.error('Erreur chargement données temps réel:', error);
     }
   };
 
@@ -89,7 +89,7 @@ export const DetailedAnalyticsDashboard: React.FC = () => {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
     } catch (error) {
-      console.error('Erreur export analytics:', error);
+      logger.error('Erreur export analytics:', error);
     }
   };
 

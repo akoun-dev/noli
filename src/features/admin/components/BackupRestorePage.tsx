@@ -127,7 +127,7 @@ export function BackupRestorePage() {
       setBackupConfig(configData);
       setStatistics(statsData);
     } catch (error) {
-      console.error('Error loading data:', error);
+      logger.error('Error loading data:', error);
     } finally {
       setLoading(false);
     }
@@ -150,7 +150,7 @@ export function BackupRestorePage() {
       setNewBackup({ name: '', description: '', type: 'FULL', includes: [] });
       loadData();
     } catch (error) {
-      console.error('Error creating backup:', error);
+      logger.error('Error creating backup:', error);
     }
   };
 
@@ -170,7 +170,7 @@ export function BackupRestorePage() {
       setNewRestore({ backupId: '', includes: [], conflictsResolution: 'MERGE' });
       loadData();
     } catch (error) {
-      console.error('Error starting restore:', error);
+      logger.error('Error starting restore:', error);
     }
   };
 
@@ -183,7 +183,7 @@ export function BackupRestorePage() {
       await backupService.deleteBackup(backupId);
       loadData();
     } catch (error) {
-      console.error('Error deleting backup:', error);
+      logger.error('Error deleting backup:', error);
     }
   };
 
@@ -199,7 +199,7 @@ export function BackupRestorePage() {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      console.error('Error downloading backup:', error);
+      logger.error('Error downloading backup:', error);
     }
   };
 
@@ -208,7 +208,7 @@ export function BackupRestorePage() {
       await backupService.cancelRestoreJob(jobId);
       loadData();
     } catch (error) {
-      console.error('Error cancelling restore:', error);
+      logger.error('Error cancelling restore:', error);
     }
   };
 
@@ -220,7 +220,7 @@ export function BackupRestorePage() {
       setIsConfigDialogOpen(false);
       loadData();
     } catch (error) {
-      console.error('Error updating config:', error);
+      logger.error('Error updating config:', error);
     }
   };
 
@@ -230,7 +230,7 @@ export function BackupRestorePage() {
       const result = await backupService.testBackupConnection();
       setConnectionTest(result);
     } catch (error) {
-      console.error('Error testing connection:', error);
+      logger.error('Error testing connection:', error);
       setConnectionTest({
         success: false,
         message: 'Erreur lors du test de connexion'

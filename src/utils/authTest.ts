@@ -28,7 +28,7 @@ export class AuthTester {
         duration,
       };
       this.results.push(result);
-      console.log(`✅ ${testName} - ${duration}ms`);
+      logger.info(`✅ ${testName} - ${duration}ms`);
       return result;
     } catch (error) {
       const duration = Date.now() - startTime;
@@ -39,7 +39,7 @@ export class AuthTester {
         duration,
       };
       this.results.push(result);
-      console.error(`❌ ${testName} - ${duration}ms - ${result.error}`);
+      logger.error(`❌ ${testName} - ${duration}ms - ${result.error}`);
       return result;
     }
   }
@@ -152,8 +152,8 @@ export class AuthTester {
   }
 
   async runAllTests(): Promise<TestResult[]> {
-    console.log('🚀 Démarrage des tests d\'authentification Supabase...');
-    console.log('='.repeat(50));
+    logger.info('🚀 Démarrage des tests d\'authentification Supabase...');
+    logger.info('='.repeat(50));
 
     this.results = [];
 
@@ -179,25 +179,25 @@ export class AuthTester {
   }
 
   private printResults(): void {
-    console.log('='.repeat(50));
-    console.log('📊 Résultats des tests:');
+    logger.info('='.repeat(50));
+    logger.info('📊 Résultats des tests:');
     
     const successCount = this.results.filter(r => r.success).length;
     const totalCount = this.results.length;
     const successRate = ((successCount / totalCount) * 100).toFixed(1);
 
-    console.log(`✅ ${successCount}/${totalCount} tests réussis (${successRate}%)`);
+    logger.info(`✅ ${successCount}/${totalCount} tests réussis (${successRate}%)`);
     
     if (successCount < totalCount) {
-      console.log('\n❌ Tests échoués:');
+      logger.info('\n❌ Tests échoués:');
       this.results
         .filter(r => !r.success)
         .forEach(r => {
-          console.log(`  - ${r.testName}: ${r.error}`);
+          logger.info(`  - ${r.testName}: ${r.error}`);
         });
     }
 
-    console.log('\n⏱️  Durée totale:', this.results.reduce((sum, r) => sum + r.duration, 0), 'ms');
+    logger.info('\n⏱️  Durée totale:', this.results.reduce((sum, r) => sum + r.duration, 0), 'ms');
   }
 
   // Test pour vérifier la configuration RLS
@@ -260,7 +260,7 @@ export const testAuthConfig = async (): Promise<boolean> => {
     await tester['runTest']('Configuration Supabase', () => tester.testConnection());
     return true;
   } catch (error) {
-    console.error('❌ Configuration Supabase invalide:', error);
+    logger.error('❌ Configuration Supabase invalide:', error);
     return false;
   }
 };

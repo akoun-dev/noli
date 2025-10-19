@@ -1,5 +1,6 @@
 import { User, LoginCredentials, RegisterData } from '@/types';
 import { supabaseHelpers, supabase } from '@/lib/supabase';
+import { logger } from '@/lib/logger';
 
 export interface AuthResponse {
   user: User;
@@ -48,7 +49,7 @@ export class AuthService {
         session: data.session,
       };
     } catch (error) {
-      console.error('Login error:', error);
+      logger.error('Login error:', error);
       throw error;
     }
   }
@@ -86,7 +87,7 @@ export class AuthService {
         session: authData.session,
       };
     } catch (error) {
-      console.error('Register error:', error);
+      logger.error('Register error:', error);
       throw error;
     }
   }
@@ -95,7 +96,7 @@ export class AuthService {
     try {
       await supabaseHelpers.signInWithOAuth(provider);
     } catch (error) {
-      console.error('OAuth login error:', error);
+      logger.error('OAuth login error:', error);
       throw error;
     }
   }
@@ -132,7 +133,7 @@ export class AuthService {
         session,
       };
     } catch (error) {
-      console.error('Refresh token error:', error);
+      logger.error('Refresh token error:', error);
       throw error;
     }
   }
@@ -147,7 +148,7 @@ export class AuthService {
       
       await supabaseHelpers.signOut();
     } catch (error) {
-      console.error('Logout error:', error);
+      logger.error('Logout error:', error);
       throw error;
     }
   }
@@ -160,9 +161,9 @@ export class AuthService {
       // Envoyer l'email de reset via Supabase
       await supabaseHelpers.resetPassword(email);
       
-      console.log(`[DEBUG] Reset token created for ${email}: ${resetToken}`);
+      logger.info(`[DEBUG] Reset token created for ${email}: ${resetToken}`);
     } catch (error) {
-      console.error('Forgot password error:', error);
+      logger.error('Forgot password error:', error);
       throw error;
     }
   }
@@ -171,7 +172,7 @@ export class AuthService {
     try {
       await supabaseHelpers.usePasswordResetToken(token, newPassword);
     } catch (error) {
-      console.error('Reset password error:', error);
+      logger.error('Reset password error:', error);
       throw error;
     }
   }
@@ -204,7 +205,7 @@ export class AuthService {
 
       return user;
     } catch (error) {
-      console.error('Update profile error:', error);
+      logger.error('Update profile error:', error);
       throw error;
     }
   }
@@ -232,7 +233,7 @@ export class AuthService {
         updatedAt: profile.updated_at,
       };
     } catch (error) {
-      console.error('Get current user error:', error);
+      logger.error('Get current user error:', error);
       return null;
     }
   }
@@ -242,7 +243,7 @@ export class AuthService {
       const { data: { session } } = await supabase.auth.getSession();
       return !!session && !!session.user;
     } catch (error) {
-      console.error('Check auth error:', error);
+      logger.error('Check auth error:', error);
       return false;
     }
   }
@@ -251,7 +252,7 @@ export class AuthService {
     try {
       return await supabaseHelpers.getUserPermissions();
     } catch (error) {
-      console.error('Get permissions error:', error);
+      logger.error('Get permissions error:', error);
       return [];
     }
   }
@@ -260,7 +261,7 @@ export class AuthService {
     try {
       return await supabaseHelpers.hasPermission(permission);
     } catch (error) {
-      console.error('Check permission error:', error);
+      logger.error('Check permission error:', error);
       return false;
     }
   }
@@ -269,7 +270,7 @@ export class AuthService {
     try {
       return await supabaseHelpers.getUserSessions();
     } catch (error) {
-      console.error('Get sessions error:', error);
+      logger.error('Get sessions error:', error);
       return [];
     }
   }
@@ -278,7 +279,7 @@ export class AuthService {
     try {
       await supabaseHelpers.revokeSession(sessionId);
     } catch (error) {
-      console.error('Revoke session error:', error);
+      logger.error('Revoke session error:', error);
       throw error;
     }
   }

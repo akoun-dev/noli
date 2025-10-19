@@ -73,7 +73,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     try {
       await sendMessage(messageContent);
     } catch (error) {
-      console.error('Erreur envoi message:', error);
+      logger.error('Erreur envoi message:', error);
       setMessage(messageContent); // Restaurer le message en cas d'erreur
     }
   };
@@ -102,7 +102,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       try {
         await sendFile(file);
       } catch (error) {
-        console.error('Erreur envoi fichier:', error);
+        logger.error('Erreur envoi fichier:', error);
       }
     }
   };
@@ -126,11 +126,11 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
             address,
           });
         } catch (error) {
-          console.error('Erreur envoi localisation:', error);
+          logger.error('Erreur envoi localisation:', error);
         }
       },
       (error) => {
-        console.error('Erreur géolocalisation:', error);
+        logger.error('Erreur géolocalisation:', error);
         alert('Impossible d\'obtenir votre localisation');
       }
     );

@@ -385,7 +385,7 @@ export class InsurerAlertService {
 
   private sendPushNotification(alert: InsurerAlert) {
     // Simuler l'envoi de notification push
-    console.log('Push notification sent:', alert);
+    logger.info('Push notification sent:', alert);
   }
 }
 

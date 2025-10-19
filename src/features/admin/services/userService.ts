@@ -113,7 +113,7 @@ export const fetchUsers = async (filters?: UserFilters): Promise<User[]> => {
     const { data: profiles, error } = await query;
 
     if (error) {
-      console.error('Error fetching users:', error);
+      logger.error('Error fetching users:', error);
       throw error;
     }
 
@@ -149,7 +149,7 @@ export const fetchUsers = async (filters?: UserFilters): Promise<User[]> => {
     return users;
 
   } catch (error) {
-    console.error('Error in fetchUsers:', error);
+    logger.error('Error in fetchUsers:', error);
     throw error;
   }
 };
@@ -162,7 +162,7 @@ export const fetchUserStats = async (): Promise<UserStats> => {
       .select('role, is_active');
 
     if (error) {
-      console.error('Error fetching user stats:', error);
+      logger.error('Error fetching user stats:', error);
       throw error;
     }
 
@@ -182,7 +182,7 @@ export const fetchUserStats = async (): Promise<UserStats> => {
     return stats;
 
   } catch (error) {
-    console.error('Error in fetchUserStats:', error);
+    logger.error('Error in fetchUserStats:', error);
     throw error;
   }
 };
@@ -201,7 +201,7 @@ export const createUser = async (userData: CreateUserRequest): Promise<User> => 
     });
 
     if (error) {
-      console.error('Error creating user:', error);
+      logger.error('Error creating user:', error);
       throw error;
     }
 
@@ -217,14 +217,14 @@ export const createUser = async (userData: CreateUserRequest): Promise<User> => 
       .single();
 
     if (fetchError) {
-      console.error('Error fetching created user:', fetchError);
+      logger.error('Error fetching created user:', fetchError);
       throw fetchError;
     }
 
     return mapProfileToUser(profile);
 
   } catch (error) {
-    console.error('Error in createUser:', error);
+    logger.error('Error in createUser:', error);
     throw error;
   }
 };
@@ -248,7 +248,7 @@ export const updateUser = async (userData: UpdateUserRequest): Promise<User> => 
     });
 
     if (error) {
-      console.error('Error updating user:', error);
+      logger.error('Error updating user:', error);
       throw error;
     }
 
@@ -264,14 +264,14 @@ export const updateUser = async (userData: UpdateUserRequest): Promise<User> => 
       .single();
 
     if (fetchError) {
-      console.error('Error fetching updated user:', fetchError);
+      logger.error('Error fetching updated user:', fetchError);
       throw fetchError;
     }
 
     return mapProfileToUser(profile);
 
   } catch (error) {
-    console.error('Error in updateUser:', error);
+    logger.error('Error in updateUser:', error);
     throw error;
   }
 };
@@ -284,7 +284,7 @@ export const deleteUser = async (userId: string): Promise<void> => {
     });
 
     if (error) {
-      console.error('Error deleting user:', error);
+      logger.error('Error deleting user:', error);
       throw error;
     }
 
@@ -293,7 +293,7 @@ export const deleteUser = async (userId: string): Promise<void> => {
     }
 
   } catch (error) {
-    console.error('Error in deleteUser:', error);
+    logger.error('Error in deleteUser:', error);
     throw error;
   }
 };
@@ -321,7 +321,7 @@ export const bulkUpdateUsers = async (userIds: string[], action: 'activate' | 's
           }
         }
       } catch (error) {
-        console.error(`Error processing user ${userId}:`, error);
+        logger.error(`Error processing user ${userId}:`, error);
         failed++;
       }
     }
@@ -329,7 +329,7 @@ export const bulkUpdateUsers = async (userIds: string[], action: 'activate' | 's
     return { success, failed };
 
   } catch (error) {
-    console.error('Error in bulkUpdateUsers:', error);
+    logger.error('Error in bulkUpdateUsers:', error);
     throw error;
   }
 };
@@ -360,7 +360,7 @@ export const exportUsers = async (filters?: UserFilters): Promise<Blob> => {
     return new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
 
   } catch (error) {
-    console.error('Error in exportUsers:', error);
+    logger.error('Error in exportUsers:', error);
     throw error;
   }
 };

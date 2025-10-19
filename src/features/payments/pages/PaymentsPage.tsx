@@ -36,13 +36,13 @@ export const PaymentsPage: React.FC = () => {
   };
 
   const handlePaymentSuccess = (transaction: any) => {
-    console.log('Payment successful:', transaction);
+    logger.info('Payment successful:', transaction);
     // In real implementation, this would update the quote/policy status
     // and redirect to confirmation page
   };
 
   const handlePaymentError = (error: Error) => {
-    console.error('Payment failed:', error);
+    logger.error('Payment failed:', error);
     // In real implementation, this would show error message
   };
 

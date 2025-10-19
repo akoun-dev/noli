@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { AdminBreadcrumb } from '@/components/common/BreadcrumbRenderer';
 import {
   Users,
   Plus,
@@ -118,12 +119,15 @@ export const AdminUsersPage: React.FC = () => {
   };
 
   const importUsers = () => {
-    console.log('Import users dialog');
+    logger.info('Import users dialog');
     // Import functionality would be implemented here
   };
 
   return (
     <div className="space-y-6 w-full">
+      {/* Breadcrumb */}
+      <AdminBreadcrumb />
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>

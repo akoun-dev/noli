@@ -137,7 +137,7 @@ const AdminSettingsPage = () => {
         setUISettings(uiResponse.data);
       }
     } catch (error) {
-      console.error('Erreur lors du chargement des paramètres:', error);
+      logger.error('Erreur lors du chargement des paramètres:', error);
       toast.error('Erreur lors du chargement des paramètres');
     } finally {
       setLoading(false);
@@ -156,7 +156,7 @@ const AdminSettingsPage = () => {
       ]);
       toast.success('Paramètres sauvegardés avec succès');
     } catch (error) {
-      console.error('Erreur lors de la sauvegarde des paramètres:', error);
+      logger.error('Erreur lors de la sauvegarde des paramètres:', error);
       toast.error('Erreur lors de la sauvegarde des paramètres');
     } finally {
       setIsSaving(false);
@@ -170,7 +170,7 @@ const AdminSettingsPage = () => {
         toast.info('Paramètres réinitialisés aux valeurs par défaut');
         loadSettings(); // Recharger les paramètres
       } catch (error) {
-        console.error('Erreur lors de la réinitialisation:', error);
+        logger.error('Erreur lors de la réinitialisation:', error);
         toast.error('Erreur lors de la réinitialisation des paramètres');
       }
     }
@@ -192,7 +192,7 @@ const AdminSettingsPage = () => {
         toast.success('Paramètres exportés avec succès');
       }
     } catch (error) {
-      console.error('Erreur lors de l\'exportation:', error);
+      logger.error('Erreur lors de l\'exportation:', error);
       toast.error('Erreur lors de l\'exportation des paramètres');
     }
   };
@@ -225,7 +225,7 @@ const AdminSettingsPage = () => {
       };
       reader.readAsText(file);
     } catch (error) {
-      console.error('Erreur lors de la lecture du fichier:', error);
+      logger.error('Erreur lors de la lecture du fichier:', error);
       toast.error('Erreur lors de la lecture du fichier');
     }
   };
@@ -247,7 +247,7 @@ const AdminSettingsPage = () => {
         toast.error(response.data.message);
       }
     } catch (error) {
-      console.error('Erreur lors du test email:', error);
+      logger.error('Erreur lors du test email:', error);
       toast.error('Erreur lors du test email');
     } finally {
       setTestEmailLoading(false);
@@ -270,7 +270,7 @@ const AdminSettingsPage = () => {
         toast.error(response.data.message);
       }
     } catch (error) {
-      console.error('Erreur lors du test SMS:', error);
+      logger.error('Erreur lors du test SMS:', error);
       toast.error('Erreur lors du test SMS');
     } finally {
       setTestSmsLoading(false);

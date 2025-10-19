@@ -73,7 +73,7 @@ class ApiClient {
         return config;
       },
       (error: AxiosError) => {
-        console.error('Request interceptor error:', error);
+        logger.error('Request interceptor error:', error);
         return Promise.reject(error);
       }
     );
@@ -160,7 +160,7 @@ class ApiClient {
     }
 
     // Log error for debugging
-    console.error('API Error:', {
+    logger.error('API Error:', {
       code: apiError.code,
       message: apiError.message,
       details: apiError.details,
@@ -187,7 +187,7 @@ class ApiClient {
 
   private handleForbidden() {
     // Handle forbidden access
-    console.error('Access forbidden - insufficient permissions');
+    logger.error('Access forbidden - insufficient permissions');
   }
 
   // Generic HTTP methods

@@ -78,7 +78,7 @@ export class RealTimeService {
         this.connectionStatus = 'connected';
         this.reconnectAttempts = 0;
         this.broadcast('connection', { status: 'connected' });
-        console.log('✅ WebSocket connected');
+        logger.info('✅ WebSocket connected');
       };
 
       this.ws.onmessage = (event) => {
@@ -86,24 +86,24 @@ export class RealTimeService {
           const data = JSON.parse(event.data);
           this.handleMessage(data);
         } catch (error) {
-          console.error('Error parsing WebSocket message:', error);
+          logger.error('Error parsing WebSocket message:', error);
         }
       };
 
       this.ws.onclose = () => {
         this.connectionStatus = 'disconnected';
         this.broadcast('connection', { status: 'disconnected' });
-        console.log('❌ WebSocket disconnected');
+        logger.info('❌ WebSocket disconnected');
         this.scheduleReconnect();
       };
 
       this.ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
+        logger.error('WebSocket error:', error);
         this.connectionStatus = 'disconnected';
       };
 
     } catch (error) {
-      console.error('Failed to initialize WebSocket:', error);
+      logger.error('Failed to initialize WebSocket:', error);
       this.connectionStatus = 'disconnected';
       this.scheduleReconnect();
     }
@@ -111,14 +111,14 @@ export class RealTimeService {
 
   private scheduleReconnect(): void {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.log('❌ Max reconnection attempts reached');
+      logger.info('❌ Max reconnection attempts reached');
       return;
     }
 
     this.reconnectAttempts++;
     const delay = this.reconnectInterval * Math.pow(2, this.reconnectAttempts - 1);
 
-    console.log(`🔄 Attempting to reconnect in ${delay}ms (attempt ${this.reconnectAttempts})`);
+    logger.info(`🔄 Attempting to reconnect in ${delay}ms (attempt ${this.reconnectAttempts})`);
 
     setTimeout(() => {
       this.initializeConnection();
@@ -143,7 +143,7 @@ export class RealTimeService {
         this.broadcast('system_notification', data.payload);
         break;
       default:
-        console.warn('Unknown message type:', data.type);
+        logger.warn('Unknown message type:', data.type);
     }
   }
 
@@ -174,7 +174,7 @@ export class RealTimeService {
         try {
           callback(data);
         } catch (error) {
-          console.error('Error in subscriber callback:', error);
+          logger.error('Error in subscriber callback:', error);
         }
       });
     }
@@ -240,7 +240,7 @@ export class RealTimeService {
     if (this.connectionStatus === 'connected') {
       this.ws?.send(JSON.stringify({ type, payload }));
     } else {
-      console.warn('Cannot send message: WebSocket not connected');
+      logger.warn('Cannot send message: WebSocket not connected');
     }
   }
 

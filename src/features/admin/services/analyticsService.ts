@@ -56,7 +56,7 @@ export const fetchPlatformStats = async (): Promise<PlatformStats> => {
     const { data, error } = await supabase.rpc('admin_get_platform_stats');
 
     if (error) {
-      console.error('Error fetching platform stats:', error);
+      logger.error('Error fetching platform stats:', error);
       // Fallback vers les stats de base si la RPC échoue
       const { data: profiles } = await supabase
         .from('profiles')
@@ -118,7 +118,7 @@ export const fetchPlatformStats = async (): Promise<PlatformStats> => {
 
     return data;
   } catch (error) {
-    console.error('Error in fetchPlatformStats:', error);
+    logger.error('Error in fetchPlatformStats:', error);
     throw error;
   }
 };
@@ -146,7 +146,7 @@ export const fetchActivityData = async (period: '7d' | '30d' | '90d' = '7d'): Pr
       .order('created_at', { ascending: true });
 
     if (error) {
-      console.error('Error fetching activity data:', error);
+      logger.error('Error fetching activity data:', error);
       return [];
     }
 
@@ -175,7 +175,7 @@ export const fetchActivityData = async (period: '7d' | '30d' | '90d' = '7d'): Pr
     }));
 
   } catch (error) {
-    console.error('Error in fetchActivityData:', error);
+    logger.error('Error in fetchActivityData:', error);
     throw error;
   }
 };
@@ -195,7 +195,7 @@ export const fetchTopInsurers = async (): Promise<TopInsurer[]> => {
       .eq('is_active', true);
 
     if (error) {
-      console.error('Error fetching top insurers:', error);
+      logger.error('Error fetching top insurers:', error);
       return [];
     }
 
@@ -241,7 +241,7 @@ export const fetchTopInsurers = async (): Promise<TopInsurer[]> => {
     return insurerStats.sort((a, b) => b.quotes - a.quotes);
 
   } catch (error) {
-    console.error('Error in fetchTopInsurers:', error);
+    logger.error('Error in fetchTopInsurers:', error);
     throw error;
   }
 };
@@ -304,7 +304,7 @@ export const fetchSystemHealth = async (): Promise<SystemHealth> => {
     return healthMetrics;
 
   } catch (error) {
-    console.error('Error in fetchSystemHealth:', error);
+    logger.error('Error in fetchSystemHealth:', error);
     throw error;
   }
 };
@@ -316,7 +316,7 @@ export const fetchUserDemographics = async (): Promise<UserDemographics> => {
       .select('created_at, phone, first_name, last_name');
 
     if (error) {
-      console.error('Error fetching user demographics:', error);
+      logger.error('Error fetching user demographics:', error);
       return {
         byAge: [],
         byLocation: [],
@@ -424,7 +424,7 @@ export const fetchUserDemographics = async (): Promise<UserDemographics> => {
     };
 
   } catch (error) {
-    console.error('Error in fetchUserDemographics:', error);
+    logger.error('Error in fetchUserDemographics:', error);
     throw error;
   }
 };
@@ -437,7 +437,7 @@ export const fetchQuoteAnalytics = async (): Promise<QuoteAnalytics> => {
       .select('status, created_at, insurer_id, updated_at, price');
 
     if (error) {
-      console.error('Error fetching quote analytics:', error);
+      logger.error('Error fetching quote analytics:', error);
       return {
         averageProcessingTime: 0,
         completionRate: 0,
@@ -515,7 +515,7 @@ export const fetchQuoteAnalytics = async (): Promise<QuoteAnalytics> => {
     };
 
   } catch (error) {
-    console.error('Error in fetchQuoteAnalytics:', error);
+    logger.error('Error in fetchQuoteAnalytics:', error);
     throw error;
   }
 };
@@ -611,7 +611,7 @@ export const exportAnalyticsReport = async (
     return new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
 
   } catch (error) {
-    console.error('Error generating report:', error);
+    logger.error('Error generating report:', error);
     throw error;
   }
 };
