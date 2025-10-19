@@ -7,7 +7,7 @@ npx lint-staged
 # Check for console.log statements (excluding test files and husky scripts)
 echo "🚫 Checking for console.log statements..."
 STAGED_FILES=$(git diff --cached --name-only)
-if echo "$STAGED_FILES" | xargs grep -l "console\.log" 2>/dev/null | grep -v "\.test\." | grep -v "\.spec\." | grep -v "\.husky/" | grep -v "scripts/"; then
+if echo "$STAGED_FILES" | xargs grep -l "console\." 2>/dev/null | grep -v "\.test\." | grep -v "\.spec\." | grep -v "\.husky/" | grep -v "scripts/" | grep -v "src/lib/logger"; then
   echo "❌ Found console.log statements in staged files. Please remove them before committing."
   echo "💡 Use logger instead of console.log for debugging."
   exit 1
