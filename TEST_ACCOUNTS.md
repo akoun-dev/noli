@@ -1,11 +1,13 @@
-  Résumé des identifiants corrects :
+Résumé des identifiants corrects :
 
-  | Rôle    | Email                   | Mot de passe  |
-  |---------|-------------------------|---------------|
-  | ADMIN   | admin@noliassurance.com | NoliTest2024! |
-  | USER    | jean.konan@noli.com     | NoliTest2024! |
-  | USER    | marie.toure@noli.com    | NoliTest2024! |
-  | USER    | kouakou.bamba@noli.com  | NoliTest2024! |
-  | INSURER | contact@assurauto.ci    | NoliTest2024! |
-  | INSURER | admin@sunuassurance.ci  | NoliTest2024! |
-  | INSURER | commercial@nsia.ci      | NoliTest2024! |
+    Utilisateur standard :
+
+- Email: user2@noli.com
+- Password: NoliTest2024!
+- Rôle: USER
+
+Administrateur :
+
+- Email: admin2@noli.com
+- Password: NoliTest2024!
+- Rôle: ADMIN
