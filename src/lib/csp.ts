@@ -35,13 +35,11 @@ export class CSPManager {
       'default-src': ["'self'"],
       'script-src': [
         "'self'",
-        "'unsafe-eval'", // Temporairement requis par Vite en dev
-        "'unsafe-inline'", // Pour les styles inline et certains composants
         'https://cdn.supabase.co',
         'https://www.googletagmanager.com',
         'https://www.google-analytics.com',
       ],
-      'style-src': ["'self'", "'unsafe-inline'", 'fonts.googleapis.com', 'https://cdn.supabase.co'],
+      'style-src': ["'self'", 'fonts.googleapis.com', 'https://cdn.supabase.co'],
       'img-src': [
         "'self'",
         'data:',
@@ -55,11 +53,11 @@ export class CSPManager {
         "'self'",
         'https://api.supabase.co',
         'https://cdn.supabase.co',
-        'https://brznmveoycrwlyksffvh.supabase.co', // URL directe du projet
+        'https://*.supabase.co', // Support pour les URLs dynamiques Supabase
         'https://www.googletagmanager.com',
         'https://www.google-analytics.com',
         'wss://api.supabase.co',
-        'wss://brznmveoycrwlyksffvh.supabase.co', // WebSocket direct
+        'wss://*.supabase.co', // Support pour les WebSockets dynamiques Supabase
       ],
       'frame-src': ["'none'"],
       'object-src': ["'none'"],
@@ -138,6 +136,63 @@ export class CSPManager {
   }
 
   /**
+   * Génère un nonce pour les scripts/styles inline autorisés
+   */
+  generateNonce(): string {
+    const array = new Uint8Array(16)
+    crypto.getRandomValues(array)
+    return Array.from(array, (byte) => byte.toString(16).padStart(2, '0')).join('')
+  }
+
+  /**
+   * Obtient un CSP avec nonce pour les scripts inline critiques
+   */
+  getProductionCSPWithNonce(nonce: string): string {
+    const cspConfig: CSPConfig = {
+      'default-src': ["'self'"],
+      'script-src': [
+        "'self'",
+        `'nonce-${nonce}'`, // Permet les scripts inline avec nonce spécifique
+        'https://cdn.supabase.co',
+        'https://www.googletagmanager.com',
+        'https://www.google-analytics.com',
+      ],
+      'style-src': [
+        "'self'",
+        `'nonce-${nonce}'`, // Permet les styles inline avec nonce spécifique
+        'fonts.googleapis.com',
+        'https://cdn.supabase.co',
+      ],
+      'img-src': [
+        "'self'",
+        'data:',
+        'blob:',
+        'https:',
+        'https://cdn.supabase.co',
+        'https://images.unsplash.com',
+      ],
+      'font-src': ["'self'", 'fonts.gstatic.com', 'data:'],
+      'connect-src': [
+        "'self'",
+        'https://api.supabase.co',
+        'https://cdn.supabase.co',
+        'https://*.supabase.co',
+        'https://www.googletagmanager.com',
+        'https://www.google-analytics.com',
+        'wss://api.supabase.co',
+        'wss://*.supabase.co',
+      ],
+      'frame-src': ["'none'"],
+      'object-src': ["'none'"],
+      'media-src': ["'self'", 'data:'],
+      'manifest-src': ["'self'"],
+      'worker-src': ["'self'", 'blob:'],
+    }
+
+    return this.buildCSPString(cspConfig)
+  }
+
+  /**
    * Retourne le CSP actuel sous forme d'objet pour inspection
    */
   inspectCurrentCSP(): CSPConfig | null {
@@ -208,6 +263,8 @@ export const useCSP = () => {
     injectCSP: () => cspManager.injectCSP(),
     getProductionCSP: () => cspManager.getProductionCSP(),
     getDevelopmentCSP: () => cspManager.getDevelopmentCSP(),
+    getProductionCSPWithNonce: (nonce: string) => cspManager.getProductionCSPWithNonce(nonce),
+    generateNonce: () => cspManager.generateNonce(),
     validateCSP: () => cspManager.validateCSP(),
     inspectCurrentCSP: () => cspManager.inspectCurrentCSP(),
   }
