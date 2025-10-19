@@ -7,7 +7,7 @@ import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { UserProvider, useUser } from '@/contexts/UserContext';
 import { authService } from '@/data/api/authService';
 import { supabase } from '@/lib/supabase';
-import LoginPage from '@/pages/auth/connexion';
+import LoginPage from '@/features/auth/pages/LoginPage';
 
 // Mock dependencies
 vi.mock('@/data/api/authService');
@@ -64,10 +64,15 @@ const mockSession = {
       role: 'USER',
       avatar_url: 'https://example.com/avatar.jpg',
     },
+    app_metadata: {},
+    aud: 'authenticated',
     phone: '+2250102030405',
     created_at: '2024-01-01T00:00:00Z',
   },
   access_token: 'mock-token',
+  refresh_token: 'mock-refresh-token',
+  expires_in: 3600,
+  token_type: 'bearer' as const,
 };
 
 describe('Authentication Flow Integration', () => {
@@ -83,6 +88,8 @@ describe('Authentication Flow Integration', () => {
     vi.mocked(supabase.auth.onAuthStateChange).mockReturnValue({
       data: {
         subscription: {
+          id: 'mock-subscription-id',
+          callback: vi.fn(),
           unsubscribe: vi.fn(),
         },
       },
@@ -271,7 +278,14 @@ describe('Authentication Flow Integration', () => {
       // Arrange - Mock expired session
       vi.mocked(supabase.auth.getSession).mockResolvedValue({
         data: { session: null },
-        error: { message: 'Session expired' },
+        // @ts-expect-error - Typage complexe de l'erreur Supabase
+        error: {
+          message: 'Session expired',
+          code: 'session_expired',
+          status: 400,
+          __isAuthError: true,
+          name: 'AuthError'
+        },
       });
 
       // Act - Render app
@@ -435,7 +449,7 @@ describe('Authentication Flow Integration', () => {
           />
           <button
             onClick={() => {
-              const email = screen.getByTestId('email-input').value;
+              const email = (screen.getByTestId('email-input') as HTMLInputElement).value;
               authService.forgotPassword(email);
             }}
           >
@@ -480,7 +494,7 @@ describe('Authentication Flow Integration', () => {
           />
           <button
             onClick={() => {
-              const email = screen.getByTestId('email-input').value;
+              const email = (screen.getByTestId('email-input') as HTMLInputElement).value;
               authService.forgotPassword(email);
             }}
           >

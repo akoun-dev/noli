@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { cn } from '../cn';
+import { cn } from '../../lib/utils';
 
 describe('cn utility function', () => {
   it('should merge class names correctly', () => {
@@ -7,7 +7,9 @@ describe('cn utility function', () => {
   });
 
   it('should handle conditional classes', () => {
-    expect(cn('base-class', true && 'active', false && 'inactive')).toBe('base-class active');
+    const isActive = true;
+    const isInactive = false;
+    expect(cn('base-class', isActive && 'active', isInactive && 'inactive')).toBe('base-class active');
   });
 
   it('should handle undefined and null values', () => {

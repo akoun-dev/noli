@@ -35,8 +35,8 @@ const UnauthenticatedWrapper: React.FC<{ children: ReactNode }> = ({ children })
 );
 
 // Mock useAuth to control authentication state
-vi.mock('./AuthContext', async () => {
-  const actual = await vi.importActual('./AuthContext');
+vi.mock('../AuthContext', async () => {
+  const actual = await vi.importActual('../AuthContext');
   return {
     ...actual,
     useAuth: vi.fn(),
@@ -50,7 +50,7 @@ describe('UserContext', () => {
     vi.clearAllMocks();
 
     // Get the mocked useAuth function
-    const { useAuth } = await import('./AuthContext');
+    const { useAuth } = await import('../AuthContext');
     mockUseAuth = vi.mocked(useAuth);
 
     // Default mock for unauthenticated state
@@ -207,7 +207,7 @@ describe('UserContext', () => {
           if (!error) {
             setError(true);
             setTimeout(() => {
-              logger.error('Error fetching profile:', new Error('API Error'));
+              console.error('Error fetching profile:', new Error('API Error'));
             }, 0);
           }
         }, [error]);
