@@ -39,7 +39,7 @@ jobs:
 
       - name: Upload ESLint report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: eslint-report
           path: eslint-report.json
@@ -188,7 +188,7 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: test-results-node-${{ matrix.node-version }}
           path: test-results-${{ matrix.node-version }}.json
@@ -224,7 +224,7 @@ jobs:
 
       - name: Upload E2E test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: playwright-report
           path: playwright-report/
@@ -232,7 +232,7 @@ jobs:
 
       - name: Upload E2E test videos
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: playwright-videos
           path: test-results/
@@ -268,7 +268,7 @@ jobs:
           find dist/ -name "*.js" -exec ls -lh {} \; | head -10
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: build-files
           path: dist/
