@@ -1,0 +1,114 @@
+name: Lighthouse CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # Exécuter tous les jours à 2h du matin UTC
+    - cron: '0 2 * * *'
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+
+      - name: Start server
+        run: |
+          npm install -g http-server
+          http-server dist -p 8080 -c-1 --cors &
+          echo "Server started, waiting for readiness..."
+          sleep 10
+
+      - name: Run Lighthouse CI
+        run: |
+          npm install -g @lhci/cli@0.12.x
+          lhci autorun
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+          LHCI_GITHUB_APP_USERNAME: ${{ secrets.LHCI_GITHUB_APP_USERNAME }}
+
+      - name: Upload results to GitHub
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-results
+          path: '.lighthouseci'
+
+      - name: Comment PR with results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = '.lighthouseci';
+
+            // Lire les résultats Lighthouse
+            const resultsPath = path + '/lhr-report.json';
+            if (fs.existsSync(resultsPath)) {
+              const lhr = JSON.parse(fs.readFileSync(resultsPath, 'utf8'));
+
+              const performance = lhr.categories.performance.score * 100;
+              const accessibility = lhr.categories.accessibility.score * 100;
+              const bestPractices = lhr.categories['best-practices'].score * 100;
+              const seo = lhr.categories.seo.score * 100;
+              const pwa = lhr.categories.pwa ? lhr.categories.pwa.score * 100 : null;
+
+              let comment = '## 📊 Lighthouse Results\n\n';
+              comment += `| Category | Score | Status |\n`;
+              comment += `|----------|-------|--------|\n`;
+              comment += `| Performance | ${performance.toFixed(0)} | ${performance >= 80 ? '✅' : performance >= 50 ? '⚠️' : '❌'} |\n`;
+              comment += `| Accessibility | ${accessibility.toFixed(0)} | ${accessibility >= 90 ? '✅' : accessibility >= 50 ? '⚠️' : '❌'} |\n`;
+              comment += `| Best Practices | ${bestPractices.toFixed(0)} | ${bestPractices >= 80 ? '✅' : bestPractices >= 50 ? '⚠️' : '❌'} |\n`;
+              comment += `| SEO | ${seo.toFixed(0)} | ${seo >= 80 ? '✅' : seo >= 50 ? '⚠️' : '❌'} |\n`;
+
+              if (pwa !== null) {
+                comment += `| PWA | ${pwa.toFixed(0)} | ${pwa >= 80 ? '✅' : pwa >= 50 ? '⚠️' : '❌'} |\n`;
+              }
+
+              comment += '\n### 🎯 Scores\n';
+              comment += `- **Performance**: ${performance.toFixed(0)}/100 ${performance >= 80 ? '(Good)' : performance >= 50 ? '(Needs Improvement)' : '(Poor)'}\n`;
+              comment += `- **Accessibility**: ${accessibility.toFixed(0)}/100 ${accessibility >= 90 ? '(Excellent)' : accessibility >= 50 ? '(Good)' : '(Poor)'}\n`;
+              comment += `- **Best Practices**: ${bestPractices.toFixed(0)}/100 ${bestPractices >= 80 ? '(Good)' : bestPractices >= 50 ? '(Needs Improvement)' : '(Poor)'}\n`;
+              comment += `- **SEO**: ${seo.toFixed(0)}/100 ${seo >= 80 ? '(Good)' : seo >= 50 ? '(Needs Improvement)' : '(Poor)'}\n`;
+              if (pwa !== null) {
+                comment += `- **PWA**: ${pwa.toFixed(0)}/100 ${pwa >= 80 ? '(Good)' : pwa >= 50 ? '(Needs Improvement)' : '(Poor)'}\n`;
+              }
+
+              // Ajouter les recommandations principales
+              if (lhr.audits) {
+                const audits = Object.entries(lhr.audits)
+                  .filter(([_, audit]) => audit.scoreDisplayMode === 'binary' && audit.score < 1)
+                  .sort(([, a], [, b]) => (a.weight || 0) - (b.weight || 0))
+                  .slice(0, 5);
+
+                if (audits.length > 0) {
+                  comment += '\n### 🔧 Top Recommendations\n';
+                  audits.forEach(([id, audit]) => {
+                    comment += `- **${audit.title}**: ${audit.description}\n`;
+                  });
+                }
+              }
+
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+            }

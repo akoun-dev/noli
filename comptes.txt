@@ -1,0 +1,12 @@
+1. Admin : admin@noli.com / NoliTest2024!
+- ✅ Connexion réussie
+- ✅ Token JWT généré
+- ✅ ID utilisateur: 4e8545d6-1297-48a8-a06f-8100576b6000
+2. User : user@noli.com / NoliTest2024!
+- ✅ Connexion réussie
+- ✅ Token JWT généré
+- ✅ ID utilisateur: a0db2489-cc30-49e7-8fe2-188b45f2fbbf
+3. Insurer : insurer@noli.com / NoliTest2024!
+- ✅ Connexion réussie
+- ✅ Token JWT généré
+- ✅ ID utilisateur: b946d3b6-b461-4f24-b8e4-a92f295e1c0b
