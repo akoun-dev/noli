@@ -47,6 +47,7 @@ import type {
   BackupRequest,
   Backup
 } from "@/api/services/adminSettingsApi";
+import { logger } from '@/lib/logger';
 
 const AdminSettingsPage = () => {
   const [activeTab, setActiveTab] = useState('general');

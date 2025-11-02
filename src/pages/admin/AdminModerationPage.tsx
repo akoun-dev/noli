@@ -34,6 +34,7 @@ import {
 } from 'lucide-react';
 import { moderationService, type Review, type Report, type ContentItem, type AuditLog, type ModerationStats } from '@/features/admin/services/moderationService';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 
 export const AdminModerationPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('reviews');

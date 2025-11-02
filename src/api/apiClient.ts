@@ -1,4 +1,5 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
+import { logger } from '@/lib/logger';
 
 // Types
 export interface ApiResponse<T = any> {

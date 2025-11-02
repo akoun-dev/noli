@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { insurerService, type Insurer, type InsurerFormData } from "@/features/admin/services/insurerService";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { logger } from '@/lib/logger';
 
 
 const AdminInsurersPage = () => {

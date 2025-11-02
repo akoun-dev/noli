@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { Menu, X, User, LogOut, Shield } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -19,9 +19,16 @@ export const Header: React.FC = () => {
   const location = useLocation()
 
   const handleLogout = () => {
+    // Fermer le menu immédiatement et déclencher la déconnexion
+    setIsMenuOpen(false)
     logout()
     // La redirection est maintenant gérée dans AuthContext.logout
   }
+
+  // Fermer le menu mobile si l'utilisateur se déconnecte
+  useEffect(() => {
+    if (!isAuthenticated) setIsMenuOpen(false)
+  }, [isAuthenticated])
 
   // Navigation publique (non connecté)
   // cspell:ignore NOLI

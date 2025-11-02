@@ -45,6 +45,7 @@ import { pricingService } from '@/features/tarification/services/pricingService'
 import { offerService, type Offer, type Insurer, type OfferAnalytics, type OfferFormData, type OfferStats } from '@/features/admin/services/offerService';
 import type { Guarantee, InsurancePackage } from '@/types/tarification';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 
 
 export const AdminOffersPage: React.FC = () => {

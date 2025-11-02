@@ -18,14 +18,22 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 import { guaranteeService } from '@/features/tarification/services/guaranteeService';
+import {
+  tarificationSupabaseService,
+  type FixedTariffItem,
+  type FixedCoverageOption,
+} from '@/features/tarification/services/tarificationSupabaseService'
 import {
   Guarantee,
   GuaranteeCategory,
   InsurancePackage,
   GuaranteeFormData,
   PackageFormData,
-  CalculationMethodType
+  CalculationMethodType,
+  TarifFixe,
+  TarifFixeFormData
 } from '@/types/tarification';
 import {
   Plus,
@@ -52,6 +60,11 @@ import { fr } from 'date-fns/locale';
 export const AdminTarificationPage: React.FC = () => {
   const [guarantees, setGuarantees] = useState<Guarantee[]>([]);
   const [packages, setPackages] = useState<InsurancePackage[]>([]);
+  const [tarifFixes, setTarifFixes] = useState<FixedTariffItem[]>([]);
+  const [fixedCoverageOptions, setFixedCoverageOptions] = useState<FixedCoverageOption[]>([])
+  const [selectedCoverageId, setSelectedCoverageId] = useState<string>('')
+  const [availableFormulas, setAvailableFormulas] = useState<string[]>([])
+  const [selectedFormulaName, setSelectedFormulaName] = useState<string>('')
   const [statistics, setStatistics] = useState<{
     totalGuarantees: number;
     activeGuarantees: number;
@@ -74,6 +87,7 @@ export const AdminTarificationPage: React.FC = () => {
   const [isEditPackageDialogOpen, setIsEditPackageDialogOpen] = useState(false);
   const [selectedGuarantee, setSelectedGuarantee] = useState<Guarantee | null>(null);
   const [selectedPackage, setSelectedPackage] = useState<InsurancePackage | null>(null);
+  const [selectedTarifFixe, setSelectedTarifFixe] = useState<TarifFixe | null>(null);
 
   const [newGuarantee, setNewGuarantee] = useState<GuaranteeFormData>({
     name: '',
@@ -92,6 +106,15 @@ export const AdminTarificationPage: React.FC = () => {
     basePrice: 0
   });
 
+  const [isCreateTarifFixeDialogOpen, setIsCreateTarifFixeDialogOpen] = useState(false);
+  const [isEditTarifFixeDialogOpen, setIsEditTarifFixeDialogOpen] = useState(false);
+  const [newTarifFixe, setNewTarifFixe] = useState<TarifFixeFormData>({
+    guaranteeName: '',
+    prime: 0,
+    conditions: '',
+    packPriceReduced: undefined,
+  });
+
   useEffect(() => {
     loadData();
   }, []);
@@ -99,20 +122,116 @@ export const AdminTarificationPage: React.FC = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [guaranteesData, packagesData, statsData] = await Promise.all([
+      const [guaranteesData, packagesData, statsData, grids, fixedTariffs, fixedOptions] = await Promise.all([
         guaranteeService.getGuarantees(),
         guaranteeService.getPackages(),
-        guaranteeService.getTarificationStats()
+        guaranteeService.getTarificationStats(),
+        guaranteeService.getTarificationGrids(), // fallback data only
+        tarificationSupabaseService.listFixedTariffs().catch(() => []),
+        tarificationSupabaseService.listFixedCoverageOptions().catch(() => []),
       ]);
 
       setGuarantees(guaranteesData);
       setPackages(packagesData);
       setStatistics(statsData);
+      setTarifFixes(fixedTariffs as FixedTariffItem[]);
+      setFixedCoverageOptions(fixedOptions as FixedCoverageOption[])
     } catch (error) {
       logger.error('Error loading data:', error);
       toast.error('Erreur lors du chargement des données de tarification');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ---- Tarifs Fixes CRUD ----
+  const handleCreateTarifFixe = async () => {
+    try {
+      if (!selectedCoverageId || !newTarifFixe.prime) {
+        toast.error('Sélectionnez une garantie et saisissez une prime');
+        return;
+      }
+
+      await tarificationSupabaseService.createFixedTariff({
+        coverageId: selectedCoverageId,
+        fixedAmount: Number(newTarifFixe.prime) || 0,
+        formulaName: selectedFormulaName || undefined,
+        conditionsText: newTarifFixe.conditions || undefined,
+        packPriceReduced:
+          newTarifFixe.packPriceReduced === undefined || newTarifFixe.packPriceReduced === null
+            ? undefined
+            : Number(newTarifFixe.packPriceReduced),
+      })
+
+      const refreshed = await tarificationSupabaseService.listFixedTariffs()
+      setTarifFixes(refreshed)
+      setIsCreateTarifFixeDialogOpen(false);
+      setNewTarifFixe({ guaranteeName: '', prime: 0, conditions: '', packPriceReduced: undefined });
+      setSelectedCoverageId('')
+      setSelectedFormulaName('')
+      toast.success('Tarif fixe créé');
+    } catch (error) {
+      logger.error('Error creating fixed tariff:', error);
+      toast.error('Erreur lors de la création du tarif');
+    }
+  };
+
+  const openEditTarifFixeDialog = (tarif: FixedTariffItem) => {
+    setSelectedTarifFixe(tarif);
+    setNewTarifFixe({
+      guaranteeName: `${tarif.coverageName}${tarif.formulaName ? ' - ' + tarif.formulaName : ''}`,
+      prime: tarif.fixedAmount,
+      conditions: tarif.conditions || '',
+      packPriceReduced: tarif.packPriceReduced ?? undefined,
+    });
+    setSelectedCoverageId(tarif.coverageId)
+    setSelectedFormulaName(tarif.formulaName || '')
+    setIsEditTarifFixeDialogOpen(true);
+  };
+
+  const handleUpdateTarifFixe = async () => {
+    if (!selectedTarifFixe) return;
+    try {
+      if (!selectedCoverageId || !newTarifFixe.prime) {
+        toast.error('Sélectionnez une garantie et saisissez une prime');
+        return;
+      }
+
+      await tarificationSupabaseService.updateFixedTariff(selectedTarifFixe.id, {
+        coverageId: selectedCoverageId,
+        fixedAmount: Number(newTarifFixe.prime) || 0,
+        formulaName: selectedFormulaName || null,
+        conditionsText: newTarifFixe.conditions ?? null,
+        packPriceReduced:
+          newTarifFixe.packPriceReduced === undefined || newTarifFixe.packPriceReduced === null
+            ? null
+            : Number(newTarifFixe.packPriceReduced),
+      })
+
+      const refreshed = await tarificationSupabaseService.listFixedTariffs()
+      setTarifFixes(refreshed)
+      setIsEditTarifFixeDialogOpen(false);
+      setSelectedTarifFixe(null);
+      setNewTarifFixe({ guaranteeName: '', prime: 0, conditions: '', packPriceReduced: undefined });
+      setSelectedCoverageId('')
+      setSelectedFormulaName('')
+      toast.success('Tarif fixe mis à jour');
+    } catch (error) {
+      logger.error('Error updating fixed tariff:', error);
+      toast.error('Erreur lors de la mise à jour du tarif');
+    }
+  };
+
+  const handleDeleteTarifFixe = async (id: string) => {
+    if (!confirm('Supprimer ce tarif fixe ?')) return;
+    try {
+      await tarificationSupabaseService.deleteFixedTariff(id)
+      const refreshed = await tarificationSupabaseService.listFixedTariffs()
+      setTarifFixes(refreshed)
+      toast.success('Tarif fixe supprimé');
+    } catch (error) {
+      logger.error('Error deleting fixed tariff:', error);
+      toast.error('Erreur lors de la suppression');
     }
   };
 
@@ -1019,13 +1138,272 @@ export const AdminTarificationPage: React.FC = () => {
                   • Assistance Silver: 65,000 FCFA<br />
                   • (Prix réduits pour packages disponibles)
                 </div>
-                <Button variant="outline" className="w-full">
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() =>
+                    document.getElementById('tarifs-fixes-section')?.scrollIntoView({ behavior: 'smooth' })
+                  }
+                >
                   <FileText className="w-4 h-4 mr-2" />
                   Voir tous les tarifs
                 </Button>
               </CardContent>
             </Card>
           </div>
+
+          {/* Gestion des Tarifs Fixes */}
+          <Card id="tarifs-fixes-section">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-base sm:text-lg">Gestion des Tarifs Fixes</CardTitle>
+              <Dialog open={isCreateTarifFixeDialogOpen} onOpenChange={(open) => {
+                setIsCreateTarifFixeDialogOpen(open)
+                if (open) {
+                  // reset selection and preload options
+                  setSelectedCoverageId('')
+                  setSelectedFormulaName('')
+                }
+              }}>
+                <DialogTrigger asChild>
+                  <Button size="sm">
+                    <Plus className="w-4 h-4 mr-2" /> Nouveau tarif
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-[95vw] sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Nouveau tarif fixe</DialogTitle>
+                    <DialogDescription>Ajouter un tarif fixe de garantie</DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label>Garantie</Label>
+                      <Select
+                        value={selectedCoverageId}
+                        onValueChange={async (val) => {
+                          setSelectedCoverageId(val)
+                          setSelectedFormulaName('')
+                          try {
+                            const formulas = await tarificationSupabaseService.listFormulas(val)
+                            setAvailableFormulas(formulas)
+                          } catch (e) {
+                            setAvailableFormulas([])
+                          }
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Sélectionnez une garantie" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {fixedCoverageOptions.map((c) => (
+                            <SelectItem key={c.id} value={c.id}>
+                              {c.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {availableFormulas.length > 0 && (
+                      <div>
+                        <Label>Formule (si applicable)</Label>
+                        <Select value={selectedFormulaName} onValueChange={(v) => setSelectedFormulaName(v)}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Choisir une formule" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availableFormulas.map((f) => (
+                              <SelectItem key={f} value={f}>
+                                {f}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                    <div>
+                      <Label>Prime (FCFA)</Label>
+                      <Input
+                        type="number"
+                        value={newTarifFixe.prime}
+                        onChange={(e) => setNewTarifFixe((p) => ({ ...p, prime: Number(e.target.value) || 0 }))}
+                        placeholder="Ex: 15000"
+                      />
+                    </div>
+                    <div>
+                      <Label>Conditions (optionnel)</Label>
+                      <Input
+                        value={newTarifFixe.conditions || ''}
+                        onChange={(e) => setNewTarifFixe((p) => ({ ...p, conditions: e.target.value }))}
+                        placeholder="Ex: Uniquement pickups"
+                      />
+                    </div>
+                    <div>
+                      <Label>Prix réduit en pack (optionnel)</Label>
+                      <Input
+                        type="number"
+                        value={newTarifFixe.packPriceReduced ?? ''}
+                        onChange={(e) =>
+                          setNewTarifFixe((p) => ({
+                            ...p,
+                            packPriceReduced: e.target.value === '' ? undefined : Number(e.target.value) || 0,
+                          }))
+                        }
+                        placeholder="Ex: 4240"
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsCreateTarifFixeDialogOpen(false)}>
+                      Annuler
+                    </Button>
+                    <Button onClick={handleCreateTarifFixe}>Créer</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </CardHeader>
+            <CardContent>
+              <div className="responsive-table-wrapper">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Garantie</TableHead>
+                      <TableHead className="hidden sm:table-cell">Conditions</TableHead>
+                      <TableHead>Prime</TableHead>
+                      <TableHead className="hidden md:table-cell">Prix pack</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {tarifFixes.map((t) => (
+                      <TableRow key={t.id}>
+                        <TableCell className="font-medium">
+                          {t.coverageName}
+                          {t.formulaName ? (
+                            <span className="text-xs text-muted-foreground"> — {t.formulaName}</span>
+                          ) : null}
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell">{t.conditions || '-'}</TableCell>
+                        <TableCell>{t.fixedAmount.toLocaleString('fr-FR')} FCFA</TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          {t.packPriceReduced != null ? `${t.packPriceReduced.toLocaleString('fr-FR')} FCFA` : '-'}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button variant="outline" size="sm" onClick={() => openEditTarifFixeDialog(t)}>
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-red-600 hover:text-red-700"
+                              onClick={() => handleDeleteTarifFixe(t.id)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Dialog: Edit Tarif Fixe */}
+          <Dialog open={isEditTarifFixeDialogOpen} onOpenChange={(open) => {
+            setIsEditTarifFixeDialogOpen(open)
+            if (!open) {
+              setSelectedCoverageId('')
+              setSelectedFormulaName('')
+            }
+          }}>
+            <DialogContent className="max-w-[95vw] sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Modifier le tarif fixe</DialogTitle>
+                <DialogDescription>Mettre à jour les informations</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label>Garantie</Label>
+                  <Select
+                    value={selectedCoverageId}
+                    onValueChange={async (val) => {
+                      setSelectedCoverageId(val)
+                      setSelectedFormulaName('')
+                      try {
+                        const formulas = await tarificationSupabaseService.listFormulas(val)
+                        setAvailableFormulas(formulas)
+                      } catch (e) {
+                        setAvailableFormulas([])
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sélectionnez une garantie" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {fixedCoverageOptions.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {availableFormulas.length > 0 && (
+                  <div>
+                    <Label>Formule (si applicable)</Label>
+                    <Select value={selectedFormulaName} onValueChange={(v) => setSelectedFormulaName(v)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Choisir une formule" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableFormulas.map((f) => (
+                          <SelectItem key={f} value={f}>
+                            {f}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                <div>
+                  <Label>Prime (FCFA)</Label>
+                  <Input
+                    type="number"
+                    value={newTarifFixe.prime}
+                    onChange={(e) => setNewTarifFixe((p) => ({ ...p, prime: Number(e.target.value) || 0 }))}
+                  />
+                </div>
+                <div>
+                  <Label>Conditions (optionnel)</Label>
+                  <Input
+                    value={newTarifFixe.conditions || ''}
+                    onChange={(e) => setNewTarifFixe((p) => ({ ...p, conditions: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <Label>Prix réduit en pack (optionnel)</Label>
+                  <Input
+                    type="number"
+                    value={newTarifFixe.packPriceReduced ?? ''}
+                    onChange={(e) =>
+                      setNewTarifFixe((p) => ({
+                        ...p,
+                        packPriceReduced: e.target.value === '' ? undefined : Number(e.target.value) || 0,
+                      }))
+                    }
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsEditTarifFixeDialogOpen(false)}>
+                  Annuler
+                </Button>
+                <Button onClick={handleUpdateTarifFixe}>Enregistrer</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
 
         <TabsContent value="statistics" className="space-y-4">

@@ -44,6 +44,7 @@ import type {
   ValidationRequest,
   ExportRequest
 } from '@/api/services/adminDataApi';
+import { logger } from '@/lib/logger';
 
 export const AdminDataManagementPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('validation');

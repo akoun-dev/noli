@@ -223,12 +223,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                   }
                 }
 
-                logger.auth('Restoring user from cache:', user.email)
+                logger.auth('Restoring user from cache (preview only, not authenticated):', user.email)
+                // Important: ne pas marquer l\'utilisateur comme authentifié à partir du cache
+                // Cela évite que le Header affiche un état connecté sans session valide
                 setState({
                   user,
-                  isAuthenticated: true,
+                  isAuthenticated: false,
                   isLoading: false,
-                  permissions,
+                  permissions: [],
                 })
 
                 // Continuer en arrière-plan pour vérifier la session réelle
@@ -373,6 +375,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           isLoading: false,
           permissions: [],
         })
+        // Nettoyer le cache local pour éviter une restauration indésirable
+        try {
+          localStorage.removeItem('noli_user')
+          localStorage.removeItem('noli_permissions')
+        } catch (_) {}
 
         // Nettoyer le cache
         localStorage.removeItem('noli_user')
@@ -483,28 +490,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = async () => {
     logger.auth('🚪 AuthContext.logout appelé')
 
-    // Forcer le chargement immédiatement pour indiquer la déconnexion
-    setState((prev) => ({ ...prev, isLoading: true }))
+    // 1) Réinitialiser immédiatement l'état pour refléter la déconnexion dans l'UI (Header, etc.)
+    setState({ user: null, isAuthenticated: false, isLoading: false, permissions: [] })
 
-    try {
-      logger.auth('📞 Appel de authService.logout...')
-      await authService.logout()
-      logger.auth('✅ authService.logout réussi')
-    } catch (error) {
-      logger.error('❌ Erreur dans AuthContext.logout:', error)
-      // Continuer quand même avec le nettoyage local même si la déconnexion distante échoue
-    }
-
-    // Nettoyer l'état local IMMÉDIATEMENT
-    logger.auth("🔄 Nettoyage complet de l'état utilisateur...")
-    setState({
-      user: null,
-      isAuthenticated: false,
-      isLoading: false, // Important: mettre isLoading à false après le nettoyage
-      permissions: [],
-    })
-
-    // Nettoyage complet du stockage local et session
+    // 2) Nettoyer le stockage local et la session (best-effort)
     try {
       // Supabase storage keys
       localStorage.removeItem('supabase.auth.token')
@@ -520,45 +509,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       localStorage.removeItem('noli_permissions')
       localStorage.removeItem('noli_last_activity')
 
-      // Nettoyage complet du sessionStorage
       sessionStorage.clear()
-
-      logger.auth('✅ Nettoyage stockage local terminé')
     } catch (storageError) {
       logger.warn('Storage cleanup error:', storageError)
     }
 
-    // Forcer la déconnexion Supabase avec timeout plus court
+    // 3) Déconnexion Supabase
+    // Priorité: invalider localement (rapide, supprime les cookies/sessions locales)
+    // Puis, en arrière-plan, tenter un signOut global non bloquant (révocation côté serveur)
     try {
       const { supabase } = await import('@/lib/supabase')
-      const signOutPromise = supabase.auth.signOut({ scope: 'global' })
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('SignOut timeout after 2 seconds')), 2000)
-      )
-      await Promise.race([signOutPromise, timeoutPromise])
-      logger.auth('✅ Déconnexion Supabase terminée')
-    } catch (refreshError) {
-      logger.warn('Supabase signOut error during logout (expected):', refreshError)
+      await supabase.auth.signOut({ scope: 'local' })
+      // Lancer la révocation globale sans bloquer ni bruiter les logs
+      supabase.auth.signOut({ scope: 'global' }).catch(() => {})
+    } catch (_) {
+      // Non bloquant, ignorer silencieusement pour ne pas polluer les logs
     }
 
-    // Forcer la mise à jour du state une dernière fois pour s'assurer qu'il est bien nettoyé
-    setState({
-      user: null,
-      isAuthenticated: false,
-      isLoading: false,
-      permissions: [],
-    })
-
-    logger.auth('✅ État de déconnexion finalisé')
-
-    // Forcer une redirection complète vers la page d'accueil avec refresh
-    logger.auth('🌐 Redirection vers /...')
-    navigate('/', { replace: true })
-
-    // Forcer un rechargement de la page pour s'assurer que tous les états sont réinitialisés
-    setTimeout(() => {
-      window.location.href = '/'
-    }, 100)
+    // 4) Navigation vers la page de connexion (plus explicite côté UX)
+    navigate('/auth/connexion', { replace: true })
   }
 
   const updateUser = async (userData: Partial<User>) => {

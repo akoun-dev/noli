@@ -75,6 +75,8 @@ export class CSPManager {
       'worker-src': ["'self'", 'blob:'],
     }
 
+    // Autoriser dynamiquement l'API backend si définie
+    this.appendEnvApiHosts(cspConfig)
     return this.buildCSPString(cspConfig)
   }
 
@@ -118,6 +120,7 @@ export class CSPManager {
       'worker-src': ["'self'", 'blob:'],
     }
 
+    this.appendEnvApiHosts(cspConfig)
     return this.buildCSPString(cspConfig)
   }
 
@@ -215,7 +218,36 @@ export class CSPManager {
       'worker-src': ["'self'", 'blob:'],
     }
 
+    this.appendEnvApiHosts(cspConfig)
     return this.buildCSPString(cspConfig)
+  }
+
+  /**
+   * Ajoute dynamiquement les hôtes d'API (VITE_API_BASE_URL, VITE_SUPABASE_URL) aux connect-src
+   */
+  private appendEnvApiHosts(config: CSPConfig) {
+    const addOrigin = (url?: string) => {
+      try {
+        if (!url) return
+        const origin = new URL(url).origin
+        if (!config['connect-src'].includes(origin)) {
+          config['connect-src'].push(origin)
+        }
+      } catch (_) {
+        // ignore invalid URL
+      }
+    }
+
+    // Backend API (env or default)
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    addOrigin(import.meta.env.VITE_API_BASE_URL)
+    // Fallback: default API used by apiClient if env not set
+    addOrigin('https://api.noliassurance.ci')
+    // Supabase project URL
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    addOrigin(import.meta.env.VITE_SUPABASE_URL)
   }
 
   /**
