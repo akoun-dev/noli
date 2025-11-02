@@ -119,6 +119,14 @@ export const AdminTarificationPage: React.FC = () => {
     loadData();
   }, []);
 
+  // Petit utilitaire pour éviter qu'un appel réseau bloque l'écran de chargement
+  const withTimeout = async <T,>(promise: Promise<T>, ms = 1500, fallback: T): Promise<T> => {
+    return await Promise.race<Promise<T>>([
+      promise,
+      new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms)),
+    ])
+  }
+
   const loadData = async () => {
     try {
       setLoading(true);
@@ -127,8 +135,17 @@ export const AdminTarificationPage: React.FC = () => {
         guaranteeService.getPackages(),
         guaranteeService.getTarificationStats(),
         guaranteeService.getTarificationGrids(), // fallback data only
-        tarificationSupabaseService.listFixedTariffs().catch(() => []),
-        tarificationSupabaseService.listFixedCoverageOptions().catch(() => []),
+        // Protège contre un Supabase local non démarré en dev
+        withTimeout(
+          tarificationSupabaseService.listFixedTariffs().catch(() => []),
+          1500,
+          [] as FixedTariffItem[]
+        ),
+        withTimeout(
+          tarificationSupabaseService.listFixedCoverageOptions().catch(() => []),
+          1500,
+          [] as FixedCoverageOption[]
+        ),
       ]);
 
       setGuarantees(guaranteesData);

@@ -79,7 +79,7 @@ export const fetchPlatformStats = async (): Promise<PlatformStats> => {
       const { count: totalPolicies } = await supabase
         .from('quotes')
         .select('*', { count: 'exact', head: true })
-        .eq('status', 'approved');
+        .eq('status', 'APPROVED');
 
       // Calculer le taux de conversion réel
       const conversionRate = totalQuotes > 0 ? Math.round((totalPolicies || 0) / totalQuotes * 100 * 100) / 100 : 0;
@@ -461,7 +461,7 @@ export const fetchQuoteAnalytics = async (): Promise<QuoteAnalytics> => {
     }
 
     const totalQuotes = quotes?.length || 0;
-    const completedQuotes = quotes?.filter(q => q.status === 'approved').length || 0;
+    const completedQuotes = quotes?.filter((q: any) => String(q.status).toUpperCase() === 'APPROVED').length || 0;
 
     // Calculer le temps de traitement moyen réel (en jours)
     const processingTimes = quotes?.filter(q => q.updated_at && q.created_at && q.status !== 'pending')

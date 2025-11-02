@@ -125,17 +125,15 @@ export const fetchUsers = async (filters?: UserFilters): Promise<User[]> => {
         // Récupérer le nombre de quotes pour cet utilisateur
         const { count: quotesCount } = await supabase
           .from('quotes')
-          .select('*', { count: 'exact' })
-          .eq('user_id', profile.id)
-          .single();
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', profile.id);
 
         // Récupérer le nombre de polices approuvées
         const { count: policiesCount } = await supabase
           .from('quotes')
-          .select('*', { count: 'exact' })
+          .select('*', { count: 'exact', head: true })
           .eq('user_id', profile.id)
-          .eq('status', 'approved')
-          .single();
+          .eq('status', 'APPROVED');
 
         user.quotesCount = quotesCount || 0;
         user.conversionRate = quotesCount && quotesCount > 0
