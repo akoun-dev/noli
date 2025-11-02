@@ -16,7 +16,137 @@ export interface FixedCoverageOption {
   calculation_type: 'FIXED_AMOUNT' | 'FORMULA_BASED'
 }
 
+export interface FreeCoverageItem {
+  id: string
+  name: string
+  isMandatory: boolean
+}
+
 class TarificationSupabaseService {
+  // ---------- COVERAGES (GARANTIES) ----------
+  private mapCalcMethodToDb(method: string): string {
+    // Keep same naming across app and DB
+    return method
+  }
+
+  async listAdminCoverages(): Promise<Array<{
+    id: string
+    name: string
+    calculation_type: string
+    is_active: boolean
+    is_mandatory: boolean
+    fixed_amount?: number | null
+  }>> {
+    // Nested select to get potential fixed_amount rules for display
+    const { data, error } = await supabase
+      .from('coverages')
+      .select(
+        'id, name, calculation_type, is_active, is_mandatory, coverage_tariff_rules:coverage_tariff_rules(fixed_amount)'
+      )
+      .order('display_order', { ascending: true })
+
+    if (error) throw error
+
+    return (data || []).map((row: any) => {
+      const rules = (row.coverage_tariff_rules || []) as Array<{ fixed_amount?: number | null }>
+      const fixed = rules.find((r) => r.fixed_amount != null)?.fixed_amount ?? null
+      return {
+        id: row.id,
+        name: row.name,
+        calculation_type: row.calculation_type,
+        is_active: !!row.is_active,
+        is_mandatory: !!row.is_mandatory,
+        fixed_amount: fixed != null ? Number(fixed) : null,
+      }
+    })
+  }
+
+  async createCoverage(input: {
+    name: string
+    calculationMethod: string
+    isOptional: boolean
+    code?: string
+    description?: string
+  }): Promise<string> {
+    const base = {
+      name: input.name,
+      calculation_type: this.mapCalcMethodToDb(input.calculationMethod),
+      is_active: true,
+      is_mandatory: !input.isOptional,
+    } as any
+
+    // Try to set optional fields if they exist in schema; fallback if DB rejects
+    const tryPayload = { ...base, code: input.code ?? null, description: input.description ?? null }
+    let insertedId: string | null = null
+
+    try {
+      const { data, error } = await supabase.from('coverages').insert(tryPayload).select('id').single()
+      if (error) throw error
+      insertedId = data?.id
+    } catch (_) {
+      const { data, error } = await supabase.from('coverages').insert(base).select('id').single()
+      if (error) throw error
+      insertedId = data?.id
+    }
+
+    if (!insertedId) throw new Error('Failed to create coverage')
+    return insertedId
+  }
+
+  async updateCoverageDetails(
+    id: string,
+    input: Partial<{ name: string; calculationMethod: string; isOptional: boolean; isActive: boolean; code?: string | null; description?: string | null }>
+  ): Promise<void> {
+    const update: any = {}
+    if (input.name !== undefined) update.name = input.name
+    if (input.calculationMethod !== undefined) update.calculation_type = this.mapCalcMethodToDb(input.calculationMethod)
+    if (input.isOptional !== undefined) update.is_mandatory = !input.isOptional
+    if (input.isActive !== undefined) update.is_active = input.isActive
+
+    // First try with optional fields
+    if (input.code !== undefined) update.code = input.code
+    if (input.description !== undefined) update.description = input.description
+
+    try {
+      const { error } = await supabase.from('coverages').update(update).eq('id', id)
+      if (error) throw error
+    } catch (_) {
+      // Retry without optional fields if DB rejects
+      const minimal: any = {}
+      if (input.name !== undefined) minimal.name = input.name
+      if (input.calculationMethod !== undefined) minimal.calculation_type = this.mapCalcMethodToDb(input.calculationMethod)
+      if (input.isOptional !== undefined) minimal.is_mandatory = !input.isOptional
+      if (input.isActive !== undefined) minimal.is_active = input.isActive
+      const { error } = await supabase.from('coverages').update(minimal).eq('id', id)
+      if (error) throw error
+    }
+  }
+
+  async upsertCoverageFixedTariff(coverageId: string, fixedAmount: number): Promise<void> {
+    // Find an existing fixed-amount rule; update if exists, else insert
+    const { data, error } = await supabase
+      .from('coverage_tariff_rules')
+      .select('id, fixed_amount')
+      .eq('coverage_id', coverageId)
+      .not('fixed_amount', 'is', null)
+      .limit(1)
+
+    if (error) throw error
+    const existing = (data || [])[0]
+
+    if (existing) {
+      const { error: upErr } = await supabase
+        .from('coverage_tariff_rules')
+        .update({ fixed_amount: fixedAmount, is_active: true })
+        .eq('id', existing.id)
+      if (upErr) throw upErr
+    } else {
+      const { error: insErr } = await supabase
+        .from('coverage_tariff_rules')
+        .insert({ coverage_id: coverageId, fixed_amount: fixedAmount, is_active: true })
+      if (insErr) throw insErr
+    }
+  }
   // ---------- FIXED TARIFFS ----------
   async listFixedTariffs(): Promise<FixedTariffItem[]> {
     const { data, error } = await supabase
@@ -55,6 +185,30 @@ class TarificationSupabaseService {
 
     if (error) throw error
     return (data || []) as FixedCoverageOption[]
+  }
+
+  async listFreeCoverages(): Promise<FreeCoverageItem[]> {
+    const { data, error } = await supabase
+      .from('coverages')
+      .select('id, name, is_mandatory, is_active')
+      .eq('calculation_type', 'FREE')
+      .eq('is_active', true)
+      .order('display_order')
+
+    if (error) throw error
+    return (data || []).map((c: any) => ({ id: c.id, name: c.name, isMandatory: !!c.is_mandatory }))
+  }
+
+  async updateCoverage(
+    id: string,
+    fields: Partial<{ is_active: boolean; is_mandatory: boolean; name: string }>
+  ): Promise<void> {
+    const { error } = await supabase
+      .from('coverages')
+      .update(fields as any)
+      .eq('id', id)
+
+    if (error) throw error
   }
 
   async listFormulas(coverageId: string): Promise<string[]> {

@@ -300,6 +300,18 @@ class GuaranteeService {
   }
 
   private initializeData() {
+    const enableMocks = (import.meta as any).env?.VITE_MOCK_DATA === 'true'
+
+    // En mode non-demo, on s'assure de ne pas injecter de données locales
+    if (!enableMocks) {
+      try {
+        localStorage.removeItem(this.storageKey)
+        localStorage.removeItem(this.packagesStorageKey)
+        localStorage.removeItem(this.gridsStorageKey)
+      } catch (_) {}
+      return
+    }
+
     if (!localStorage.getItem(this.storageKey)) {
       localStorage.setItem(this.storageKey, JSON.stringify(initialGuarantees));
     }
@@ -337,6 +349,8 @@ class GuaranteeService {
     const guarantees = await this.getGuarantees();
     const newGuarantee: Guarantee = {
       ...data,
+      // Catégorie par défaut (plus utilisée dans le formulaire)
+      category: 'RESPONSABILITE_CIVILE',
       id: Math.random().toString(36).substr(2, 9),
       isActive: true,
       createdAt: new Date(),
@@ -544,6 +558,11 @@ class GuaranteeService {
   // Méthodes de calcul
   getCalculationMethods(): { value: CalculationMethodType; label: string; description: string }[] {
     return [
+      {
+        value: 'FREE',
+        label: 'Gratuit',
+        description: 'Prime nulle (gratuite)'
+      },
       {
         value: 'FIXED_AMOUNT',
         label: 'Montant Fixe',

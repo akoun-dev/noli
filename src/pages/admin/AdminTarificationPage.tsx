@@ -27,7 +27,6 @@ import {
 } from '@/features/tarification/services/tarificationSupabaseService'
 import {
   Guarantee,
-  GuaranteeCategory,
   InsurancePackage,
   GuaranteeFormData,
   PackageFormData,
@@ -62,6 +61,7 @@ export const AdminTarificationPage: React.FC = () => {
   const [packages, setPackages] = useState<InsurancePackage[]>([]);
   const [tarifFixes, setTarifFixes] = useState<FixedTariffItem[]>([]);
   const [fixedCoverageOptions, setFixedCoverageOptions] = useState<FixedCoverageOption[]>([])
+  const [freeCoverages, setFreeCoverages] = useState<Array<{ id: string; name: string; isMandatory: boolean }>>([])
   const [selectedCoverageId, setSelectedCoverageId] = useState<string>('')
   const [availableFormulas, setAvailableFormulas] = useState<string[]>([])
   const [selectedFormulaName, setSelectedFormulaName] = useState<string>('')
@@ -80,14 +80,13 @@ export const AdminTarificationPage: React.FC = () => {
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [isCreateGuaranteeDialogOpen, setIsCreateGuaranteeDialogOpen] = useState(false);
   const [isCreatePackageDialogOpen, setIsCreatePackageDialogOpen] = useState(false);
   const [isEditGuaranteeDialogOpen, setIsEditGuaranteeDialogOpen] = useState(false);
   const [isEditPackageDialogOpen, setIsEditPackageDialogOpen] = useState(false);
   const [selectedGuarantee, setSelectedGuarantee] = useState<Guarantee | null>(null);
   const [selectedPackage, setSelectedPackage] = useState<InsurancePackage | null>(null);
-  const [selectedTarifFixe, setSelectedTarifFixe] = useState<TarifFixe | null>(null);
+  const [selectedTarifFixe, setSelectedTarifFixe] = useState<FixedTariffItem | null>(null);
 
   const [newGuarantee, setNewGuarantee] = useState<GuaranteeFormData>({
     name: '',
@@ -130,8 +129,27 @@ export const AdminTarificationPage: React.FC = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [guaranteesData, packagesData, statsData, grids, fixedTariffs, fixedOptions] = await Promise.all([
-        guaranteeService.getGuarantees(),
+      const [guaranteesData, packagesData, statsData, grids, fixedTariffs, fixedOptions, freeCov] = await Promise.all([
+        withTimeout(
+          tarificationSupabaseService
+            .listAdminCoverages()
+            .then(rows => rows.map(row => ({
+              id: row.id,
+              name: row.name,
+              code: '',
+              category: 'RESPONSABILITE_CIVILE',
+              description: '',
+              calculationMethod: row.calculation_type as CalculationMethodType,
+              isOptional: !row.is_mandatory,
+              isActive: row.is_active,
+              fixedAmount: row.fixed_amount ?? undefined,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+              createdBy: 'supabase'
+            }) as Guarantee)),
+          1500,
+          await guaranteeService.getGuarantees()
+        ),
         guaranteeService.getPackages(),
         guaranteeService.getTarificationStats(),
         guaranteeService.getTarificationGrids(), // fallback data only
@@ -146,6 +164,11 @@ export const AdminTarificationPage: React.FC = () => {
           1500,
           [] as FixedCoverageOption[]
         ),
+        withTimeout(
+          tarificationSupabaseService.listFreeCoverages().catch(() => []),
+          1500,
+          [] as Array<{ id: string; name: string; isMandatory: boolean }>
+        )
       ]);
 
       setGuarantees(guaranteesData);
@@ -153,6 +176,7 @@ export const AdminTarificationPage: React.FC = () => {
       setStatistics(statsData);
       setTarifFixes(fixedTariffs as FixedTariffItem[]);
       setFixedCoverageOptions(fixedOptions as FixedCoverageOption[])
+      setFreeCoverages(freeCov)
     } catch (error) {
       logger.error('Error loading data:', error);
       toast.error('Erreur lors du chargement des données de tarification');
@@ -254,12 +278,57 @@ export const AdminTarificationPage: React.FC = () => {
 
   const handleCreateGuarantee = async () => {
     try {
-      if (!newGuarantee.name || !newGuarantee.code || !newGuarantee.description) {
-        toast.error('Veuillez remplir tous les champs obligatoires');
-        return;
+      const missing: string[] = []
+      const method = newGuarantee.calculationMethod
+      if (!newGuarantee.name?.trim()) missing.push('Nom')
+      if (!newGuarantee.code?.trim()) missing.push('Code')
+      if (!method) missing.push('Méthode de calcul')
+
+      const needsRate = ['RATE_ON_SI', 'RATE_ON_NEW_VALUE', 'CONDITIONAL_RATE'].includes(method as string)
+      if (needsRate && (!newGuarantee.rate || Number.isNaN(newGuarantee.rate) || (newGuarantee.rate as number) <= 0)) {
+        missing.push('Taux (%)')
+      }
+      const isFixed = method === 'FIXED_AMOUNT'
+      if (isFixed && (!newGuarantee.fixedAmount || Number.isNaN(newGuarantee.fixedAmount) || (newGuarantee.fixedAmount as number) <= 0)) {
+        missing.push('Montant fixe (FCFA)')
       }
 
-      await guaranteeService.createGuarantee(newGuarantee);
+      if (missing.length > 0) {
+        toast.error(`Veuillez remplir tous les champs obligatoires: ${missing.join(', ')}`)
+        return
+      }
+
+      // Normaliser les champs selon la méthode choisie
+      const payload: GuaranteeFormData = { ...newGuarantee }
+      if (method === 'FREE') {
+        payload.rate = undefined
+        payload.minValue = undefined
+        payload.maxValue = undefined
+        payload.fixedAmount = undefined
+      } else if (method === 'FIXED_AMOUNT') {
+        payload.rate = undefined
+        payload.minValue = undefined
+        payload.maxValue = undefined
+      } else if (['RATE_ON_SI', 'RATE_ON_NEW_VALUE', 'CONDITIONAL_RATE'].includes(method as string)) {
+        payload.fixedAmount = undefined
+      }
+
+      // Try Supabase first
+      try {
+        const coverageId = await tarificationSupabaseService.createCoverage({
+          name: payload.name,
+          calculationMethod: payload.calculationMethod,
+          isOptional: payload.isOptional,
+          code: payload.code,
+          description: payload.description,
+        })
+        if (method === 'FIXED_AMOUNT' && payload.fixedAmount) {
+          await tarificationSupabaseService.upsertCoverageFixedTariff(coverageId, payload.fixedAmount)
+        }
+      } catch (e) {
+        // Fallback local storage in dev
+        await guaranteeService.createGuarantee(payload)
+      }
       setIsCreateGuaranteeDialogOpen(false);
       setNewGuarantee({
         name: '',
@@ -300,11 +369,55 @@ export const AdminTarificationPage: React.FC = () => {
 
   const handleUpdateGuarantee = async () => {
     try {
-      if (!selectedGuarantee || !newGuarantee.name || !newGuarantee.code || !newGuarantee.description) {
-        return;
+      if (!selectedGuarantee) return
+
+      const missing: string[] = []
+      const method = newGuarantee.calculationMethod
+      if (!newGuarantee.name?.trim()) missing.push('Nom')
+      if (!newGuarantee.code?.trim()) missing.push('Code')
+      if (!method) missing.push('Méthode de calcul')
+
+      const needsRate = ['RATE_ON_SI', 'RATE_ON_NEW_VALUE', 'CONDITIONAL_RATE'].includes(method as string)
+      if (needsRate && (!newGuarantee.rate || Number.isNaN(newGuarantee.rate) || (newGuarantee.rate as number) <= 0)) {
+        missing.push('Taux (%)')
+      }
+      const isFixed = method === 'FIXED_AMOUNT'
+      if (isFixed && (!newGuarantee.fixedAmount || Number.isNaN(newGuarantee.fixedAmount) || (newGuarantee.fixedAmount as number) <= 0)) {
+        missing.push('Montant fixe (FCFA)')
       }
 
-      await guaranteeService.updateGuarantee(selectedGuarantee.id, newGuarantee);
+      if (missing.length > 0) {
+        toast.error(`Veuillez remplir tous les champs obligatoires: ${missing.join(', ')}`)
+        return
+      }
+
+      // Normaliser les champs selon la méthode choisie
+      const payload: Partial<GuaranteeFormData> = { ...newGuarantee }
+      if (method === 'FREE') {
+        payload.rate = undefined
+        payload.minValue = undefined
+        payload.maxValue = undefined
+        payload.fixedAmount = undefined
+      } else if (method === 'FIXED_AMOUNT') {
+        payload.rate = undefined
+        payload.minValue = undefined
+        payload.maxValue = undefined
+      } else if (['RATE_ON_SI', 'RATE_ON_NEW_VALUE', 'CONDITIONAL_RATE'].includes(method as string)) {
+        payload.fixedAmount = undefined
+      }
+
+      try {
+        await tarificationSupabaseService.updateCoverageDetails(selectedGuarantee.id, {
+          name: payload.name!,
+          calculationMethod: payload.calculationMethod!,
+          isOptional: payload.isOptional!,
+        })
+        if (method === 'FIXED_AMOUNT' && payload.fixedAmount) {
+          await tarificationSupabaseService.upsertCoverageFixedTariff(selectedGuarantee.id, payload.fixedAmount)
+        }
+      } catch (e) {
+        await guaranteeService.updateGuarantee(selectedGuarantee.id, payload)
+      }
       setIsEditGuaranteeDialogOpen(false);
       setSelectedGuarantee(null);
       setNewGuarantee({
@@ -349,7 +462,11 @@ export const AdminTarificationPage: React.FC = () => {
     }
 
     try {
-      await guaranteeService.deleteGuarantee(id);
+      try {
+        await tarificationSupabaseService.updateCoverageDetails(id, { isActive: false })
+      } catch (e) {
+        await guaranteeService.deleteGuarantee(id)
+      }
       loadData();
     } catch (error) {
       logger.error('Error deleting guarantee:', error);
@@ -371,7 +488,14 @@ export const AdminTarificationPage: React.FC = () => {
 
   const handleToggleGuarantee = async (id: string) => {
     try {
-      await guaranteeService.toggleGuarantee(id);
+      const found = guarantees.find(g => g.id === id)
+      if (found) {
+        try {
+          await tarificationSupabaseService.updateCoverageDetails(id, { isActive: !found.isActive })
+        } catch (e) {
+          await guaranteeService.toggleGuarantee(id)
+        }
+      }
       loadData();
     } catch (error) {
       logger.error('Error toggling guarantee:', error);
@@ -422,8 +546,7 @@ export const AdminTarificationPage: React.FC = () => {
     const matchesSearch = `${guarantee.name} ${guarantee.code} ${guarantee.description || ''}`
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
-    const matchesCategory = categoryFilter === 'all' || guarantee.category === categoryFilter;
-    return matchesSearch && matchesCategory;
+    return matchesSearch;
   });
 
   const filteredPackages = packages.filter(pkg =>
@@ -433,7 +556,6 @@ export const AdminTarificationPage: React.FC = () => {
   );
 
   const calculationMethods = guaranteeService.getCalculationMethods();
-  const categories = guaranteeService.getGuaranteeCategories();
 
   if (loading) {
     return (
@@ -575,29 +697,7 @@ export const AdminTarificationPage: React.FC = () => {
                         />
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <Label>Catégorie</Label>
-                          <Select
-                            value={newGuarantee.category}
-                            onValueChange={(value: GuaranteeCategory) =>
-                              setNewGuarantee(prev => ({ ...prev, category: value }))
-                            }
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {categories.map(cat => (
-                                <SelectItem key={cat.value} value={cat.value}>
-                                  {cat.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div>
+                      <div>
                           <Label>Méthode de calcul</Label>
                           <Select
                             value={newGuarantee.calculationMethod}
@@ -616,51 +716,91 @@ export const AdminTarificationPage: React.FC = () => {
                               ))}
                             </SelectContent>
                           </Select>
-                        </div>
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <Label>Taux (%)</Label>
-                          <Input
-                            type="number"
-                            step="0.1"
-                            value={newGuarantee.rate || ''}
-                            onChange={(e) => setNewGuarantee(prev => ({ ...prev, rate: parseFloat(e.target.value) || undefined }))}
-                            placeholder="Ex: 1.5"
-                          />
-                        </div>
-                        <div>
-                          <Label>Montant fixe (FCFA)</Label>
-                          <Input
-                            type="number"
-                            value={newGuarantee.rate || ''}
-                            onChange={(e) => setNewGuarantee(prev => ({ ...prev, rate: parseFloat(e.target.value) || undefined }))}
-                            placeholder="Ex: 15000"
-                          />
-                        </div>
-                      </div>
+                      {/* Champs dynamiques selon la méthode de calcul */}
+                      {(() => {
+                        const method = newGuarantee.calculationMethod
+                        const showRate = ['RATE_ON_SI', 'RATE_ON_NEW_VALUE', 'CONDITIONAL_RATE'].includes(method as string)
+                        const showMinMax = showRate
+                        const isFixed = method === 'FIXED_AMOUNT'
+                        // FREE n'est pas sélectionnable ici (géré via Supabase), mais on prépare le cas
+                        const isFree = (method as any) === 'FREE'
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <Label>Montant minimum (FCFA)</Label>
-                          <Input
-                            type="number"
-                            value={newGuarantee.minValue || ''}
-                            onChange={(e) => setNewGuarantee(prev => ({ ...prev, minValue: parseFloat(e.target.value) || undefined }))}
-                            placeholder="Ex: 50000"
-                          />
-                        </div>
-                        <div>
-                          <Label>Montant maximum (FCFA)</Label>
-                          <Input
-                            type="number"
-                            value={newGuarantee.maxValue || ''}
-                            onChange={(e) => setNewGuarantee(prev => ({ ...prev, maxValue: parseFloat(e.target.value) || undefined }))}
-                            placeholder="Ex: 500000"
-                          />
-                        </div>
-                      </div>
+                        return (
+                          <>
+                            {isFixed && (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                  <Label>Montant fixe (FCFA)</Label>
+                                  <Input
+                                    type="number"
+                                    value={newGuarantee.fixedAmount ?? ''}
+                                    onChange={(e) =>
+                                      setNewGuarantee((prev) => ({
+                                        ...prev,
+                                        fixedAmount: parseFloat(e.target.value) || undefined,
+                                      }))
+                                    }
+                                    placeholder="Ex: 15000"
+                                  />
+                                </div>
+                              </div>
+                            )}
+                            {showRate && (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                  <Label>Taux (%)</Label>
+                                  <Input
+                                    type="number"
+                                    step="0.1"
+                                    value={newGuarantee.rate || ''}
+                                    onChange={(e) => setNewGuarantee(prev => ({ ...prev, rate: parseFloat(e.target.value) || undefined }))}
+                                    placeholder="Ex: 1.5"
+                                  />
+                                </div>
+                                {showMinMax && (
+                                  <div className="flex items-end text-sm text-muted-foreground">
+                                    Les montants mini/maxi ci‑dessous sont optionnels
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {showMinMax && (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                  <Label>Montant minimum (FCFA)</Label>
+                                  <Input
+                                    type="number"
+                                    value={newGuarantee.minValue || ''}
+                                    onChange={(e) => setNewGuarantee(prev => ({ ...prev, minValue: parseFloat(e.target.value) || undefined }))}
+                                    placeholder="Ex: 50000"
+                                  />
+                                </div>
+                                <div>
+                                  <Label>Montant maximum (FCFA)</Label>
+                                  <Input
+                                    type="number"
+                                    value={newGuarantee.maxValue || ''}
+                                    onChange={(e) => setNewGuarantee(prev => ({ ...prev, maxValue: parseFloat(e.target.value) || undefined }))}
+                                    placeholder="Ex: 500000"
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {isFree && (
+                              <Alert>
+                                <AlertTriangle className="h-4 w-4" />
+                                <AlertDescription>
+                                  Cette garantie est gratuite: aucun taux ni montant à saisir ici.
+                                </AlertDescription>
+                              </Alert>
+                            )}
+                          </>
+                        )
+                      })()}
 
                       <div>
                         <Label htmlFor="guarantee-conditions">Conditions</Label>
@@ -707,19 +847,7 @@ export const AdminTarificationPage: React.FC = () => {
                     className="pl-10 w-full sm:max-w-sm"
                   />
                 </div>
-                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                  <SelectTrigger className="w-full sm:w-48">
-                    <SelectValue placeholder="Filtrer par catégorie" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Toutes catégories</SelectItem>
-                    {categories.map(cat => (
-                      <SelectItem key={cat.value} value={cat.value}>
-                        {cat.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {/* Filtre catégorie retiré */}
               </div>
 
               <div className="responsive-table-wrapper">
@@ -727,7 +855,7 @@ export const AdminTarificationPage: React.FC = () => {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="p-2">Garantie</TableHead>
-                      <TableHead className="p-2 hidden sm:table-cell">Catégorie</TableHead>
+                      {/* Colonne Catégorie retirée */}
                       <TableHead className="p-2 hidden md:table-cell">Méthode de calcul</TableHead>
                       <TableHead className="p-2">Taux/Montant</TableHead>
                       <TableHead className="p-2">Statut</TableHead>
@@ -748,11 +876,7 @@ export const AdminTarificationPage: React.FC = () => {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="p-2 hidden sm:table-cell">
-                        <Badge variant="outline" className="text-xs">
-                          {categories.find(c => c.value === guarantee.category)?.label}
-                        </Badge>
-                      </TableCell>
+                      {/* Cellule Catégorie retirée */}
                       <TableCell className="p-2 hidden md:table-cell">
                         <div className="text-xs">
                           {calculationMethods.find(m => m.value === guarantee.calculationMethod)?.label}
@@ -760,15 +884,21 @@ export const AdminTarificationPage: React.FC = () => {
                       </TableCell>
                       <TableCell className="p-2">
                         <div className="text-xs">
-                          {guarantee.rate ? (
-                            guarantee.calculationMethod === 'FIXED_AMOUNT' ? (
-                              `${guarantee.rate.toLocaleString()} FCFA`
-                            ) : (
-                              `${guarantee.rate}%`
-                            )
-                          ) : (
-                            '-'
-                          )}
+                          {(() => {
+                            const method = guarantee.calculationMethod
+                            if (method === 'FREE') {
+                              return 'Gratuit'
+                            }
+                            if (method === 'FIXED_AMOUNT') {
+                              return typeof guarantee.fixedAmount === 'number'
+                                ? `${guarantee.fixedAmount.toLocaleString()} FCFA`
+                                : '-'
+                            }
+                            if (['RATE_ON_SI', 'RATE_ON_NEW_VALUE', 'CONDITIONAL_RATE'].includes(method as string)) {
+                              return typeof guarantee.rate === 'number' ? `${guarantee.rate}%` : '-'
+                            }
+                            return '-'
+                          })()}
                         </div>
                         {guarantee.minValue && guarantee.maxValue && (
                           <div className="text-xs text-muted-foreground">
@@ -891,29 +1021,29 @@ export const AdminTarificationPage: React.FC = () => {
                       <div>
                         <Label>Garanties incluses</Label>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2 max-h-48 overflow-y-auto border rounded-lg p-3">
-                          {guarantees.filter(g => g.isActive).map(guarantee => (
-                            <div key={guarantee.id} className="flex items-center space-x-2">
-                              <Checkbox
-                                id={`package-${guarantee.id}`}
-                                checked={newPackage.guaranteeIds.includes(guarantee.id)}
-                                onCheckedChange={(checked) =>
-                                  setNewPackage(prev => ({
-                                    ...prev,
-                                    guaranteeIds: checked
-                                      ? [...prev.guaranteeIds, guarantee.id]
-                                      : prev.guaranteeIds.filter(id => id !== guarantee.id)
-                                  }))
-                                }
-                              />
-                              <Label
-                                htmlFor={`package-${guarantee.id}`}
-                                className="text-sm cursor-pointer"
-                                title={guarantee.description}
-                              >
-                                {guarantee.name}
-                              </Label>
-                            </div>
-                          ))}
+                          {[...fixedCoverageOptions.map((c) => ({ id: c.id, name: c.name })), ...freeCoverages.map((c) => ({ id: c.id, name: c.name }))]
+                            .map((cov) => (
+                              <div key={cov.id} className="flex items-center space-x-2">
+                                <Checkbox
+                                  id={`package-${cov.id}`}
+                                  checked={newPackage.guaranteeIds.includes(cov.id)}
+                                  onCheckedChange={(checked) =>
+                                    setNewPackage((prev) => ({
+                                      ...prev,
+                                      guaranteeIds: checked
+                                        ? [...prev.guaranteeIds, cov.id]
+                                        : prev.guaranteeIds.filter((id) => id !== cov.id),
+                                    }))
+                                  }
+                                />
+                                <Label
+                                  htmlFor={`package-${cov.id}`}
+                                  className="text-sm cursor-pointer"
+                                >
+                                  {cov.name}
+                                </Label>
+                              </div>
+                            ))}
                         </div>
                         <p className="text-xs text-muted-foreground mt-1">
                           {newPackage.guaranteeIds.length} garantie(s) sélectionnée(s)
@@ -1043,14 +1173,48 @@ export const AdminTarificationPage: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="grids" className="space-y-4">
-          <Alert>
-            <AlertTriangle className="h-4 w-4" />
-            <AlertDescription>
-              Les grilles de tarification sont basées sur le document de tarification fourni.
-              Elles incluent les grilles RC, IC/IPT, TCM/TCL et les tarifs fixes.
-            </AlertDescription>
-          </Alert>
+          {import.meta.env.VITE_MOCK_DATA === 'true' && (
+            <Alert>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                Mode démonstration activé (VITE_MOCK_DATA=true). Les grilles affichées ci‑dessous sont des exemples.
+              </AlertDescription>
+            </Alert>
+          )}
 
+          {/* Section Garanties Gratuites (Supabase) */}
+          {freeCoverages.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="w-5 h-5" /> Garanties Gratuites
+                </CardTitle>
+                <CardDescription>Garanties dont la prime est gratuite</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {freeCoverages.map((c) => (
+                    <div key={c.id} className="flex items-center justify-between border p-2 rounded-md">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline">Gratuit</Badge>
+                        <span className="font-medium">{c.name}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {c.isMandatory && (
+                          <Badge variant="outline" className="bg-green-50 text-green-700 dark:bg-green-500/10 dark:text-green-400">Obligatoire</Badge>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  {freeCoverages.length === 0 && (
+                    <div className="text-sm text-muted-foreground">Aucune garantie gratuite configurée</div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {import.meta.env.VITE_MOCK_DATA === 'true' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
             <Card>
               <CardHeader>
@@ -1168,6 +1332,7 @@ export const AdminTarificationPage: React.FC = () => {
               </CardContent>
             </Card>
           </div>
+          )}
 
           {/* Gestion des Tarifs Fixes */}
           <Card id="tarifs-fixes-section">
@@ -1460,39 +1625,7 @@ export const AdminTarificationPage: React.FC = () => {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Répartition par catégorie</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {categories.map(category => {
-                    const count = guarantees.filter(g => g.category === category.value && g.isActive).length;
-                    const percentage = (count / guarantees.length) * 100;
-
-                    return (
-                      <div key={category.value} className="flex justify-between items-center">
-                        <div className="flex items-center gap-3">
-                          <Shield className="w-4 h-4 text-muted-foreground" />
-                          <span>{category.label}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className="w-16 bg-muted rounded-full h-2">
-                            <div
-                              className="bg-primary h-2 rounded-full"
-                              style={{ width: `${percentage}%` }}
-                            />
-                          </div>
-                          <span className="text-sm text-muted-foreground min-w-[3rem]">
-                            {count}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
+            {/* Répartition par catégorie retirée de l'UI */}
           </div>
 
           <Card>
@@ -1523,9 +1656,7 @@ export const AdminTarificationPage: React.FC = () => {
         <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Modifier la garantie</DialogTitle>
-            <DialogDescription>
-              Mettez à jour les informations de la garantie
-            </DialogDescription>
+            <DialogDescription>Mettez à jour les informations de la garantie</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1534,7 +1665,7 @@ export const AdminTarificationPage: React.FC = () => {
                 <Input
                   id="edit-guarantee-name"
                   value={newGuarantee.name}
-                  onChange={(e) => setNewGuarantee(prev => ({ ...prev, name: e.target.value }))}
+                  onChange={(e) => setNewGuarantee((prev) => ({ ...prev, name: e.target.value }))}
                 />
               </div>
               <div>
@@ -1542,7 +1673,7 @@ export const AdminTarificationPage: React.FC = () => {
                 <Input
                   id="edit-guarantee-code"
                   value={newGuarantee.code}
-                  onChange={(e) => setNewGuarantee(prev => ({ ...prev, code: e.target.value.toUpperCase() }))}
+                  onChange={(e) => setNewGuarantee((prev) => ({ ...prev, code: e.target.value.toUpperCase() }))}
                   maxLength={10}
                 />
               </div>
@@ -1553,61 +1684,121 @@ export const AdminTarificationPage: React.FC = () => {
               <Textarea
                 id="edit-guarantee-description"
                 value={newGuarantee.description}
-                onChange={(e) => setNewGuarantee(prev => ({ ...prev, description: e.target.value }))}
+                onChange={(e) => setNewGuarantee((prev) => ({ ...prev, description: e.target.value }))}
                 rows={3}
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <Label>Catégorie</Label>
-                <Select
-                  value={newGuarantee.category}
-                  onValueChange={(value: GuaranteeCategory) =>
-                    setNewGuarantee(prev => ({ ...prev, category: value }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map(cat => (
-                      <SelectItem key={cat.value} value={cat.value}>
-                        {cat.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label>Méthode de calcul</Label>
-                <Select
-                  value={newGuarantee.calculationMethod}
-                  onValueChange={(value: CalculationMethodType) =>
-                    setNewGuarantee(prev => ({ ...prev, calculationMethod: value }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {calculationMethods.map(method => (
-                      <SelectItem key={method.value} value={method.value}>
-                        {method.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div>
+              <Label>Méthode de calcul</Label>
+              <Select
+                value={newGuarantee.calculationMethod}
+                onValueChange={(value: CalculationMethodType) =>
+                  setNewGuarantee((prev) => ({ ...prev, calculationMethod: value }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {calculationMethods.map((method) => (
+                    <SelectItem key={method.value} value={method.value}>
+                      {method.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
+
+            {/* Champs dynamiques selon la méthode de calcul (édition) */}
+            {(() => {
+              const method = newGuarantee.calculationMethod
+              const showRate = ['RATE_ON_SI', 'RATE_ON_NEW_VALUE', 'CONDITIONAL_RATE'].includes(method as string)
+              const showMinMax = showRate
+              const isFixed = method === 'FIXED_AMOUNT'
+              const isFree = (method as any) === 'FREE'
+
+              return (
+                <>
+                  {isFixed && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <Label>Montant fixe (FCFA)</Label>
+                        <Input
+                          type="number"
+                          value={newGuarantee.fixedAmount ?? ''}
+                          onChange={(e) =>
+                            setNewGuarantee((prev) => ({
+                              ...prev,
+                              fixedAmount: parseFloat(e.target.value) || undefined,
+                            }))
+                          }
+                          placeholder="Ex: 15000"
+                        />
+                      </div>
+                    </div>
+                  )}
+                  {showRate && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <Label>Taux (%)</Label>
+                        <Input
+                          type="number"
+                          step="0.1"
+                          value={newGuarantee.rate || ''}
+                          onChange={(e) => setNewGuarantee(prev => ({ ...prev, rate: parseFloat(e.target.value) || undefined }))}
+                          placeholder="Ex: 1.5"
+                        />
+                      </div>
+                      {showMinMax && (
+                        <div className="flex items-end text-sm text-muted-foreground">
+                          Les montants mini/maxi ci‑dessous sont optionnels
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {showMinMax && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <Label>Montant minimum (FCFA)</Label>
+                        <Input
+                          type="number"
+                          value={newGuarantee.minValue || ''}
+                          onChange={(e) => setNewGuarantee(prev => ({ ...prev, minValue: parseFloat(e.target.value) || undefined }))}
+                          placeholder="Ex: 50000"
+                        />
+                      </div>
+                      <div>
+                        <Label>Montant maximum (FCFA)</Label>
+                        <Input
+                          type="number"
+                          value={newGuarantee.maxValue || ''}
+                          onChange={(e) => setNewGuarantee(prev => ({ ...prev, maxValue: parseFloat(e.target.value) || undefined }))}
+                          placeholder="Ex: 500000"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {isFree && (
+                    <Alert>
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription>
+                        Cette garantie est gratuite: aucun taux ni montant à saisir ici.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </>
+              )
+            })()}
 
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="edit-guarantee-optional"
                 checked={newGuarantee.isOptional}
                 onCheckedChange={(checked) =>
-                  setNewGuarantee(prev => ({ ...prev, isOptional: checked as boolean }))
+                  setNewGuarantee((prev) => ({ ...prev, isOptional: checked as boolean }))
                 }
               />
               <Label htmlFor="edit-guarantee-optional">Garantie optionnelle</Label>
@@ -1617,9 +1808,7 @@ export const AdminTarificationPage: React.FC = () => {
             <Button variant="outline" onClick={() => setIsEditGuaranteeDialogOpen(false)}>
               Annuler
             </Button>
-            <Button onClick={handleUpdateGuarantee}>
-              Mettre à jour
-            </Button>
+            <Button onClick={handleUpdateGuarantee}>Mettre à jour</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

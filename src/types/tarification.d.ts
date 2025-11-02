@@ -55,6 +55,7 @@ export interface CalculationMethod {
 
 export type CalculationMethodType =
   | 'FIXED_AMOUNT'
+  | 'FREE'
   | 'RATE_ON_SI'
   | 'RATE_ON_NEW_VALUE'
   | 'MTPL_TARIFF'
@@ -75,6 +76,7 @@ export interface Guarantee {
   minValue?: number;
   maxValue?: number;
   rate?: number;
+  fixedAmount?: number;
   franchiseOptions?: number[];
   parameters?: {
     [key: string]: any;
@@ -214,6 +216,7 @@ export interface GuaranteeFormData {
   minValue?: number;
   maxValue?: number;
   rate?: number;
+  fixedAmount?: number;
   franchiseOptions?: number[];
   parameters?: {
     [key: string]: any;
