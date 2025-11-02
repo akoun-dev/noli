@@ -132,41 +132,79 @@ export const fetchQuoteStats = async (): Promise<QuoteHistoryStats> => {
       averageProcessingTime: 0,
     }
 
-  const { data, error } = await supabase
-    .from('quote_offers')
-    .select('status, created_at, updated_at, quote:quote_id ( user_id )')
-    .eq('quote.user_id', user.id)
-  if (error) throw error
+  try {
+    const { data, error } = await supabase
+      .from('quote_offers')
+      .select('status, created_at, updated_at, quote:quote_id ( user_id )')
+      .eq('quote.user_id', user.id)
+    if (error) throw error
 
-  const total = data?.length || 0
-  const byStatus = (data || []).reduce(
-    (acc: any, q: any) => {
-      const s = String(q.status || 'PENDING').toLowerCase()
-      acc[s] = (acc[s] || 0) + 1
-      return acc
-    },
-    {} as Record<string, number>
-  )
-
-  // Rough average processing time (approved and rejected)
-  const durations: number[] = (data || [])
-    .filter(
-      (q: any) => ['APPROVED', 'REJECTED'].includes(String(q.status).toUpperCase()) && q.updated_at
+    const total = data?.length || 0
+    const byStatus = (data || []).reduce(
+      (acc: any, q: any) => {
+        const s = String(q.status || 'PENDING').toLowerCase()
+        acc[s] = (acc[s] || 0) + 1
+        return acc
+      },
+      {} as Record<string, number>
     )
-    .map(
-      (q: any) =>
-        (new Date(q.updated_at).getTime() - new Date(q.created_at).getTime()) /
-        (1000 * 60 * 60 * 24)
-    )
-  const avg = durations.length ? durations.reduce((a, b) => a + b, 0) / durations.length : 0
 
-  return {
-    totalQuotes: total,
-    pendingQuotes: byStatus['pending'] || 0,
-    approvedQuotes: byStatus['approved'] || 0,
-    rejectedQuotes: byStatus['rejected'] || 0,
-    expiredQuotes: byStatus['expired'] || 0,
-    averageProcessingTime: Math.round(avg * 10) / 10,
+    // Rough average processing time (approved and rejected)
+    const durations: number[] = (data || [])
+      .filter(
+        (q: any) => ['APPROVED', 'REJECTED'].includes(String(q.status).toUpperCase()) && q.updated_at
+      )
+      .map(
+        (q: any) =>
+          (new Date(q.updated_at).getTime() - new Date(q.created_at).getTime()) /
+          (1000 * 60 * 60 * 24)
+      )
+    const avg = durations.length ? durations.reduce((a, b) => a + b, 0) / durations.length : 0
+
+    return {
+      totalQuotes: total,
+      pendingQuotes: byStatus['pending'] || 0,
+      approvedQuotes: byStatus['approved'] || 0,
+      rejectedQuotes: byStatus['rejected'] || 0,
+      expiredQuotes: byStatus['expired'] || 0,
+      averageProcessingTime: Math.round(avg * 10) / 10,
+    }
+  } catch (_) {
+    // Fallback si la table quote_offers n'existe pas: utiliser quotes de l'utilisateur
+    const { data: quotes } = await supabase
+      .from('quotes')
+      .select('status, created_at, updated_at')
+      .eq('user_id', user.id)
+
+    const total = quotes?.length || 0
+    const byStatus = (quotes || []).reduce(
+      (acc: any, q: any) => {
+        const s = String(q.status || 'PENDING').toLowerCase()
+        acc[s] = (acc[s] || 0) + 1
+        return acc
+      },
+      {} as Record<string, number>
+    )
+
+    const durations: number[] = (quotes || [])
+      .filter(
+        (q: any) => ['APPROVED', 'REJECTED'].includes(String(q.status).toUpperCase()) && q.updated_at
+      )
+      .map(
+        (q: any) =>
+          (new Date(q.updated_at).getTime() - new Date(q.created_at).getTime()) /
+          (1000 * 60 * 60 * 24)
+      )
+    const avg = durations.length ? durations.reduce((a, b) => a + b, 0) / durations.length : 0
+
+    return {
+      totalQuotes: total,
+      pendingQuotes: byStatus['pending'] || 0,
+      approvedQuotes: byStatus['approved'] || 0,
+      rejectedQuotes: byStatus['rejected'] || 0,
+      expiredQuotes: byStatus['expired'] || 0,
+      averageProcessingTime: Math.round(avg * 10) / 10,
+    }
   }
 }
 

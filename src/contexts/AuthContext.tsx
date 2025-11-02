@@ -6,6 +6,7 @@ import { supabase, supabaseHelpers } from '@/lib/supabase'
 import { logger } from '@/lib/logger'
 import { secureAuthService } from '@/lib/secure-auth'
 import { usePermissionCache } from '@/lib/permission-cache'
+import { useQueryClient } from '@tanstack/react-query'
 
 export interface AuthState {
   user: User | null
@@ -31,6 +32,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const navigate = useNavigate()
   const { getUserPermissions } = usePermissionCache()
+  const queryClient = useQueryClient()
   const [state, setState] = useState<AuthState>({
     user: null,
     isAuthenticated: false,
@@ -496,13 +498,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // 2) Nettoyer le stockage local et la session (best-effort)
     try {
       // Supabase storage keys
-      localStorage.removeItem('supabase.auth.token')
-      localStorage.removeItem('supabase.auth.refreshToken')
-      localStorage.removeItem('supabase.auth.code.verifier')
-      localStorage.removeItem('supabase.auth.pkce_code_verifier')
-      localStorage.removeItem('supabase.auth.expires_at')
-      localStorage.removeItem('supabase.auth.provider_token')
-      localStorage.removeItem('supabase.auth.provider_refresh_token')
+      const keysToRemove = [
+        'supabase.auth.token',
+        'supabase.auth.refreshToken',
+        'supabase.auth.code.verifier',
+        'supabase.auth.pkce_code_verifier',
+        'supabase.auth.expires_at',
+        'supabase.auth.provider_token',
+        'supabase.auth.provider_refresh_token',
+      ]
+      keysToRemove.forEach((k) => localStorage.removeItem(k))
+
+      // Supprimer également toute clé dynamique sb-* utilisée par supabase-js v2
+      try {
+        const dynamicKeys: string[] = []
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i)
+          if (!key) continue
+          if (key.startsWith('sb-') || key.startsWith('supabase.')) {
+            dynamicKeys.push(key)
+          }
+        }
+        dynamicKeys.forEach((k) => localStorage.removeItem(k))
+      } catch (_) {
+        // ignore
+      }
 
       // Application-specific keys
       localStorage.removeItem('noli_user')
@@ -514,9 +534,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       logger.warn('Storage cleanup error:', storageError)
     }
 
+    // 2b) Nettoyer les caches de requêtes pour éviter tout résidu de données
+    try {
+      queryClient.clear()
+    } catch (_) {
+      // ignore
+    }
+
     // 3) Déconnexion Supabase
-    // Priorité: invalider localement (rapide, supprime les cookies/sessions locales)
-    // Puis, en arrière-plan, tenter un signOut global non bloquant (révocation côté serveur)
+    // Priorité: invalider localement (rapide), puis tenter une révocation globale non bloquante
     try {
       const { supabase } = await import('@/lib/supabase')
       await supabase.auth.signOut({ scope: 'local' })

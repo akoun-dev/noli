@@ -56,7 +56,7 @@ export const PaymentsPage: React.FC = () => {
         // Simplified query to avoid infinite loading
         const { data: quotes, error } = await supabase
           .from('quotes')
-          .select('id, insurer_id, estimated_price, valid_until, created_at')
+          .select('id, estimated_price, valid_until, created_at, status')
           .eq('user_id', user.id)
           .in('status', ['PENDING', 'APPROVED'])
           .gte('valid_until', new Date().toISOString())

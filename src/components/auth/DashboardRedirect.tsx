@@ -3,7 +3,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
 
 export const DashboardRedirect: React.FC = () => {
-  const { user, isLoading } = useAuth()
+  const { user, isAuthenticated, isLoading } = useAuth()
 
   if (isLoading) {
     return (
@@ -13,7 +13,8 @@ export const DashboardRedirect: React.FC = () => {
     )
   }
 
-  if (!user) {
+  // Si non authentifié, rediriger vers la connexion
+  if (!isAuthenticated || !user) {
     return <Navigate to="/auth/connexion" replace />
   }
 

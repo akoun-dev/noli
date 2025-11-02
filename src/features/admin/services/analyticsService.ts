@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { logger } from '@/lib/logger';
 
 // Types
 export interface PlatformStats {
@@ -77,9 +78,8 @@ export const fetchPlatformStats = async (): Promise<PlatformStats> => {
       // Récupérer le nombre réel de polices (contrats approuvés)
       const { count: totalPolicies } = await supabase
         .from('quotes')
-        .select('*', { count: 'exact' })
-        .eq('status', 'approved')
-        .single();
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'approved');
 
       // Calculer le taux de conversion réel
       const conversionRate = totalQuotes > 0 ? Math.round((totalPolicies || 0) / totalQuotes * 100 * 100) / 100 : 0;
@@ -91,16 +91,14 @@ export const fetchPlatformStats = async (): Promise<PlatformStats> => {
 
       const { count: usersThisMonth } = await supabase
         .from('profiles')
-        .select('*', { count: 'exact' })
-        .gte('created_at', thisMonth.toISOString())
-        .single();
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', thisMonth.toISOString());
 
       const { count: usersLastMonth } = await supabase
         .from('profiles')
-        .select('*', { count: 'exact' })
+        .select('*', { count: 'exact', head: true })
         .gte('created_at', lastMonth.toISOString())
-        .lt('created_at', thisMonth.toISOString())
-        .single();
+        .lt('created_at', thisMonth.toISOString());
 
       const monthlyGrowth = usersLastMonth && usersLastMonth > 0
         ? Math.round(((usersThisMonth || 0) - usersLastMonth) / usersLastMonth * 100 * 100) / 100
@@ -116,7 +114,48 @@ export const fetchPlatformStats = async (): Promise<PlatformStats> => {
       };
     }
 
-    return data;
+    if (data && typeof data === 'object' && 'users' in (data as any)) {
+      const d: any = data;
+      const totalUsers = d.users?.total ?? 0;
+      const totalInsurers = d.insurers?.total ?? 0;
+      const totalQuotes = d.quotes?.total ?? 0;
+      const conversionRate = d.quotes?.conversion_rate ?? 0;
+
+      // Approx rapide pour la croissance mensuelle
+      const now = new Date();
+      const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const { count: usersThisMonth } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', thisMonth.toISOString());
+      const { count: usersLastMonth } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', lastMonth.toISOString())
+        .lt('created_at', thisMonth.toISOString());
+      const monthlyGrowth = usersLastMonth && usersLastMonth > 0
+        ? Math.round(((usersThisMonth || 0) - usersLastMonth) / usersLastMonth * 100 * 100) / 100
+        : 0;
+
+      return {
+        totalUsers,
+        totalInsurers,
+        totalQuotes,
+        totalPolicies: 0,
+        conversionRate,
+        monthlyGrowth,
+      };
+    }
+
+    return {
+      totalUsers: 0,
+      totalInsurers: 0,
+      totalQuotes: 0,
+      totalPolicies: 0,
+      conversionRate: 0,
+      monthlyGrowth: 0,
+    };
   } catch (error) {
     logger.error('Error in fetchPlatformStats:', error);
     throw error;
@@ -182,15 +221,10 @@ export const fetchActivityData = async (period: '7d' | '30d' | '90d' = '7d'): Pr
 
 export const fetchTopInsurers = async (): Promise<TopInsurer[]> => {
   try {
-    // Récupérer les assureurs et leurs statistiques
+    // Récupérer les assureurs actifs
     const { data: insurers, error } = await supabase
       .from('profiles')
-      .select(`
-        id,
-        company_name,
-        email,
-        created_at
-      `)
+      .select('id, company_name, email')
       .eq('role', 'INSURER')
       .eq('is_active', true);
 
@@ -199,46 +233,27 @@ export const fetchTopInsurers = async (): Promise<TopInsurer[]> => {
       return [];
     }
 
-    // Récupérer les statistiques pour chaque assureur
+    // Récupérer un proxy d'activité (nombre d'offres par assureur)
     const insurerStats = await Promise.all(
       insurers.map(async (insurer) => {
-        // Compter les quotes pour cet assureur
-        const { count: quoteCount } = await supabase
-          .from('quotes')
-          .select('*', { count: 'exact' })
-          .eq('insurer_id', insurer.id)
-          .single();
-
-        // Compter les policies réelles pour cet assureur (quotes approuvées)
-        const { count: policiesCount } = await supabase
-          .from('quotes')
-          .select('*', { count: 'exact' })
-          .eq('insurer_id', insurer.id)
-          .eq('status', 'approved')
-          .single();
-
-        // Calculer le revenu réel basé sur les polices avec prix
-        const { data: policiesWithPrice } = await supabase
-          .from('quotes')
-          .select('price')
-          .eq('insurer_id', insurer.id)
-          .eq('status', 'approved');
-
-        const revenue = policiesWithPrice?.reduce((sum, policy) => sum + (policy.price || 0), 0) || 0;
+        const { count: offersCount } = await supabase
+          .from('insurance_offers')
+          .select('*', { count: 'exact', head: true })
+          .eq('insurer_id', insurer.id);
 
         return {
           id: insurer.id,
           name: insurer.company_name || insurer.email,
-          quotes: quoteCount || 0,
-          policies: policiesCount || 0,
-          revenue,
-          conversionRate: quoteCount > 0 ? Math.round(((policiesCount || 0) / quoteCount) * 100) : 0
+          quotes: 0,
+          policies: offersCount || 0,
+          revenue: 0,
+          conversionRate: 0,
         };
       })
     );
 
-    // Trier par nombre de quotes
-    return insurerStats.sort((a, b) => b.quotes - a.quotes);
+    // Trier par nombre d'offres (proxy activité)
+    return insurerStats.sort((a, b) => b.policies - a.policies);
 
   } catch (error) {
     logger.error('Error in fetchTopInsurers:', error);
@@ -278,18 +293,16 @@ export const fetchSystemHealth = async (): Promise<SystemHealth> => {
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const { count: recentActivity } = await supabase
       .from('activity_logs')
-      .select('*', { count: 'exact' })
-      .gte('created_at', oneDayAgo.toISOString())
-      .single();
+      .select('*', { count: 'exact', head: true })
+      .gte('created_at', oneDayAgo.toISOString());
 
     const uptime = recentActivity && recentActivity > 0 ? 99.8 : 95.2;
 
     // Utilisation mémoire basée sur le nombre d'utilisateurs actifs
     const { count: activeUsers } = await supabase
       .from('profiles')
-      .select('*', { count: 'exact' })
-      .eq('is_active', true)
-      .single();
+      .select('*', { count: 'exact', head: true })
+      .eq('is_active', true);
 
     const memoryUsage = Math.min(100, Math.max(20, Math.round((activeUsers || 0) / 10)));
 
@@ -434,7 +447,7 @@ export const fetchQuoteAnalytics = async (): Promise<QuoteAnalytics> => {
     // Récupérer les quotes et leur statut avec prix
     const { data: quotes, error } = await supabase
       .from('quotes')
-      .select('status, created_at, insurer_id, updated_at, price');
+      .select('status, created_at, updated_at, estimated_price');
 
     if (error) {
       logger.error('Error fetching quote analytics:', error);
@@ -463,9 +476,9 @@ export const fetchQuoteAnalytics = async (): Promise<QuoteAnalytics> => {
       : 0;
 
     // Calculer la valeur moyenne réelle
-    const quotesWithValue = quotes?.filter(q => q.price && q.price > 0) || [];
+    const quotesWithValue = quotes?.filter((q: any) => q.estimated_price && q.estimated_price > 0) || [];
     const averageValue = quotesWithValue.length > 0
-      ? Math.round(quotesWithValue.reduce((sum, quote) => sum + quote.price!, 0) / quotesWithValue.length)
+      ? Math.round(quotesWithValue.reduce((sum: number, quote: any) => sum + quote.estimated_price, 0) / quotesWithValue.length)
       : 0;
 
     // Compter les quotes par statut
@@ -479,32 +492,8 @@ export const fetchQuoteAnalytics = async (): Promise<QuoteAnalytics> => {
       count
     }));
 
-    // Compter les quotes par assureur
-    const insurerCounts = quotes?.reduce((acc, quote) => {
-      if (quote.insurer_id) {
-        acc[quote.insurer_id] = (acc[quote.insurer_id] || 0) + 1;
-      }
-      return acc;
-    }, {} as Record<string, number>) || {};
-
-    // Récupérer les noms des assureurs
-    const insurerIds = Object.keys(insurerCounts);
-    let byInsurer = [];
-
-    if (insurerIds.length > 0) {
-      const { data: insurerProfiles } = await supabase
-        .from('profiles')
-        .select('id, company_name')
-        .in('id', insurerIds);
-
-      byInsurer = insurerIds.map(insurerId => {
-        const profile = insurerProfiles?.find(p => p.id === insurerId);
-        return {
-          insurer: profile?.company_name || 'Unknown',
-          count: insurerCounts[insurerId]
-        };
-      }).sort((a, b) => b.count - a.count);
-    }
+    // Pas de regroupement par assureur sans jointures locales
+    const byInsurer: { insurer: string; count: number }[] = [];
 
     return {
       averageProcessingTime,

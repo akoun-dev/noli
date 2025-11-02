@@ -506,7 +506,7 @@ const supabaseAnalyticsService = {
       // Fallback: calculer manuellement
       const { data: quotes } = await supabase
         .from('quotes')
-        .select('status, created_at, insurer_id, updated_at, category_id');
+        .select('status, created_at, updated_at, category_id');
 
       const totalQuotes = quotes?.length || 0;
       const completedQuotes = quotes?.filter(q => q.status === 'APPROVED').length || 0;
@@ -534,35 +534,15 @@ const supabaseAnalyticsService = {
         count,
       }));
 
-      // Par assureur
-      const insurerCounts = quotes?.reduce((acc, quote) => {
-        if (quote.insurer_id) {
-          acc[quote.insurer_id] = (acc[quote.insurer_id] || 0) + 1;
-        }
-        return acc;
-      }, {} as Record<string, number>) || {};
-
-      const byInsurer = await Promise.all(
-        Object.entries(insurerCounts).map(async ([insurerId, count]) => {
-          const { data: insurer } = await supabase
-            .from('profiles')
-            .select('company_name')
-            .eq('id', insurerId)
-            .single();
-
-          return {
-            insurer: insurer?.company_name || 'Unknown',
-            count,
-          };
-        })
-      );
+      // Par assureur (non disponible sans jointure dédiée) -> vide en fallback
+      const byInsurer: { insurer: string; count: number }[] = []
 
       return {
         averageProcessingTime,
         completionRate: totalQuotes > 0 ? Math.round((completedQuotes / totalQuotes) * 10000) / 100 : 0,
         averageValue: 0, // Serait calculé depuis les prix
         byStatus,
-        byInsurer: byInsurer.sort((a, b) => b.count - a.count),
+        byInsurer: byInsurer,
         byCategory: [], // Serait rempli depuis les catégories
         timeToApprove: averageProcessingTime,
         rejectionRate: totalQuotes > 0 ? Math.round(((statusCounts['REJECTED'] || 0) / totalQuotes) * 10000) / 100 : 0,
