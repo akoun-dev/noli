@@ -1,4 +1,8 @@
 import { supabase } from '@/lib/supabase'
+import { logger } from '@/lib/logger'
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 export interface FixedTariffItem {
   id: string
@@ -38,27 +42,82 @@ class TarificationSupabaseService {
     fixed_amount?: number | null
   }>> {
     // Nested select to get potential fixed_amount rules for display
-    const { data, error } = await supabase
-      .from('coverages')
-      .select(
-        'id, name, calculation_type, is_active, is_mandatory, coverage_tariff_rules:coverage_tariff_rules(fixed_amount)'
-      )
-      .order('display_order', { ascending: true })
+    logger.api('listAdminCoverages: v2 fetching coverages with rules')
 
-    if (error) throw error
+    try {
+      // Try using Supabase client first
+      const { data, error } = await supabase
+        .from('coverages')
+        .select(
+          'id, name, calculation_type, is_active, is_mandatory, coverage_tariff_rules:coverage_tariff_rules(fixed_amount)'
+        )
+        .order('display_order', { ascending: true })
 
-    return (data || []).map((row: any) => {
-      const rules = (row.coverage_tariff_rules || []) as Array<{ fixed_amount?: number | null }>
-      const fixed = rules.find((r) => r.fixed_amount != null)?.fixed_amount ?? null
-      return {
-        id: row.id,
-        name: row.name,
-        calculation_type: row.calculation_type,
-        is_active: !!row.is_active,
-        is_mandatory: !!row.is_mandatory,
-        fixed_amount: fixed != null ? Number(fixed) : null,
+      if (error) {
+        logger.error('listAdminCoverages: supabase error', {
+          code: (error as any).code,
+          message: (error as any).message,
+          details: (error as any).details,
+          hint: (error as any).hint,
+        })
+        throw error
       }
-    })
+
+      const rows = (data || [])
+      logger.api(`listAdminCoverages: fetched ${rows.length} coverages`)
+      logger.api(`listAdminCoverages: raw data`, { data: data, error: null })
+      return rows.map((row: any) => {
+        const rules = (row.coverage_tariff_rules || []) as Array<{ fixed_amount?: number | null }>
+        const fixed = rules.find((r) => r.fixed_amount != null)?.fixed_amount ?? null
+        return {
+          id: row.id,
+          name: row.name,
+          calculation_type: row.calculation_type,
+          is_active: !!row.is_active,
+          is_mandatory: !!row.is_mandatory,
+          fixed_amount: fixed != null ? Number(fixed) : null,
+        }
+      })
+    } catch (error) {
+      logger.warn('listAdminCoverages: Supabase client failed, trying direct fetch', error)
+
+      // Fallback to direct fetch
+      try {
+        const response = await fetch(
+          `${supabaseUrl}/rest/v1/coverages?select=id,name,calculation_type,is_active,is_mandatory,coverage_tariff_rules:coverage_tariff_rules(fixed_amount)&order=display_order.asc`,
+          {
+            headers: {
+              'apikey': supabaseAnonKey,
+              'Content-Type': 'application/json'
+            }
+          }
+        )
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        const data = await response.json()
+        logger.api(`listAdminCoverages: fetch fallback fetched ${data.length} coverages`)
+        logger.api(`listAdminCoverages: fetch fallback data`, { data })
+
+        return data.map((row: any) => {
+          const rules = (row.coverage_tariff_rules || []) as Array<{ fixed_amount?: number | null }>
+          const fixed = rules.find((r) => r.fixed_amount != null)?.fixed_amount ?? null
+          return {
+            id: row.id,
+            name: row.name,
+            calculation_type: row.calculation_type,
+            is_active: !!row.is_active,
+            is_mandatory: !!row.is_mandatory,
+            fixed_amount: fixed != null ? Number(fixed) : null,
+          }
+        })
+      } catch (fetchError) {
+        logger.error('listAdminCoverages: Both Supabase client and fetch failed', fetchError)
+        throw fetchError
+      }
+    }
   }
 
   async createCoverage(input: {
@@ -68,7 +127,19 @@ class TarificationSupabaseService {
     code?: string
     description?: string
   }): Promise<string> {
+    // Generate a stable, URL-safe id from name or provided code
+    const baseCode = (input.code && input.code.trim().length > 0 ? input.code : input.name)
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, '')
+      .slice(0, 32)
+    const randomSuffix = Math.random().toString(36).slice(2, 6).toUpperCase()
+    const id = (baseCode || 'GAR') + '_' + randomSuffix
+    logger.api('createCoverage: input', { input: { ...input, code: baseCode }, generatedId: id })
+
     const base = {
+      id,
+      // type is nullable since migration 015; we omit it for dynamic coverages
       name: input.name,
       calculation_type: this.mapCalcMethodToDb(input.calculationMethod),
       is_active: true,
@@ -83,10 +154,18 @@ class TarificationSupabaseService {
       const { data, error } = await supabase.from('coverages').insert(tryPayload).select('id').single()
       if (error) throw error
       insertedId = data?.id
-    } catch (_) {
+      logger.api('createCoverage: inserted with optional fields', { id: insertedId })
+    } catch (e1) {
+      logger.warn('createCoverage: retry without optional fields due to error', {
+        code: (e1 as any)?.code,
+        message: (e1 as any)?.message,
+        details: (e1 as any)?.details,
+        hint: (e1 as any)?.hint,
+      })
       const { data, error } = await supabase.from('coverages').insert(base).select('id').single()
       if (error) throw error
       insertedId = data?.id
+      logger.api('createCoverage: inserted with minimal payload', { id: insertedId })
     }
 
     if (!insertedId) throw new Error('Failed to create coverage')
@@ -107,10 +186,18 @@ class TarificationSupabaseService {
     if (input.code !== undefined) update.code = input.code
     if (input.description !== undefined) update.description = input.description
 
+    logger.api('updateCoverageDetails: updating', { id, update })
     try {
       const { error } = await supabase.from('coverages').update(update).eq('id', id)
       if (error) throw error
-    } catch (_) {
+      logger.api('updateCoverageDetails: updated (full)')
+    } catch (e1) {
+      logger.warn('updateCoverageDetails: retry minimal due to error', {
+        code: (e1 as any)?.code,
+        message: (e1 as any)?.message,
+        details: (e1 as any)?.details,
+        hint: (e1 as any)?.hint,
+      })
       // Retry without optional fields if DB rejects
       const minimal: any = {}
       if (input.name !== undefined) minimal.name = input.name
@@ -119,11 +206,13 @@ class TarificationSupabaseService {
       if (input.isActive !== undefined) minimal.is_active = input.isActive
       const { error } = await supabase.from('coverages').update(minimal).eq('id', id)
       if (error) throw error
+      logger.api('updateCoverageDetails: updated (minimal)')
     }
   }
 
   async upsertCoverageFixedTariff(coverageId: string, fixedAmount: number): Promise<void> {
     // Find an existing fixed-amount rule; update if exists, else insert
+    logger.api('upsertCoverageFixedTariff: checking existing rule', { coverageId, fixedAmount })
     const { data, error } = await supabase
       .from('coverage_tariff_rules')
       .select('id, fixed_amount')
@@ -131,7 +220,15 @@ class TarificationSupabaseService {
       .not('fixed_amount', 'is', null)
       .limit(1)
 
-    if (error) throw error
+    if (error) {
+      logger.error('upsertCoverageFixedTariff: select error', {
+        code: (error as any).code,
+        message: (error as any).message,
+        details: (error as any).details,
+        hint: (error as any).hint,
+      })
+      throw error
+    }
     const existing = (data || [])[0]
 
     if (existing) {
@@ -139,16 +236,35 @@ class TarificationSupabaseService {
         .from('coverage_tariff_rules')
         .update({ fixed_amount: fixedAmount, is_active: true })
         .eq('id', existing.id)
-      if (upErr) throw upErr
+      if (upErr) {
+        logger.error('upsertCoverageFixedTariff: update error', {
+          code: (upErr as any).code,
+          message: (upErr as any).message,
+          details: (upErr as any).details,
+          hint: (upErr as any).hint,
+        })
+        throw upErr
+      }
+      logger.api('upsertCoverageFixedTariff: updated existing rule', { ruleId: existing.id })
     } else {
       const { error: insErr } = await supabase
         .from('coverage_tariff_rules')
         .insert({ coverage_id: coverageId, fixed_amount: fixedAmount, is_active: true })
-      if (insErr) throw insErr
+      if (insErr) {
+        logger.error('upsertCoverageFixedTariff: insert error', {
+          code: (insErr as any).code,
+          message: (insErr as any).message,
+          details: (insErr as any).details,
+          hint: (insErr as any).hint,
+        })
+        throw insErr
+      }
+      logger.api('upsertCoverageFixedTariff: inserted new rule')
     }
   }
   // ---------- FIXED TARIFFS ----------
   async listFixedTariffs(): Promise<FixedTariffItem[]> {
+    logger.api('listFixedTariffs: fetching')
     const { data, error } = await supabase
       .from('coverage_tariff_rules')
       .select(
@@ -158,9 +274,14 @@ class TarificationSupabaseService {
       .not('fixed_amount', 'is', null) // fixed_amount not null
       .eq('is_active', true)
 
-    if (error) throw error
+    if (error) {
+      logger.error('listFixedTariffs: supabase error', error)
+      throw error
+    }
 
-    return (data || []).map((row: any) => {
+    const rows = (data || [])
+    logger.api(`listFixedTariffs: fetched ${rows.length} rows`)
+    return rows.map((row: any) => {
       const condStr = row.conditions ? JSON.stringify(row.conditions) : null
       const packReduced = row.conditions?.pack_price_reduced ?? null
       return {
@@ -176,6 +297,7 @@ class TarificationSupabaseService {
   }
 
   async listFixedCoverageOptions(): Promise<FixedCoverageOption[]> {
+    logger.api('listFixedCoverageOptions: fetching')
     const { data, error } = await supabase
       .from('coverages')
       .select('id, name, calculation_type')
@@ -183,11 +305,17 @@ class TarificationSupabaseService {
       .eq('is_active', true)
       .order('display_order')
 
-    if (error) throw error
-    return (data || []) as FixedCoverageOption[]
+    if (error) {
+      logger.error('listFixedCoverageOptions: supabase error', error)
+      throw error
+    }
+    const rows = (data || []) as FixedCoverageOption[]
+    logger.api(`listFixedCoverageOptions: fetched ${rows.length} options`)
+    return rows
   }
 
   async listFreeCoverages(): Promise<FreeCoverageItem[]> {
+    logger.api('listFreeCoverages: fetching')
     const { data, error } = await supabase
       .from('coverages')
       .select('id, name, is_mandatory, is_active')
@@ -195,8 +323,13 @@ class TarificationSupabaseService {
       .eq('is_active', true)
       .order('display_order')
 
-    if (error) throw error
-    return (data || []).map((c: any) => ({ id: c.id, name: c.name, isMandatory: !!c.is_mandatory }))
+    if (error) {
+      logger.error('listFreeCoverages: supabase error', error)
+      throw error
+    }
+    const rows = (data || [])
+    logger.api(`listFreeCoverages: fetched ${rows.length} items`)
+    return rows.map((c: any) => ({ id: c.id, name: c.name, isMandatory: !!c.is_mandatory }))
   }
 
   async updateCoverage(
@@ -274,21 +407,53 @@ class TarificationSupabaseService {
     if (input.conditionsText !== undefined) cond.note = input.conditionsText
     if (Object.keys(cond).length) update.conditions = cond
 
+    logger.api('updateFixedTariff: updating', { id, input })
     const { error } = await supabase
       .from('coverage_tariff_rules')
       .update(update)
       .eq('id', id)
 
-    if (error) throw error
+    if (error) {
+      logger.error('updateFixedTariff: supabase error', error)
+      throw error
+    }
   }
 
   async deleteFixedTariff(id: string): Promise<void> {
+    logger.api('deleteFixedTariff: deleting', { id })
     const { error } = await supabase
       .from('coverage_tariff_rules')
       .delete()
       .eq('id', id)
 
-    if (error) throw error
+    if (error) {
+      logger.error('deleteFixedTariff: supabase error', error)
+      throw error
+    }
+  }
+
+  async deleteCoverage(coverageId: string): Promise<void> {
+    // Delete rules first to avoid FK constraint, then coverage
+    logger.api('deleteCoverage: deleting rules', { coverageId })
+    const { error: ruleErr } = await supabase
+      .from('coverage_tariff_rules')
+      .delete()
+      .eq('coverage_id', coverageId)
+    if (ruleErr) {
+      logger.error('deleteCoverage: rule delete error', ruleErr)
+      throw ruleErr
+    }
+
+    logger.api('deleteCoverage: deleting coverage', { coverageId })
+    const { error } = await supabase
+      .from('coverages')
+      .delete()
+      .eq('id', coverageId)
+
+    if (error) {
+      logger.error('deleteCoverage: coverage delete error', error)
+      throw error
+    }
   }
 
   // ---------- RC (MTPL) TARIFFS ----------

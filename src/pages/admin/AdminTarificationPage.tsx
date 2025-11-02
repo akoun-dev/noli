@@ -6,6 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -57,6 +58,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 export const AdminTarificationPage: React.FC = () => {
+  const { user } = useAuth();
   const [guarantees, setGuarantees] = useState<Guarantee[]>([]);
   const [packages, setPackages] = useState<InsurancePackage[]>([]);
   const [tarifFixes, setTarifFixes] = useState<FixedTariffItem[]>([]);
@@ -81,9 +83,11 @@ export const AdminTarificationPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreateGuaranteeDialogOpen, setIsCreateGuaranteeDialogOpen] = useState(false);
+  const [isCreatingGuarantee, setIsCreatingGuarantee] = useState(false);
   const [isCreatePackageDialogOpen, setIsCreatePackageDialogOpen] = useState(false);
   const [isEditGuaranteeDialogOpen, setIsEditGuaranteeDialogOpen] = useState(false);
   const [isEditPackageDialogOpen, setIsEditPackageDialogOpen] = useState(false);
+  const [showInactive, setShowInactive] = useState(true);
   const [selectedGuarantee, setSelectedGuarantee] = useState<Guarantee | null>(null);
   const [selectedPackage, setSelectedPackage] = useState<InsurancePackage | null>(null);
   const [selectedTarifFixe, setSelectedTarifFixe] = useState<FixedTariffItem | null>(null);
@@ -115,8 +119,11 @@ export const AdminTarificationPage: React.FC = () => {
   });
 
   useEffect(() => {
-    loadData();
-  }, []);
+    // Only load data when user is authenticated
+    if (user) {
+      loadData();
+    }
+  }, [user]); // Re-load when user changes (fixes refresh issue)
 
   // Petit utilitaire pour éviter qu'un appel réseau bloque l'écran de chargement
   const withTimeout = async <T,>(promise: Promise<T>, ms = 1500, fallback: T): Promise<T> => {
@@ -129,14 +136,23 @@ export const AdminTarificationPage: React.FC = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [guaranteesData, packagesData, statsData, grids, fixedTariffs, fixedOptions, freeCov] = await Promise.all([
-        withTimeout(
-          tarificationSupabaseService
-            .listAdminCoverages()
-            .then(rows => rows.map(row => ({
+      logger.debug('AdminTarificationPage.loadData: start')
+      logger.debug('AdminTarificationPage.loadData: calling listAdminCoverages')
+      const supaGuaranteesData = await withTimeout(
+        tarificationSupabaseService
+          .listAdminCoverages()
+          .then(rows => {
+            logger.debug(`AdminTarificationPage.loadData: received ${rows.length} rows from Supabase`)
+            return rows.map(row => {
+            const codeAuto = (row.name || '')
+              .trim()
+              .toUpperCase()
+              .replace(/[^A-Z0-9]/g, '')
+              .slice(0, 8)
+            return {
               id: row.id,
               name: row.name,
-              code: '',
+              code: codeAuto || 'GAR',
               category: 'RESPONSABILITE_CIVILE',
               description: '',
               calculationMethod: row.calculation_type as CalculationMethodType,
@@ -146,10 +162,20 @@ export const AdminTarificationPage: React.FC = () => {
               createdAt: new Date(),
               updatedAt: new Date(),
               createdBy: 'supabase'
-            }) as Guarantee)),
-          1500,
-          await guaranteeService.getGuarantees()
-        ),
+            } as Guarantee
+          })
+          })
+          .catch((err) => {
+            logger.error('Erreur de chargement des garanties (DB):', err)
+            toast.error("Impossible de charger les garanties depuis la base")
+            return [] as Guarantee[]
+          }),
+        10000, // Augmenté à 10 secondes
+        [] as Guarantee[]
+      )
+      logger.debug(`AdminTarificationPage.loadData: final supaGuaranteesData length: ${supaGuaranteesData.length}`)
+
+      const [packagesData, statsData, grids, fixedTariffs, fixedOptions, freeCov] = await Promise.all([
         guaranteeService.getPackages(),
         guaranteeService.getTarificationStats(),
         guaranteeService.getTarificationGrids(), // fallback data only
@@ -171,12 +197,19 @@ export const AdminTarificationPage: React.FC = () => {
         )
       ]);
 
-      setGuarantees(guaranteesData);
+      setGuarantees(supaGuaranteesData);
       setPackages(packagesData);
       setStatistics(statsData);
       setTarifFixes(fixedTariffs as FixedTariffItem[]);
       setFixedCoverageOptions(fixedOptions as FixedCoverageOption[])
       setFreeCoverages(freeCov)
+      logger.debug('AdminTarificationPage.loadData: done', {
+        guarantees: Array.isArray(supaGuaranteesData) ? supaGuaranteesData.length : 'n/a',
+        packages: Array.isArray(packagesData) ? packagesData.length : 'n/a',
+        fixedTariffs: Array.isArray(fixedTariffs) ? fixedTariffs.length : 'n/a',
+        fixedOptions: Array.isArray(fixedOptions) ? fixedOptions.length : 'n/a',
+        freeCoverages: Array.isArray(freeCov) ? freeCov.length : 'n/a',
+      })
     } catch (error) {
       logger.error('Error loading data:', error);
       toast.error('Erreur lors du chargement des données de tarification');
@@ -278,10 +311,11 @@ export const AdminTarificationPage: React.FC = () => {
 
   const handleCreateGuarantee = async () => {
     try {
+      if (isCreatingGuarantee) return
+      setIsCreatingGuarantee(true)
       const missing: string[] = []
       const method = newGuarantee.calculationMethod
       if (!newGuarantee.name?.trim()) missing.push('Nom')
-      if (!newGuarantee.code?.trim()) missing.push('Code')
       if (!method) missing.push('Méthode de calcul')
 
       const needsRate = ['RATE_ON_SI', 'RATE_ON_NEW_VALUE', 'CONDITIONAL_RATE'].includes(method as string)
@@ -294,12 +328,21 @@ export const AdminTarificationPage: React.FC = () => {
       }
 
       if (missing.length > 0) {
+        logger.warn('handleCreateGuarantee: missing fields', missing)
         toast.error(`Veuillez remplir tous les champs obligatoires: ${missing.join(', ')}`)
         return
       }
 
       // Normaliser les champs selon la méthode choisie
       const payload: GuaranteeFormData = { ...newGuarantee }
+      if (!payload.code || !payload.code.trim()) {
+        const auto = (payload.name || '')
+          .trim()
+          .toUpperCase()
+          .replace(/[^A-Z0-9]/g, '')
+          .slice(0, 8)
+        payload.code = auto || 'GAR'
+      }
       if (method === 'FREE') {
         payload.rate = undefined
         payload.minValue = undefined
@@ -313,20 +356,33 @@ export const AdminTarificationPage: React.FC = () => {
         payload.fixedAmount = undefined
       }
 
-      // Try Supabase first
+      logger.api('handleCreateGuarantee: payload', payload)
+      // Try Supabase first (with timeout to avoid UI freeze if PostgREST is not ready)
       try {
-        const coverageId = await tarificationSupabaseService.createCoverage({
-          name: payload.name,
-          calculationMethod: payload.calculationMethod,
-          isOptional: payload.isOptional,
-          code: payload.code,
-          description: payload.description,
-        })
-        if (method === 'FIXED_AMOUNT' && payload.fixedAmount) {
-          await tarificationSupabaseService.upsertCoverageFixedTariff(coverageId, payload.fixedAmount)
+        const coverageId = await withTimeout(
+          tarificationSupabaseService.createCoverage({
+            name: payload.name,
+            calculationMethod: payload.calculationMethod,
+            isOptional: payload.isOptional,
+            code: payload.code,
+            description: payload.description,
+          }),
+          4000,
+          null as unknown as string
+        )
+        if (!coverageId) {
+          logger.warn('handleCreateGuarantee: Supabase create timed out, fallback to local')
+          await guaranteeService.createGuarantee(payload)
+        } else {
+          logger.api('handleCreateGuarantee: created coverage in Supabase', { coverageId })
+          if (method === 'FIXED_AMOUNT' && payload.fixedAmount) {
+            await tarificationSupabaseService.upsertCoverageFixedTariff(coverageId, payload.fixedAmount)
+            logger.api('handleCreateGuarantee: upserted fixed tariff', { coverageId, fixedAmount: payload.fixedAmount })
+          }
         }
       } catch (e) {
         // Fallback local storage in dev
+        logger.warn('handleCreateGuarantee: Supabase create failed, fallback to local', e)
         await guaranteeService.createGuarantee(payload)
       }
       setIsCreateGuaranteeDialogOpen(false);
@@ -343,6 +399,8 @@ export const AdminTarificationPage: React.FC = () => {
     } catch (error) {
       logger.error('Error creating guarantee:', error);
       toast.error('Erreur lors de la création de la garantie');
+    } finally {
+      setIsCreatingGuarantee(false)
     }
   };
 
@@ -374,7 +432,6 @@ export const AdminTarificationPage: React.FC = () => {
       const missing: string[] = []
       const method = newGuarantee.calculationMethod
       if (!newGuarantee.name?.trim()) missing.push('Nom')
-      if (!newGuarantee.code?.trim()) missing.push('Code')
       if (!method) missing.push('Méthode de calcul')
 
       const needsRate = ['RATE_ON_SI', 'RATE_ON_NEW_VALUE', 'CONDITIONAL_RATE'].includes(method as string)
@@ -387,12 +444,21 @@ export const AdminTarificationPage: React.FC = () => {
       }
 
       if (missing.length > 0) {
+        logger.warn('handleUpdateGuarantee: missing fields', missing)
         toast.error(`Veuillez remplir tous les champs obligatoires: ${missing.join(', ')}`)
         return
       }
 
       // Normaliser les champs selon la méthode choisie
       const payload: Partial<GuaranteeFormData> = { ...newGuarantee }
+      if (!payload.code || (typeof payload.code === 'string' && !payload.code.trim())) {
+        const auto = (payload.name || '')
+          .trim()
+          .toUpperCase()
+          .replace(/[^A-Z0-9]/g, '')
+          .slice(0, 8)
+        payload.code = auto || 'GAR'
+      }
       if (method === 'FREE') {
         payload.rate = undefined
         payload.minValue = undefined
@@ -406,16 +472,20 @@ export const AdminTarificationPage: React.FC = () => {
         payload.fixedAmount = undefined
       }
 
+      logger.api('handleUpdateGuarantee: payload', { id: selectedGuarantee.id, payload })
       try {
         await tarificationSupabaseService.updateCoverageDetails(selectedGuarantee.id, {
           name: payload.name!,
           calculationMethod: payload.calculationMethod!,
           isOptional: payload.isOptional!,
         })
+        logger.api('handleUpdateGuarantee: updated coverage in Supabase', { id: selectedGuarantee.id })
         if (method === 'FIXED_AMOUNT' && payload.fixedAmount) {
           await tarificationSupabaseService.upsertCoverageFixedTariff(selectedGuarantee.id, payload.fixedAmount)
+          logger.api('handleUpdateGuarantee: upserted fixed tariff', { id: selectedGuarantee.id, fixedAmount: payload.fixedAmount })
         }
       } catch (e) {
+        logger.warn('handleUpdateGuarantee: Supabase update failed, fallback to local', e)
         await guaranteeService.updateGuarantee(selectedGuarantee.id, payload)
       }
       setIsEditGuaranteeDialogOpen(false);
@@ -463,8 +533,10 @@ export const AdminTarificationPage: React.FC = () => {
 
     try {
       try {
-        await tarificationSupabaseService.updateCoverageDetails(id, { isActive: false })
+        await tarificationSupabaseService.deleteCoverage(id)
+        logger.api('handleDeleteGuarantee: deleted coverage in Supabase', { id })
       } catch (e) {
+        logger.warn('handleDeleteGuarantee: Supabase delete failed, fallback to local', e)
         await guaranteeService.deleteGuarantee(id)
       }
       loadData();
@@ -492,7 +564,9 @@ export const AdminTarificationPage: React.FC = () => {
       if (found) {
         try {
           await tarificationSupabaseService.updateCoverageDetails(id, { isActive: !found.isActive })
+          logger.api('handleToggleGuarantee: toggled in Supabase', { id, to: !found.isActive })
         } catch (e) {
+          logger.warn('handleToggleGuarantee: Supabase toggle failed, fallback to local', e)
           await guaranteeService.toggleGuarantee(id)
         }
       }
@@ -546,7 +620,8 @@ export const AdminTarificationPage: React.FC = () => {
     const matchesSearch = `${guarantee.name} ${guarantee.code} ${guarantee.description || ''}`
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
-    return matchesSearch;
+    const matchesActive = showInactive ? true : guarantee.isActive;
+    return matchesSearch && matchesActive;
   });
 
   const filteredPackages = packages.filter(pkg =>
@@ -556,6 +631,9 @@ export const AdminTarificationPage: React.FC = () => {
   );
 
   const calculationMethods = guaranteeService.getCalculationMethods();
+  const selectableCalculationMethods = calculationMethods.filter(
+    (m) => m.value === 'FREE' || m.value === 'FIXED_AMOUNT'
+  );
 
   if (loading) {
     return (
@@ -651,10 +729,10 @@ export const AdminTarificationPage: React.FC = () => {
                 <span>Gestion des Garanties</span>
                 <Dialog open={isCreateGuaranteeDialogOpen} onOpenChange={setIsCreateGuaranteeDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button>
-                      <Plus className="w-4 h-4 mr-2" />
-                      Nouvelle Garantie
-                    </Button>
+                      <Button disabled={isCreatingGuarantee}>
+                        <Plus className="w-4 h-4 mr-2" />
+                      {isCreatingGuarantee ? 'Création…' : 'Nouvelle Garantie'}
+                      </Button>
                   </DialogTrigger>
                   <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[80vh] overflow-y-auto">
                     <DialogHeader>
@@ -709,7 +787,7 @@ export const AdminTarificationPage: React.FC = () => {
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              {calculationMethods.map(method => (
+                              {selectableCalculationMethods.map(method => (
                                 <SelectItem key={method.value} value={method.value}>
                                   {method.label}
                                 </SelectItem>
@@ -828,7 +906,7 @@ export const AdminTarificationPage: React.FC = () => {
                       <Button variant="outline" onClick={() => setIsCreateGuaranteeDialogOpen(false)}>
                         Annuler
                       </Button>
-                      <Button onClick={handleCreateGuarantee}>
+                      <Button onClick={handleCreateGuarantee} disabled={isCreatingGuarantee}>
                         Créer la garantie
                       </Button>
                     </DialogFooter>
@@ -847,7 +925,14 @@ export const AdminTarificationPage: React.FC = () => {
                     className="pl-10 w-full sm:max-w-sm"
                   />
                 </div>
-                {/* Filtre catégorie retiré */}
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="show-inactive"
+                    checked={showInactive}
+                    onCheckedChange={(checked) => setShowInactive(!!checked)}
+                  />
+                  <Label htmlFor="show-inactive" className="text-sm">Afficher inactives</Label>
+                </div>
               </div>
 
               <div className="responsive-table-wrapper">
@@ -1701,7 +1786,7 @@ export const AdminTarificationPage: React.FC = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {calculationMethods.map((method) => (
+                  {selectableCalculationMethods.map((method) => (
                     <SelectItem key={method.value} value={method.value}>
                       {method.label}
                     </SelectItem>
