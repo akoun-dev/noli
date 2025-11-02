@@ -201,12 +201,26 @@ export const supabaseHelpers = {
         logger.auth('👤 Rôle depuis métadonnées:', user.user_metadata?.role)
         logger.auth('🎯 Rôle qui sera utilisé:', user.user_metadata?.role || 'USER')
 
+        // Utiliser le rôle du cache local si les métadonnées ne le contiennent pas
+        let cachedRole: string | undefined
+        try {
+          const cachedUserRaw = localStorage.getItem('noli_user')
+          if (cachedUserRaw) {
+            const cachedUser = JSON.parse(cachedUserRaw)
+            if (cachedUser?.id === user.id && typeof cachedUser?.role === 'string') {
+              cachedRole = cachedUser.role
+            }
+          }
+        } catch (_) {
+          // Ignorer toute erreur de parsing
+        }
+
         const fallbackProfile = {
           id: user.id,
           email: email,
           first_name: user.user_metadata?.first_name || '',
           last_name: user.user_metadata?.last_name || '',
-          role: user.user_metadata?.role || 'USER',
+          role: user.user_metadata?.role || (cachedRole as any) || 'USER',
           is_active: true,
           created_at: user.created_at,
           updated_at: user.updated_at || user.created_at,
@@ -294,7 +308,21 @@ export const supabaseHelpers = {
       }
 
       // Déterminer les permissions basées sur le rôle
-      const role = user.user_metadata?.role || 'USER'
+      // Utiliser un rôle de secours depuis le cache si les métadonnées ne sont pas définies
+      let cachedRoleForPerms: string | undefined
+      try {
+        const cachedUserRaw = localStorage.getItem('noli_user')
+        if (cachedUserRaw) {
+          const cachedUser = JSON.parse(cachedUserRaw)
+          if (cachedUser?.id === user.id && typeof cachedUser?.role === 'string') {
+            cachedRoleForPerms = cachedUser.role
+          }
+        }
+      } catch (_) {
+        // Ignorer
+      }
+
+      const role = user.user_metadata?.role || (cachedRoleForPerms as any) || 'USER'
       
       // Logs détaillés pour le débogage du rôle dans les permissions
       logger.auth('🔍 Métadonnées utilisateur dans getUserPermissions:', user.user_metadata)

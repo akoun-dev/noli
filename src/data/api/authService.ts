@@ -38,6 +38,27 @@ export class AuthService {
 
       logger.auth('Étape 4: Profil trouvé, rôle:', profile.role)
 
+      // Synchroniser les métadonnées Auth avec le rôle du profil pour éviter
+      // toute régression de rôle lors des rafraîchissements de page
+      try {
+        const currentUser = (await supabase.auth.getUser()).data.user
+        const currentRole = currentUser?.user_metadata?.role
+        if (currentUser && currentRole !== profile.role) {
+          logger.auth('Mise à jour des métadonnées Auth (role ->)', profile.role)
+          await supabase.auth.updateUser({
+            data: {
+              role: profile.role,
+              first_name: profile.first_name,
+              last_name: profile.last_name,
+              company: profile.company_name,
+              avatar_url: profile.avatar_url,
+            },
+          })
+        }
+      } catch (metaErr) {
+        logger.warn('Impossible de synchroniser les métadonnées Auth:', metaErr)
+      }
+
       // Logger la connexion
       try {
         await supabaseHelpers.logAction('LOGIN', 'session', data.user?.id)

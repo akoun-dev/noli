@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 import {
   Users,
   Shield,
@@ -82,7 +83,7 @@ export const AdminSupervisionPage: React.FC = () => {
         setOffers(offersResponse.data?.data || []);
       }
       if (statsResponse.success) {
-        setStats(statsResponse.data);
+        setStats(statsResponse.data || null);
       }
       if (kpisResponse.success) {
         setKpis(kpisResponse.data || []);
@@ -239,8 +240,8 @@ export const AdminSupervisionPage: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Utilisateurs</p>
-                <p className="text-2xl font-bold text-blue-600">{stats.users.total.toLocaleString()}</p>
-                <p className="text-xs text-green-600">+{stats.users.new} ce mois</p>
+                <p className="text-2xl font-bold text-blue-600">{stats?.users?.total?.toLocaleString() || 0}</p>
+                <p className="text-xs text-green-600">+{stats?.users?.new || 0} ce mois</p>
               </div>
               <Users className="h-8 w-8 text-blue-600" />
             </div>
@@ -252,8 +253,8 @@ export const AdminSupervisionPage: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Assureurs</p>
-                <p className="text-2xl font-bold text-green-600">{stats.insurers.total}</p>
-                <p className="text-xs text-yellow-600">{stats.insurers.pending} en attente</p>
+                <p className="text-2xl font-bold text-green-600">{stats?.insurers?.total || 0}</p>
+                <p className="text-xs text-yellow-600">{stats?.insurers?.pending || 0} en attente</p>
               </div>
               <Shield className="h-8 w-8 text-green-600" />
             </div>
@@ -265,8 +266,8 @@ export const AdminSupervisionPage: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Offres</p>
-                <p className="text-2xl font-bold text-purple-600">{stats.offers.total}</p>
-                <p className="text-xs text-green-600">{stats.offers.active} actives</p>
+                <p className="text-2xl font-bold text-purple-600">{stats?.offers?.total || 0}</p>
+                <p className="text-xs text-green-600">{stats?.offers?.active || 0} actives</p>
               </div>
               <FileText className="h-8 w-8 text-purple-600" />
             </div>
@@ -278,8 +279,8 @@ export const AdminSupervisionPage: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Conversion</p>
-                <p className="text-2xl font-bold text-orange-600">{stats.quotes.conversionRate}%</p>
-                <p className="text-xs text-green-600">{stats.quotes.converted} conversions</p>
+                <p className="text-2xl font-bold text-orange-600">{stats?.quotes?.conversionRate || 0}%</p>
+                <p className="text-xs text-green-600">{stats?.quotes?.converted || 0} conversions</p>
               </div>
               <TrendingUp className="h-8 w-8 text-orange-600" />
             </div>

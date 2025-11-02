@@ -93,6 +93,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           // Priorité 1: Essayer de récupérer le profil complet depuis la base de données
           let user: User | null = null
 
+          // Lire le cache local pour éviter le downgrade de rôle lors d'un refresh
+          let cachedRole: string | undefined
+          try {
+            const cachedUserRaw = localStorage.getItem('noli_user')
+            if (cachedUserRaw) {
+              const cachedUser = JSON.parse(cachedUserRaw)
+              if (cachedUser?.id === session.user.id && typeof cachedUser?.role === 'string') {
+                cachedRole = cachedUser.role
+              }
+            }
+          } catch (_) {
+            // Ignorer les erreurs de lecture du cache
+          }
+
           try {
             const profile = await supabaseHelpers.getProfile(session.user.id)
             if (profile) {
@@ -122,7 +136,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               firstName: session.user.user_metadata?.first_name || '',
               lastName: session.user.user_metadata?.last_name || '',
               companyName: session.user.user_metadata?.company || '',
-              role: session.user.user_metadata?.role || 'USER',
+              // Important: préférer le rôle du cache si disponible pour éviter la régression vers USER
+              role: session.user.user_metadata?.role || (cachedRole as any) || 'USER',
               phone: session.user.phone || '',
               avatar: session.user.user_metadata?.avatar_url || '',
               createdAt: new Date(session.user.created_at),
@@ -279,13 +294,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         // Utiliser directement les données de la session pour éviter les problèmes RPC
         // lors de l'actualisation de page
+        // Tenter d'utiliser le cache local pour préserver le rôle exact
+        let cachedRole: string | undefined
+        try {
+          const cachedUserRaw = localStorage.getItem('noli_user')
+          if (cachedUserRaw) {
+            const cachedUser = JSON.parse(cachedUserRaw)
+            if (cachedUser?.id === session.user.id && typeof cachedUser?.role === 'string') {
+              cachedRole = cachedUser.role
+            }
+          }
+        } catch (_) {
+          // Ignorer
+        }
+
         const user: User = {
           id: session.user.id,
           email: session.user.email || '',
           firstName: session.user.user_metadata?.first_name || '',
           lastName: session.user.user_metadata?.last_name || '',
           companyName: session.user.user_metadata?.company || '',
-          role: session.user.user_metadata?.role || 'USER',
+          role: session.user.user_metadata?.role || (cachedRole as any) || 'USER',
           phone: session.user.phone || '',
           avatar: session.user.user_metadata?.avatar_url || '',
           createdAt: new Date(session.user.created_at),
