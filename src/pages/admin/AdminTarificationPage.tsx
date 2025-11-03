@@ -58,7 +58,8 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 export const AdminTarificationPage: React.FC = () => {
-  const { user } = useAuth();
+  // Important: wait for real authentication before loading data
+  const { user, isAuthenticated, isLoading } = useAuth();
   const [guarantees, setGuarantees] = useState<Guarantee[]>([]);
   const [packages, setPackages] = useState<InsurancePackage[]>([]);
   const [tarifFixes, setTarifFixes] = useState<FixedTariffItem[]>([]);
@@ -119,11 +120,12 @@ export const AdminTarificationPage: React.FC = () => {
   });
 
   useEffect(() => {
-    // Only load data when user is authenticated
-    if (user) {
+    // Load data only when the session is confirmed
+    // Avoid triggering when we only have a cached preview user (not authenticated yet)
+    if (!isLoading && isAuthenticated) {
       loadData();
     }
-  }, [user]); // Re-load when user changes (fixes refresh issue)
+  }, [isAuthenticated, isLoading]);
 
   // Petit utilitaire pour éviter qu'un appel réseau bloque l'écran de chargement
   const withTimeout = async <T,>(promise: Promise<T>, ms = 1500, fallback: T): Promise<T> => {
@@ -182,17 +184,17 @@ export const AdminTarificationPage: React.FC = () => {
         // Protège contre un Supabase local non démarré en dev
         withTimeout(
           tarificationSupabaseService.listFixedTariffs().catch(() => []),
-          1500,
+          5000,
           [] as FixedTariffItem[]
         ),
         withTimeout(
           tarificationSupabaseService.listFixedCoverageOptions().catch(() => []),
-          1500,
+          5000,
           [] as FixedCoverageOption[]
         ),
         withTimeout(
           tarificationSupabaseService.listFreeCoverages().catch(() => []),
-          1500,
+          5000,
           [] as Array<{ id: string; name: string; isMandatory: boolean }>
         )
       ]);

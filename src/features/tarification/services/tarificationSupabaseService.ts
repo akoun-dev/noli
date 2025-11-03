@@ -63,9 +63,35 @@ class TarificationSupabaseService {
         throw error
       }
 
-      const rows = (data || [])
+      let rows = (data || [])
       logger.api(`listAdminCoverages: fetched ${rows.length} coverages`)
       logger.api(`listAdminCoverages: raw data`, { data: data, error: null })
+
+      // If zero rows returned, try a direct REST fetch once (handles warm-up/edge cases)
+      if (!rows || rows.length === 0) {
+        try {
+          logger.warn('listAdminCoverages: zero rows via client, retrying via fetch')
+          const { data: sess } = await supabase.auth.getSession()
+          const headers: Record<string, string> = {
+            apikey: supabaseAnonKey,
+            'Content-Type': 'application/json',
+          }
+          if (sess?.session?.access_token) {
+            headers['Authorization'] = `Bearer ${sess.session.access_token}`
+          }
+          const response = await fetch(
+            `${supabaseUrl}/rest/v1/coverages?select=id,name,calculation_type,is_active,is_mandatory,coverage_tariff_rules:coverage_tariff_rules(fixed_amount)&order=display_order.asc`,
+            { headers }
+          )
+          if (response.ok) {
+            rows = await response.json()
+            logger.api(`listAdminCoverages: retry via fetch returned ${rows.length} coverages`)
+          }
+        } catch (retryErr) {
+          logger.warn('listAdminCoverages: retry via fetch failed (non-fatal)', retryErr)
+        }
+      }
+
       return rows.map((row: any) => {
         const rules = (row.coverage_tariff_rules || []) as Array<{ fixed_amount?: number | null }>
         const fixed = rules.find((r) => r.fixed_amount != null)?.fixed_amount ?? null
@@ -283,8 +309,41 @@ class TarificationSupabaseService {
       throw error
     }
 
-    const rows = (data || [])
+    let rows = (data || [])
     logger.api(`listFixedTariffs: fetched ${rows.length} rows`)
+
+    // Retry via REST fetch if supabase client yields zero rows unexpectedly
+    if (!rows || rows.length === 0) {
+      try {
+        logger.warn('listFixedTariffs: zero rows via client, retrying via fetch')
+        const { data: sess } = await supabase.auth.getSession()
+        const headers: Record<string, string> = {
+          apikey: supabaseAnonKey,
+          'Content-Type': 'application/json',
+        }
+        if (sess?.session?.access_token) {
+          headers['Authorization'] = `Bearer ${sess.session.access_token}`
+        }
+        const url =
+          `${supabaseUrl}/rest/v1/coverage_tariff_rules?` +
+          [
+            'select=' +
+              encodeURIComponent(
+                'id,coverage_id,fixed_amount,formula_name,conditions,coverage:coverages(id,name,calculation_type)'
+              ),
+            'not.fixed_amount=is.null',
+            'is_active=eq.true',
+          ].join('&')
+        const resp = await fetch(url, { headers })
+        if (resp.ok) {
+          rows = await resp.json()
+          logger.api(`listFixedTariffs: retry via fetch returned ${rows.length} rows`)
+        }
+      } catch (retryErr) {
+        logger.warn('listFixedTariffs: retry via fetch failed (non-fatal)', retryErr)
+      }
+    }
+
     return rows.map((row: any) => {
       const condStr = row.conditions ? JSON.stringify(row.conditions) : null
       const packReduced = row.conditions?.pack_price_reduced ?? null
@@ -313,8 +372,38 @@ class TarificationSupabaseService {
       logger.error('listFixedCoverageOptions: supabase error', error)
       throw error
     }
-    const rows = (data || []) as FixedCoverageOption[]
+    let rows = (data || []) as FixedCoverageOption[]
     logger.api(`listFixedCoverageOptions: fetched ${rows.length} options`)
+
+    if (!rows || rows.length === 0) {
+      try {
+        logger.warn('listFixedCoverageOptions: zero rows via client, retrying via fetch')
+        const { data: sess } = await supabase.auth.getSession()
+        const headers: Record<string, string> = {
+          apikey: supabaseAnonKey,
+          'Content-Type': 'application/json',
+        }
+        if (sess?.session?.access_token) {
+          headers['Authorization'] = `Bearer ${sess.session.access_token}`
+        }
+        const url =
+          `${supabaseUrl}/rest/v1/coverages?` +
+          [
+            'select=' + encodeURIComponent('id,name,calculation_type'),
+            'calculation_type=in.(FIXED_AMOUNT,FORMULA_BASED)',
+            'is_active=eq.true',
+            'order=display_order.asc',
+          ].join('&')
+        const resp = await fetch(url, { headers })
+        if (resp.ok) {
+          rows = (await resp.json()) as any
+          logger.api(`listFixedCoverageOptions: retry via fetch returned ${rows.length} options`)
+        }
+      } catch (retryErr) {
+        logger.warn('listFixedCoverageOptions: retry via fetch failed (non-fatal)', retryErr)
+      }
+    }
+
     return rows
   }
 
@@ -331,8 +420,38 @@ class TarificationSupabaseService {
       logger.error('listFreeCoverages: supabase error', error)
       throw error
     }
-    const rows = (data || [])
+    let rows = (data || [])
     logger.api(`listFreeCoverages: fetched ${rows.length} items`)
+
+    if (!rows || rows.length === 0) {
+      try {
+        logger.warn('listFreeCoverages: zero rows via client, retrying via fetch')
+        const { data: sess } = await supabase.auth.getSession()
+        const headers: Record<string, string> = {
+          apikey: supabaseAnonKey,
+          'Content-Type': 'application/json',
+        }
+        if (sess?.session?.access_token) {
+          headers['Authorization'] = `Bearer ${sess.session.access_token}`
+        }
+        const url =
+          `${supabaseUrl}/rest/v1/coverages?` +
+          [
+            'select=' + encodeURIComponent('id,name,is_mandatory,is_active'),
+            'calculation_type=eq.FREE',
+            'is_active=eq.true',
+            'order=display_order.asc',
+          ].join('&')
+        const resp = await fetch(url, { headers })
+        if (resp.ok) {
+          rows = await resp.json()
+          logger.api(`listFreeCoverages: retry via fetch returned ${rows.length} items`)
+        }
+      } catch (retryErr) {
+        logger.warn('listFreeCoverages: retry via fetch failed (non-fatal)', retryErr)
+      }
+    }
+
     return rows.map((c: any) => ({ id: c.id, name: c.name, isMandatory: !!c.is_mandatory }))
   }
 
