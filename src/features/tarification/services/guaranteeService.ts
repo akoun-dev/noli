@@ -485,6 +485,78 @@ class GuaranteeService {
     }
   }
 
+  private async upsertFixedAmountRule(
+    coverageId: string,
+    amount: number | null | undefined,
+    parameters?: Record<string, any>
+  ): Promise<void> {
+    if (amount === undefined) {
+      return;
+    }
+
+    try {
+      const { data: existing, error: fetchError } = await supabase
+        .from('coverage_tariff_rules')
+        .select('id')
+        .eq('coverage_id', coverageId)
+        .limit(1)
+        .maybeSingle();
+
+      if (fetchError) {
+        logger.error('GuaranteeService.upsertFixedAmountRule: fetch error', fetchError);
+        throw fetchError;
+      }
+
+      if (amount === null) {
+        if (existing?.id) {
+          const { error: deleteError } = await supabase
+            .from('coverage_tariff_rules')
+            .delete()
+            .eq('id', existing.id);
+
+          if (deleteError) {
+            logger.error('GuaranteeService.upsertFixedAmountRule: delete error', deleteError);
+            throw deleteError;
+          }
+        }
+        return;
+      }
+
+      const payload = {
+        fixed_amount: amount,
+        conditions: parameters ?? {},
+        is_active: true,
+      };
+
+      if (existing?.id) {
+        const { error: updateError } = await supabase
+          .from('coverage_tariff_rules')
+          .update(payload)
+          .eq('id', existing.id);
+
+        if (updateError) {
+          logger.error('GuaranteeService.upsertFixedAmountRule: update error', updateError);
+          throw updateError;
+        }
+      } else {
+        const { error: insertError } = await supabase
+          .from('coverage_tariff_rules')
+          .insert({
+            coverage_id: coverageId,
+            ...payload,
+          });
+
+        if (insertError) {
+          logger.error('GuaranteeService.upsertFixedAmountRule: insert error', insertError);
+          throw insertError;
+        }
+      }
+    } catch (error) {
+      logger.error('GuaranteeService.upsertFixedAmountRule: unexpected error', error);
+      throw error instanceof Error ? error : new Error("Impossible d'enregistrer le tarif fixe");
+    }
+  }
+
   private async fetchCoverageRow(id: string): Promise<CoverageRow | null> {
     const { data, error } = await supabase
       .from('coverages')
@@ -630,7 +702,18 @@ class GuaranteeService {
         throw error;
       }
 
-      return this.mapCoverageRow(inserted as CoverageRow);
+      const coverage = this.mapCoverageRow(inserted as CoverageRow);
+      const sanitizedFixedAmount = this.sanitizeNumber(data.fixedAmount);
+
+      if (data.calculationMethod === 'FIXED_AMOUNT') {
+        await this.upsertFixedAmountRule(
+          coverage.id,
+          sanitizedFixedAmount ?? null,
+          (metadata.parameters as Record<string, any>) ?? {}
+        );
+      }
+
+      return coverage;
     } catch (error) {
       logger.error('GuaranteeService.createGuarantee: unexpected error', error);
       throw error instanceof Error ? error : new Error('Impossible de créer la garantie');
@@ -681,6 +764,17 @@ class GuaranteeService {
       if (error) {
         logger.error('GuaranteeService.updateGuarantee: Supabase error', error);
         throw error;
+      }
+
+      const sanitizedInstruction =
+        data.fixedAmount !== undefined ? this.sanitizeNumber(data.fixedAmount) ?? null : undefined;
+      const shouldRemoveFixedRule =
+        data.calculationMethod !== undefined && data.calculationMethod !== 'FIXED_AMOUNT';
+
+      if (sanitizedInstruction !== undefined) {
+        await this.upsertFixedAmountRule(id, sanitizedInstruction, mergedMetadata.parameters as Record<string, any> | undefined);
+      } else if (shouldRemoveFixedRule) {
+        await this.upsertFixedAmountRule(id, null);
       }
 
       const refreshed = await this.fetchCoverageRow(id);
