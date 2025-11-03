@@ -1,4 +1,6 @@
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
+import { supabasePublic as supabaseREST } from '@/lib/supabase-public'
 import {
   Database,
   InsuranceOffer as DBInsuranceOffer,
@@ -7,6 +9,9 @@ import {
 } from '@/types/database'
 import { logger } from '@/lib/logger'
 import { coverageTarificationService } from '@/services/coverageTarificationService'
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 // Types pour les offres
 export interface Offer {
@@ -212,17 +217,12 @@ const offerService = {
 
   // Récupérer toutes les offres publiques
   async getPublicOffers(filters?: OfferFilters): Promise<Offer[]> {
-    let query = supabase
+    // Public, session-less listing via REST wrapper
+    let query = (supabaseREST as any)
       .from('insurance_offers')
-      .select(
-        `
-        *,
-        insurers!inner(name, logo_url),
-        insurance_categories!inner(name, icon)
-      `
-      )
-      .eq('is_active', true)
-      .order('updated_at', { ascending: false })
+      .select(`*,insurers!inner(name, logo_url),insurance_categories!inner(name, icon)`) as any
+
+    query = query.eq('is_active', true).order('updated_at', { ascending: false })
 
     // Appliquer les filtres
     if (filters?.category_id) {
@@ -253,15 +253,23 @@ const offerService = {
       query = query.limit(filters.limit)
     }
 
-    const { data, error } = await query
-
-    if (error) {
-      throw new Error(`Erreur lors de la récupération des offres publiques: ${error.message}`)
+    const res = await query.execute()
+    if (res.error) {
+      throw new Error(`Erreur lors de la récupération des offres publiques: ${res.error.message}`)
     }
-
-    return (data || []).map((offer) =>
-      mapDbToOffer(offer, offer.insurers, offer.insurance_categories)
-    )
+    const rows = (res.data || []) as any[]
+    return rows.map((offer) => mapDbToOffer(offer, offer.insurers, offer.insurance_categories))
+  },
+  
+  // Récupérer une offre publique par son ID (sans authentification)
+  async getPublicOfferById(id: string): Promise<Offer | null> {
+    const res = await (supabaseREST as any)
+      .from('insurance_offers')
+      .select(`*,insurers!inner(name, logo_url),insurance_categories!inner(name, icon)`) as any
+    const out = await res.eq('id', id).eq('is_active', true).limit(1).execute()
+    if (out.error) return null
+    const row = (out.data || [])[0]
+    return row ? mapDbToOffer(row, row.insurers, row.insurance_categories) : null
   },
 
   // Récupérer les offres de l'assureur connecté
@@ -285,7 +293,7 @@ const offerService = {
       throw new Error(`Erreur lors de la récupération des offres de l'assureur: ${error.message}`)
     }
 
-    return (data || []).map((offer) =>
+    return (data || []).map((offer: any) =>
       mapDbToOffer(offer, offer.insurers, offer.insurance_categories)
     )
   },
@@ -540,13 +548,17 @@ const offerService = {
 
   // Récupérer les catégories
   async getCategories(): Promise<OfferCategory[]> {
-    const { data, error } = await supabase.from('insurance_categories').select('*').order('name')
+    const res = await (supabaseREST as any)
+      .from('insurance_categories')
+      .select('*')
+      .order('name')
+      .execute()
 
-    if (error) {
-      throw new Error(`Erreur lors de la récupération des catégories: ${error.message}`)
+    if (res.error) {
+      throw new Error(`Erreur lors de la récupération des catégories: ${res.error.message}`)
     }
 
-    return (data || []).map(mapDbToCategory)
+    return (res.data || []).map(mapDbToCategory)
   },
 
   // Dupliquer une offre
@@ -709,7 +721,7 @@ const offerService = {
 
   // Créer un devis avec le système de tarification par garantie
   async createQuoteWithCoverage(quoteData: {
-    user_id: string;
+    user_id?: string;
     category_id: string;
     personal_data: any;
     vehicle_data: any;
@@ -721,59 +733,107 @@ const offerService = {
     }>;
   }): Promise<any> {
     try {
-      // Créer le devis principal
-      const { data: quote, error: quoteError } = await supabase
-        .from('quotes')
-        .insert({
-          user_id: quoteData.user_id,
-          category_id: quoteData.category_id,
-          status: 'DRAFT',
-          personal_data: quoteData.personal_data,
-          vehicle_data: quoteData.vehicle_data,
-          coverage_requirements: quoteData.coverage_requirements,
-        })
-        .select()
-        .single();
+      // Utilisateur connecté: insertion directe (RLS standard)
+      if (quoteData.user_id) {
+        const { data: quote, error: quoteError } = await supabase
+          .from('quotes')
+          .insert({
+            user_id: quoteData.user_id,
+            category_id: quoteData.category_id,
+            status: 'DRAFT',
+            personal_data: quoteData.personal_data,
+            vehicle_data: quoteData.vehicle_data,
+            coverage_requirements: quoteData.coverage_requirements,
+          })
+          .select()
+          .single();
 
-      if (quoteError) {
-        throw new Error(`Erreur lors de la création du devis: ${quoteError.message}`);
-      }
-
-      // Ajouter les garanties si spécifiées
-      if (quoteData.selected_coverages && quoteData.selected_coverages.length > 0) {
-        for (const coverage of quoteData.selected_coverages) {
-          await coverageTarificationService.addCoverageToQuote(
-            quote.id,
-            coverage.coverage_id,
-            {
-              ...quoteData.vehicle_data,
-              ...(coverage.formula_name && { formula_name: coverage.formula_name })
-            },
-            coverage.is_included
-          );
+        if (quoteError) {
+          throw new Error(`Erreur lors de la création du devis: ${quoteError.message}`);
         }
+
+        // Ajouter les garanties si spécifiées
+        if (quoteData.selected_coverages && quoteData.selected_coverages.length > 0) {
+          for (const coverage of quoteData.selected_coverages) {
+            await coverageTarificationService.addCoverageToQuote(
+              quote.id,
+              coverage.coverage_id,
+              {
+                ...quoteData.vehicle_data,
+                ...(coverage.formula_name && { formula_name: coverage.formula_name })
+              },
+              coverage.is_included
+            );
+          }
+        }
+
+        // Calculer et mettre à jour le prix total
+        const totalPremium = await coverageTarificationService.calculateQuoteTotalPremium(quote.id);
+
+        // Mettre à jour le devis avec le prix calculé
+        await supabase
+          .from('quotes')
+          .update({
+            estimated_price: totalPremium,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', quote.id);
+
+        return {
+          ...quote,
+          estimated_price: totalPremium,
+          total_premium: totalPremium,
+        };
       }
 
-      // Calculer et mettre à jour le prix total
-      const totalPremium = await coverageTarificationService.calculateQuoteTotalPremium(quote.id);
-
-      // Mettre à jour le devis avec le prix calculé
-      await supabase
-        .from('quotes')
-        .update({
-          estimated_price: totalPremium,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', quote.id);
-
-      return {
-        ...quote,
-        estimated_price: totalPremium,
-        total_premium: totalPremium,
-      };
+      // Invité (non authentifié): appel RPC create_public_quote (SECURITY DEFINER requis côté DB)
+      const rpcUrl = `${supabaseUrl.replace(/\/$/, '')}/rest/v1/rpc/create_public_quote`
+      const headers: Record<string, string> = {
+        apikey: supabaseAnonKey,
+        'Content-Type': 'application/json',
+      }
+      if (typeof supabaseAnonKey === 'string' && supabaseAnonKey.split('.').length >= 3) {
+        headers['Authorization'] = `Bearer ${supabaseAnonKey}`
+      }
+      const body = {
+        p_category_id: quoteData.category_id,
+        p_personal_data: quoteData.personal_data,
+        p_vehicle_data: quoteData.vehicle_data,
+        p_coverage_requirements: quoteData.coverage_requirements,
+        p_selected_coverages: quoteData.selected_coverages || [],
+      }
+      const resp = await fetch(rpcUrl, { method: 'POST', headers, body: JSON.stringify(body) })
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}))
+        throw new Error(err?.message || `Public quote RPC HTTP ${resp.status}`)
+      }
+      const result = await resp.json()
+      return result
     } catch (error) {
       logger.error('Error creating quote with coverage:', error);
       throw error;
+    }
+  },
+
+  // Fallback public request (retourne une structure minimale si l'RPC n'est pas disponible)
+  async requestQuotePublic(input: {
+    category_id: string
+    personal_data: any
+    vehicle_data: any
+    coverage_requirements: any
+    selected_coverages?: Array<{ coverage_id: string; is_included: boolean; formula_name?: string }>
+  }): Promise<{ success: boolean; error?: string; data?: any }> {
+    try {
+      const data = await this.createQuoteWithCoverage({
+        category_id: input.category_id,
+        personal_data: input.personal_data,
+        vehicle_data: input.vehicle_data,
+        coverage_requirements: input.coverage_requirements,
+        selected_coverages: input.selected_coverages || [],
+      })
+      return { success: true, data }
+    } catch (e: any) {
+      return { success: false, error: 'Quote request not available without authentication' }
     }
   },
 }

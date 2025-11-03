@@ -54,7 +54,7 @@ const Step2Vehicle: React.FC<Step2VehicleProps> = ({ onNext, onBack }: Step2Vehi
       {/* Fuel */}
       <div className='space-y-2'>
         <Label htmlFor='fuel'>Carburant *</Label>
-        <Select value={watch('fuel')} onValueChange={(v) => setValue('fuel', v)}>
+        <Select value={watch('fuel') || ''} onValueChange={(v) => setValue('fuel', v)}>
           <SelectTrigger className={cn(errors.fuel && 'border-destructive')}>
             <SelectValue placeholder='Sélectionner le type de carburant' />
           </SelectTrigger>
@@ -72,7 +72,7 @@ const Step2Vehicle: React.FC<Step2VehicleProps> = ({ onNext, onBack }: Step2Vehi
       <div className='grid md:grid-cols-2 gap-4'>
         <div className='space-y-2'>
           <Label htmlFor='fiscalPower'>Puissance fiscale *</Label>
-          <Select value={watch('fiscalPower')} onValueChange={(v) => setValue('fiscalPower', v)}>
+          <Select value={watch('fiscalPower') || ''} onValueChange={(v) => setValue('fiscalPower', v)}>
             <SelectTrigger className={cn(errors.fiscalPower && 'border-destructive')}>
               <SelectValue placeholder='Sélectionner' />
             </SelectTrigger>
@@ -99,7 +99,7 @@ const Step2Vehicle: React.FC<Step2VehicleProps> = ({ onNext, onBack }: Step2Vehi
         </div>
         <div className='space-y-2'>
           <Label htmlFor='seats'>Nombre de places *</Label>
-          <Select value={watch('seats')} onValueChange={(v) => setValue('seats', v)}>
+          <Select value={watch('seats') || ''} onValueChange={(v) => setValue('seats', v)}>
             <SelectTrigger className={cn(errors.seats && 'border-destructive')}>
               <SelectValue placeholder='Sélectionner' />
             </SelectTrigger>
@@ -161,10 +161,7 @@ const Step2Vehicle: React.FC<Step2VehicleProps> = ({ onNext, onBack }: Step2Vehi
       {/* Vehicle Usage */}
       <div className='space-y-2'>
         <Label htmlFor='vehicleUsage'>Usage du véhicule *</Label>
-        <Select
-          value={watch('vehicleUsage')}
-          onValueChange={(v) => setValue('vehicleUsage', v as any)}
-        >
+        <Select value={watch('vehicleUsage') || ''} onValueChange={(v) => setValue('vehicleUsage', v as any)}>
           <SelectTrigger className={cn(errors.vehicleUsage && 'border-destructive')}>
             <SelectValue placeholder='Sélectionner' />
           </SelectTrigger>

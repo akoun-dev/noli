@@ -32,6 +32,10 @@ export class SupabasePublicClient {
     this.apiKey = apiKey
   }
 
+  private isJwt(key: string): boolean {
+    return typeof key === 'string' && key.split('.').length >= 3
+  }
+
   private async request<T>(
     endpoint: string,
     options: RequestInit = {}
@@ -39,15 +43,17 @@ export class SupabasePublicClient {
     try {
       const url = `${this.baseUrl}/rest/v1${endpoint}`
 
-      const response = await fetch(url, {
-        ...options,
-        headers: {
-          apikey: this.apiKey,
-          'Content-Type': 'application/json',
-          'X-Application-Name': 'noli-assurance-public',
-          ...options.headers,
-        },
-      })
+      const headers: Record<string, string> = {
+        apikey: this.apiKey,
+        'Content-Type': 'application/json',
+        'X-Application-Name': 'noli-assurance-public',
+        ...(options.headers as any),
+      }
+      if (this.isJwt(this.apiKey)) {
+        headers['Authorization'] = `Bearer ${this.apiKey}`
+      }
+
+      const response = await fetch(url, { ...options, headers })
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
@@ -156,13 +162,15 @@ export class SupabaseQueryBuilder<T> {
 
     const endpoint = `/${this.table}?${queryParams}`
 
-    const response = await fetch(`${this.url}/rest/v1${endpoint}`, {
-      headers: {
-        apikey: this.apiKey,
-        'Content-Type': 'application/json',
-        'X-Application-Name': 'noli-assurance-public',
-      },
-    })
+    const headers: Record<string, string> = {
+      apikey: this.apiKey,
+      'Content-Type': 'application/json',
+      'X-Application-Name': 'noli-assurance-public',
+    }
+    if (typeof this.apiKey === 'string' && this.apiKey.split('.').length >= 3) {
+      headers['Authorization'] = `Bearer ${this.apiKey}`
+    }
+    const response = await fetch(`${this.url}/rest/v1${endpoint}`, { headers })
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))

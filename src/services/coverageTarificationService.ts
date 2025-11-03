@@ -1,4 +1,17 @@
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+import { logger } from '@/lib/logger';
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+// Client public pour les requêtes sans authentification
+const supabasePublic = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false,
+  },
+});
 
 // Types for the coverage-based tarification system
 export type CoverageType =
@@ -89,18 +102,225 @@ export interface CoverageOption {
 }
 
 class CoverageTarificationService {
-  // Get all available coverages for a vehicle category
-  async getAvailableCoverages(vehicleCategory: string = '401'): Promise<CoverageOption[]> {
-    try {
-      const { data, error } = await supabase.rpc('get_available_coverages', {
-        p_vehicle_category: vehicleCategory
-      }) as { data: CoverageOption[] | null, error: any };
+  // Get available coverages from DB (preferred: direct table), with RPC fallback
+  async getAvailableCoverages(params: {
+    category?: string
+    vehicle_value?: number | null
+    fiscal_power?: number | null
+    fuel_type?: string | null
+  }): Promise<CoverageOption[]> {
+    const category = params.category || '401'
+    const value = params.vehicle_value ?? null
+    const power = params.fiscal_power ?? null
+    const fuel = params.fuel_type ?? null
 
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      console.error('Error fetching available coverages:', error);
-      throw error;
+    try {
+      // 1) Prefer public client to avoid session requirements
+      const pub = await (supabasePublic as any)
+        .from('coverages')
+        .select(
+          'id,type,name,description,calculation_type,is_mandatory,is_active,display_order,coverage_tariff_rules:coverage_tariff_rules(formula_name,fixed_amount,min_amount,max_amount,base_rate)'
+        )
+        .eq('is_active', true)
+        .order('display_order')
+
+      if (!pub.error && Array.isArray(pub.data) && pub.data.length > 0) {
+        const rows = pub.data
+        return rows.map((r: any) => {
+          const rules = Array.isArray(r.coverage_tariff_rules) ? r.coverage_tariff_rules : []
+          const formulas = Array.from(
+            new Set(
+              rules
+                .map((rr: any) => rr?.formula_name)
+                .filter((x: any): x is string => typeof x === 'string' && x.length > 0)
+            )
+          )
+        const fixeds = rules
+            .map((rr: any) => rr?.fixed_amount)
+            .filter((n: any) => typeof n === 'number') as number[]
+        const mins = rules
+            .map((rr: any) => rr?.min_amount)
+            .filter((n: any) => typeof n === 'number') as number[]
+        const maxs = rules
+            .map((rr: any) => rr?.max_amount)
+            .filter((n: any) => typeof n === 'number') as number[]
+
+        const estMin = fixeds.length ? Math.min(...fixeds) : mins.length ? Math.min(...mins) : undefined
+        const estMax = fixeds.length ? Math.max(...fixeds) : maxs.length ? Math.max(...maxs) : undefined
+
+        return {
+          coverage_id: r.id,
+          coverage_type: r.type as CoverageType,
+          name: r.name,
+          description: r.description,
+          calculation_type: r.calculation_type as CalculationType,
+          is_mandatory: !!r.is_mandatory,
+          estimated_min_premium: estMin,
+          estimated_max_premium: estMax,
+          available_formulas: formulas,
+        } as CoverageOption
+      })
+      }
+
+      // 1b) Try direct table query with auth client (for authenticated sessions)
+      const { data, error } = await (supabase
+        .from('coverages')
+        .select(
+          'id, type, name, description, calculation_type, is_mandatory, is_active, display_order, coverage_tariff_rules:coverage_tariff_rules(formula_name, fixed_amount, min_amount, max_amount, base_rate)'
+        )
+        .eq('is_active', true)
+        .order('display_order', { ascending: true }) as any)
+
+      if (error) throw error
+
+      const rows = (data || []) as any[]
+      if (rows.length > 0) {
+        return rows.map((r) => {
+          const rules = Array.isArray(r.coverage_tariff_rules) ? r.coverage_tariff_rules : []
+          const formulas = Array.from(
+            new Set(
+              rules
+                .map((rr: any) => rr?.formula_name)
+                .filter((x: any): x is string => typeof x === 'string' && x.length > 0)
+            )
+          )
+          const fixeds = rules
+            .map((rr: any) => rr?.fixed_amount)
+            .filter((n: any) => typeof n === 'number') as number[]
+          const mins = rules
+            .map((rr: any) => rr?.min_amount)
+            .filter((n: any) => typeof n === 'number') as number[]
+          const maxs = rules
+            .map((rr: any) => rr?.max_amount)
+            .filter((n: any) => typeof n === 'number') as number[]
+
+          const estMin = fixeds.length ? Math.min(...fixeds) : mins.length ? Math.min(...mins) : undefined
+          const estMax = fixeds.length ? Math.max(...fixeds) : maxs.length ? Math.max(...maxs) : undefined
+
+          return {
+            coverage_id: r.id,
+            coverage_type: r.type as CoverageType,
+            name: r.name,
+            description: r.description,
+            calculation_type: r.calculation_type as CalculationType,
+            is_mandatory: !!r.is_mandatory,
+            estimated_min_premium: estMin,
+            estimated_max_premium: estMax,
+            available_formulas: formulas,
+          } as CoverageOption
+        })
+      }
+    } catch (e1) {
+      // ignore and continue
+      // Continue to RPC fallback
+    }
+
+    try {
+      // Prefer extended signature (category + vehicle details)
+      const { data, error } = await (supabase.rpc as any)('get_available_coverages', {
+        p_vehicle_category: category,
+        p_vehicle_value: value,
+        p_fiscal_power: power,
+        p_fuel_type: fuel,
+      })
+
+      if (error) throw error
+
+      const rows = (data || []) as any[]
+      return rows.map((r) => {
+        // Handle both variants: fields may be (coverage_id, coverage_type, available_formulas)
+        // or (id, type, available_formulas as json)
+        const coverage_id: string = r.coverage_id ?? r.id
+        const coverage_type: CoverageType = (r.coverage_type ?? r.type) as CoverageType
+        const available_formulas: string[] = Array.isArray(r.available_formulas)
+          ? (r.available_formulas as string[]).filter(Boolean)
+          : typeof r.available_formulas === 'object' && r.available_formulas !== null
+          ? Array.from(new Set(Object.values(r.available_formulas as any).filter(Boolean))) as string[]
+          : []
+
+        const minEst = typeof r.estimated_min_premium === 'number' ? Number(r.estimated_min_premium) : undefined
+        const maxEst = typeof r.estimated_max_premium === 'number' ? Number(r.estimated_max_premium) : undefined
+        const premiumAmount = typeof r.premium_amount === 'number' ? Number(r.premium_amount) : undefined
+
+        return {
+          coverage_id,
+          coverage_type,
+          name: r.name,
+          description: r.description,
+          calculation_type: r.calculation_type,
+          is_mandatory: !!r.is_mandatory,
+          estimated_min_premium: minEst ?? premiumAmount,
+          estimated_max_premium: maxEst ?? premiumAmount,
+          available_formulas,
+        } as CoverageOption
+      })
+    } catch (errExt) {
+      // Fallback to legacy signature (category only)
+      try {
+        const { data, error } = await (supabase.rpc as any)('get_available_coverages', {
+          p_vehicle_category: category,
+        })
+        if (error) throw error
+        const rows = (data || []) as any[]
+        return rows.map((r) => ({
+          coverage_id: r.coverage_id ?? r.id,
+          coverage_type: (r.coverage_type ?? r.type) as CoverageType,
+          name: r.name,
+          description: r.description,
+          calculation_type: r.calculation_type,
+          is_mandatory: !!r.is_mandatory,
+          estimated_min_premium: typeof r.estimated_min_premium === 'number' ? Number(r.estimated_min_premium) : undefined,
+          estimated_max_premium: typeof r.estimated_max_premium === 'number' ? Number(r.estimated_max_premium) : undefined,
+          available_formulas: Array.isArray(r.available_formulas) ? (r.available_formulas as string[]) : [],
+        }))
+      } catch (error) {
+        logger.error('Error fetching available coverages via RPC, trying direct fetch:', error)
+
+        // Final fallback: use direct REST API fetch
+        try {
+          const { data: session } = await supabase.auth.getSession()
+          const headers: Record<string, string> = {
+            'apikey': supabaseAnonKey,
+            'Content-Type': 'application/json'
+          }
+
+          if (session?.session?.access_token) {
+            headers['Authorization'] = `Bearer ${session.session.access_token}`
+          }
+
+          const response = await fetch(
+            `${supabaseUrl}/rest/v1/rpc/get_available_coverages`,
+            {
+              method: 'POST',
+              headers,
+              body: JSON.stringify({})
+            }
+          )
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`)
+          }
+
+          const data = await response.json()
+          logger.api('getAvailableCoverages: direct fetch fallback succeeded', { count: data.length })
+
+          return data.map((r: any) => ({
+            coverage_id: r.coverage_id ?? r.id,
+            coverage_type: (r.coverage_type ?? r.type) as CoverageType,
+            name: r.name,
+            description: r.description,
+            calculation_type: r.calculation_type,
+            is_mandatory: !!r.is_mandatory,
+            estimated_min_premium: typeof r.estimated_min_premium === 'number' ? Number(r.estimated_min_premium) : undefined,
+            estimated_max_premium: typeof r.estimated_max_premium === 'number' ? Number(r.estimated_max_premium) : undefined,
+            available_formulas: Array.isArray(r.available_formulas) ? (r.available_formulas as string[]) : [],
+          }))
+        } catch (fetchError) {
+          logger.error('getAvailableCoverages: All methods failed', fetchError)
+          // Return empty array as last resort to prevent complete failure
+          return []
+        }
+      }
     }
   }
 
@@ -111,11 +331,11 @@ class CoverageTarificationService {
     quoteData: Record<string, any> = {}
   ): Promise<number> {
     try {
-      const { data, error } = await supabase.rpc('calculate_coverage_premium', {
+      const { data, error } = await (supabase.rpc as any)('calculate_coverage_premium', {
         p_coverage_id: coverageId,
         p_vehicle_data: vehicleData,
         p_quote_data: quoteData
-      }) as { data: number | null, error: any };
+      });
 
       if (error) throw error;
       return data || 0;
@@ -133,12 +353,12 @@ class CoverageTarificationService {
     isIncluded: boolean = false
   ): Promise<string> {
     try {
-      const { data, error } = await supabase.rpc('add_coverage_to_quote', {
+      const { data, error } = await (supabase.rpc as any)('add_coverage_to_quote', {
         p_quote_id: quoteId,
         p_coverage_id: coverageId,
         p_calculation_parameters: calculationParameters,
         p_is_included: isIncluded
-      }) as { data: string, error: any };
+      });
 
       if (error) throw error;
       return data;
@@ -151,9 +371,9 @@ class CoverageTarificationService {
   // Update quote coverage premiums
   async updateQuoteCoveragePremiums(quoteId: string): Promise<void> {
     try {
-      const { error } = await supabase.rpc('update_quote_coverage_premiums', {
+      const { error } = await (supabase.rpc as any)('update_quote_coverage_premiums', {
         p_quote_id: quoteId
-      }) as { error: any };
+      });
 
       if (error) throw error;
     } catch (error) {
@@ -165,9 +385,9 @@ class CoverageTarificationService {
   // Calculate total premium for a quote
   async calculateQuoteTotalPremium(quoteId: string): Promise<number> {
     try {
-      const { data, error } = await supabase.rpc('calculate_quote_total_premium', {
+      const { data, error } = await (supabase.rpc as any)('calculate_quote_total_premium', {
         p_quote_id: quoteId
-      }) as { data: number | null, error: any };
+      });
 
       if (error) throw error;
       return data || 0;
@@ -285,20 +505,23 @@ class CoverageTarificationService {
   // Get available formulas for a coverage
   async getCoverageFormulas(coverageId: string): Promise<string[]> {
     try {
-      const { data, error } = await supabase
+      // Use main Supabase client
+      const res = await supabase
         .from('coverage_tariff_rules')
         .select('formula_name')
         .eq('coverage_id', coverageId)
         .eq('is_active', true)
-        .not('formula_name', 'is', null);
 
-      if (error) throw error;
-      
-      const formulas = (data as any[])?.map(rule => rule.formula_name).filter((formula): formula is string => Boolean(formula)) || [];
-      return [...new Set(formulas)];
+      if (res.error) throw res.error
+
+      const rows = (res.data || []) as any[]
+      const formulas = rows
+        .map((r) => r?.formula_name)
+        .filter((f): f is string => typeof f === 'string' && f.length > 0)
+      return Array.from(new Set(formulas))
     } catch (error) {
-      console.error('Error fetching coverage formulas:', error);
-      throw error;
+      console.error('Error fetching coverage formulas:', error)
+      return []
     }
   }
 

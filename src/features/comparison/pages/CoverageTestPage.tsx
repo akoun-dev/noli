@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Shield, Calculator, CheckCircle, AlertTriangle, Loader2 } from 'lucide-react';
 import { coverageTarificationService, type VehicleData, type CoverageOption } from '@/services/coverageTarificationService';
+import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function CoverageTestPage() {
@@ -45,7 +46,12 @@ export default function CoverageTestPage() {
     try {
       setLoading(true);
       setError(null);
-      const coverages = await coverageTarificationService.getAvailableCoverages(vehicleData.category);
+      const coverages = await coverageTarificationService.getAvailableCoverages({
+        category: vehicleData.category,
+        vehicle_value: vehicleData.sum_insured || vehicleData.new_value || 0,
+        fiscal_power: vehicleData.fiscal_power,
+        fuel_type: vehicleData.fuel_type,
+      });
       setAvailableCoverages(coverages);
     } catch (err) {
       setError('Erreur lors du chargement des garanties');
@@ -92,36 +98,53 @@ export default function CoverageTestPage() {
       setError(null);
       setSuccess(null);
 
-      const quoteData = {
-        user_id: user.id,
-        category_id: 'AUTO',
-        personal_data: {
-          firstName: 'Test',
-          lastName: 'User',
-          email: user.email || 'test@example.com',
-          phone: '+22500000000',
-        },
-        vehicle_data: vehicleData,
-        coverage_requirements: {
-          test_mode: true,
-        },
-      };
-
-      const response = await fetch('/api/quotes', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(quoteData),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to create test quote');
+      // Resolve Auto category
+      let categoryId: string | null = null;
+      try {
+        const { data: cat } = await supabase
+          .from('insurance_categories')
+          .select('id')
+          .ilike('name', 'auto')
+          .limit(1)
+          .single();
+        categoryId = cat?.id || null;
+      } catch (_) {
+        categoryId = null;
       }
 
-      const quote = await response.json();
-      setTestQuoteId(quote.id);
-      setSuccess(`Devis test créé: ${quote.id}`);
+      const personalData = {
+        full_name: 'Test User',
+        email: user.email || 'test@example.com',
+        phone: '+22500000000',
+      };
+
+      const vehiclePayload = {
+        category: vehicleData.category,
+        fiscal_power: vehicleData.fiscal_power,
+        fuel_type: vehicleData.fuel_type,
+        value: vehicleData.sum_insured || vehicleData.new_value || 0,
+        sum_insured: vehicleData.sum_insured,
+        new_value: vehicleData.new_value,
+      };
+
+      const { data, error } = await supabase
+        .from('quotes')
+        .insert({
+          user_id: user.id,
+          category_id: categoryId || 'AUTO',
+          status: 'DRAFT' as any,
+          personal_data: personalData as any,
+          vehicle_data: vehiclePayload as any,
+          coverage_requirements: { test_mode: true } as any,
+          valid_until: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        })
+        .select('id')
+        .single();
+
+      if (error || !data?.id) throw error || new Error('Failed to create test quote');
+
+      setTestQuoteId(data.id);
+      setSuccess(`Devis test créé: ${data.id}`);
     } catch (err) {
       setError('Erreur lors de la création du devis test');
       console.error(err);
