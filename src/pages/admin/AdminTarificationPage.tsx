@@ -20,7 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
 import { logger } from '@/lib/logger';
-import { guaranteeService } from '@/features/tarification/services/guaranteeService';
+import { guaranteeService, getBuiltinDefaultGuarantees } from '@/features/tarification/services/guaranteeService';
 import {
   tarificationSupabaseService,
   type FixedTariffItem,
@@ -197,7 +197,25 @@ export const AdminTarificationPage: React.FC = () => {
         )
       ]);
 
-      setGuarantees(supaGuaranteesData);
+      // Fallback only if explicitly allowed via env flag
+      let finalGuarantees = supaGuaranteesData
+      const allowFallback = (import.meta as any).env?.VITE_ALLOW_GUARANTEE_FALLBACK === 'true'
+      if (allowFallback && (!Array.isArray(finalGuarantees) || finalGuarantees.length === 0)) {
+        try {
+          if ((import.meta as any).env?.VITE_MOCK_DATA === 'true') {
+            const local = await guaranteeService.getGuarantees()
+            if (Array.isArray(local) && local.length > 0) finalGuarantees = local as any
+          }
+        } catch (_) {
+          // ignore
+        }
+        if ((!finalGuarantees || finalGuarantees.length === 0) && allowFallback) {
+          finalGuarantees = getBuiltinDefaultGuarantees() as any
+          logger.warn('AdminTarificationPage.loadData: using built-in default guarantees as fallback')
+        }
+      }
+
+      setGuarantees(finalGuarantees);
       setPackages(packagesData);
       setStatistics(statsData);
       setTarifFixes(fixedTariffs as FixedTariffItem[]);

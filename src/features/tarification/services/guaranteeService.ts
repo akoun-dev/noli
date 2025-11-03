@@ -603,3 +603,9 @@ class GuaranteeService {
 }
 
 export const guaranteeService = new GuaranteeService();
+
+// Fournit les garanties par défaut intégrées (sans utiliser le stockage local)
+// Utile comme repli d'affichage en environnement de dev si la base est vide
+export function getBuiltinDefaultGuarantees(): Guarantee[] {
+  return initialGuarantees;
+}

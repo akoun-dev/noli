@@ -83,14 +83,18 @@ class TarificationSupabaseService {
 
       // Fallback to direct fetch
       try {
+        // Include user token if available so RLS recognizes admin
+        const { data: sess } = await supabase.auth.getSession()
+        const headers: Record<string, string> = {
+          'apikey': supabaseAnonKey,
+          'Content-Type': 'application/json',
+        }
+        if (sess?.session?.access_token) {
+          headers['Authorization'] = `Bearer ${sess.session.access_token}`
+        }
         const response = await fetch(
           `${supabaseUrl}/rest/v1/coverages?select=id,name,calculation_type,is_active,is_mandatory,coverage_tariff_rules:coverage_tariff_rules(fixed_amount)&order=display_order.asc`,
-          {
-            headers: {
-              'apikey': supabaseAnonKey,
-              'Content-Type': 'application/json'
-            }
-          }
+          { headers }
         )
 
         if (!response.ok) {

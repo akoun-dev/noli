@@ -25,6 +25,7 @@
     "migrate:auth": "npx tsx scripts/migrate-secure-auth.ts",
     "validate:mock-migration": "npx tsx scripts/validate-mock-migration.ts",
     "storybook": "storybook dev -p 6006",
+    "seed:tarification": "tsx scripts/seed-tarification.ts",
     "build-storybook": "storybook build"
   },
   "dependencies": {
