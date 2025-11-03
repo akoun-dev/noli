@@ -245,40 +245,6 @@ const LoginPage = () => {
                 {isLoading ? 'Connexion en cours...' : 'Se connecter'}
               </Button>
             </form>
-
-            {/* Demo Accounts - Uniquement en développement */}
-            {import.meta.env.DEV && (
-              <div className='space-y-2'>
-                <div className='relative'>
-                  <div className='absolute inset-0 flex items-center'>
-                    <span className='w-full border-t border-border' />
-                  </div>
-                  <div className='relative flex justify-center text-xs uppercase'>
-                    <span className='bg-card px-2 text-muted-foreground'>
-                      Comptes de démonstration (Développement)
-                    </span>
-                  </div>
-                </div>
-
-                <div className='space-y-1 text-xs text-muted-foreground'>
-                  <div className='flex justify-between'>
-                    <span>Utilisateur:</span>
-                    <span className='font-mono'>user@example.com</span>
-                  </div>
-                  <div className='flex justify-between'>
-                    <span>Assureur:</span>
-                    <span className='font-mono'>nsia@assurances.ci</span>
-                  </div>
-                  <div className='flex justify-between'>
-                    <span>Admin:</span>
-                    <span className='font-mono'>admin@noli.ci</span>
-                  </div>
-                  <div className='text-center mt-1'>
-                    <span className='text-primary'>Mot de passe: password123</span>
-                  </div>
-                </div>
-              </div>
-            )}
           </CardContent>
         </Card>
 

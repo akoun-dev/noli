@@ -39,7 +39,12 @@ export type CalculationType =
   | 'PERCENTAGE_VN'
   | 'MTPL_TARIFF'
   | 'FORMULA_BASED'
-  | 'FREE';
+  | 'FREE'
+  | 'RATE_ON_SI'
+  | 'RATE_ON_NEW_VALUE'
+  | 'TCM_TCL_MATRIX'
+  | 'IC_IPT_FORMULA'
+  | 'CONDITIONAL_RATE';
 
 export interface Coverage {
   id: string;

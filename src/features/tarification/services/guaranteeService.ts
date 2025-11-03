@@ -12,6 +12,8 @@ import {
   TarificationStats,
   CalculationMethodType
 } from '@/types/tarification';
+import { supabase } from '@/lib/supabase';
+import { logger } from '@/lib/logger';
 
 // Grilles de tarification initiales basées sur le document
 const initialTarifRC: TarifRC[] = [
@@ -290,26 +292,67 @@ const initialPackages: InsurancePackage[] = [
   }
 ];
 
+type CoverageRow = {
+  id: string
+  code: string | null
+  type: string | null
+  name: string
+  description: string | null
+  calculation_type: string
+  is_mandatory: boolean
+  is_active: boolean
+  display_order?: number | null
+  metadata: Record<string, any> | null
+  created_by: string | null
+  created_at: string
+  updated_at: string
+};
+
+const DEFAULT_CATEGORY: GuaranteeCategory = 'RESPONSABILITE_CIVILE';
+
+const CATEGORY_TO_COVERAGE_TYPE: Record<GuaranteeCategory, string> = {
+  RESPONSABILITE_CIVILE: 'RC',
+  DEFENSE_RECOURS: 'DEFENSE_RECOURS',
+  INDIVIDUELLE_CONDUCTEUR: 'INDIVIDUELLE_CONDUCTEUR',
+  INDIVIDUELLE_PASSAGERS: 'INDIVIDUELLE_PASSAGERS',
+  INCENDIE: 'INCENDIE',
+  VOL: 'VOL',
+  VOL_MAINS_ARMEES: 'VOL_MAINS_ARMEES',
+  BRIS_GLACES: 'BRIS_GLACES',
+  TIERCE_COMPLETE: 'TIERCE_COMPLETE',
+  TIERCE_COLLISION: 'TIERCE_COLLISION',
+  ASSISTANCE: 'ASSISTANCE',
+  AVANCE_RECOURS: 'AVANCE_RECOURS',
+  ACCESSOIRES: 'ACCESSOIRES',
+};
+
+const GUARANTEE_CATEGORIES = new Set<GuaranteeCategory>(
+  Object.keys(CATEGORY_TO_COVERAGE_TYPE) as GuaranteeCategory[]
+);
+
+const isGuaranteeCategory = (value: unknown): value is GuaranteeCategory =>
+  typeof value === 'string' && GUARANTEE_CATEGORIES.has(value as GuaranteeCategory);
+
 class GuaranteeService {
   private storageKey = 'noli_guarantees';
   private packagesStorageKey = 'noli_packages';
   private gridsStorageKey = 'noli_tarification_grids';
+  private useMockData: boolean;
 
   constructor() {
+    this.useMockData = (import.meta as any).env?.VITE_MOCK_DATA === 'true';
     this.initializeData();
   }
 
   private initializeData() {
-    const enableMocks = (import.meta as any).env?.VITE_MOCK_DATA === 'true'
-
     // En mode non-demo, on s'assure de ne pas injecter de données locales
-    if (!enableMocks) {
+    if (!this.useMockData) {
       try {
-        localStorage.removeItem(this.storageKey)
-        localStorage.removeItem(this.packagesStorageKey)
-        localStorage.removeItem(this.gridsStorageKey)
+        localStorage.removeItem(this.storageKey);
+        localStorage.removeItem(this.packagesStorageKey);
+        localStorage.removeItem(this.gridsStorageKey);
       } catch (_) {}
-      return
+      return;
     }
 
     if (!localStorage.getItem(this.storageKey)) {
@@ -329,75 +372,384 @@ class GuaranteeService {
     }
   }
 
+  private sanitizeNumber(value: unknown): number | undefined {
+    if (value === undefined || value === null) return undefined;
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : undefined;
+  }
+
+  private normalizeCode(value?: string | null): string | null {
+    if (!value) return null;
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    return trimmed.toUpperCase().replace(/[^A-Z0-9_]/g, '').slice(0, 32);
+  }
+
+  private mapCategoryToCoverageType(category?: GuaranteeCategory): string {
+    if (category && CATEGORY_TO_COVERAGE_TYPE[category]) {
+      return CATEGORY_TO_COVERAGE_TYPE[category];
+    }
+    return CATEGORY_TO_COVERAGE_TYPE[DEFAULT_CATEGORY];
+  }
+
+  private buildMetadataFromForm(
+    input: Partial<GuaranteeFormData>,
+    base: Record<string, any> = {}
+  ): Record<string, any> {
+    const metadata = { ...base };
+    if (input.category !== undefined) metadata.category = input.category;
+    if (input.conditions !== undefined) metadata.conditions = input.conditions;
+    if (input.minValue !== undefined) metadata.minValue = this.sanitizeNumber(input.minValue) ?? null;
+    if (input.maxValue !== undefined) metadata.maxValue = this.sanitizeNumber(input.maxValue) ?? null;
+    if (input.rate !== undefined) metadata.rate = this.sanitizeNumber(input.rate) ?? null;
+    if (input.fixedAmount !== undefined) metadata.fixedAmount = this.sanitizeNumber(input.fixedAmount) ?? null;
+    if (input.franchiseOptions !== undefined) {
+      metadata.franchiseOptions = Array.isArray(input.franchiseOptions)
+        ? input.franchiseOptions
+            .map(value => this.sanitizeNumber(value))
+            .filter((value): value is number => value !== undefined)
+        : input.franchiseOptions;
+    }
+    if (input.parameters !== undefined) metadata.parameters = input.parameters;
+    if (input.calculationMethod !== undefined) metadata.calculationMethod = input.calculationMethod;
+    if (input.code !== undefined) {
+      const normalized = this.normalizeCode(input.code);
+      metadata.code = normalized ?? input.code;
+    }
+    if (input.name !== undefined) metadata.name = input.name;
+    if (input.description !== undefined) metadata.description = input.description;
+    if (input.isOptional !== undefined) metadata.isOptional = input.isOptional;
+    return metadata;
+  }
+
+  private mapCoverageRow(row: CoverageRow): Guarantee {
+    const metadata = (row.metadata || {}) as Record<string, any>;
+    const categoryFromMeta = metadata.category;
+    const categoryFromRow = row.type;
+    const category: GuaranteeCategory =
+      isGuaranteeCategory(categoryFromMeta)
+        ? categoryFromMeta
+        : isGuaranteeCategory(categoryFromRow)
+        ? (categoryFromRow as GuaranteeCategory)
+        : DEFAULT_CATEGORY;
+    const calculationMethod =
+      (metadata.calculationMethod as CalculationMethodType | undefined) ||
+      (row.calculation_type as CalculationMethodType);
+    const franchiseOptionsRaw = metadata.franchiseOptions;
+    const franchiseOptions = Array.isArray(franchiseOptionsRaw)
+      ? franchiseOptionsRaw
+          .map((value: any) => Number(value))
+          .filter((value) => Number.isFinite(value))
+      : undefined;
+    const parameters = metadata.parameters && typeof metadata.parameters === 'object' ? metadata.parameters : undefined;
+    const minValue = this.sanitizeNumber(metadata.minValue);
+    const maxValue = this.sanitizeNumber(metadata.maxValue);
+    const rate = this.sanitizeNumber(metadata.rate);
+    const fixedAmount = this.sanitizeNumber(metadata.fixedAmount);
+
+    const guarantee: Guarantee = {
+      id: row.id,
+      name: row.name,
+      code:
+        this.normalizeCode(row.code) ||
+        (metadata.code && String(metadata.code)) ||
+        this.normalizeCode(row.name) ||
+        row.id,
+      category,
+      description: row.description ?? (metadata.description as string | undefined) ?? '',
+      calculationMethod,
+      isOptional: !row.is_mandatory,
+      isActive: row.is_active,
+      conditions: metadata.conditions ?? undefined,
+      minValue,
+      maxValue,
+      rate,
+      fixedAmount,
+      franchiseOptions,
+      parameters,
+      createdAt: row.created_at ? new Date(row.created_at) : new Date(),
+      updatedAt: row.updated_at ? new Date(row.updated_at) : new Date(),
+      createdBy: metadata.createdBy ?? row.created_by ?? 'system',
+    };
+
+    return guarantee;
+  }
+
+  private async getCurrentUserId(): Promise<string | null> {
+    try {
+      const { data } = await supabase.auth.getUser();
+      return data.user?.id ?? null;
+    } catch (error) {
+      logger.warn('GuaranteeService.getCurrentUserId: unable to retrieve user', error);
+      return null;
+    }
+  }
+
+  private async fetchCoverageRow(id: string): Promise<CoverageRow | null> {
+    const { data, error } = await supabase
+      .from('coverages')
+      .select('id, code, type, name, description, calculation_type, is_mandatory, is_active, metadata, created_by, created_at, updated_at, display_order')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      if ((error as any).code === 'PGRST116') {
+        return null;
+      }
+      throw error;
+    }
+
+    return data as CoverageRow;
+  }
+
   // Gestion des garanties
   async getGuarantees(): Promise<Guarantee[]> {
-    const data = localStorage.getItem(this.storageKey);
-    return data ? JSON.parse(data) : [];
+    if (this.useMockData) {
+      const data = localStorage.getItem(this.storageKey);
+      return data ? JSON.parse(data) : [];
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('coverages')
+        .select(
+          'id, code, type, name, description, calculation_type, is_mandatory, is_active, metadata, created_by, created_at, updated_at, display_order'
+        )
+        .order('display_order', { ascending: true })
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        logger.error('GuaranteeService.getGuarantees: Supabase error', error);
+        throw error;
+      }
+
+      return (data || []).map((row) => this.mapCoverageRow(row as CoverageRow));
+    } catch (error) {
+      logger.error('GuaranteeService.getGuarantees: unexpected error', error);
+      throw error instanceof Error ? error : new Error('Impossible de charger les garanties');
+    }
   }
 
   async getGuarantee(id: string): Promise<Guarantee | null> {
-    const guarantees = await this.getGuarantees();
-    return guarantees.find(g => g.id === id) || null;
+    if (this.useMockData) {
+      const guarantees = await this.getGuarantees();
+      return guarantees.find(g => g.id === id) || null;
+    }
+
+    try {
+      const row = await this.fetchCoverageRow(id);
+      return row ? this.mapCoverageRow(row) : null;
+    } catch (error) {
+      logger.error('GuaranteeService.getGuarantee: Supabase error', error);
+      throw error instanceof Error ? error : new Error('Impossible de récupérer la garantie');
+    }
   }
 
   async getGuaranteesByCategory(category: GuaranteeCategory): Promise<Guarantee[]> {
+    if (this.useMockData) {
+      const guarantees = await this.getGuarantees();
+      return guarantees.filter(g => g.category === category && g.isActive);
+    }
+
     const guarantees = await this.getGuarantees();
-    return guarantees.filter(g => g.category === category && g.isActive);
+    return guarantees.filter((g) => g.category === category && g.isActive);
   }
 
   async createGuarantee(data: GuaranteeFormData): Promise<Guarantee> {
-    const guarantees = await this.getGuarantees();
-    const newGuarantee: Guarantee = {
-      ...data,
-      // Catégorie par défaut (plus utilisée dans le formulaire)
-      category: 'RESPONSABILITE_CIVILE',
-      id: Math.random().toString(36).substr(2, 9),
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      createdBy: 'current-user'
+    if (this.useMockData) {
+      const guarantees = await this.getGuarantees();
+      const newGuarantee: Guarantee = {
+        ...data,
+        category: data.category || DEFAULT_CATEGORY,
+        id: Math.random().toString(36).substr(2, 9),
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        createdBy: 'current-user'
+      };
+
+      guarantees.push(newGuarantee);
+      localStorage.setItem(this.storageKey, JSON.stringify(guarantees));
+      return newGuarantee;
+    }
+
+    const normalizedCode =
+      this.normalizeCode(data.code) ||
+      this.normalizeCode(data.name) ||
+      null;
+    const userId = await this.getCurrentUserId();
+    const metadata = this.buildMetadataFromForm(data, {
+      createdBy: userId ?? 'system',
+    });
+    const fallbackCode =
+      this.normalizeCode(`${data.name}-${Date.now()}`) ??
+      `GAR_${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+    const finalCode = normalizedCode ?? fallbackCode;
+    metadata.code = finalCode;
+    metadata.category = data.category || DEFAULT_CATEGORY;
+    metadata.isOptional = data.isOptional;
+
+    const payload: {
+      code: string;
+      type: string;
+      name: string;
+      description: string | null;
+      calculation_type: string;
+      is_mandatory: boolean;
+      is_active: boolean;
+      metadata: Record<string, any>;
+      display_order?: number;
+      created_by?: string;
+    } = {
+      code: finalCode,
+      type: this.mapCategoryToCoverageType(data.category),
+      name: data.name,
+      description: data.description ?? null,
+      calculation_type: data.calculationMethod,
+      is_mandatory: !data.isOptional,
+      is_active: true,
+      metadata,
+      display_order: Math.floor(Date.now() / 1000),
     };
 
-    guarantees.push(newGuarantee);
-    localStorage.setItem(this.storageKey, JSON.stringify(guarantees));
-    return newGuarantee;
+    if (userId) {
+      payload.created_by = userId;
+    }
+
+    try {
+      const { data: inserted, error } = await supabase
+        .from('coverages')
+        .insert(payload)
+        .select(
+          'id, code, type, name, description, calculation_type, is_mandatory, is_active, metadata, created_by, created_at, updated_at, display_order'
+        )
+        .single();
+
+      if (error) {
+        logger.error('GuaranteeService.createGuarantee: Supabase error', error);
+        throw error;
+      }
+
+      return this.mapCoverageRow(inserted as CoverageRow);
+    } catch (error) {
+      logger.error('GuaranteeService.createGuarantee: unexpected error', error);
+      throw error instanceof Error ? error : new Error('Impossible de créer la garantie');
+    }
   }
 
   async updateGuarantee(id: string, data: Partial<GuaranteeFormData>): Promise<Guarantee> {
-    const guarantees = await this.getGuarantees();
-    const index = guarantees.findIndex(g => g.id === id);
-    if (index === -1) {
-      throw new Error('Garantie non trouvée');
+    if (this.useMockData) {
+      const guarantees = await this.getGuarantees();
+      const index = guarantees.findIndex(g => g.id === id);
+      if (index === -1) {
+        throw new Error('Garantie non trouvée');
+      }
+
+      guarantees[index] = {
+        ...guarantees[index],
+        ...data,
+        updatedAt: new Date()
+      };
+
+      localStorage.setItem(this.storageKey, JSON.stringify(guarantees));
+      return guarantees[index];
     }
 
-    guarantees[index] = {
-      ...guarantees[index],
-      ...data,
-      updatedAt: new Date()
-    };
+    try {
+      const row = await this.fetchCoverageRow(id);
+      if (!row) {
+        throw new Error('Garantie non trouvée');
+      }
 
-    localStorage.setItem(this.storageKey, JSON.stringify(guarantees));
-    return guarantees[index];
+      const updatePayload: Record<string, any> = {};
+      if (data.name !== undefined) updatePayload.name = data.name;
+      if (data.description !== undefined) updatePayload.description = data.description ?? null;
+      if (data.calculationMethod !== undefined) updatePayload.calculation_type = data.calculationMethod;
+      if (data.isOptional !== undefined) updatePayload.is_mandatory = !data.isOptional;
+      if (data.code !== undefined) {
+        const normalized = this.normalizeCode(data.code);
+        updatePayload.code = normalized ?? row.code;
+      }
+      if (data.category !== undefined) {
+        updatePayload.type = this.mapCategoryToCoverageType(data.category);
+      }
+
+      const mergedMetadata = this.buildMetadataFromForm(data, (row.metadata as Record<string, any>) || {});
+      updatePayload.metadata = mergedMetadata;
+
+      const { error } = await supabase.from('coverages').update(updatePayload).eq('id', id);
+      if (error) {
+        logger.error('GuaranteeService.updateGuarantee: Supabase error', error);
+        throw error;
+      }
+
+      const refreshed = await this.fetchCoverageRow(id);
+      if (!refreshed) {
+        throw new Error('Garantie introuvable après mise à jour');
+      }
+      return this.mapCoverageRow(refreshed);
+    } catch (error) {
+      logger.error('GuaranteeService.updateGuarantee: unexpected error', error);
+      throw error instanceof Error ? error : new Error('Impossible de mettre à jour la garantie');
+    }
   }
-
   async deleteGuarantee(id: string): Promise<void> {
-    const guarantees = await this.getGuarantees();
-    const index = guarantees.findIndex(g => g.id === id);
-    if (index === -1) {
-      throw new Error('Garantie non trouvée');
+    if (this.useMockData) {
+      const guarantees = await this.getGuarantees();
+      const index = guarantees.findIndex(g => g.id === id);
+      if (index === -1) {
+        throw new Error('Garantie non trouvée');
+      }
+
+      guarantees.splice(index, 1);
+      localStorage.setItem(this.storageKey, JSON.stringify(guarantees));
+      return;
     }
 
-    guarantees.splice(index, 1);
-    localStorage.setItem(this.storageKey, JSON.stringify(guarantees));
+    try {
+      const { error } = await supabase.from('coverages').delete().eq('id', id);
+      if (error) {
+        logger.error('GuaranteeService.deleteGuarantee: Supabase error', error);
+        throw error;
+      }
+    } catch (error) {
+      logger.error('GuaranteeService.deleteGuarantee: unexpected error', error);
+      throw error instanceof Error ? error : new Error('Impossible de supprimer la garantie');
+    }
   }
 
   async toggleGuarantee(id: string): Promise<Guarantee> {
+    if (this.useMockData) {
+      const guarantee = await this.getGuarantee(id);
+      if (!guarantee) {
+        throw new Error('Garantie non trouvée');
+      }
+
+      return this.updateGuarantee(id, { isActive: !guarantee.isActive });
+    }
+
     const guarantee = await this.getGuarantee(id);
     if (!guarantee) {
       throw new Error('Garantie non trouvée');
     }
 
-    return this.updateGuarantee(id, { isActive: !guarantee.isActive });
+    try {
+      const { error } = await supabase
+        .from('coverages')
+        .update({ is_active: !guarantee.isActive })
+        .eq('id', id);
+
+      if (error) {
+        logger.error('GuaranteeService.toggleGuarantee: Supabase error', error);
+        throw error;
+      }
+
+      const refreshed = await this.fetchCoverageRow(id);
+      return refreshed ? this.mapCoverageRow(refreshed) : { ...guarantee, isActive: !guarantee.isActive };
+    } catch (error) {
+      logger.error('GuaranteeService.toggleGuarantee: unexpected error', error);
+      throw error instanceof Error ? error : new Error('Impossible de modifier le statut de la garantie');
+    }
   }
 
   // Gestion des packages
