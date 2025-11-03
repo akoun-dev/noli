@@ -28,9 +28,7 @@ import {
 } from '@/features/tarification/services/tarificationSupabaseService'
 import {
   Guarantee,
-  InsurancePackage,
   GuaranteeFormData,
-  PackageFormData,
   CalculationMethodType,
   TarifFixe,
   TarifFixeFormData
@@ -41,7 +39,6 @@ import {
   Trash2,
   Search,
   Shield,
-  Package,
   Calculator,
   Settings,
   CheckCircle,
@@ -61,7 +58,6 @@ export const AdminTarificationPage: React.FC = () => {
   // Important: wait for real authentication before loading data
   const { user, isAuthenticated, isLoading } = useAuth();
   const [guarantees, setGuarantees] = useState<Guarantee[]>([]);
-  const [packages, setPackages] = useState<InsurancePackage[]>([]);
   const [tarifFixes, setTarifFixes] = useState<FixedTariffItem[]>([]);
   const [fixedCoverageOptions, setFixedCoverageOptions] = useState<FixedCoverageOption[]>([])
   const [freeCoverages, setFreeCoverages] = useState<Array<{ id: string; name: string; isMandatory: boolean }>>([])
@@ -71,9 +67,6 @@ export const AdminTarificationPage: React.FC = () => {
   const [statistics, setStatistics] = useState<{
     totalGuarantees: number;
     activeGuarantees: number;
-    totalPackages: number;
-    activePackages: number;
-    averagePackagePrice: number;
     priceRange: { min: number; max: number };
     mostUsedGuarantees: Array<{
       guaranteeId: string;
@@ -85,12 +78,9 @@ export const AdminTarificationPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreateGuaranteeDialogOpen, setIsCreateGuaranteeDialogOpen] = useState(false);
   const [isCreatingGuarantee, setIsCreatingGuarantee] = useState(false);
-  const [isCreatePackageDialogOpen, setIsCreatePackageDialogOpen] = useState(false);
   const [isEditGuaranteeDialogOpen, setIsEditGuaranteeDialogOpen] = useState(false);
-  const [isEditPackageDialogOpen, setIsEditPackageDialogOpen] = useState(false);
   const [showInactive, setShowInactive] = useState(true);
   const [selectedGuarantee, setSelectedGuarantee] = useState<Guarantee | null>(null);
-  const [selectedPackage, setSelectedPackage] = useState<InsurancePackage | null>(null);
   const [selectedTarifFixe, setSelectedTarifFixe] = useState<FixedTariffItem | null>(null);
 
   const [newGuarantee, setNewGuarantee] = useState<GuaranteeFormData>({
@@ -100,14 +90,6 @@ export const AdminTarificationPage: React.FC = () => {
     description: '',
     calculationMethod: 'FIXED_AMOUNT',
     isOptional: true
-  });
-
-  const [newPackage, setNewPackage] = useState<PackageFormData>({
-    name: '',
-    code: '',
-    description: '',
-    guaranteeIds: [],
-    basePrice: 0
   });
 
   const [isCreateTarifFixeDialogOpen, setIsCreateTarifFixeDialogOpen] = useState(false);
@@ -177,8 +159,7 @@ export const AdminTarificationPage: React.FC = () => {
       )
       logger.debug(`AdminTarificationPage.loadData: final supaGuaranteesData length: ${supaGuaranteesData.length}`)
 
-      const [packagesData, statsData, grids, fixedTariffs, fixedOptions, freeCov] = await Promise.all([
-        guaranteeService.getPackages(),
+      const [statsData, grids, fixedTariffs, fixedOptions, freeCov] = await Promise.all([
         guaranteeService.getTarificationStats(),
         guaranteeService.getTarificationGrids(), // fallback data only
         // Protège contre un Supabase local non démarré en dev
@@ -218,14 +199,12 @@ export const AdminTarificationPage: React.FC = () => {
       }
 
       setGuarantees(finalGuarantees);
-      setPackages(packagesData);
       setStatistics(statsData);
       setTarifFixes(fixedTariffs as FixedTariffItem[]);
       setFixedCoverageOptions(fixedOptions as FixedCoverageOption[])
       setFreeCoverages(freeCov)
       logger.debug('AdminTarificationPage.loadData: done', {
         guarantees: Array.isArray(supaGuaranteesData) ? supaGuaranteesData.length : 'n/a',
-        packages: Array.isArray(packagesData) ? packagesData.length : 'n/a',
         fixedTariffs: Array.isArray(fixedTariffs) ? fixedTariffs.length : 'n/a',
         fixedOptions: Array.isArray(fixedOptions) ? fixedOptions.length : 'n/a',
         freeCoverages: Array.isArray(freeCov) ? freeCov.length : 'n/a',
@@ -424,27 +403,6 @@ export const AdminTarificationPage: React.FC = () => {
     }
   };
 
-  const handleCreatePackage = async () => {
-    try {
-      if (!newPackage.name || !newPackage.code || !newPackage.description || newPackage.guaranteeIds.length === 0) {
-        return;
-      }
-
-      await guaranteeService.createPackage(newPackage);
-      setIsCreatePackageDialogOpen(false);
-      setNewPackage({
-        name: '',
-        code: '',
-        description: '',
-        guaranteeIds: [],
-        basePrice: 0
-      });
-      loadData();
-    } catch (error) {
-      logger.error('Error creating package:', error);
-    }
-  };
-
   const handleUpdateGuarantee = async () => {
     try {
       if (!selectedGuarantee) return
@@ -524,28 +482,6 @@ export const AdminTarificationPage: React.FC = () => {
     }
   };
 
-  const handleUpdatePackage = async () => {
-    try {
-      if (!selectedPackage || !newPackage.name || !newPackage.code || !newPackage.description || newPackage.guaranteeIds.length === 0) {
-        return;
-      }
-
-      await guaranteeService.updatePackage(selectedPackage.id, newPackage);
-      setIsEditPackageDialogOpen(false);
-      setSelectedPackage(null);
-      setNewPackage({
-        name: '',
-        code: '',
-        description: '',
-        guaranteeIds: [],
-        basePrice: 0
-      });
-      loadData();
-    } catch (error) {
-      logger.error('Error updating package:', error);
-    }
-  };
-
   const handleDeleteGuarantee = async (id: string) => {
     if (!confirm('Êtes-vous sûr de vouloir supprimer cette garantie ?')) {
       return;
@@ -565,19 +501,6 @@ export const AdminTarificationPage: React.FC = () => {
     }
   };
 
-  const handleDeletePackage = async (id: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer ce package ?')) {
-      return;
-    }
-
-    try {
-      await guaranteeService.deletePackage(id);
-      loadData();
-    } catch (error) {
-      logger.error('Error deleting package:', error);
-    }
-  };
-
   const handleToggleGuarantee = async (id: string) => {
     try {
       const found = guarantees.find(g => g.id === id)
@@ -593,15 +516,6 @@ export const AdminTarificationPage: React.FC = () => {
       loadData();
     } catch (error) {
       logger.error('Error toggling guarantee:', error);
-    }
-  };
-
-  const handleTogglePackage = async (id: string) => {
-    try {
-      await guaranteeService.togglePackage(id);
-      loadData();
-    } catch (error) {
-      logger.error('Error toggling package:', error);
     }
   };
 
@@ -624,18 +538,6 @@ export const AdminTarificationPage: React.FC = () => {
     setIsEditGuaranteeDialogOpen(true);
   };
 
-  const openEditPackageDialog = (pkg: InsurancePackage) => {
-    setSelectedPackage(pkg);
-    setNewPackage({
-      name: pkg.name,
-      code: pkg.code,
-      description: pkg.description,
-      guaranteeIds: pkg.guarantees,
-      basePrice: pkg.basePrice
-    });
-    setIsEditPackageDialogOpen(true);
-  };
-
   const filteredGuarantees = guarantees.filter(guarantee => {
     const matchesSearch = `${guarantee.name} ${guarantee.code} ${guarantee.description || ''}`
       .toLowerCase()
@@ -643,12 +545,6 @@ export const AdminTarificationPage: React.FC = () => {
     const matchesActive = showInactive ? true : guarantee.isActive;
     return matchesSearch && matchesActive;
   });
-
-  const filteredPackages = packages.filter(pkg =>
-    `${pkg.name} ${pkg.code} ${pkg.description || ''}`
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase())
-  );
 
   const calculationMethods = guaranteeService.getCalculationMethods();
   const selectableCalculationMethods = calculationMethods.filter(
@@ -669,7 +565,7 @@ export const AdminTarificationPage: React.FC = () => {
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold">Tarification & Garanties</h1>
           <p className="text-muted-foreground text-sm sm:text-base">
-            Gérez les garanties, packages et grilles de tarification
+            Gérez les garanties et grilles de tarification
           </p>
         </div>
       </div>
@@ -691,28 +587,15 @@ export const AdminTarificationPage: React.FC = () => {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Packages</CardTitle>
-              <Package className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{statistics.totalPackages}</div>
-              <p className="text-xs text-muted-foreground">
-                {statistics.activePackages} actifs
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Prix Moyen</CardTitle>
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {Math.round(statistics.averagePackagePrice).toLocaleString()} FCFA
+                {Math.round((statistics.priceRange.min + statistics.priceRange.max) / 2).toLocaleString()} FCFA
               </div>
               <p className="text-xs text-muted-foreground">
-                Par package
+                Moyenne des garanties
               </p>
             </CardContent>
           </Card>
@@ -735,9 +618,8 @@ export const AdminTarificationPage: React.FC = () => {
       )}
 
       <Tabs defaultValue="guarantees" className="space-y-4">
-        <TabsList className="grid grid-cols-2 sm:grid-cols-4 w-full">
+        <TabsList className="grid grid-cols-1 sm:grid-cols-3 w-full">
           <TabsTrigger value="guarantees" className="text-xs sm:text-sm">Garanties</TabsTrigger>
-          <TabsTrigger value="packages" className="text-xs sm:text-sm">Packages</TabsTrigger>
           <TabsTrigger value="grids" className="text-xs sm:text-sm">Grilles</TabsTrigger>
           <TabsTrigger value="statistics" className="text-xs sm:text-sm">Statistiques</TabsTrigger>
         </TabsList>
@@ -1045,223 +927,6 @@ export const AdminTarificationPage: React.FC = () => {
                             variant="outline"
                             size="sm"
                             onClick={() => handleDeleteGuarantee(guarantee.id)}
-                            className="text-red-600 hover:text-red-700 h-8 w-8 p-0 sm:h-auto sm:w-auto sm:p-2"
-                          >
-                            <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="packages" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex justify-between items-center">
-                <span>Gestion des Packages</span>
-                <Dialog open={isCreatePackageDialogOpen} onOpenChange={setIsCreatePackageDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button>
-                      <Plus className="w-4 h-4 mr-2" />
-                      Nouveau Package
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[80vh] overflow-y-auto">
-                    <DialogHeader>
-                      <DialogTitle>Créer un nouveau package</DialogTitle>
-                      <DialogDescription>
-                        Définissez un package d'assurances avec des garanties pré-sélectionnées
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="package-name">Nom du package</Label>
-                          <Input
-                            id="package-name"
-                            value={newPackage.name}
-                            onChange={(e) => setNewPackage(prev => ({ ...prev, name: e.target.value }))}
-                            placeholder="Ex: Plan Essentiel"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="package-code">Code</Label>
-                          <Input
-                            id="package-code"
-                            value={newPackage.code}
-                            onChange={(e) => setNewPackage(prev => ({ ...prev, code: e.target.value.toUpperCase() }))}
-                            placeholder="Ex: ESSENTIEL"
-                            maxLength={20}
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <Label htmlFor="package-description">Description</Label>
-                        <Textarea
-                          id="package-description"
-                          value={newPackage.description}
-                          onChange={(e) => setNewPackage(prev => ({ ...prev, description: e.target.value }))}
-                          placeholder="Description détaillée du package"
-                          rows={3}
-                        />
-                      </div>
-
-                      <div>
-                        <Label>Prix de base (FCFA)</Label>
-                        <Input
-                          type="number"
-                          value={newPackage.basePrice}
-                          onChange={(e) => setNewPackage(prev => ({ ...prev, basePrice: parseFloat(e.target.value) || 0 }))}
-                          placeholder="Ex: 150000"
-                        />
-                      </div>
-
-                      <div>
-                        <Label>Garanties incluses</Label>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2 max-h-48 overflow-y-auto border rounded-lg p-3">
-                          {[...fixedCoverageOptions.map((c) => ({ id: c.id, name: c.name })), ...freeCoverages.map((c) => ({ id: c.id, name: c.name }))]
-                            .map((cov) => (
-                              <div key={cov.id} className="flex items-center space-x-2">
-                                <Checkbox
-                                  id={`package-${cov.id}`}
-                                  checked={newPackage.guaranteeIds.includes(cov.id)}
-                                  onCheckedChange={(checked) =>
-                                    setNewPackage((prev) => ({
-                                      ...prev,
-                                      guaranteeIds: checked
-                                        ? [...prev.guaranteeIds, cov.id]
-                                        : prev.guaranteeIds.filter((id) => id !== cov.id),
-                                    }))
-                                  }
-                                />
-                                <Label
-                                  htmlFor={`package-${cov.id}`}
-                                  className="text-sm cursor-pointer"
-                                >
-                                  {cov.name}
-                                </Label>
-                              </div>
-                            ))}
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {newPackage.guaranteeIds.length} garantie(s) sélectionnée(s)
-                        </p>
-                      </div>
-                    </div>
-                    <DialogFooter>
-                      <Button variant="outline" onClick={() => setIsCreatePackageDialogOpen(false)}>
-                        Annuler
-                      </Button>
-                      <Button onClick={handleCreatePackage}>
-                        Créer le package
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mb-4">
-                <div className="relative flex-1 sm:flex-initial">
-                  <Search className="absolute left-3 top-1/2 w-4 h-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    placeholder="Rechercher un package..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 w-full sm:max-w-sm"
-                  />
-                </div>
-              </div>
-
-              <div className="responsive-table-wrapper">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="p-2">Package</TableHead>
-                      <TableHead className="p-2 hidden sm:table-cell">Prix de base</TableHead>
-                      <TableHead className="p-2">Prix total</TableHead>
-                      <TableHead className="p-2 hidden md:table-cell">Garanties</TableHead>
-                      <TableHead className="p-2">Statut</TableHead>
-                      <TableHead className="p-2">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                <TableBody>
-                  {filteredPackages.map((pkg) => (
-                    <TableRow key={pkg.id}>
-                      <TableCell className="p-2">
-                        <div>
-                          <div className="font-medium flex items-center gap-2 text-sm">
-                            {pkg.name}
-                            {pkg.isPopular && (
-                              <Badge variant="outline" className="border-yellow-200 bg-yellow-50 text-yellow-800" style={{ fontSize: '0.7rem' }}>
-                                Populaire
-                              </Badge>
-                            )}
-                          </div>
-                          <div className="text-xs text-muted-foreground">Code: {pkg.code}</div>
-                          {pkg.description && (
-                            <div className="text-xs text-muted-foreground max-w-xs truncate">
-                              {pkg.description}
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="p-2 hidden sm:table-cell">
-                        <div className="text-xs">
-                          {pkg.basePrice.toLocaleString()} FCFA
-                        </div>
-                      </TableCell>
-                      <TableCell className="p-2">
-                        <div className="font-medium text-sm">
-                          {pkg.totalPrice.toLocaleString()} FCFA
-                        </div>
-                      </TableCell>
-                      <TableCell className="p-2 hidden md:table-cell">
-                        <div className="text-xs">
-                          {pkg.guarantees.length} garantie(s)
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {pkg.guarantees.slice(0, 2).map(gId => {
-                            const guarantee = guarantees.find(g => g.id === gId);
-                            return guarantee?.name;
-                          }).filter(Boolean).join(', ')}
-                          {pkg.guarantees.length > 2 && '...'}
-                        </div>
-                      </TableCell>
-                      <TableCell className="p-2">
-                        <Badge variant="outline" className={pkg.isActive ? 'border-green-200 bg-green-50 text-green-800' : 'border-red-200 bg-red-50 text-red-800'} style={{ fontSize: '0.7rem' }}>
-                          {pkg.isActive ? 'Actif' : 'Inactif'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="p-2">
-                        <div className="flex items-center space-x-1 sm:space-x-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openEditPackageDialog(pkg)}
-                            className="h-8 w-8 p-0 sm:h-auto sm:w-auto sm:p-2"
-                          >
-                            <Edit className="w-3 h-3 sm:w-4 sm:h-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleTogglePackage(pkg.id)}
-                            className="h-8 w-8 p-0 sm:h-auto sm:w-auto sm:p-2"
-                          >
-                            {pkg.isActive ? <XCircle className="w-3 h-3 sm:w-4 sm:h-4" /> : <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />}
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDeletePackage(pkg.id)}
                             className="text-red-600 hover:text-red-700 h-8 w-8 p-0 sm:h-auto sm:w-auto sm:p-2"
                           >
                             <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -1918,94 +1583,6 @@ export const AdminTarificationPage: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog pour modifier un package */}
-      <Dialog open={isEditPackageDialogOpen} onOpenChange={setIsEditPackageDialogOpen}>
-        <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Modifier le package</DialogTitle>
-            <DialogDescription>
-              Mettez à jour les informations du package
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="edit-package-name">Nom du package</Label>
-                <Input
-                  id="edit-package-name"
-                  value={newPackage.name}
-                  onChange={(e) => setNewPackage(prev => ({ ...prev, name: e.target.value }))}
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit-package-code">Code</Label>
-                <Input
-                  id="edit-package-code"
-                  value={newPackage.code}
-                  onChange={(e) => setNewPackage(prev => ({ ...prev, code: e.target.value.toUpperCase() }))}
-                  maxLength={20}
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="edit-package-description">Description</Label>
-              <Textarea
-                id="edit-package-description"
-                value={newPackage.description}
-                onChange={(e) => setNewPackage(prev => ({ ...prev, description: e.target.value }))}
-                rows={3}
-              />
-            </div>
-
-            <div>
-              <Label>Prix de base (FCFA)</Label>
-              <Input
-                type="number"
-                value={newPackage.basePrice}
-                onChange={(e) => setNewPackage(prev => ({ ...prev, basePrice: parseFloat(e.target.value) || 0 }))}
-              />
-            </div>
-
-            <div>
-              <Label>Garanties incluses</Label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2 max-h-48 overflow-y-auto border rounded-lg p-3">
-                {guarantees.filter(g => g.isActive).map(guarantee => (
-                  <div key={guarantee.id} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`edit-package-${guarantee.id}`}
-                      checked={newPackage.guaranteeIds.includes(guarantee.id)}
-                      onCheckedChange={(checked) =>
-                        setNewPackage(prev => ({
-                          ...prev,
-                          guaranteeIds: checked
-                            ? [...prev.guaranteeIds, guarantee.id]
-                            : prev.guaranteeIds.filter(id => id !== guarantee.id)
-                        }))
-                      }
-                    />
-                    <Label
-                      htmlFor={`edit-package-${guarantee.id}`}
-                      className="text-sm cursor-pointer"
-                      title={guarantee.description}
-                    >
-                      {guarantee.name}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditPackageDialogOpen(false)}>
-              Annuler
-            </Button>
-            <Button onClick={handleUpdatePackage}>
-              Mettre à jour
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

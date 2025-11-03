@@ -276,49 +276,68 @@ class CoverageTarificationService {
       } catch (error) {
         logger.error('Error fetching available coverages via RPC, trying direct fetch:', error)
 
-        // Final fallback: use direct REST API fetch
-        try {
-          const { data: session } = await supabase.auth.getSession()
-          const headers: Record<string, string> = {
-            'apikey': supabaseAnonKey,
-            'Content-Type': 'application/json'
-          }
-
-          if (session?.session?.access_token) {
-            headers['Authorization'] = `Bearer ${session.session.access_token}`
-          }
-
-          const response = await fetch(
-            `${supabaseUrl}/rest/v1/rpc/get_available_coverages`,
-            {
-              method: 'POST',
-              headers,
-              body: JSON.stringify({})
+        // Final fallback: use direct REST API fetch with retry logic
+        const maxRetries = 3
+        let retryCount = 0
+        
+        while (retryCount < maxRetries) {
+          try {
+            const { data: session } = await supabase.auth.getSession()
+            const headers: Record<string, string> = {
+              'apikey': supabaseAnonKey,
+              'Content-Type': 'application/json'
             }
-          )
 
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`)
+            if (session?.session?.access_token) {
+              headers['Authorization'] = `Bearer ${session.session.access_token}`
+            }
+
+            const controller = new AbortController()
+            const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
+
+            const response = await fetch(
+              `${supabaseUrl}/rest/v1/rpc/get_available_coverages`,
+              {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({}),
+                signal: controller.signal
+              }
+            )
+
+            clearTimeout(timeoutId)
+
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`)
+            }
+
+            const data = await response.json()
+            logger.api('getAvailableCoverages: direct fetch fallback succeeded', { count: data.length })
+
+            return data.map((r: any) => ({
+              coverage_id: r.coverage_id ?? r.id,
+              coverage_type: (r.coverage_type ?? r.type) as CoverageType,
+              name: r.name,
+              description: r.description,
+              calculation_type: r.calculation_type,
+              is_mandatory: !!r.is_mandatory,
+              estimated_min_premium: typeof r.estimated_min_premium === 'number' ? Number(r.estimated_min_premium) : undefined,
+              estimated_max_premium: typeof r.estimated_max_premium === 'number' ? Number(r.estimated_max_premium) : undefined,
+              available_formulas: Array.isArray(r.available_formulas) ? (r.available_formulas as string[]) : [],
+            }))
+          } catch (fetchError) {
+            logger.error(`getAvailableCoverages: Fetch attempt ${retryCount + 1} failed:`, fetchError)
+            
+            if (retryCount === maxRetries - 1) {
+              // Return empty array as last resort to prevent complete failure
+              logger.error('getAvailableCoverages: All methods failed, returning empty array')
+              return []
+            }
+            
+            retryCount++
+            // Wait before retrying (exponential backoff)
+            await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000))
           }
-
-          const data = await response.json()
-          logger.api('getAvailableCoverages: direct fetch fallback succeeded', { count: data.length })
-
-          return data.map((r: any) => ({
-            coverage_id: r.coverage_id ?? r.id,
-            coverage_type: (r.coverage_type ?? r.type) as CoverageType,
-            name: r.name,
-            description: r.description,
-            calculation_type: r.calculation_type,
-            is_mandatory: !!r.is_mandatory,
-            estimated_min_premium: typeof r.estimated_min_premium === 'number' ? Number(r.estimated_min_premium) : undefined,
-            estimated_max_premium: typeof r.estimated_max_premium === 'number' ? Number(r.estimated_max_premium) : undefined,
-            available_formulas: Array.isArray(r.available_formulas) ? (r.available_formulas as string[]) : [],
-          }))
-        } catch (fetchError) {
-          logger.error('getAvailableCoverages: All methods failed', fetchError)
-          // Return empty array as last resort to prevent complete failure
-          return []
         }
       }
     }
