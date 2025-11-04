@@ -1,6 +1,11 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { AuditLog, AuditLogFilters, AuditLogExport, AuditAction } from '@/types/admin';
+import { supabase } from '@/lib/supabase';
+import { logger } from '@/lib/logger';
+import { toast } from 'sonner';
 
-const mockAuditLogs: AuditLog[] = [
+// Logs d'audit initiaux pour la démo
+const initialAuditLogs: AuditLog[] = [
   {
     id: '1',
     userId: 'admin-1',
@@ -100,11 +105,143 @@ const mockAuditLogs: AuditLog[] = [
   }
 ];
 
-export const auditService = {
-  async getAuditLogs(filters: AuditLogFilters = {}): Promise<{ logs: AuditLog[]; total: number }> {
-    await new Promise(resolve => setTimeout(resolve, 800));
+// Fonctions API pour l'audit avec Supabase
+export const fetchAuditLogs = async (filters: AuditLogFilters = {}): Promise<{ logs: AuditLog[]; total: number }> => {
+  try {
+    let query = supabase
+      .from('audit_logs')
+      .select('*', { count: 'exact' })
+      .order('timestamp', { ascending: false });
 
-    let filteredLogs = [...mockAuditLogs];
+    // Appliquer les filtres
+    if (filters.startDate) {
+      query = query.gte('timestamp', filters.startDate.toISOString());
+    }
+
+    if (filters.endDate) {
+      query = query.lte('timestamp', filters.endDate.toISOString());
+    }
+
+    if (filters.userId) {
+      query = query.eq('user_id', filters.userId);
+    }
+
+    if (filters.userEmail) {
+      query = query.ilike('user_email', `%${filters.userEmail}%`);
+    }
+
+    if (filters.action) {
+      query = query.eq('action', filters.action);
+    }
+
+    if (filters.resource) {
+      query = query.ilike('resource', `%${filters.resource}%`);
+    }
+
+    if (filters.severity) {
+      query = query.eq('severity', filters.severity);
+    }
+
+    if (filters.ipAddress) {
+      query = query.ilike('ip_address', `%${filters.ipAddress}%`);
+    }
+
+    const offset = filters.offset || 0;
+    const limit = filters.limit || 50;
+
+    query = query.range(offset, offset + limit - 1);
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      logger.error('Error fetching audit logs:', error);
+      // Fallback vers les logs initiaux
+      return await auditService.getAuditLogsFallback(filters);
+    }
+
+    // Convertir les données de la base en format AuditLog
+    const logs: AuditLog[] = (data || []).map(log => ({
+      id: log.id,
+      userId: log.user_id,
+      userEmail: log.user_email,
+      action: log.action as AuditAction,
+      resource: log.resource,
+      resourceId: log.resource_id,
+      details: log.details || {},
+      ipAddress: log.ip_address,
+      userAgent: log.user_agent,
+      timestamp: new Date(log.timestamp),
+      severity: log.severity as AuditLog['severity']
+    }));
+
+    return {
+      logs,
+      total: count || 0
+    };
+
+  } catch (error) {
+    logger.error('Error in fetchAuditLogs:', error);
+    return await auditService.getAuditLogsFallback(filters);
+  }
+};
+
+export const createAuditLog = async (log: Omit<AuditLog, 'id' | 'timestamp'>): Promise<AuditLog> => {
+  try {
+    const { data, error } = await supabase
+      .from('audit_logs')
+      .insert({
+        user_id: log.userId,
+        user_email: log.userEmail,
+        action: log.action,
+        resource: log.resource,
+        resource_id: log.resourceId,
+        details: log.details,
+        ip_address: log.ipAddress,
+        user_agent: log.userAgent,
+        severity: log.severity,
+        timestamp: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (error) {
+      logger.error('Error creating audit log:', error);
+      throw error;
+    }
+
+    return {
+      id: data.id,
+      userId: data.user_id,
+      userEmail: data.user_email,
+      action: data.action as AuditAction,
+      resource: data.resource,
+      resourceId: data.resource_id,
+      details: data.details || {},
+      ipAddress: data.ip_address,
+      userAgent: data.user_agent,
+      timestamp: new Date(data.timestamp),
+      severity: data.severity as AuditLog['severity']
+    };
+
+  } catch (error) {
+    logger.error('Error in createAuditLog:', error);
+    // Fallback: créer un log en mémoire
+    const newLog: AuditLog = {
+      ...log,
+      id: Math.random().toString(36).substr(2, 9),
+      timestamp: new Date()
+    };
+    initialAuditLogs.unshift(newLog);
+    return newLog;
+  }
+};
+
+export const auditService = {
+  // Fallback vers les logs en mémoire si la base n'est pas disponible
+  async getAuditLogsFallback(filters: AuditLogFilters = {}): Promise<{ logs: AuditLog[]; total: number }> {
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    let filteredLogs = [...initialAuditLogs];
 
     if (filters.startDate) {
       filteredLogs = filteredLogs.filter(log => log.timestamp >= filters.startDate!);
@@ -156,18 +293,12 @@ export const auditService = {
     };
   },
 
+  async getAuditLogs(filters: AuditLogFilters = {}): Promise<{ logs: AuditLog[]; total: number }> {
+    return await fetchAuditLogs(filters);
+  },
+
   async createAuditLog(log: Omit<AuditLog, 'id' | 'timestamp'>): Promise<AuditLog> {
-    await new Promise(resolve => setTimeout(resolve, 300));
-
-    const newLog: AuditLog = {
-      ...log,
-      id: Math.random().toString(36).substr(2, 9),
-      timestamp: new Date()
-    };
-
-    mockAuditLogs.unshift(newLog);
-
-    return newLog;
+    return await createAuditLog(log);
   },
 
   async exportAuditLogs(exportConfig: AuditLogExport): Promise<Blob> {
@@ -322,4 +453,57 @@ export const auditService = {
       topActions
     };
   }
+};
+
+// React Query Hooks pour l'audit
+export const useAuditLogs = (filters?: AuditLogFilters) => {
+  return useQuery({
+    queryKey: ['admin-audit-logs', filters],
+    queryFn: () => fetchAuditLogs(filters),
+    staleTime: 2 * 60 * 1000, // 2 minutes
+  });
+};
+
+export const useCreateAuditLog = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: createAuditLog,
+    onSuccess: () => {
+      queryClient.invalidateQueries(['admin-audit-logs']);
+    },
+    onError: (error) => {
+      logger.error('Error creating audit log:', error);
+      toast.error('Erreur lors de la création du log d\'audit');
+    },
+  });
+};
+
+export const useExportAuditLogs = () => {
+  return useMutation({
+    mutationFn: (exportConfig: AuditLogExport) => auditService.exportAuditLogs(exportConfig),
+    onSuccess: (blob, variables) => {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `audit_logs_${new Date().toISOString().split('T')[0]}.${variables.format.toLowerCase()}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast.success('Logs d\'audit exportés avec succès');
+    },
+    onError: (error) => {
+      logger.error('Error exporting audit logs:', error);
+      toast.error('Erreur lors de l\'export des logs d\'audit');
+    },
+  });
+};
+
+export const useAuditStatistics = () => {
+  return useQuery({
+    queryKey: ['admin-audit-statistics'],
+    queryFn: () => auditService.getAuditStatistics(),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
 };

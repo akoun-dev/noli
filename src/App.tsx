@@ -146,9 +146,7 @@ const App = () => (
                       <Route path='/admin/utilisateurs' element={<Suspense fallback={<PageLoader />}><AdminUsersPage /></Suspense>} />
                       <Route path='/admin/assureurs' element={<Suspense fallback={<PageLoader />}><AdminInsurersPage /></Suspense>} />
                       <Route path='/admin/offres' element={<Suspense fallback={<PageLoader />}><AdminOffersPage /></Suspense>} />
-                      <Route path='/admin/devis' element={<Suspense fallback={<PageLoader />}><div>Admin Quotes</div></Suspense>} />
                       <Route path='/admin/tarification' element={<Suspense fallback={<PageLoader />}><AdminTarificationPage /></Suspense>} />
-                      <Route path='/admin/devis' element={<Suspense fallback={<PageLoader />}><div>Admin Quotes</div></Suspense>} />
                       <Route path='/admin/analytics' element={<Suspense fallback={<PageLoader />}><AdminAnalyticsPage /></Suspense>} />
                       <Route path='/admin/moderation' element={<Suspense fallback={<PageLoader />}><AdminModerationPage /></Suspense>} />
                       <Route path='/admin/donnees' element={<Suspense fallback={<PageLoader />}><AdminDataManagementPage /></Suspense>} />

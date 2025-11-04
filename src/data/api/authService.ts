@@ -1,11 +1,20 @@
 import { User, LoginCredentials, RegisterData } from '@/types'
 import { supabaseHelpers, supabase } from '@/lib/supabase'
 import { logger } from '@/lib/logger'
+import { securityManager } from '@/lib/security-manager'
+import { anomalyDetector } from '@/lib/anomaly-detector'
 import type { ProfileInsert } from '@/types/database'
 
 export interface AuthResponse {
   user: User
   session: unknown
+  securityAlerts?: any[]
+  captchaRequired?: boolean
+  rateLimitInfo?: {
+    allowed: boolean
+    remainingAttempts: number
+    lockoutTime?: number
+  }
 }
 
 export class AuthService {
@@ -18,10 +27,54 @@ export class AuthService {
     return AuthService.instance
   }
 
-  async login(credentials: LoginCredentials): Promise<AuthResponse> {
+  async login(credentials: LoginCredentials, context?: {
+    ip?: string
+    userAgent?: string
+    deviceFingerprint?: any
+  }): Promise<AuthResponse> {
     logger.auth('AuthService.login appelé avec email:', credentials.email)
 
     try {
+      // 1. Vérifier le rate limiting
+      const rateLimitResult = await securityManager.checkRateLimit(
+        credentials.email,
+        'login',
+        context
+      )
+
+      if (!rateLimitResult.allowed) {
+        logger.security('Login blocked due to rate limit', {
+          email: credentials.email,
+          remainingAttempts: rateLimitResult.remainingAttempts,
+          lockoutTime: rateLimitResult.lockoutTime
+        })
+
+        return {
+          user: null as any,
+          session: null,
+          rateLimitInfo: rateLimitResult
+        }
+      }
+
+      // 2. Évaluer le risque
+      const risk = await securityManager.assessRisk(credentials.email, context)
+      const captchaRequired = securityManager.shouldRequireCaptcha(risk)
+
+      if (captchaRequired) {
+        logger.security('CAPTCHA required for login', {
+          email: credentials.email,
+          riskLevel: risk.level,
+          riskScore: risk.score
+        })
+
+        return {
+          user: null as any,
+          session: null,
+          captchaRequired: true,
+          rateLimitInfo: rateLimitResult
+        }
+      }
+
       logger.auth('Étape 1: Appel de supabaseHelpers.signIn')
       const data = await supabaseHelpers.signIn(credentials.email, credentials.password)
 
@@ -81,14 +134,53 @@ export class AuthService {
       }
 
       logger.auth('🔍 Profil utilisé pour créer l utilisateur:', profile)
-      logger.auth('👤 Rôle dans le profil:', profile.role)
-      logger.auth('🎯 Rôle dans l objet User:', user.role)
-      logger.auth('Étape 6: Login complété avec succès pour:', user.email, 'avec le rôle:', user.role)
+      // Enregistrer la tentative réussie
+      securityManager.logAttempt(credentials.email, true, 'login', context)
+
+      // Analyser les anomalies pour cette connexion réussie
+      if (data.user?.id && context?.deviceFingerprint) {
+        const anomalyAlerts = await anomalyDetector.analyzeLoginAttempt({
+          id: data.user.id,
+          userId: data.user.id,
+          email: credentials.email,
+          timestamp: Date.now(),
+          ip: context.ip || 'unknown',
+          userAgent: context.userAgent || navigator.userAgent,
+          success: true,
+          geoLocation: context.deviceFingerprint.geoLocation,
+          deviceFingerprint: context.deviceFingerprint
+        })
+
+        if (anomalyAlerts.length > 0) {
+          logger.security('Security anomalies detected during successful login', {
+            userId: data.user.id,
+            email: credentials.email,
+            alertCount: anomalyAlerts.length,
+            alerts: anomalyAlerts.map(a => ({ type: a.type, severity: a.severity }))
+          })
+        }
+
+        logger.auth('👤 Rôle dans le profil:', profile.role)
+        logger.auth('🎯 Rôle dans l objet User:', user.role)
+        logger.auth('Étape 6: Login complété avec succès pour:', user.email, 'avec le rôle:', user.role)
+
+        return {
+          user,
+          session: data.session,
+          securityAlerts: anomalyAlerts,
+          rateLimitInfo: rateLimitResult
+        }
+      }
+
       return {
         user,
         session: data.session,
+        rateLimitInfo: rateLimitResult
       }
     } catch (error) {
+      // Enregistrer la tentative échouée
+      securityManager.logAttempt(credentials.email, false, 'login', context)
+
       logger.error('Login error dans AuthService:', error)
       logger.error('Détails de l erreur de login:', {
         message: error instanceof Error ? error.message : 'Unknown error',
@@ -98,9 +190,44 @@ export class AuthService {
     }
   }
 
-  async register(data: RegisterData): Promise<AuthResponse> {
+  async register(data: RegisterData, context?: {
+    ip?: string
+    userAgent?: string
+    deviceFingerprint?: any
+  }): Promise<AuthResponse> {
     try {
       logger.auth("Tentative d'inscription pour:", data.email)
+
+      // 1. Vérifier le rate limiting pour l'inscription
+      const rateLimitResult = await securityManager.checkRateLimit(
+        data.email,
+        'register',
+        context
+      )
+
+      if (!rateLimitResult.allowed) {
+        logger.security('Registration blocked due to rate limit', {
+          email: data.email,
+          remainingAttempts: rateLimitResult.remainingAttempts,
+          lockoutTime: rateLimitResult.lockoutTime
+        })
+
+        throw new Error(`Trop de tentatives d'inscription. Veuillez réessayer plus tard.`)
+      }
+
+      // 2. Évaluer le risque pour l'inscription
+      const risk = await securityManager.assessRisk(data.email, context)
+      const captchaRequired = securityManager.shouldRequireCaptcha(risk)
+
+      if (captchaRequired) {
+        logger.security('CAPTCHA required for registration', {
+          email: data.email,
+          riskLevel: risk.level,
+          riskScore: risk.score
+        })
+
+        throw new Error('Veuillez compléter la vérification de sécurité pour continuer.')
+      }
 
       // En développement, créer directement l'utilisateur puis le connecter
       const { supabase } = await import('@/lib/supabase')
@@ -261,13 +388,20 @@ export class AuthService {
         updatedAt: new Date(),
       }
 
+      // Enregistrer la tentative d'inscription réussie
+      securityManager.logAttempt(data.email, true, 'register', context)
+
       logger.auth('✅ Inscription terminée avec succès:', user.id)
 
       return {
         user,
         session: authData.session,
+        rateLimitInfo: rateLimitResult
       }
     } catch (error) {
+      // Enregistrer la tentative d'inscription échouée
+      securityManager.logAttempt(data.email, false, 'register', context)
+
       logger.error("❌ Erreur lors de l'inscription:", error)
       throw error
     }
@@ -374,12 +508,31 @@ export class AuthService {
       logger.warn('Logout error (non-critical):', error)
     }
 
-    // Nettoyage local immédiat (non bloquant)
+    // 🔒 SÉCURITÉ : Nettoyage sécurisé avec migration vers cookies
     try {
-      localStorage.removeItem('supabase.auth.token')
-      localStorage.removeItem('supabase.auth.refreshToken')
+      // Nettoyer tous les traces localStorage potentiellement dangereuses
+      const dangerousKeys = [
+        'supabase.auth.token',
+        'supabase.auth.refreshToken',
+        'noli_user',  // Cache utilisateur sensible
+        'noli_token',  // Token d'authentification
+        'user_preferences',  // Préférences sensibles
+        'auth_cache',  // Cache d'authentification
+        'role_cache',  // Cache de rôles
+        'permissions_cache'  // Cache de permissions
+      ]
+
+      dangerousKeys.forEach(key => {
+        try {
+          localStorage.removeItem(key)
+          logger.auth(`🗑️ Nettoyage clé sensible: ${key}`)
+        } catch (err) {
+          logger.warn(`Échec nettoyage clé ${key}:`, err)
+        }
+      })
+
       sessionStorage.clear()
-      logger.auth('✅ Nettoyage local effectué')
+      logger.auth('✅ Nettoyage sécurisé complété')
     } catch (cleanupError) {
       logger.warn('Cleanup error:', cleanupError)
     }

@@ -201,19 +201,10 @@ export const supabaseHelpers = {
         logger.auth('👤 Rôle depuis métadonnées:', user.user_metadata?.role)
         logger.auth('🎯 Rôle qui sera utilisé:', user.user_metadata?.role || 'USER')
 
-        // Utiliser le rôle du cache local si les métadonnées ne le contiennent pas
+        // 🔒 SÉCURITÉ : Ne plus utiliser localStorage pour les données sensibles
+        // Le rôle doit uniquement provenir des métadonnées utilisateur ou de la BDD
         let cachedRole: string | undefined
-        try {
-          const cachedUserRaw = localStorage.getItem('noli_user')
-          if (cachedUserRaw) {
-            const cachedUser = JSON.parse(cachedUserRaw)
-            if (cachedUser?.id === user.id && typeof cachedUser?.role === 'string') {
-              cachedRole = cachedUser.role
-            }
-          }
-        } catch (_) {
-          // Ignorer toute erreur de parsing
-        }
+        // Note: Migration vers cookies sécurisés - plus d'accès au localStorage ici
 
         const fallbackProfile = {
           id: user.id,

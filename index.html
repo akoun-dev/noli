@@ -3,6 +3,30 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- 🔒 SÉCURITÉ : Content Security Policy -->
+    <meta http-equiv="Content-Security-Policy"
+          content="default-src 'self';
+                   script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.sentry.io;
+                   style-src 'self' 'unsafe-inline';
+                   img-src 'self' data: https: blob:;
+                   connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.sentry.io;
+                   font-src 'self' data:;
+                   object-src 'none';
+                   base-uri 'self';
+                   form-action 'self';
+                   frame-ancestors 'none';
+                   upgrade-insecure-requests;">
+
+    <!-- 🔒 SÉCURITÉ : En-têtes de protection supplémentaires -->
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block">
+    <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
+
+    <!-- Permissions Policy -->
+    <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), payment=(), usb=()">
+
     <title>NOLI Assurance - Comparez les meilleures assurances auto en Côte d'Ivoire</title>
     <meta name="description" content="Comparez gratuitement les offres d'assurance auto des plus grands assureurs ivoiriens. Trouvez l'assurance qui vous correspond au meilleur prix en moins de 3 minutes." />
     <meta name="author" content="NOLI Assurance" />

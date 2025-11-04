@@ -1,5 +1,121 @@
 import { z } from 'zod'
 
+// Password validation helper
+const passwordRequirements = {
+  minLength: 8,
+  requireUppercase: true,
+  requireLowercase: true,
+  requireNumbers: true,
+  requireSpecialChars: true,
+  preventCommonPasswords: true,
+  preventRepeats: true,
+  preventSequences: true
+}
+
+const commonPasswords = [
+  'password', '123456', '123456789', 'qwerty', 'abc123', 'password123',
+  'admin', 'letmein', 'welcome', 'monkey', '1234567890', 'password1',
+  'azerty', '000000', '111111', '123123', 'qwertyuiop', 'starwars'
+]
+
+// Password validation function
+const validatePasswordStrength = (password: string) => {
+  const errors: string[] = []
+  let score = 0
+
+  // Longueur minimale
+  if (password.length >= passwordRequirements.minLength) {
+    score += 20
+  } else {
+    errors.push(`Le mot de passe doit contenir au moins ${passwordRequirements.minLength} caractères`)
+  }
+
+  // Bonus pour la longueur
+  if (password.length >= 12) {
+    score += 10
+  }
+
+  // Lettres minuscules
+  if (/[a-z]/.test(password)) {
+    score += 15
+  } else if (passwordRequirements.requireLowercase) {
+    errors.push('Le mot de passe doit contenir au moins une lettre minuscule')
+  }
+
+  // Lettres majuscules
+  if (/[A-Z]/.test(password)) {
+    score += 15
+  } else if (passwordRequirements.requireUppercase) {
+    errors.push('Le mot de passe doit contenir au moins une lettre majuscule')
+  }
+
+  // Chiffres
+  if (/[0-9]/.test(password)) {
+    score += 15
+  } else if (passwordRequirements.requireNumbers) {
+    errors.push('Le mot de passe doit contenir au moins un chiffre')
+  }
+
+  // Caractères spéciaux
+  if (/[^a-zA-Z0-9]/.test(password)) {
+    score += 15
+  } else if (passwordRequirements.requireSpecialChars) {
+    errors.push('Le mot de passe doit contenir au moins un caractère spécial (!@#$%^&*...)')
+  }
+
+  // Vérifier les mots de passe communs
+  if (passwordRequirements.preventCommonPasswords) {
+    const lowerPassword = password.toLowerCase()
+    if (commonPasswords.some(common => lowerPassword.includes(common))) {
+      score -= 30
+      errors.push('Le mot de passe est trop commun et facile à deviner')
+    }
+  }
+
+  // Vérifier les répétitions (aaa, 111, !!!)
+  if (passwordRequirements.preventRepeats) {
+    if (/(.)\1{2,}/.test(password)) {
+      score -= 20
+      errors.push('Évitez les répétitions de caractères')
+    }
+  }
+
+  // Vérifier les séquences (abc, 123, qwe)
+  if (passwordRequirements.preventSequences) {
+    if (/(?:abc|bcd|cde|def|efg|fgh|ghi|hij|ijk|jkl|klm|lmn|mno|nop|opq|pqr|qrs|rst|stu|tuv|uvw|vwx|wxy|xyz|012|123|234|345|456|567|678|789|890|qwe|wer|ert|rty|tyu|yui|uio|iop)/i.test(password)) {
+      score -= 20
+      errors.push('Évitez les séquences de caractères consécutifs')
+    }
+  }
+
+  // Évaluer la force
+  const strength = score >= 60 ? 'strong' : score >= 40 ? 'medium' : 'weak'
+
+  return {
+    score: Math.max(0, Math.min(100, score)),
+    strength,
+    errors,
+    isValid: errors.length === 0
+  }
+}
+
+// Enhanced password schema with detailed validation
+const enhancedPasswordSchema = z.string()
+  .min(passwordRequirements.minLength, `Le mot de passe doit contenir au moins ${passwordRequirements.minLength} caractères`)
+  .regex(/[a-z]/, 'Le mot de passe doit contenir au moins une lettre minuscule')
+  .regex(/[A-Z]/, 'Le mot de passe doit contenir au moins une lettre majuscule')
+  .regex(/[0-9]/, 'Le mot de passe doit contenir au moins un chiffre')
+  .regex(/[^a-zA-Z0-9]/, 'Le mot de passe doit contenir au moins un caractère spécial')
+  .refine((password) => !commonPasswords.some(common => password.toLowerCase().includes(common)), {
+    message: 'Le mot de passe est trop commun'
+  })
+  .refine((password) => !/(.)\1{2,}/.test(password), {
+    message: 'Évitez les répétitions de caractères'
+  })
+  .refine((password) => !/(?:abc|123|qwe)/i.test(password), {
+    message: 'Évitez les séquences de caractères consécutifs'
+  })
+
 // Auth schemas
 export const loginSchema = z.object({
   email: z.string().trim().email('Email invalide').min(1, "L'email est requis"),
@@ -36,9 +152,7 @@ export const registerSchema = z
         /^(\+225)?[0-9]{10}$/,
         'Numéro de téléphone invalide (format: +225XXXXXXXXXX ou XXXXXXXXXX)'
       ),
-    password: z
-      .string()
-      .min(6, 'Le mot de passe doit contenir au moins 6 caractères'),
+    password: enhancedPasswordSchema,
     confirmPassword: z.string().min(1, 'La confirmation du mot de passe est requise'),
   })
   .refine((data) => data.password === data.confirmPassword, {
@@ -109,9 +223,7 @@ export const forgotPasswordSchema = z.object({
 
 export const resetPasswordSchema = z
   .object({
-    password: z
-      .string()
-      .min(6, 'Le mot de passe doit contenir au moins 6 caractères'),
+    password: enhancedPasswordSchema,
     confirmPassword: z.string().min(1, 'La confirmation du mot de passe est requise'),
   })
   .refine((data) => data.password === data.confirmPassword, {

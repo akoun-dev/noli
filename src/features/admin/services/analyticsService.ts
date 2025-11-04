@@ -53,8 +53,14 @@ export interface QuoteAnalytics {
 // API Functions utilisant les vraies données de la base
 export const fetchPlatformStats = async (): Promise<PlatformStats> => {
   try {
-    // Utiliser notre fonction RPC pour les statistiques
-    const { data, error } = await supabase.rpc('admin_get_platform_stats');
+    // Utiliser notre fonction RPC pour les statistiques (avec fallback)
+    let data, error;
+    try {
+      ({ data, error } = await supabase.rpc('admin_get_platform_stats'));
+    } catch (rpcErr) {
+      logger.warn('admin_get_platform_stats RPC not available, using fallback');
+      error = { message: 'RPC not available' };
+    }
 
     if (error) {
       logger.error('Error fetching platform stats:', error);
@@ -271,13 +277,25 @@ export const fetchSystemHealth = async (): Promise<SystemHealth> => {
       .order('created_at', { ascending: false })
       .limit(10);
 
-    // Récupérer les métriques réelles de la base de données
-    const { data: dbSize } = await supabase
-      .rpc('get_database_size');
+    // Récupérer les métriques réelles de la base de données (avec fallback)
+    let dbSize = 50; // Valeur par défaut en MB
+    try {
+      const { data } = await supabase
+        .rpc('get_database_size');
+      dbSize = data || 50;
+    } catch (err) {
+      logger.warn('get_database_size RPC not available, using default value');
+    }
 
-    // Récupérer le nombre total de connexions actives (si disponible)
-    const { data: activeConnections } = await supabase
-      .rpc('get_active_connections');
+    // Récupérer le nombre total de connexions actives (avec fallback)
+    let activeConnections = 5;
+    try {
+      const { data } = await supabase
+        .rpc('get_active_connections');
+      activeConnections = data || 5;
+    } catch (err) {
+      logger.warn('get_active_connections RPC not available, using default value');
+    }
 
     // Calculer le stockage utilisé basé sur la taille réelle de la base
     const dbSizeMB = dbSize || 50; // Valeur par défaut si non disponible

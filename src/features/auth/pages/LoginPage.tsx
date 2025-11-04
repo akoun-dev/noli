@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Shield, Eye, EyeOff, Mail, Lock, AlertCircle } from 'lucide-react'
+import { Shield, Eye, EyeOff, Mail, Lock, AlertCircle, Info } from 'lucide-react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -8,6 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/hooks/use-toast'
+import { useSecurityContext } from '@/hooks/useSecurityContext'
+import { Captcha } from '@/components/auth/Captcha'
 import { loginSchema, type LoginFormData } from '@/lib/zod-schemas'
 import { logger } from '@/lib/logger'
 
@@ -16,6 +18,7 @@ const LoginPage = () => {
   const location = useLocation()
   const { login } = useAuth()
   const { toast } = useToast()
+  const { securityContext, assessRisk, addSecurityAlert } = useSecurityContext()
 
   const [formData, setFormData] = useState<LoginFormData>({
     email: '',
@@ -25,6 +28,10 @@ const LoginPage = () => {
   const [errors, setErrors] = useState<Partial<LoginFormData>>({})
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [showCaptcha, setShowCaptcha] = useState(false)
+  const [captchaVerified, setCaptchaVerified] = useState(false)
+  const [rateLimitInfo, setRateLimitInfo] = useState<any>(null)
+  const [securityAlerts, setSecurityAlerts] = useState<any[]>([])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -56,6 +63,43 @@ const LoginPage = () => {
     }
   }
 
+  // Évaluer le risque quand l'email change
+  const handleEmailChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { value } = e.target
+    setFormData(prev => ({ ...prev, email: value }))
+
+    if (errors.email) {
+      setErrors(prev => ({ ...prev, email: undefined }))
+    }
+
+    // Évaluer le risque si l'email est valide
+    if (value && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+      const { risk, captchaRequired } = await assessRisk(value)
+      setShowCaptcha(captchaRequired)
+    }
+  }
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { value } = e.target
+    setFormData(prev => ({ ...prev, password: value }))
+
+    if (errors.password) {
+      setErrors(prev => ({ ...prev, password: undefined }))
+    }
+  }
+
+  const handleCaptchaVerify = (success: boolean) => {
+    setCaptchaVerified(success)
+    if (!success) {
+      toast({
+        title: 'Vérification échouée',
+        description: 'Veuillez réessayer la vérification de sécurité',
+        variant: 'destructive'
+      })
+    }
+  }
+
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     logger.auth('🚀 LoginPage.handleSubmit appelé')
@@ -67,12 +111,79 @@ const LoginPage = () => {
       return
     }
 
+    // Vérifier le CAPTCHA si requis
+    if (showCaptcha && !captchaVerified) {
+      toast({
+        title: 'Vérification requise',
+        description: 'Veuillez compléter la vérification de sécurité',
+        variant: 'destructive'
+      })
+      return
+    }
+
     logger.auth('✅ Formulaire validé, début de la connexion...')
     setIsLoading(true)
+    setRateLimitInfo(null)
+    setSecurityAlerts([])
+
     try {
+      // Préparer le contexte de sécurité
+      const securityContextData = {
+        ip: securityContext.ipInfo.ip,
+        userAgent: navigator.userAgent,
+        deviceFingerprint: securityContext.deviceFingerprint
+      }
+
       logger.auth('📞 Appel de la fonction login du contexte...')
-      const user = await login(formData.email, formData.password)
-      logger.auth('✅ Login réussi, utilisateur:', user)
+      const result = await login(formData.email, formData.password, securityContextData)
+
+      // Vérifier si la connexion est bloquée par le rate limiting
+      if (result.rateLimitInfo && !result.rateLimitInfo.allowed) {
+        setRateLimitInfo(result.rateLimitInfo)
+
+        const lockoutMinutes = result.rateLimitInfo.lockoutTime
+          ? Math.ceil((result.rateLimitInfo.lockoutTime - Date.now()) / 60000)
+          : 15
+
+        toast({
+          title: 'Trop de tentatives',
+          description: `Compte temporairement verrouillé pour ${lockoutMinutes} minutes. Veuillez réessayer plus tard.`,
+          variant: 'destructive'
+        })
+        return
+      }
+
+      // Vérifier si un CAPTCHA est requis
+      if (result.captchaRequired) {
+        setShowCaptcha(true)
+        toast({
+          title: 'Vérification de sécurité',
+          description: 'Veuillez compléter la vérification CAPTCHA pour continuer',
+        })
+        return
+      }
+
+      logger.auth('✅ Login réussi, utilisateur:', result.user)
+
+      // Gérer les alertes de sécurité
+      if (result.securityAlerts && result.securityAlerts.length > 0) {
+        setSecurityAlerts(result.securityAlerts)
+
+        const criticalAlerts = result.securityAlerts.filter(a => a.severity === 'critical')
+        if (criticalAlerts.length > 0) {
+          toast({
+            title: 'Alerte de sécurité',
+            description: 'Des activités suspectes ont été détectées. Vérifiez vos informations de connexion.',
+            variant: 'destructive'
+          })
+        } else {
+          toast({
+            title: 'Information de sécurité',
+            description: 'Nouvelle connexion détectée. Si ce n\'était pas vous, sécurisez votre compte.',
+            variant: 'default'
+          })
+        }
+      }
 
       toast({
         title: 'Connexion réussie',
@@ -81,43 +192,41 @@ const LoginPage = () => {
 
       logger.auth('🔄 Préparation de la redirection...')
       // Redirect by role after successful login
-      const redirectMap: Record<typeof user.role, string> = {
+      const redirectMap: Record<typeof result.user.role, string> = {
         USER: '/tableau-de-bord',
         INSURER: '/assureur/tableau-de-bord',
         ADMIN: '/admin/tableau-de-bord',
       }
       logger.auth('🗺️ Map de redirection:', redirectMap)
-      logger.auth('👤 Rôle utilisateur:', user.role)
+      logger.auth('👤 Rôle utilisateur:', result.user.role)
 
       const fromPath = (location.state as { from?: { pathname?: string } })?.from?.pathname
       logger.auth('📍 From path:', fromPath)
 
-      const targetPath = fromPath || redirectMap[user.role]
+      const targetPath = fromPath || redirectMap[result.user.role]
       logger.auth('🎯 Cible de redirection:', targetPath)
 
       if (fromPath) {
-        // Prioriser la redirection selon le rôle de l'utilisateur
-        if (user.role === 'ADMIN') {
-          const targetPath = fromPath.startsWith('/admin/') ? fromPath : redirectMap[user.role]
+        if (result.user.role === 'ADMIN') {
+          const targetPath = fromPath.startsWith('/admin/') ? fromPath : redirectMap[result.user.role]
           logger.auth('➡️ Redirection ADMIN vers:', targetPath)
           navigate(targetPath, { replace: true })
-        } else if (user.role === 'INSURER') {
-          const targetPath = fromPath.startsWith('/assureur/') ? fromPath : redirectMap[user.role]
+        } else if (result.user.role === 'INSURER') {
+          const targetPath = fromPath.startsWith('/assureur/') ? fromPath : redirectMap[result.user.role]
           logger.auth('➡️ Redirection INSURER vers:', targetPath)
           navigate(targetPath, { replace: true })
-        } else if (user.role === 'USER') {
-          // Les utilisateurs simples peuvent accéder aux routes publiques et utilisateur
+        } else if (result.user.role === 'USER') {
           if (!fromPath.startsWith('/admin/') && !fromPath.startsWith('/assureur/')) {
             logger.auth('➡️ Redirection USER vers:', fromPath)
             navigate(fromPath, { replace: true })
           } else {
-            logger.auth('➡️ Redirection USER vers dashboard:', redirectMap[user.role])
-            navigate(redirectMap[user.role], { replace: true })
+            logger.auth('➡️ Redirection USER vers dashboard:', redirectMap[result.user.role])
+            navigate(redirectMap[result.user.role], { replace: true })
           }
         }
       } else {
-        logger.auth('➡️ Redirection vers dashboard par défaut:', redirectMap[user.role])
-        navigate(redirectMap[user.role], { replace: true })
+        logger.auth('➡️ Redirection vers dashboard par défaut:', redirectMap[result.user.role])
+        navigate(redirectMap[result.user.role], { replace: true })
       }
     } catch (error) {
       logger.error('❌ Erreur de connexion:', error)
@@ -165,7 +274,7 @@ const LoginPage = () => {
                     type='email'
                     placeholder='votre@email.com'
                     value={formData.email}
-                    onChange={handleInputChange}
+                    onChange={handleEmailChange}
                     className={`pl-10 ${errors.email ? 'border-destructive' : ''}`}
                     disabled={isLoading}
                     aria-describedby={errors.email ? 'email-error' : undefined}
@@ -193,7 +302,7 @@ const LoginPage = () => {
                     type={showPassword ? 'text' : 'password'}
                     placeholder='Votre mot de passe'
                     value={formData.password}
-                    onChange={handleInputChange}
+                    onChange={handlePasswordChange}
                     className={`pl-10 pr-10 ${errors.password ? 'border-destructive' : ''}`}
                     disabled={isLoading}
                     aria-describedby={errors.password ? 'password-error' : undefined}
@@ -235,11 +344,45 @@ const LoginPage = () => {
                 </Link>
               </div>
 
+              {/* Alertes de sécurité */}
+              {rateLimitInfo && !rateLimitInfo.allowed && (
+                <Alert variant="destructive" className="mb-4">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    Trop de tentatives de connexion. Compte verrouillé temporairement.
+                    {rateLimitInfo.lockoutTime && (
+                      <span className="block mt-1">
+                        Réessayez dans {Math.ceil((rateLimitInfo.lockoutTime - Date.now()) / 60000)} minutes.
+                      </span>
+                    )}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {securityAlerts.length > 0 && (
+                <Alert className="mb-4">
+                  <Info className="h-4 w-4" />
+                  <AlertDescription>
+                    {securityAlerts.length} alertes de sécurité détectées lors de cette connexion.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {/* CAPTCHA */}
+              {showCaptcha && (
+                <div className="mb-4">
+                  <Captcha
+                    onVerify={handleCaptchaVerify}
+                    riskLevel={securityContext.riskLevel}
+                  />
+                </div>
+              )}
+
               {/* Submit Button */}
               <Button
                 type='submit'
                 className='w-full'
-                disabled={isLoading}
+                disabled={isLoading || (showCaptcha && !captchaVerified)}
                 aria-describedby={isLoading ? 'submit-status' : undefined}
               >
                 {isLoading ? 'Connexion en cours...' : 'Se connecter'}
