@@ -29,6 +29,15 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import { useIsMobile } from '@/hooks/use-mobile'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
 
 interface Step3NeedsProps {
   onBack: () => void
@@ -48,6 +57,7 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
   const [coverageLoading, setCoverageLoading] = useState(false)
   const [coverageErrors, setCoverageErrors] = useState<string[]>([])
   const [availableCoverages, setAvailableCoverages] = useState<any[]>([])
+  const [isQuoteModalOpen, setIsQuoteModalOpen] = useState(false)
 
   // Prepare vehicle data for coverage calculation
   const vehicleData: VehicleData = {
@@ -167,19 +177,75 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
           isIncluded
         )
 
+        // Update premiums immediately for selected coverage
+        if (isIncluded) {
+          try {
+            const premium = await coverageTarificationService.calculateCoveragePremium(
+              coverageId,
+              {
+                ...vehicleData,
+                ...(formulaName && { formula_name: formulaName }),
+              }
+            )
+            
+            // If premium is 0 or undefined, try to get fixed amount from available coverages
+            if (!premium || premium === 0) {
+              const coverage = availableCoverages.find(c => c.coverage_id === coverageId)
+              if (coverage?.estimated_min_premium && coverage.estimated_min_premium > 0) {
+                setPremiumBreakdown(prev => ({ ...prev, [coverageId]: coverage.estimated_min_premium }))
+                console.log(`Using estimated premium for ${coverageId}:`, coverage.estimated_min_premium)
+              } else {
+                setPremiumBreakdown(prev => ({ ...prev, [coverageId]: 0 }))
+                console.warn(`No premium found for coverage ${coverageId}`)
+              }
+            } else {
+              setPremiumBreakdown(prev => ({ ...prev, [coverageId]: premium }))
+              console.log(`Calculated premium for ${coverageId}:`, premium)
+            }
+          } catch (premiumError) {
+            console.error('Error calculating individual premium:', premiumError)
+            // Fallback to estimated premium if available
+            const coverage = availableCoverages.find(c => c.coverage_id === coverageId)
+            if (coverage?.estimated_min_premium && coverage.estimated_min_premium > 0) {
+              setPremiumBreakdown(prev => ({ ...prev, [coverageId]: coverage.estimated_min_premium }))
+              console.log(`Fallback to estimated premium for ${coverageId}:`, coverage.estimated_min_premium)
+            } else {
+              setPremiumBreakdown(prev => ({ ...prev, [coverageId]: 0 }))
+            }
+          }
+        } else {
+          // Remove from breakdown when deselected
+          setPremiumBreakdown(prev => {
+            const newBreakdown = { ...prev }
+            delete newBreakdown[coverageId]
+            return newBreakdown
+          })
+        }
+
         // Recalculate total premium
         const newTotal = await coverageTarificationService.calculateQuoteTotalPremium(tempQuoteId)
         setTotalPremium(newTotal)
 
-        // Update breakdown
+        // Update breakdown from server to ensure consistency
         const premiums = await coverageTarificationService.getQuoteCoveragePremiums(tempQuoteId)
-        const breakdown: Record<string, number> = {}
+        const serverBreakdown: Record<string, number> = {}
         premiums
           .filter((p) => p.is_included)
           .forEach((p) => {
-            breakdown[p.coverage_id] = p.premium_amount
+            serverBreakdown[p.coverage_id] = p.premium_amount
           })
-        setPremiumBreakdown(breakdown)
+        
+        // Merge local and server breakdowns, prioritizing server values
+        setPremiumBreakdown(prev => {
+          const merged = { ...prev, ...serverBreakdown }
+          // Ensure only selected coverages are in the breakdown
+          Object.keys(merged).forEach(key => {
+            if (!selectedCoverages[key]) {
+              delete merged[key]
+            }
+          })
+          return merged
+        })
       } catch (error) {
         console.error('Error updating coverage:', error)
         setCoverageErrors(['Erreur lors de la mise à jour des garanties'])
@@ -327,47 +393,126 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
         </div>
       </Card>
 
-      {/* Floating Action Buttons - Mobile optimized */}
-      <div className={cn(
-        "sticky bottom-0 bg-background/95 backdrop-blur-sm border-t p-4 -mx-4",
-        isMobile ? "gap-2 flex-col" : "flex gap-4 max-w-5xl mx-auto"
-      )}>
-        <Button
-          type='button'
-          variant='outline'
-          size={isMobile ? "default" : "lg"}
-          onClick={onBack}
-          className={cn(
-            "flex items-center justify-center gap-2",
-            isMobile ? "w-full" : "flex-1"
-          )}
-        >
-          <ArrowLeft className={cn("w-4 h-4", !isMobile && "w-5 h-5")} />
-          {isMobile ? "Retour" : "Précédent"}
-        </Button>
-        <Button
-          type='submit'
-          size={isMobile ? "default" : "lg"}
-          className={cn(
-            "flex items-center justify-center gap-2 bg-accent hover:bg-accent/90 text-accent-foreground",
-            "transition-all duration-200 group",
-            isMobile ? "w-full" : "flex-1"
-          )}
-        >
-          <span>
-            {totalPremium > 0
-              ? (isMobile
-                ? `Voir les offres (${Math.round(totalPremium / 12).toLocaleString('fr-FR')}€/mois)`
-                : `Voir les offres (${totalPremium.toLocaleString('fr-FR')} FCFA/an)`)
-              : 'Voir les offres'
-            }
-          </span>
-          <ArrowRight className={cn(
-            "transition-transform",
-            isMobile ? "w-4 h-4" : "w-5 h-5 group-hover:translate-x-1"
-          )} />
-        </Button>
-      </div>
+     {/* Floating Action Buttons - Mobile optimized */}
+     <div className={cn(
+       "sticky bottom-0 bg-background/95 backdrop-blur-sm border-t p-4 -mx-4",
+       isMobile ? "gap-2 flex-col" : "flex gap-4 max-w-5xl mx-auto"
+     )}>
+       <Button
+         type='button'
+         variant='outline'
+         size={isMobile ? "default" : "lg"}
+         onClick={onBack}
+         className={cn(
+           "flex items-center justify-center gap-2",
+           isMobile ? "w-full" : "flex-1"
+         )}
+       >
+         <ArrowLeft className={cn("w-4 h-4", !isMobile && "w-5 h-5")} />
+         {isMobile ? "Retour" : "Précédent"}
+       </Button>
+       <Dialog open={isQuoteModalOpen} onOpenChange={setIsQuoteModalOpen}>
+         <DialogTrigger asChild>
+           <Button
+             type='button'
+             variant='secondary'
+             size={isMobile ? "default" : "lg"}
+             className={cn(
+               "flex items-center justify-center gap-2",
+               isMobile ? "w-full" : "flex-1"
+             )}
+           >
+             <Car className={cn("w-4 h-4", !isMobile && "w-5 h-5")} />
+             Devis
+           </Button>
+         </DialogTrigger>
+         <DialogContent className={cn(
+           isMobile ? "w-11/12 max-w-sm" : "max-w-md"
+         )}>
+           <DialogHeader>
+             <DialogTitle>Récapitulatif du devis</DialogTitle>
+             <DialogDescription>
+               Détail des garanties sélectionnées et montant total
+             </DialogDescription>
+           </DialogHeader>
+           <div className="space-y-4 py-4">
+             <div className="space-y-2">
+               <h4 className="font-medium">Garanties sélectionnées</h4>
+               {Object.entries(selectedCoverages).filter(([_, isSelected]) => isSelected).length > 0 ? (
+                 <div className="space-y-2">
+                   {Object.entries(selectedCoverages)
+                     .filter(([_, isSelected]) => isSelected)
+                     .map(([coverageId]) => {
+                       const amount = premiumBreakdown[coverageId] || 0
+                       return (
+                         <div key={coverageId} className="flex justify-between text-sm">
+                           <span className="text-muted-foreground">Garantie {coverageId}</span>
+                           <span className="font-medium">{amount.toLocaleString('fr-FR')} FCFA</span>
+                         </div>
+                       )
+                     })}
+                 </div>
+               ) : (
+                 <p className="text-sm text-muted-foreground">Aucune garantie sélectionnée</p>
+               )}
+             </div>
+             <div className="border-t pt-4">
+               <div className="flex justify-between items-center">
+                 <span className="font-semibold">Total annuel</span>
+                 <span className="font-bold text-lg">
+                   {totalPremium.toLocaleString('fr-FR')} FCFA
+                 </span>
+               </div>
+               <div className="flex justify-between items-center text-sm text-muted-foreground">
+                 <span>Soit par mois</span>
+                 <span className="font-medium">
+                   {Math.round(totalPremium / 12).toLocaleString('fr-FR')} FCFA
+                 </span>
+               </div>
+             </div>
+           </div>
+           <DialogFooter>
+             <Button
+               variant="outline"
+               onClick={() => setIsQuoteModalOpen(false)}
+             >
+               Fermer
+             </Button>
+             <Button
+               onClick={() => {
+                 // Logique pour télécharger ou sauvegarder le devis
+                 console.log('Télécharger le devis')
+                 setIsQuoteModalOpen(false)
+               }}
+             >
+               Télécharger le devis
+             </Button>
+           </DialogFooter>
+         </DialogContent>
+       </Dialog>
+       <Button
+         type='submit'
+         size={isMobile ? "default" : "lg"}
+         className={cn(
+           "flex items-center justify-center gap-2 bg-accent hover:bg-accent/90 text-accent-foreground",
+           "transition-all duration-200 group",
+           isMobile ? "w-full" : "flex-1"
+         )}
+       >
+         <span>
+           {totalPremium > 0
+             ? (isMobile
+               ? `Voir les offres (${Math.round(totalPremium / 12).toLocaleString('fr-FR')}€/mois)`
+               : `Voir les offres (${totalPremium.toLocaleString('fr-FR')} FCFA/an)`)
+             : 'Voir les offres'
+           }
+         </span>
+         <ArrowRight className={cn(
+           "transition-transform",
+           isMobile ? "w-4 h-4" : "w-5 h-5 group-hover:translate-x-1"
+         )} />
+       </Button>
+     </div>
 
       {/* Trust indicators - Mobile footer */}
       <div className={cn(

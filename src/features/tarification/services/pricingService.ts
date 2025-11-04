@@ -12,6 +12,7 @@ import {
   TarifFixe
 } from '@/types/tarification';
 import { guaranteeService } from './guaranteeService';
+import { logger } from '@/lib/logger';
 
 export class PricingService {
   // Grilles de tarification en mémoire
@@ -28,31 +29,29 @@ export class PricingService {
 
     let totalBasePrice = 0;
     let totalWithGuarantees = 0;
-    let guaranteeBreakdown: GuaranteePricing[] = [];
+    const guaranteeBreakdown: GuaranteePricing[] = [];
     let selectedPackage: InsurancePackage | undefined;
 
     // Déterminer les garanties à calculer
     let guaranteesToPrice: Guarantee[] = [];
 
     if (calculationMethod === 'PACK' && packageId) {
-      selectedPackage = await guaranteeService.getPackage(packageId);
+      selectedPackage = await guaranteeService.getPackage(packageId) || undefined;
       if (!selectedPackage) {
         throw new Error('Package non trouvé');
       }
 
       // Récupérer les garanties du package
-      guaranteesToPrice = await Promise.all(
+      guaranteesToPrice = (await Promise.all(
         selectedPackage.guarantees.map(gId => guaranteeService.getGuarantee(gId))
-      );
-      guaranteesToPrice = guaranteesToPrice.filter(Boolean) as Guarantee[];
+      )).filter((g): g is Guarantee => g !== null);
 
       totalBasePrice = selectedPackage.basePrice;
     } else {
       // Mode TAILOR_MADE
-      guaranteesToPrice = await Promise.all(
+      guaranteesToPrice = (await Promise.all(
         guaranteeIds.map(gId => guaranteeService.getGuarantee(gId))
-      );
-      guaranteesToPrice = guaranteesToPrice.filter(Boolean) as Guarantee[];
+      )).filter((g): g is Guarantee => g !== null);
     }
 
     // Calculer chaque garantie
@@ -191,7 +190,8 @@ export class PricingService {
     if (selectedPackage && guarantee.parameters?.packPriceReduced) {
       return guarantee.parameters.packPriceReduced;
     }
-    return guarantee.rate || 0;
+    // Utiliser fixedAmount en priorité, sinon rate pour compatibilité
+    return guarantee.fixedAmount || guarantee.rate || 0;
   }
 
   // Méthode 2: Taux sur valeur assurée

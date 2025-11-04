@@ -447,6 +447,12 @@ class GuaranteeService {
     const rate = this.sanitizeNumber(metadata.rate);
     const fixedAmount = this.sanitizeNumber(metadata.fixedAmount);
 
+    // Récupérer le fixed_amount depuis les règles de tarification si disponible
+    const tariffRules = (row as any).coverage_tariff_rules || [];
+    const fixedAmountFromRules = tariffRules.length > 0
+      ? this.sanitizeNumber(tariffRules.find((rule: any) => rule.fixed_amount != null)?.fixed_amount)
+      : undefined;
+
     const guarantee: Guarantee = {
       id: row.id,
       name: row.name,
@@ -464,7 +470,7 @@ class GuaranteeService {
       minValue,
       maxValue,
       rate,
-      fixedAmount,
+      fixedAmount: fixedAmountFromRules || fixedAmount || metadata.fixedAmount || undefined,
       franchiseOptions,
       parameters,
       createdAt: row.created_at ? new Date(row.created_at) : new Date(),
@@ -560,7 +566,7 @@ class GuaranteeService {
   private async fetchCoverageRow(id: string): Promise<CoverageRow | null> {
     const { data, error } = await supabase
       .from('coverages')
-      .select('id, code, type, name, description, calculation_type, is_mandatory, is_active, metadata, created_by, created_at, updated_at, display_order')
+      .select('id, code, type, name, description, calculation_type, is_mandatory, is_active, metadata, created_by, created_at, updated_at, display_order, coverage_tariff_rules:coverage_tariff_rules(fixed_amount, conditions)')
       .eq('id', id)
       .single();
 
@@ -585,7 +591,7 @@ class GuaranteeService {
       const { data, error } = await supabase
         .from('coverages')
         .select(
-          'id, code, type, name, description, calculation_type, is_mandatory, is_active, metadata, created_by, created_at, updated_at, display_order'
+          'id, code, type, name, description, calculation_type, is_mandatory, is_active, metadata, created_by, created_at, updated_at, display_order, coverage_tariff_rules:coverage_tariff_rules(fixed_amount, conditions)'
         )
         .order('display_order', { ascending: true })
         .order('created_at', { ascending: true });
