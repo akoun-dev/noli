@@ -120,7 +120,7 @@
     "eslint-plugin-storybook": "^9.1.13",
     "globals": "^15.15.0",
     "husky": "^9.1.7",
-    "jsdom": "^27.0.0",
+    "jsdom": "^27.1.0",
     "lint-staged": "^16.2.4",
     "lovable-tagger": "^1.1.10",
     "playwright": "^1.56.1",
