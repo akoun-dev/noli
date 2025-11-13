@@ -455,7 +455,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }
 
-  const register = async (userData: Partial<User> & { password: string }) => {
+  const register = async (userData: Partial<User> & { password: string; role?: 'USER' | 'INSURER' | 'ADMIN' }) => {
     setState((prev) => ({ ...prev, isLoading: true }))
     try {
       const registerData = {
@@ -464,6 +464,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         firstName: userData.firstName!,
         lastName: userData.lastName!,
         phone: userData.phone,
+        role: userData.role,
       }
 
       const response = await authService.register(registerData)

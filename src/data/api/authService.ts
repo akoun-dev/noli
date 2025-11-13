@@ -233,7 +233,13 @@ export class AuthService {
       const { supabase } = await import('@/lib/supabase')
 
       // 1. Créer l'utilisateur avec auto-confirmation (développement uniquement)
-      const userRole = data.companyName ? 'INSURER' : 'USER'
+      // Utiliser le rôle fourni ou le déterminer automatiquement
+      let userRole: 'USER' | 'INSURER' | 'ADMIN'
+      if (data.role) {
+        userRole = data.role
+      } else {
+        userRole = data.companyName ? 'INSURER' : 'USER'
+      }
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,

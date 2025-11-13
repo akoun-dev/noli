@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Shield, Eye, EyeOff, User, Mail, Phone, Lock, AlertCircle, Building } from 'lucide-react'
+import { Shield, Eye, EyeOff, User, Mail, Phone, Lock, AlertCircle, Building, Crown } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -37,7 +37,7 @@ const RegisterPage = () => {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [accountType, setAccountType] = useState<'personal' | 'business'>('personal')
+  const [accountType, setAccountType] = useState<'personal' | 'business' | 'admin'>('personal')
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -88,6 +88,19 @@ const RegisterPage = () => {
       } else if (formData.companyName.length > 100) {
         fieldErrors.companyName = "Le nom de l'entreprise ne peut pas dépasser 100 caractères"
       }
+    } else if (accountType === 'admin') {
+      // Admin account - requires full name
+      if (!formData.firstName || formData.firstName.trim().length < 2) {
+        fieldErrors.firstName = 'Le prénom doit contenir au moins 2 caractères'
+      } else if (formData.firstName.length > 50) {
+        fieldErrors.firstName = 'Le prénom ne peut pas dépasser 50 caractères'
+      }
+
+      if (!formData.lastName || formData.lastName.trim().length < 2) {
+        fieldErrors.lastName = 'Le nom doit contenir au moins 2 caractères'
+      } else if (formData.lastName.length > 50) {
+        fieldErrors.lastName = 'Le nom ne peut pas dépasser 50 caractères'
+      }
     } else {
       // Personal account
       if (!formData.firstName || formData.firstName.trim().length < 2) {
@@ -114,7 +127,22 @@ const RegisterPage = () => {
 
     setIsLoading(true)
     try {
-      const user = await register(formData)
+      // Determine role based on account type
+      let role: 'USER' | 'INSURER' | 'ADMIN'
+      if (accountType === 'business') {
+        role = 'INSURER'
+      } else if (accountType === 'admin') {
+        role = 'ADMIN'
+      } else {
+        role = 'USER'
+      }
+
+      const registerDataWithRole = {
+        ...formData,
+        role
+      }
+
+      const user = await register(registerDataWithRole)
 
       toast({
         title: 'Inscription réussie',
@@ -212,7 +240,7 @@ const RegisterPage = () => {
                 <Label>Type de compte</Label>
                 <Select
                   value={accountType}
-                  onValueChange={(value: 'personal' | 'business') => setAccountType(value)}
+                  onValueChange={(value: 'personal' | 'business' | 'admin') => setAccountType(value)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder='Sélectionnez le type de compte' />
@@ -230,20 +258,39 @@ const RegisterPage = () => {
                         Compte professionnel/Assureur
                       </div>
                     </SelectItem>
+                    <SelectItem value='admin'>
+                      <div className='flex items-center gap-2'>
+                        <Crown className='h-4 w-4' />
+                        Compte Administrateur
+                      </div>
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
+              {/* Admin Account Warning */}
+              {accountType === 'admin' && (
+                <Alert className="border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950/50">
+                  <AlertCircle className="h-4 w-4 text-orange-600" />
+                  <AlertDescription className="text-orange-800 dark:text-orange-200">
+                    <strong>Attention :</strong> Le compte administrateur donne accès à toutes les fonctionnalités de gestion
+                    de la plateforme. Ce type de compte doit uniquement être utilisé par le personnel autorisé.
+                  </AlertDescription>
+                </Alert>
+              )}
+
               {/* Dynamic Name Fields */}
-              {accountType === 'personal' ? (
+              {(accountType === 'personal' || accountType === 'admin') ? (
                 <div className='grid grid-cols-2 gap-4'>
                   <div className='space-y-2'>
-                    <Label htmlFor='firstName'>Prénom</Label>
+                    <Label htmlFor='firstName'>
+                      {accountType === 'admin' ? 'Prénom (Admin)' : 'Prénom'}
+                    </Label>
                     <Input
                       id='firstName'
                       name='firstName'
                       type='text'
-                      placeholder='Prénom'
+                      placeholder={accountType === 'admin' ? 'Prénom de l\'administrateur' : 'Prénom'}
                       value={formData.firstName}
                       onChange={handleInputChange}
                       className={errors.firstName ? 'border-destructive' : ''}
@@ -258,12 +305,14 @@ const RegisterPage = () => {
                   </div>
 
                   <div className='space-y-2'>
-                    <Label htmlFor='lastName'>Nom</Label>
+                    <Label htmlFor='lastName'>
+                      {accountType === 'admin' ? 'Nom (Admin)' : 'Nom'}
+                    </Label>
                     <Input
                       id='lastName'
                       name='lastName'
                       type='text'
-                      placeholder='Nom'
+                      placeholder={accountType === 'admin' ? 'Nom de l\'administrateur' : 'Nom'}
                       value={formData.lastName}
                       onChange={handleInputChange}
                       className={errors.lastName ? 'border-destructive' : ''}

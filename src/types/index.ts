@@ -24,6 +24,7 @@ export interface RegisterData {
   lastName?: string;
   companyName?: string;
   phone?: string;
+  role?: 'USER' | 'INSURER' | 'ADMIN';
 }
 
 // Insurance Types
