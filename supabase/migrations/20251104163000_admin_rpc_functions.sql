@@ -88,7 +88,7 @@ BEGIN
     WHERE
         (p_search IS NULL OR
          p_search = '' OR
-         LOWER(p.first_name || ' ' || p.last_name || ' ' || email) LIKE LOWER('%' || p_search || '%'))
+         LOWER(p.first_name || ' ' || p.last_name || ' ' || p.email) LIKE LOWER('%' || p_search || '%'))
         AND (p_role IS NULL OR p.role = p_role)
         AND (p_is_active IS NULL OR p.is_active = p_is_active)
         AND p.role != 'ANONYMOUS'
@@ -100,8 +100,7 @@ BEGIN
             WHEN p_sort_by = 'role' THEN p.role
             WHEN p_sort_by = 'is_active' THEN p.is_active::TEXT
             ELSE p.created_at
-        END
-        CASE WHEN p_sort_direction = 'ASC' THEN ASC ELSE DESC END
+        END ASC
     LIMIT p_page_size OFFSET v_offset;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -261,7 +260,10 @@ BEGIN
 
     IF v_success THEN
         PERFORM admin_user_operation(
-            p_is_active ? 'suspend' : 'unsuspend',
+            CASE
+                WHEN p_is_active THEN 'suspend'
+                ELSE 'unsuspend'
+            END,
             p_user_id,
             json_build_object('old_status', v_old_status, 'new_status', p_is_active),
             p_reason
@@ -549,17 +551,7 @@ BEGIN
                         'total_premium', q.total_premium
                     )
                 ) FROM public.quotes q WHERE q.user_id = p.id
-            ),
-  -- 'policies', (
-            --     SELECT jsonb_agg(
-            --         jsonb_build_object(
-            --             'id', pol.id,
-            --             'policy_number', pol.policy_number,
-            --             'created_at', pol.created_at,
-            --             'status', pol.status
-            --         )
-            --     ) FROM public.policies pol WHERE pol.user_id = p.id
-            -- )
+            )
         )
     ) INTO v_export_data
     FROM public.profiles p
@@ -663,7 +655,10 @@ BEGIN
             'missing_functions', v_missing_functions
         ),
         v_function_count = array_length(v_required_functions, 1),
-        v_function_count = array_length(v_required_functions, 1) ? NULL : 'Missing RPC functions',
+        CASE
+            WHEN v_function_count = array_length(v_required_functions, 1) THEN NULL
+            ELSE 'Missing RPC functions'
+        END,
         CASE
             WHEN v_function_count = array_length(v_required_functions, 1) THEN 'info'
             ELSE 'error'

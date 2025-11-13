@@ -55,10 +55,9 @@ CREATE POLICY "Insurers can view relevant quotes" ON public.quotes
         auth.jwt() ->> 'role' = 'INSURER' AND
         EXISTS (
             SELECT 1 FROM public.quote_coverages qc
-            JOIN public.coverage_tarifications ct ON qc.coverage_id = ct.coverage_id
-            JOIN public.insurance_offers io ON ct.offer_id = io.id
-            JOIN public.insurers i ON io.insurer_id = i.id
-            WHERE qc.quote_id = quotes.id AND i.is_active = true
+            JOIN public.coverage_tariff_rules ctr ON qc.tariff_rule_id = ctr.id
+            JOIN public.coverages c ON ctr.coverage_id = c.id
+            WHERE qc.quote_id = quotes.id
         )
     );
 
@@ -168,15 +167,24 @@ CREATE OR REPLACE FUNCTION check_user_permission(
     p_permission TEXT
 ) RETURNS BOOLEAN AS $$
 DECLARE
-    v_has_permission BOOLEAN;
-    v_cache_key TEXT;
+    v_user_role TEXT;
+    v_has_permission BOOLEAN := false;
 BEGIN
-    -- Check if user has the permission
-    SELECT EXISTS (
-        SELECT 1 FROM public.user_permissions up
-        JOIN public.permissions p ON up.permission_id = p.id
-        WHERE up.user_id = p_user_id AND p.name = p_permission
-    ) INTO v_has_permission;
+    -- Get user role from profiles table
+    SELECT role INTO v_user_role
+    FROM public.profiles
+    WHERE id = p_user_id AND is_active = true;
+
+    -- Check permission based on role
+    CASE p_permission
+        WHEN 'admin_access' THEN v_has_permission := (v_user_role = 'ADMIN');
+        WHEN 'insurer_access' THEN v_has_permission := (v_user_role = 'INSURER');
+        WHEN 'user_access' THEN v_has_permission := (v_user_role = 'USER');
+        WHEN 'manage_users' THEN v_has_permission := (v_user_role = 'ADMIN');
+        WHEN 'manage_quotes' THEN v_has_permission := (v_user_role IN ('ADMIN', 'INSURER'));
+        WHEN 'manage_coverages' THEN v_has_permission := (v_user_role IN ('ADMIN', 'INSURER'));
+        ELSE v_has_permission := false;
+    END CASE;
 
     -- Log permission check for security monitoring
     PERFORM log_user_action(
@@ -184,7 +192,7 @@ BEGIN
         'permission',
         NULL,
         NULL,
-        json_build_object('permission', p_permission, 'granted', v_has_permission),
+        json_build_object('permission', p_permission, 'granted', v_has_permission, 'role', v_user_role),
         true,
         NULL,
         json_build_object('cache_hit', false)

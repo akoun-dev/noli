@@ -6,24 +6,33 @@
 -- 1. Enhanced Admin Audit Tables
 -- ==============================
 
--- Ensure audit_logs table exists with all required columns
-CREATE TABLE IF NOT EXISTS public.audit_logs (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID REFERENCES public.profiles(id),
-    action TEXT NOT NULL,
-    resource_type TEXT NOT NULL,
-    resource_id UUID,
-    old_values JSONB,
-    new_values JSONB,
-    ip_address INET,
-    user_agent TEXT,
-    success BOOLEAN DEFAULT true,
-    error_message TEXT,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    metadata JSONB DEFAULT '{}'::jsonb,
-    session_id UUID REFERENCES public.user_sessions(id),
-    severity TEXT DEFAULT 'info' CHECK (severity IN ('debug', 'info', 'warning', 'error', 'critical'))
-);
+-- Add missing columns to audit_logs table if they don't exist
+DO $$
+BEGIN
+    -- Add session_id column if it doesn't exist
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'audit_logs'
+        AND column_name = 'session_id'
+        AND table_schema = 'public'
+    ) THEN
+        ALTER TABLE public.audit_logs
+        ADD COLUMN session_id UUID REFERENCES public.user_sessions(id);
+    END IF;
+
+    -- Add severity column if it doesn't exist
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'audit_logs'
+        AND column_name = 'severity'
+        AND table_schema = 'public'
+    ) THEN
+        ALTER TABLE public.audit_logs
+        ADD COLUMN severity TEXT DEFAULT 'info'
+        CHECK (severity IN ('debug', 'info', 'warning', 'error', 'critical'));
+    END IF;
+END;
+$$;
 
 -- Admin-specific audit view
 CREATE OR REPLACE VIEW public.admin_audit_logs AS
@@ -62,7 +71,7 @@ CREATE OR REPLACE FUNCTION log_admin_action(
     p_new_values JSONB DEFAULT NULL,
     p_success BOOLEAN DEFAULT true,
     p_error_message TEXT DEFAULT NULL,
-    p_severity TEXT DEFAULT 'info' DEFAULT 'info',
+    p_severity TEXT DEFAULT 'info',
     p_metadata JSONB DEFAULT NULL
 ) RETURNS UUID AS $$
 DECLARE
@@ -437,7 +446,10 @@ BEGIN
             'admin_functions', v_function_count
         ),
         v_table_exists AND v_view_exists AND v_function_count >= 5,
-        v_table_exists AND v_view_exists AND v_function_count >= 5 ? NULL : 'Migration validation failed',
+        CASE
+            WHEN v_table_exists AND v_view_exists AND v_function_count >= 5 THEN NULL
+            ELSE 'Migration validation failed'
+        END,
         CASE
             WHEN v_table_exists AND v_view_exists AND v_function_count >= 5 THEN 'info'
             ELSE 'error'

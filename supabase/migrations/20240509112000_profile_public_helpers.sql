@@ -43,7 +43,7 @@ SET search_path = public
 AS $$
 DECLARE
   v_role_candidate text := UPPER(COALESCE(p_role, 'USER'));
-  v_role public.profiles.role%TYPE;
+  v_role public.profile_role;
   v_profile public.profiles;
 BEGIN
   IF p_user_id IS NULL THEN
@@ -54,7 +54,7 @@ BEGIN
     v_role_candidate := 'USER';
   END IF;
 
-  v_role := v_role_candidate::public.profiles.role%TYPE;
+  v_role := v_role_candidate::public.profile_role;
 
   INSERT INTO public.profiles (
     id,

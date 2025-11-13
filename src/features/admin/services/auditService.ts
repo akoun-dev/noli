@@ -413,16 +413,16 @@ export const auditService = {
   }> {
     await new Promise(resolve => setTimeout(resolve, 500));
 
-    const criticalLogs = mockAuditLogs.filter(log => log.severity === 'CRITICAL').length;
-    const highLogs = mockAuditLogs.filter(log => log.severity === 'HIGH').length;
-    const mediumLogs = mockAuditLogs.filter(log => log.severity === 'MEDIUM').length;
-    const lowLogs = mockAuditLogs.filter(log => log.severity === 'LOW').length;
+    const criticalLogs = initialAuditLogs.filter(log => log.severity === 'CRITICAL').length;
+    const highLogs = initialAuditLogs.filter(log => log.severity === 'HIGH').length;
+    const mediumLogs = initialAuditLogs.filter(log => log.severity === 'MEDIUM').length;
+    const lowLogs = initialAuditLogs.filter(log => log.severity === 'LOW').length;
 
-    const recentActivity = mockAuditLogs
+    const recentActivity = initialAuditLogs
       .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
       .slice(0, 10);
 
-    const userCounts = mockAuditLogs.reduce((acc, log) => {
+    const userCounts = initialAuditLogs.reduce((acc, log) => {
       acc[log.userEmail] = (acc[log.userEmail] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
@@ -432,7 +432,7 @@ export const auditService = {
       .slice(0, 5)
       .map(([email, count]) => ({ email, count }));
 
-    const actionCounts = mockAuditLogs.reduce((acc, log) => {
+    const actionCounts = initialAuditLogs.reduce((acc, log) => {
       acc[log.action] = (acc[log.action] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
@@ -443,7 +443,7 @@ export const auditService = {
       .map(([action, count]) => ({ action, count }));
 
     return {
-      totalLogs: mockAuditLogs.length,
+      totalLogs: initialAuditLogs.length,
       criticalLogs,
       highLogs,
       mediumLogs,
