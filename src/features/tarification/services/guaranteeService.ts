@@ -397,6 +397,17 @@ class GuaranteeService {
     return CATEGORY_TO_COVERAGE_TYPE[DEFAULT_CATEGORY];
   }
 
+  private mapTarifRcRow(row: any): TarifRC {
+    return {
+      id: row.id,
+      category: row.category,
+      energy: row.energy,
+      powerMin: typeof row.power_min === 'number' ? row.power_min : row.powerMin,
+      powerMax: typeof row.power_max === 'number' ? row.power_max : row.powerMax,
+      prime: typeof row.prime === 'number' ? row.prime : Number(row.prime ?? 0)
+    };
+  }
+
   private buildMetadataFromForm(
     input: Partial<GuaranteeFormData>,
     base: Record<string, any> = {}
@@ -1000,13 +1011,14 @@ class GuaranteeService {
       const { supabase } = await import('@/lib/supabase');
       const { data, error } = await supabase
         .from('tarif_rc')
-        .select('*')
+        .select('id, category, energy, power_min, power_max, prime, is_active')
+        .eq('is_active', true)
         .order('energy', { ascending: true })
-        .order('powerMin', { ascending: true });
+        .order('power_min', { ascending: true });
 
       if (!error && data && Array.isArray(data)) {
         logger.auth('Loaded RC tariffs from database:', data.length);
-        return data;
+        return data.map(row => this.mapTarifRcRow(row));
       }
     } catch (err) {
       logger.warn('Failed to load RC tariffs from database, using defaults:', err);
@@ -1023,11 +1035,14 @@ class GuaranteeService {
     const { data, error } = await supabase
       .from('tarif_rc')
       .insert({
-        ...tarif,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        category: tarif.category,
+        energy: tarif.energy,
+        power_min: tarif.powerMin,
+        power_max: tarif.powerMax,
+        prime: tarif.prime,
+        is_active: true
       })
-      .select()
+      .select('id, category, energy, power_min, power_max, prime')
       .single();
 
     if (error) {
@@ -1036,20 +1051,24 @@ class GuaranteeService {
     }
 
     logger.info('RC tariff created:', data);
-    return data;
+    return this.mapTarifRcRow(data);
   }
 
   async updateTarifRC(id: string, tarif: Partial<TarifRC>): Promise<TarifRC> {
     const { supabase } = await import('@/lib/supabase');
 
+    const payload: Record<string, any> = {};
+    if (tarif.category !== undefined) payload.category = tarif.category;
+    if (tarif.energy !== undefined) payload.energy = tarif.energy;
+    if (tarif.powerMin !== undefined) payload.power_min = tarif.powerMin;
+    if (tarif.powerMax !== undefined) payload.power_max = tarif.powerMax;
+    if (tarif.prime !== undefined) payload.prime = tarif.prime;
+
     const { data, error } = await supabase
       .from('tarif_rc')
-      .update({
-        ...tarif,
-        updated_at: new Date().toISOString()
-      })
+      .update(payload)
       .eq('id', id)
-      .select()
+      .select('id, category, energy, power_min, power_max, prime')
       .single();
 
     if (error) {
@@ -1058,7 +1077,7 @@ class GuaranteeService {
     }
 
     logger.info('RC tariff updated:', data);
-    return data;
+    return this.mapTarifRcRow(data);
   }
 
   async deleteTarifRC(id: string): Promise<void> {

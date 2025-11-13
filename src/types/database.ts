@@ -68,16 +68,36 @@ export interface Database {
         Row: {
           id: string
           user_id: string | null
+          session_id: string | null
           action: string
-          resource: string | null
+          resource_type: string
           resource_id: string | null
+          old_values: Json | null
+          new_values: Json | null
           ip_address: string | null
           user_agent: string | null
-          metadata: Json
+          success: boolean | null
+          error_message: string | null
+          severity: 'debug' | 'info' | 'warning' | 'error' | 'critical'
+          metadata: Json | null
           created_at: string
         }
-        Insert: Omit<Database['public']['Tables']['audit_logs']['Row'], 'id' | 'created_at'> & {
+        Insert: {
           id?: string
+          user_id?: string | null
+          session_id?: string | null
+          action: string
+          resource_type: string
+          resource_id?: string | null
+          old_values?: Json | null
+          new_values?: Json | null
+          ip_address?: string | null
+          user_agent?: string | null
+          success?: boolean | null
+          error_message?: string | null
+          severity?: 'debug' | 'info' | 'warning' | 'error' | 'critical'
+          metadata?: Json | null
+          created_at?: string
         }
         Update: Partial<Database['public']['Tables']['audit_logs']['Insert']>
       }
@@ -223,6 +243,23 @@ export interface Database {
           id?: string
         }
         Update: Partial<Database['public']['Tables']['payments']['Insert']>
+      }
+      tarif_rc: {
+        Row: {
+          id: string
+          category: string
+          energy: string
+          power_min: number
+          power_max: number
+          prime: number
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['tarif_rc']['Row'], 'id' | 'created_at' | 'updated_at'> & {
+          id?: string
+        }
+        Update: Partial<Database['public']['Tables']['tarif_rc']['Insert']>
       }
       tarification_rules: {
         Row: {
@@ -517,6 +554,9 @@ export type InsuranceOffer = Database['public']['Tables']['insurance_offers']['R
 export type Insurer = Database['public']['Tables']['insurers']['Row']
 export type InsuranceCategory = Database['public']['Tables']['insurance_categories']['Row']
 export type Payment = Database['public']['Tables']['payments']['Row']
+export type TarifRc = Database['public']['Tables']['tarif_rc']['Row']
+export type TarifRcInsert = Database['public']['Tables']['tarif_rc']['Insert']
+export type TarifRcUpdate = Database['public']['Tables']['tarif_rc']['Update']
 export type AuditLog = Database['public']['Tables']['audit_logs']['Row']
 export type Notification = Database['public']['Tables']['notifications']['Row']
 export type NotificationPreferences = Database['public']['Tables']['notification_preferences']['Row']

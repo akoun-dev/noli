@@ -106,20 +106,45 @@ const initialAuditLogs: AuditLog[] = [
 ];
 
 // Fonctions API pour l'audit avec Supabase
+const mapSeverityToUi = (severity?: string): AuditLog['severity'] => {
+  switch ((severity || '').toLowerCase()) {
+    case 'critical':
+      return 'CRITICAL';
+    case 'error':
+      return 'HIGH';
+    case 'warning':
+      return 'MEDIUM';
+    default:
+      return 'LOW';
+  }
+};
+
+const mapSeverityToDb = (severity: AuditLog['severity']): 'debug' | 'info' | 'warning' | 'error' | 'critical' => {
+  switch (severity) {
+    case 'CRITICAL':
+      return 'critical';
+    case 'HIGH':
+      return 'error';
+    case 'MEDIUM':
+      return 'warning';
+    default:
+      return 'info';
+  }
+};
+
 export const fetchAuditLogs = async (filters: AuditLogFilters = {}): Promise<{ logs: AuditLog[]; total: number }> => {
   try {
     let query = supabase
-      .from('audit_logs')
+      .from('admin_audit_logs' as any)
       .select('*', { count: 'exact' })
-      .order('timestamp', { ascending: false });
+      .order('created_at', { ascending: false });
 
-    // Appliquer les filtres
     if (filters.startDate) {
-      query = query.gte('timestamp', filters.startDate.toISOString());
+      query = query.gte('created_at', filters.startDate.toISOString());
     }
 
     if (filters.endDate) {
-      query = query.lte('timestamp', filters.endDate.toISOString());
+      query = query.lte('created_at', filters.endDate.toISOString());
     }
 
     if (filters.userId) {
@@ -135,11 +160,11 @@ export const fetchAuditLogs = async (filters: AuditLogFilters = {}): Promise<{ l
     }
 
     if (filters.resource) {
-      query = query.ilike('resource', `%${filters.resource}%`);
+      query = query.ilike('resource_type', `%${filters.resource}%`);
     }
 
     if (filters.severity) {
-      query = query.eq('severity', filters.severity);
+      query = query.eq('severity', mapSeverityToDb(filters.severity));
     }
 
     if (filters.ipAddress) {
@@ -148,30 +173,27 @@ export const fetchAuditLogs = async (filters: AuditLogFilters = {}): Promise<{ l
 
     const offset = filters.offset || 0;
     const limit = filters.limit || 50;
-
     query = query.range(offset, offset + limit - 1);
 
     const { data, error, count } = await query;
 
     if (error) {
       logger.error('Error fetching audit logs:', error);
-      // Fallback vers les logs initiaux
       return await auditService.getAuditLogsFallback(filters);
     }
 
-    // Convertir les données de la base en format AuditLog
     const logs: AuditLog[] = (data || []).map(log => ({
       id: log.id,
       userId: log.user_id,
       userEmail: log.user_email,
       action: log.action as AuditAction,
-      resource: log.resource,
+      resource: log.resource_type,
       resourceId: log.resource_id,
-      details: log.details || {},
+      details: log.metadata || log.new_values || {},
       ipAddress: log.ip_address,
       userAgent: log.user_agent,
-      timestamp: new Date(log.timestamp),
-      severity: log.severity as AuditLog['severity']
+      timestamp: new Date(log.created_at),
+      severity: mapSeverityToUi(log.severity)
     }));
 
     return {
@@ -191,15 +213,14 @@ export const createAuditLog = async (log: Omit<AuditLog, 'id' | 'timestamp'>): P
       .from('audit_logs')
       .insert({
         user_id: log.userId,
-        user_email: log.userEmail,
         action: log.action,
-        resource: log.resource,
+        resource_type: log.resource,
         resource_id: log.resourceId,
-        details: log.details,
+        metadata: log.details,
         ip_address: log.ipAddress,
         user_agent: log.userAgent,
-        severity: log.severity,
-        timestamp: new Date().toISOString()
+        severity: mapSeverityToDb(log.severity),
+        success: true
       })
       .select()
       .single();
@@ -212,15 +233,15 @@ export const createAuditLog = async (log: Omit<AuditLog, 'id' | 'timestamp'>): P
     return {
       id: data.id,
       userId: data.user_id,
-      userEmail: data.user_email,
+      userEmail: log.userEmail,
       action: data.action as AuditAction,
-      resource: data.resource,
+      resource: data.resource_type,
       resourceId: data.resource_id,
-      details: data.details || {},
+      details: data.metadata || {},
       ipAddress: data.ip_address,
       userAgent: data.user_agent,
-      timestamp: new Date(data.timestamp),
-      severity: data.severity as AuditLog['severity']
+      timestamp: new Date(data.created_at),
+      severity: mapSeverityToUi(data.severity)
     };
 
   } catch (error) {

@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Card } from '@/components/ui/card'
-import { ArrowRight, ArrowLeft, AlertTriangle, Shield, Car } from 'lucide-react'
+import { ArrowRight, ArrowLeft, AlertTriangle, Shield, Car, Download, Mail, MessageCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useNavigate } from 'react-router-dom'
 import { CoverageSelector } from '@/components/coverage/CoverageSelector'
@@ -38,6 +38,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
+import { PDFService } from '@/features/quotes/services/pdfService'
+import { NotificationService } from '@/services/notificationService'
+import { toast } from 'sonner'
 
 interface Step3NeedsProps {
   onBack: () => void
@@ -58,6 +61,9 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
   const [coverageErrors, setCoverageErrors] = useState<string[]>([])
   const [availableCoverages, setAvailableCoverages] = useState<any[]>([])
   const [isQuoteModalOpen, setIsQuoteModalOpen] = useState(false)
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false)
+  const [isSendingEmail, setIsSendingEmail] = useState(false)
+  const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false)
 
   // Prepare vehicle data for coverage calculation
   const vehicleInfo = formData.vehicleInfo || {}
@@ -349,6 +355,157 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
     navigate('/offres')
   }
 
+  // Fonction pour générer et télécharger le PDF
+  const handleDownloadPdf = async () => {
+    if (!tempQuoteId || !user) {
+      toast.error('Impossible de générer le PDF : informations manquantes')
+      return
+    }
+
+    try {
+      setIsGeneratingPdf(true)
+      
+      // Préparer les données pour le PDF
+      const personalInfo = formData.personalInfo || {}
+      const vehicleInfo = formData.vehicleInfo || {}
+      const insuranceNeeds = formData.insuranceNeeds || {}
+      
+      const pdfData = {
+        id: tempQuoteId,
+        createdAt: new Date(),
+        customerInfo: {
+          fullName: `${personalInfo.firstName || ''} ${personalInfo.lastName || ''}`.trim(),
+          email: personalInfo.email || user.email || '',
+          phone: personalInfo.phone || '',
+          address: (personalInfo as any).address || '',
+          birthDate: (personalInfo as any).birthDate ? new Date((personalInfo as any).birthDate) : new Date(),
+          licenseNumber: (personalInfo as any).licenseNumber || '',
+          licenseDate: (personalInfo as any).licenseDate ? new Date((personalInfo as any).licenseDate) : new Date(),
+        },
+        vehicleInfo: {
+          brand: (vehicleInfo as any).brand || '',
+          model: (vehicleInfo as any).model || '',
+          year: (vehicleInfo as any).year || new Date().getFullYear(),
+          registrationNumber: (vehicleInfo as any).registration || '',
+          vehicleType: (vehicleInfo as any).vehicleType || 'voiture',
+          fuelType: vehicleInfo.fuel || 'essence',
+          value: typeof vehicleInfo.currentValue === 'number' ? vehicleInfo.currentValue : parseInt(vehicleInfo.currentValue as string) || 0,
+        },
+        insuranceInfo: {
+          insurer: 'NOLI Assurance',
+          offerName: insuranceNeeds.coverageType || 'tiers',
+          coverageType: insuranceNeeds.coverageType || 'tiers',
+          price: {
+            monthly: Math.round(totalPremium / 12),
+            annual: totalPremium,
+          },
+          franchise: 0,
+          features: Object.entries(selectedCoverages)
+            .filter(([_, isSelected]) => isSelected)
+            .map(([coverageId]) => getCoverageName(coverageId)),
+          guarantees: selectedCoverages,
+        },
+        personalInfo: {
+          usage: (insuranceNeeds as any).usage || 'personal',
+          annualKilometers: (insuranceNeeds as any).annualKm || 0,
+          parkingType: (insuranceNeeds as any).parkingType || '',
+          historyClaims: (insuranceNeeds as any).historyClaims || '',
+        },
+      }
+
+      const pdfService = new PDFService()
+      const blob = await pdfService.generateQuotePDF(pdfData)
+      
+      // Télécharger le PDF
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `devis-assurance-${tempQuoteId}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+      
+      toast.success('PDF téléchargé avec succès')
+    } catch (error) {
+      console.error('Erreur lors de la génération du PDF:', error)
+      toast.error('Erreur lors de la génération du PDF')
+    } finally {
+      setIsGeneratingPdf(false)
+    }
+  }
+
+  // Fonction pour envoyer le devis par email
+  const handleSendEmail = async () => {
+    if (!tempQuoteId || !user) {
+      toast.error('Impossible d\'envoyer l\'email : informations manquantes')
+      return
+    }
+
+    try {
+      setIsSendingEmail(true)
+      
+      const personalInfo = formData.personalInfo || {}
+      const firstName = personalInfo.firstName || ''
+      const email = personalInfo.email || user.email || ''
+      
+      await NotificationService.sendNotification(
+        ['email'],
+        { email, phone: personalInfo.phone || '' },
+        'quoteGenerated',
+        {
+          firstName,
+          quoteId: tempQuoteId,
+          price: totalPremium,
+          insurerName: 'NOLI Assurance',
+          downloadUrl: `${window.location.origin}/devis/${tempQuoteId}`,
+        }
+      )
+      
+      toast.success('Email envoyé avec succès')
+    } catch (error) {
+      console.error('Erreur lors de l\'envoi de l\'email:', error)
+      toast.error('Erreur lors de l\'envoi de l\'email')
+    } finally {
+      setIsSendingEmail(false)
+    }
+  }
+
+  // Fonction pour envoyer le devis par WhatsApp
+  const handleSendWhatsApp = async () => {
+    if (!tempQuoteId || !user) {
+      toast.error('Impossible d\'envoyer par WhatsApp : informations manquantes')
+      return
+    }
+
+    try {
+      setIsSendingWhatsApp(true)
+      
+      const personalInfo = formData.personalInfo || {}
+      const firstName = personalInfo.firstName || ''
+      const phone = personalInfo.phone || ''
+      
+      await NotificationService.sendNotification(
+        ['whatsapp'],
+        { email: personalInfo.email || user.email || '', phone },
+        'quoteGenerated',
+        {
+          firstName,
+          quoteId: tempQuoteId,
+          price: totalPremium,
+          insurerName: 'NOLI Assurance',
+          downloadUrl: `${window.location.origin}/devis/${tempQuoteId}`,
+        }
+      )
+      
+      toast.success('Message WhatsApp envoyé avec succès')
+    } catch (error) {
+      console.error('Erreur lors de l\'envoi du message WhatsApp:', error)
+      toast.error('Erreur lors de l\'envoi du message WhatsApp')
+    } finally {
+      setIsSendingWhatsApp(false)
+    }
+  }
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className={cn(
@@ -490,36 +647,152 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
            </Button>
          </DialogTrigger>
          <DialogContent className={cn(
-           isMobile ? "w-11/12 max-w-sm" : "max-w-md"
+           isMobile ? "w-11/12 max-w-sm" : "max-w-2xl mx-auto",
+           "p-0 overflow-hidden"
          )}>
-           <DialogHeader>
-             <DialogTitle>Votre devis personnalisé</DialogTitle>
-             <DialogDescription>
-               Récapitulatif de votre protection
-             </DialogDescription>
-           </DialogHeader>
-           <div className="space-y-4 py-4">
-             <div className="text-center space-y-2">
-               <div className="text-3xl font-bold text-primary">
-                 {totalPremium.toLocaleString('fr-FR')} FCFA
+           {/* Header avec design moderne */}
+           <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 rounded-t-lg">
+             <DialogHeader className="text-center space-y-2">
+               <div className="inline-flex items-center justify-center w-12 h-12 bg-white/20 rounded-full mb-3">
+                 <Shield className="w-6 h-6" />
                </div>
-               <div className="text-sm text-muted-foreground">
-                 {Math.round(totalPremium / 12).toLocaleString('fr-FR')} FCFA par mois
+               <DialogTitle className="text-xl font-semibold text-white">
+                 Votre devis personnalisé
+               </DialogTitle>
+               <DialogDescription className="text-blue-100 text-sm">
+                 Protection sur mesure pour votre véhicule
+               </DialogDescription>
+             </DialogHeader>
+           </div>
+
+           <div className="p-6 space-y-6">
+             {/* Prix mis en avant */}
+             <div className="text-center bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-100">
+               <div className="flex items-center justify-center gap-2 mb-2">
+                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                 <span className="text-sm font-medium text-green-700">Devis immédiat</span>
                </div>
-               <div className="text-xs text-muted-foreground">
+               <div className="text-4xl font-bold text-gray-900 mb-1">
+                 {totalPremium.toLocaleString('fr-FR')}
+                 <span className="text-lg font-normal text-gray-600 ml-1">FCFA</span>
+               </div>
+               <div className="text-sm text-gray-600 mb-3">
+                 {Math.round(totalPremium / 12).toLocaleString('fr-FR')} FCFA
+                 <span className="text-gray-500"> / mois</span>
+               </div>
+               <div className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
                  {Object.entries(selectedCoverages).filter(([_, isSelected]) => isSelected).length} garantie(s) sélectionnée(s)
                </div>
              </div>
-             
-             <div className="border-t pt-4">
-               <Button
-                 variant="outline"
-                 className="w-full"
-                 onClick={() => setIsQuoteModalOpen(false)}
-               >
-                 Fermer
-               </Button>
+
+             {/* Options de partage */}
+             <div className="space-y-3">
+               <div className="flex items-center justify-between mb-4">
+                 <h3 className="font-semibold text-gray-900">Recevoir votre devis</h3>
+                 <span className="text-xs text-gray-500">Formats disponibles</span>
+               </div>
+
+               <div className="grid gap-3">
+                 {/* Bouton PDF - Design moderne */}
+                 <Button
+                   onClick={handleDownloadPdf}
+                   disabled={isGeneratingPdf}
+                   className="relative h-12 bg-gradient-to-r from-gray-900 to-gray-800 hover:from-gray-800 hover:to-gray-700 text-white rounded-xl shadow-lg transition-all duration-200 group overflow-hidden"
+                 >
+                   <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+                   <div className="relative flex items-center justify-center gap-3">
+                     <div className={cn(
+                       "w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center",
+                       isGeneratingPdf && "animate-spin"
+                     )}>
+                       {isGeneratingPdf ? (
+                         <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"></div>
+                       ) : (
+                         <Download className="w-5 h-5" />
+                       )}
+                     </div>
+                     <div className="text-left">
+                       <div className="font-semibold">
+                         {isGeneratingPdf ? 'Génération...' : 'Télécharger le PDF'}
+                       </div>
+                       <div className="text-xs opacity-80">Document officiel</div>
+                     </div>
+                   </div>
+                 </Button>
+
+                 {/* Boutons Email et WhatsApp - Design moderne côte à côte */}
+                 <div className="grid grid-cols-2 gap-3">
+                   <Button
+                     onClick={handleSendEmail}
+                     disabled={isSendingEmail}
+                     variant="outline"
+                     className="relative h-12 border-2 hover:border-blue-500 hover:bg-blue-50 rounded-xl transition-all duration-200 group"
+                   >
+                     <div className="absolute inset-0 bg-gradient-to-r from-blue-100 to-indigo-100 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-xl"></div>
+                     <div className="relative flex flex-col items-center gap-1">
+                       <div className={cn(
+                         "w-8 h-8 bg-blue-500 text-white rounded-lg flex items-center justify-center",
+                         isSendingEmail && "animate-pulse"
+                       )}>
+                         {isSendingEmail ? (
+                           <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+                         ) : (
+                           <Mail className="w-4 h-4" />
+                         )}
+                       </div>
+                       <span className="text-xs font-medium">
+                         {isSendingEmail ? 'Envoi...' : 'Email'}
+                       </span>
+                     </div>
+                   </Button>
+
+                   <Button
+                     onClick={handleSendWhatsApp}
+                     disabled={isSendingWhatsApp}
+                     variant="outline"
+                     className="relative h-12 border-2 hover:border-green-500 hover:bg-green-50 rounded-xl transition-all duration-200 group"
+                   >
+                     <div className="absolute inset-0 bg-gradient-to-r from-green-100 to-emerald-100 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-xl"></div>
+                     <div className="relative flex flex-col items-center gap-1">
+                       <div className={cn(
+                         "w-8 h-8 bg-green-500 text-white rounded-lg flex items-center justify-center",
+                         isSendingWhatsApp && "animate-pulse"
+                       )}>
+                         {isSendingWhatsApp ? (
+                           <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+                         ) : (
+                           <MessageCircle className="w-4 h-4" />
+                         )}
+                       </div>
+                       <span className="text-xs font-medium">
+                         {isSendingWhatsApp ? 'Envoi...' : 'WhatsApp'}
+                       </span>
+                     </div>
+                   </Button>
+                 </div>
+               </div>
              </div>
+
+             {/* Infos supplémentaires */}
+             <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+               <div className="flex items-center gap-3 text-sm text-gray-600">
+                 <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                 <span>Recevez votre devis instantanément par email ou WhatsApp</span>
+               </div>
+               <div className="flex items-center gap-3 text-sm text-gray-600 mt-2">
+                 <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                 <span>PDF valide pour 30 jours avec référence unique</span>
+               </div>
+             </div>
+
+             {/* Bouton fermer stylé */}
+             <Button
+               variant="ghost"
+               onClick={() => setIsQuoteModalOpen(false)}
+               className="w-full h-11 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-all duration-200"
+             >
+               Fermer
+             </Button>
            </div>
          </DialogContent>
        </Dialog>
