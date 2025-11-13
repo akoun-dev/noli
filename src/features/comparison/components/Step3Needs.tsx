@@ -20,7 +20,7 @@ import { cn } from '@/lib/utils'
 import { useNavigate } from 'react-router-dom'
 import { CoverageSelector } from '@/components/coverage/CoverageSelector'
 import ProgressiveCoverageSelector from '@/components/coverage/ProgressiveCoverageSelector'
-import DynamicPricingSummary from '@/components/coverage/DynamicPricingSummary'
+import SimplifiedCoverageSelector from '@/components/coverage/SimplifiedCoverageSelector'
 import {
   coverageTarificationService,
   type VehicleData,
@@ -201,9 +201,9 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
     } catch (error) {
       console.error('🔧 ERROR creating temporary quote:', error)
       console.error('🔧 Quote error details:', {
-        message: error?.message,
-        stack: error?.stack,
-        name: error?.name,
+        message: (error as any)?.message,
+        stack: (error as any)?.stack,
+        name: (error as any)?.name,
         error
       })
       setCoverageErrors(['Erreur lors de la création du devis temporaire'])
@@ -382,7 +382,7 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
               user: !!user
             })
             return (
-              <ProgressiveCoverageSelector
+              <SimplifiedCoverageSelector
                 quoteId={tempQuoteId || ''}
                 vehicleData={vehicleData}
                 selectedCoverages={selectedCoverages}
@@ -482,81 +482,45 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
          <DialogTrigger asChild>
            <Button
              type='button'
-             variant='secondary'
-             size={isMobile ? "default" : "lg"}
-             className={cn(
-               "flex items-center justify-center gap-2",
-               isMobile ? "w-full" : "flex-1"
-             )}
+             variant='ghost'
+             size="sm"
+             className="text-muted-foreground"
            >
-             <Car className={cn("w-4 h-4", !isMobile && "w-5 h-5")} />
-             Devis
+             Voir le devis
            </Button>
          </DialogTrigger>
          <DialogContent className={cn(
            isMobile ? "w-11/12 max-w-sm" : "max-w-md"
          )}>
            <DialogHeader>
-             <DialogTitle>Récapitulatif du devis</DialogTitle>
+             <DialogTitle>Votre devis personnalisé</DialogTitle>
              <DialogDescription>
-               Détail des garanties sélectionnées et montant total
+               Récapitulatif de votre protection
              </DialogDescription>
            </DialogHeader>
            <div className="space-y-4 py-4">
-             <div className="space-y-2">
-               <h4 className="font-medium">Garanties sélectionnées</h4>
-               {Object.entries(selectedCoverages).filter(([_, isSelected]) => isSelected).length > 0 ? (
-                 <div className="space-y-2">
-                   {Object.entries(selectedCoverages)
-                     .filter(([_, isSelected]) => isSelected)
-                     .map(([coverageId]) => {
-                       const amount = premiumBreakdown[coverageId] || 0
-                       return (
-                         <div key={coverageId} className="flex justify-between text-sm">
-                           <span className="text-muted-foreground">
-                             {getCoverageName(coverageId)}
-                           </span>
-                           <span className="font-medium">{amount.toLocaleString('fr-FR')} FCFA</span>
-                         </div>
-                       )
-                     })}
-                 </div>
-               ) : (
-                 <p className="text-sm text-muted-foreground">Aucune garantie sélectionnée</p>
-               )}
+             <div className="text-center space-y-2">
+               <div className="text-3xl font-bold text-primary">
+                 {totalPremium.toLocaleString('fr-FR')} FCFA
+               </div>
+               <div className="text-sm text-muted-foreground">
+                 {Math.round(totalPremium / 12).toLocaleString('fr-FR')} FCFA par mois
+               </div>
+               <div className="text-xs text-muted-foreground">
+                 {Object.entries(selectedCoverages).filter(([_, isSelected]) => isSelected).length} garantie(s) sélectionnée(s)
+               </div>
              </div>
+             
              <div className="border-t pt-4">
-               <div className="flex justify-between items-center">
-                 <span className="font-semibold">Total annuel</span>
-                 <span className="font-bold text-lg">
-                   {totalPremium.toLocaleString('fr-FR')} FCFA
-                 </span>
-               </div>
-               <div className="flex justify-between items-center text-sm text-muted-foreground">
-                 <span>Soit par mois</span>
-                 <span className="font-medium">
-                   {Math.round(totalPremium / 12).toLocaleString('fr-FR')} FCFA
-                 </span>
-               </div>
+               <Button
+                 variant="outline"
+                 className="w-full"
+                 onClick={() => setIsQuoteModalOpen(false)}
+               >
+                 Fermer
+               </Button>
              </div>
            </div>
-           <DialogFooter>
-             <Button
-               variant="outline"
-               onClick={() => setIsQuoteModalOpen(false)}
-             >
-               Fermer
-             </Button>
-             <Button
-               onClick={() => {
-                 // Logique pour télécharger ou sauvegarder le devis
-                 console.log('Télécharger le devis')
-                 setIsQuoteModalOpen(false)
-               }}
-             >
-               Télécharger le devis
-             </Button>
-           </DialogFooter>
          </DialogContent>
        </Dialog>
        <Button
