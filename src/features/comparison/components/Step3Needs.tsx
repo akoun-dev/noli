@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { insuranceNeedsSchema, InsuranceNeedsFormData } from '@/lib/zod-schemas'
@@ -60,13 +60,30 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
   const [isQuoteModalOpen, setIsQuoteModalOpen] = useState(false)
 
   // Prepare vehicle data for coverage calculation
-  const vehicleData: VehicleData = {
-    category: '401', // Using default value since category is not in VehicleInfo
-    fiscal_power: parseInt(formData.vehicleInfo.fiscalPower || '6'),
-    fuel_type: formData.vehicleInfo.fuel || 'essence',
-    sum_insured: parseInt(formData.vehicleInfo.currentValue || '5000000'),
-    new_value: parseInt(formData.vehicleInfo.newValue || '8000000'),
-  }
+  const vehicleInfo = formData.vehicleInfo || {}
+  const vehicleData: VehicleData = useMemo(() => {
+    const parseNumber = (value: string | number | undefined, fallback: number) => {
+      if (typeof value === 'number') return value
+      if (typeof value === 'string' && value.trim().length > 0) {
+        const parsed = parseInt(value, 10)
+        return Number.isNaN(parsed) ? fallback : parsed
+      }
+      return fallback
+    }
+
+    return {
+      category: '401',
+      fiscal_power: parseNumber(vehicleInfo.fiscalPower, 6),
+      fuel_type: vehicleInfo.fuel || 'essence',
+      sum_insured: parseNumber(vehicleInfo.currentValue, 5_000_000),
+      new_value: parseNumber(vehicleInfo.newValue, 8_000_000),
+    }
+  }, [
+    vehicleInfo.fiscalPower,
+    vehicleInfo.fuel,
+    vehicleInfo.currentValue,
+    vehicleInfo.newValue,
+  ])
 
   const { handleSubmit, formState: { errors }, setValue, watch } = useForm<InsuranceNeedsFormData>({
     resolver: zodResolver(insuranceNeedsSchema),
@@ -78,6 +95,29 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
     },
   })
   const selectedOptions = watch('options') || []
+
+  const findCoverageDetails = (coverageId: string) =>
+    availableCoverages.find((coverage) => coverage.coverage_id === coverageId)
+
+  const getEstimatedPremium = (coverageId: string): number => {
+    const coverage = findCoverageDetails(coverageId)
+    if (!coverage) return 0
+
+    const { estimated_min_premium, estimated_max_premium } = coverage
+    if (typeof estimated_min_premium === 'number' && estimated_min_premium > 0) {
+      return estimated_min_premium
+    }
+    if (typeof estimated_max_premium === 'number' && estimated_max_premium > 0) {
+      return estimated_max_premium
+    }
+
+    return 0
+  }
+
+  const getCoverageName = (coverageId: string) => {
+    const coverage = findCoverageDetails(coverageId)
+    return coverage?.name || `Garantie ${coverageId}`
+  }
 
   // Create temporary quote for coverage calculation
   useEffect(() => {
@@ -178,96 +218,95 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
     isIncluded: boolean,
     formulaName?: string
   ) => {
-    // Update local state immediately for UI responsiveness
-    setSelectedCoverages((prev) => ({ ...prev, [coverageId]: isIncluded }))
+    const nextSelectedCoverages = { ...selectedCoverages, [coverageId]: isIncluded }
+    setSelectedCoverages(nextSelectedCoverages)
 
-    if (tempQuoteId) {
-      try {
-        await coverageTarificationService.addCoverageToQuote(
-          tempQuoteId,
-          coverageId,
-          {
-            ...vehicleData,
-            ...(formulaName && { formula_name: formulaName }),
-          },
-          isIncluded
-        )
+    const calculationPayload = {
+      ...vehicleData,
+      ...(formulaName && { formula_name: formulaName }),
+    }
 
-        // Update premiums immediately for selected coverage
-        if (isIncluded) {
-          try {
-            const premium = await coverageTarificationService.calculateCoveragePremium(
-              coverageId,
-              {
-                ...vehicleData,
-                ...(formulaName && { formula_name: formulaName }),
-              }
-            )
-            
-            // If premium is 0 or undefined, try to get fixed amount from available coverages
-            if (!premium || premium === 0) {
-              const coverage = availableCoverages.find(c => c.coverage_id === coverageId)
-              if (coverage?.estimated_min_premium && coverage.estimated_min_premium > 0) {
-                setPremiumBreakdown(prev => ({ ...prev, [coverageId]: coverage.estimated_min_premium }))
-                console.log(`Using estimated premium for ${coverageId}:`, coverage.estimated_min_premium)
-              } else {
-                setPremiumBreakdown(prev => ({ ...prev, [coverageId]: 0 }))
-                console.warn(`No premium found for coverage ${coverageId}`)
-              }
-            } else {
-              setPremiumBreakdown(prev => ({ ...prev, [coverageId]: premium }))
-              console.log(`Calculated premium for ${coverageId}:`, premium)
-            }
-          } catch (premiumError) {
-            console.error('Error calculating individual premium:', premiumError)
-            // Fallback to estimated premium if available
-            const coverage = availableCoverages.find(c => c.coverage_id === coverageId)
-            if (coverage?.estimated_min_premium && coverage.estimated_min_premium > 0) {
-              setPremiumBreakdown(prev => ({ ...prev, [coverageId]: coverage.estimated_min_premium }))
-              console.log(`Fallback to estimated premium for ${coverageId}:`, coverage.estimated_min_premium)
-            } else {
-              setPremiumBreakdown(prev => ({ ...prev, [coverageId]: 0 }))
-            }
+    let localPremium = 0
+    if (isIncluded) {
+      if (user) {
+        try {
+          const premium = await coverageTarificationService.calculateCoveragePremium(
+            coverageId,
+            calculationPayload
+          )
+
+          if (premium && premium > 0) {
+            localPremium = premium
+            console.log(`Calculated premium for ${coverageId}:`, premium)
           }
-        } else {
-          // Remove from breakdown when deselected
-          setPremiumBreakdown(prev => {
-            const newBreakdown = { ...prev }
-            delete newBreakdown[coverageId]
-            return newBreakdown
-          })
+        } catch (premiumError) {
+          console.error('Error calculating individual premium:', premiumError)
         }
-
-        // Recalculate total premium
-        const newTotal = await coverageTarificationService.calculateQuoteTotalPremium(tempQuoteId)
-        setTotalPremium(newTotal)
-
-        // Update breakdown from server to ensure consistency
-        const premiums = await coverageTarificationService.getQuoteCoveragePremiums(tempQuoteId)
-        const serverBreakdown: Record<string, number> = {}
-        premiums
-          .filter((p) => p.is_included)
-          .forEach((p) => {
-            serverBreakdown[p.coverage_id] = p.premium_amount
-          })
-        
-        // Merge local and server breakdowns, prioritizing server values
-        setPremiumBreakdown(prev => {
-          const merged = { ...prev, ...serverBreakdown }
-          // Ensure only selected coverages are in the breakdown
-          Object.keys(merged).forEach(key => {
-            if (!selectedCoverages[key]) {
-              delete merged[key]
-            }
-          })
-          return merged
-        })
-      } catch (error) {
-        console.error('Error updating coverage:', error)
-        setCoverageErrors(['Erreur lors de la mise à jour des garanties'])
-        // Revert the state change on error
-        setSelectedCoverages((prev) => ({ ...prev, [coverageId]: !isIncluded }))
       }
+
+      if (!localPremium || localPremium <= 0) {
+        localPremium = getEstimatedPremium(coverageId)
+        if (localPremium > 0) {
+          console.log(`Using estimated premium for ${coverageId}:`, localPremium)
+        } else {
+          console.warn(`No premium found for coverage ${coverageId}`)
+        }
+      }
+    }
+
+    const updatedBreakdown = (() => {
+      if (isIncluded) {
+        return { ...premiumBreakdown, [coverageId]: localPremium }
+      }
+      const { [coverageId]: _, ...rest } = premiumBreakdown
+      return rest
+    })()
+
+    setPremiumBreakdown(updatedBreakdown)
+    const localTotal = Object.values(updatedBreakdown).reduce((sum, value) => sum + value, 0)
+    setTotalPremium(localTotal)
+
+    if (!tempQuoteId) {
+      return
+    }
+
+    try {
+      await coverageTarificationService.addCoverageToQuote(
+        tempQuoteId,
+        coverageId,
+        calculationPayload,
+        isIncluded
+      )
+
+      const newTotal = await coverageTarificationService.calculateQuoteTotalPremium(tempQuoteId)
+
+      const premiums = await coverageTarificationService.getQuoteCoveragePremiums(tempQuoteId)
+      const serverBreakdown: Record<string, number> = {}
+      premiums
+        .filter((p) => p.is_included && p.premium_amount > 0)
+        .forEach((p) => {
+          serverBreakdown[p.coverage_id] = p.premium_amount
+        })
+
+      let mergedBreakdown: Record<string, number> = updatedBreakdown
+      setPremiumBreakdown((prev) => {
+        const merged = { ...prev, ...serverBreakdown }
+        Object.keys(merged).forEach((key) => {
+          if (!nextSelectedCoverages[key]) {
+            delete merged[key]
+          }
+        })
+        mergedBreakdown = merged
+        return merged
+      })
+
+      const fallbackServerTotal = Object.values(mergedBreakdown).reduce((sum, value) => sum + value, 0)
+      setTotalPremium(newTotal > 0 ? newTotal : fallbackServerTotal)
+    } catch (error) {
+      console.error('Error updating coverage:', error)
+      setCoverageErrors(['Erreur lors de la mise à jour des garanties'])
+      // Revert the state change on error
+      setSelectedCoverages((prev) => ({ ...prev, [coverageId]: !isIncluded }))
     }
   }
 
@@ -353,6 +392,7 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
                   setPremiumBreakdown(breakdown)
                 }}
                 canCalculate={!!user}
+                onCoveragesLoaded={setAvailableCoverages}
               />
             )
           })()
@@ -473,7 +513,9 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
                        const amount = premiumBreakdown[coverageId] || 0
                        return (
                          <div key={coverageId} className="flex justify-between text-sm">
-                           <span className="text-muted-foreground">Garantie {coverageId}</span>
+                           <span className="text-muted-foreground">
+                             {getCoverageName(coverageId)}
+                           </span>
                            <span className="font-medium">{amount.toLocaleString('fr-FR')} FCFA</span>
                          </div>
                        )
