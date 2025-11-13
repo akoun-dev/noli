@@ -89,6 +89,10 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
   const createTempQuote = async () => {
     if (!user) return
 
+    console.log('🔧 Step3Needs: Creating temporary quote...')
+    console.log('🔧 User:', user?.id)
+    console.log('🔧 Vehicle data:', vehicleData)
+
     try {
       setCoverageLoading(true)
       setCoverageErrors([])
@@ -146,13 +150,25 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
         .select('id')
         .single() as any
 
-      if (error || !data?.id) throw error || new Error('Quote creation failed')
+      console.log('🔧 Quote creation result:', { error, data })
+      if (error || !data?.id) {
+        console.error('🔧 Quote creation failed:', error)
+        throw error || new Error('Quote creation failed')
+      }
 
+      console.log('🔧 Quote created successfully with ID:', data.id)
       setTempQuoteId(data.id)
     } catch (error) {
-      console.error('Error creating temporary quote:', error)
+      console.error('🔧 ERROR creating temporary quote:', error)
+      console.error('🔧 Quote error details:', {
+        message: error?.message,
+        stack: error?.stack,
+        name: error?.name,
+        error
+      })
       setCoverageErrors(['Erreur lors de la création du devis temporaire'])
     } finally {
+      console.log('🔧 Quote creation process finished')
       setCoverageLoading(false)
     }
   }
@@ -318,17 +334,28 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
             </div>
           </Card>
         ) : (
-          <ProgressiveCoverageSelector
-            quoteId={tempQuoteId || ''}
-            vehicleData={vehicleData}
-            selectedCoverages={selectedCoverages}
-            onCoverageChange={handleCoverageChange}
-            onPremiumsChange={(total: number, breakdown: Record<string, number>) => {
-              setTotalPremium(total)
-              setPremiumBreakdown(breakdown)
-            }}
-            canCalculate={!!user}
-          />
+          (() => {
+            console.log('🔧 Step3Needs: About to render ProgressiveCoverageSelector')
+            console.log('🔧 Props:', {
+              tempQuoteId,
+              vehicleData,
+              selectedCoverages,
+              user: !!user
+            })
+            return (
+              <ProgressiveCoverageSelector
+                quoteId={tempQuoteId || ''}
+                vehicleData={vehicleData}
+                selectedCoverages={selectedCoverages}
+                onCoverageChange={handleCoverageChange}
+                onPremiumsChange={(total: number, breakdown: Record<string, number>) => {
+                  setTotalPremium(total)
+                  setPremiumBreakdown(breakdown)
+                }}
+                canCalculate={!!user}
+              />
+            )
+          })()
         )}
       </div>
 

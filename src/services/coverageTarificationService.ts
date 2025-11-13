@@ -13,6 +13,9 @@ const supabasePublic = createClient(supabaseUrl, supabaseAnonKey, {
   },
 });
 
+// Essayer avec le client supabase-public.ts qui utilise fetch natif
+import { supabasePublic as supabasePublicFetch } from '@/lib/supabase-public';
+
 // Types for the coverage-based tarification system
 export type CoverageType =
   | 'RC'
@@ -119,18 +122,38 @@ class CoverageTarificationService {
     const power = params.fiscal_power ?? null
     const fuel = params.fuel_type ?? null
 
-    try {
-      // 1) Prefer public client to avoid session requirements
-      const pub = await (supabasePublic as any)
-        .from('coverages')
-        .select(
-          'id,type,name,description,calculation_type,is_mandatory,is_active,display_order,coverage_tariff_rules:coverage_tariff_rules(formula_name,fixed_amount,min_amount,max_amount,base_rate)'
-        )
-        .eq('is_active', true)
-        .order('display_order')
+    console.log('🔍 getAvailableCoverages called with params:', { category, value, power, fuel })
+    console.log('🔍 Supabase URL:', supabaseUrl)
 
-      if (!pub.error && Array.isArray(pub.data) && pub.data.length > 0) {
-        const rows = pub.data
+    const isJwt = (token: string | undefined | null) =>
+      typeof token === 'string' && token.split('.').length >= 3
+
+    try {
+      console.log('🔍 Step 1: Trying direct fetch to avoid JWT issues...')
+      // 1) Use direct fetch to avoid JWT issues completely
+      const headers: Record<string, string> = {
+        apikey: supabaseAnonKey,
+        'Content-Type': 'application/json',
+      }
+
+      if (isJwt(supabaseAnonKey)) {
+        headers.Authorization = `Bearer ${supabaseAnonKey}`
+      }
+
+      const response = await fetch(`${supabaseUrl}/rest/v1/coverages?select=id,type,name,description,calculation_type,is_mandatory,is_active,display_order,coverage_tariff_rules:coverage_tariff_rules(formula_name,fixed_amount,min_amount,max_amount,base_rate)&is_active=eq.true&order=display_order`, {
+        headers,
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const coveragesData = await response.json()
+      console.log('🔍 Direct fetch result:', { dataLength: coveragesData?.length, data: coveragesData })
+
+      if (Array.isArray(coveragesData) && coveragesData.length > 0) {
+        console.log('🔍 Step 1 SUCCESS: Got', coveragesData.length, 'coverages from direct fetch')
+        const rows = coveragesData
         return rows.map((r: any) => {
           const rules = Array.isArray(r.coverage_tariff_rules) ? r.coverage_tariff_rules : []
           const formulas = Array.from(
@@ -167,6 +190,9 @@ class CoverageTarificationService {
       })
       }
 
+      console.log('🔍 Step 1 FAILED: Direct query failed or returned no data')
+      console.log('🔍 Step 2: Trying direct table query with auth client...')
+
       // 1b) Try direct table query with auth client (for authenticated sessions)
       const { data, error } = await (supabase
         .from('coverages')
@@ -176,10 +202,13 @@ class CoverageTarificationService {
         .eq('is_active', true)
         .order('display_order', { ascending: true }) as any)
 
+      console.log('🔍 Auth client query result:', { error, dataLength: data?.length, data })
+
       if (error) throw error
 
       const rows = (data || []) as any[]
       if (rows.length > 0) {
+        console.log('🔍 Step 2 SUCCESS: Got', rows.length, 'coverages from auth client')
         return rows.map((r) => {
           const rules = Array.isArray(r.coverage_tariff_rules) ? r.coverage_tariff_rules : []
           const formulas = Array.from(

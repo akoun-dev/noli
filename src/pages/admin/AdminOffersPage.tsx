@@ -131,12 +131,14 @@ export const AdminOffersPage: React.FC = () => {
   ];
 
   const filteredOffers = offers.filter(offer => {
-    const matchesSearch = offer.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         offer.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         offer.insurer.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || offer.status === statusFilter;
-    const matchesInsurer = insurerFilter === 'all' || offer.insurerId === insurerFilter;
-    const matchesCategory = categoryFilter === 'all' || offer.category === categoryFilter;
+    const matchesSearch = offer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (offer.description?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
+                         (offer.insurer?.name?.toLowerCase().includes(searchTerm.toLowerCase()) || false);
+    const matchesStatus = statusFilter === 'all' ||
+                         (statusFilter === 'active' && offer.is_active) ||
+                         (statusFilter === 'inactive' && !offer.is_active);
+    const matchesInsurer = insurerFilter === 'all' || offer.insurer_id === insurerFilter;
+    const matchesCategory = categoryFilter === 'all' || offer.category_id === categoryFilter;
     return matchesSearch && matchesStatus && matchesInsurer && matchesCategory;
   });
 
@@ -529,17 +531,17 @@ export const AdminOffersPage: React.FC = () => {
                       <tr key={offer.id} className="border-b hover:bg-accent">
                         <td className="p-2 sm:p-4">
                           <div>
-                            <div className="font-medium text-sm">{offer.title}</div>
-                            <div className="text-xs text-muted-foreground">{offer.category}</div>
+                            <div className="font-medium text-sm">{offer.name}</div>
+                            <div className="text-xs text-muted-foreground">{offer.category?.name || 'Non catégorisé'}</div>
                             <div className="flex flex-wrap gap-1 mt-1">
-                              {offer.tags.slice(0, 2).map((tag, index) => (
+                              {offer.features.slice(0, 2).map((feature, index) => (
                                 <Badge key={index} className="text-xs bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400" style={{ fontSize: '0.65rem' }}>
-                                  {tag}
+                                  {feature}
                                 </Badge>
                               ))}
-                              {offer.tags.length > 2 && (
+                              {offer.features.length > 2 && (
                                 <Badge className="text-xs bg-gray-100 text-gray-800 dark:bg-gray-500/20 dark:text-gray-400" style={{ fontSize: '0.65rem' }}>
-                                  +{offer.tags.length - 2}
+                                  +{offer.features.length - 2}
                                 </Badge>
                               )}
                             </div>
@@ -549,45 +551,52 @@ export const AdminOffersPage: React.FC = () => {
                           <div className="flex items-center space-x-2">
                             <Shield className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />
                             <div>
-                              <div className="font-medium text-sm">{offer.insurer}</div>
+                              <div className="font-medium text-sm">{offer.insurer?.name || 'Assureur inconnu'}</div>
                               <div className="text-xs text-muted-foreground sm:hidden">
-                                {offer.price.toLocaleString()} {offer.currency}
+                                {offer.price_min ? `${offer.price_min.toLocaleString()} FCFA` : 'Prix sur demande'}
                               </div>
                             </div>
                           </div>
                         </td>
                         <td className="p-2 sm:p-4">
-                          <div className="font-medium text-sm">{offer.price.toLocaleString()} {offer.currency}</div>
+                          <div className="font-medium text-sm">
+                            {offer.price_min && offer.price_max
+                              ? `${offer.price_min.toLocaleString()} - ${offer.price_max.toLocaleString()} FCFA`
+                              : offer.price_min
+                                ? `${offer.price_min.toLocaleString()} FCFA`
+                                : 'Prix sur demande'
+                            }
+                          </div>
                           <div className="text-xs text-muted-foreground hidden sm:block">
                             {offer.validUntil ? `Valide jusqu'au ${offer.validUntil}` : 'Sans limite'}
                           </div>
                         </td>
                         <td className="p-2 sm:p-4">
                           <div className="flex flex-col gap-1">
-                            {getStatusBadge(offer.status)}
-                            {getPriorityBadge(offer.priority)}
+                            {getStatusBadge(offer.is_active ? 'active' : 'inactive')}
+                            {/* Priority badge removed as it doesn't exist in the new interface */}
                           </div>
                         </td>
                         <td className="p-2 sm:p-4 hidden md:table-cell">
                           <div className="space-y-1">
                             <div className="text-sm">
-                              <span className="font-medium">{offer.clicks}</span> clics
+                              <span className="font-medium">0</span> clics
                             </div>
                             <div className="text-xs">
-                              <span className="font-medium">{offer.conversions}</span> conversions
+                              <span className="font-medium">0</span> conversions
                             </div>
                             <div className="text-xs text-green-600">
-                              {offer.conversionRate.toFixed(1)}% conversion
+                              0.0% conversion
                             </div>
                           </div>
                         </td>
                         <td className="p-2 sm:p-4 hidden lg:table-cell">
                           <div className="flex items-center space-x-2">
                             <div className="flex">
-                              {renderStars(offer.averageRating)}
+                              {renderStars(offer.insurer?.rating || 0)}
                             </div>
                             <span className="text-sm text-muted-foreground">
-                              ({offer.reviewCount})
+                              (Aucun avis)
                             </span>
                           </div>
                         </td>
@@ -768,13 +777,13 @@ export const AdminOffersPage: React.FC = () => {
                               {index + 1}
                             </div>
                             <div>
-                              <div className="font-medium">{offer.title}</div>
-                              <div className="text-sm text-muted-foreground">{offer.insurer}</div>
+                              <div className="font-medium">{offer.name}</div>
+                              <div className="text-sm text-muted-foreground">{offer.insurer?.name || 'Assureur inconnu'}</div>
                             </div>
                           </div>
                           <div className="text-right">
-                            <div className="font-bold text-green-600 dark:text-green-400">{offer.conversionRate.toFixed(1)}%</div>
-                            <div className="text-sm text-muted-foreground">{offer.conversions} conversions</div>
+                            <div className="font-bold text-green-600 dark:text-green-400">0.0%</div>
+                            <div className="text-sm text-muted-foreground">0 conversions</div>
                           </div>
                         </div>
                       ))}
@@ -1238,23 +1247,26 @@ const OfferDetails: React.FC<{ offer: any }> = ({ offer }) => {
     <div className="space-y-6">
       <div className="flex items-start justify-between">
         <div>
-          <h3 className="text-xl font-bold">{offer.title}</h3>
-          <p className="text-muted-foreground mt-1">{offer.description}</p>
+          <h3 className="text-xl font-bold">{offer.name}</h3>
+          <p className="text-muted-foreground mt-1">{offer.description || 'Aucune description'}</p>
           <div className="flex items-center space-x-2 mt-2">
-            <Badge className="capitalize">{offer.category}</Badge>
-            <Badge variant="outline" className={
-              offer.status === 'active' ? 'border-green-200 bg-green-50 text-green-800 dark:border-green-500/30 dark:bg-green-500/20 dark:text-green-400' :
-              offer.status === 'pending' ? 'border-yellow-200 bg-yellow-50 text-yellow-800 dark:border-yellow-500/30 dark:bg-yellow-500/20 dark:text-yellow-400' :
-              offer.status === 'draft' ? 'border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/20 dark:text-blue-400' : 'border-gray-200 bg-gray-50 text-gray-800 dark:border-gray-500/30 dark:bg-gray-500/20 dark:text-gray-400'
-            }>
-              {offer.status}
+            <Badge className="capitalize">{offer.category?.name || 'Non catégorisé'}</Badge>
+            <Badge variant="outline" className={offer.is_active ? 'border-green-200 bg-green-50 text-green-800 dark:border-green-500/30 dark:bg-green-500/20 dark:text-green-400' : 'border-gray-200 bg-gray-50 text-gray-800 dark:border-gray-500/30 dark:bg-gray-500/20 dark:text-gray-400'}>
+              {offer.is_active ? 'Actif' : 'Inactif'}
             </Badge>
           </div>
         </div>
         <div className="text-right">
-          <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{offer.price.toLocaleString()} {offer.currency}</div>
+          <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+            {offer.price_min && offer.price_max
+              ? `${offer.price_min.toLocaleString()} - ${offer.price_max.toLocaleString()} FCFA`
+              : offer.price_min
+                ? `${offer.price_min.toLocaleString()} FCFA`
+                : 'Prix sur demande'
+            }
+          </div>
           <div className="text-sm text-muted-foreground">
-            {offer.validUntil ? `Valide jusqu'au ${offer.validUntil}` : 'Sans limite de temps'}
+            Franchise: {offer.deductible.toLocaleString()} FCFA
           </div>
         </div>
       </div>
@@ -1265,23 +1277,23 @@ const OfferDetails: React.FC<{ offer: any }> = ({ offer }) => {
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Assureur:</span>
-              <span className="font-medium">{offer.insurer}</span>
+              <span className="font-medium">{offer.insurer?.name || 'Non spécifié'}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Visibilité:</span>
-              <span className="font-medium capitalize">{offer.visibility}</span>
+              <span className="text-muted-foreground">Type de contrat:</span>
+              <span className="font-medium">{offer.contract_type || 'Non spécifié'}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Priorité:</span>
-              <span className="font-medium capitalize">{offer.priority}</span>
+              <span className="text-muted-foreground">Franchise:</span>
+              <span className="font-medium">{offer.deductible.toLocaleString()} FCFA</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Créé le:</span>
-              <span className="font-medium">{offer.createdAt}</span>
+              <span className="font-medium">{new Date(offer.created_at).toLocaleDateString()}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Modifié le:</span>
-              <span className="font-medium">{offer.updatedAt}</span>
+              <span className="font-medium">{new Date(offer.updated_at).toLocaleDateString()}</span>
             </div>
           </div>
         </div>

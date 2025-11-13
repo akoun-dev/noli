@@ -31,7 +31,9 @@ import {
   GuaranteeFormData,
   CalculationMethodType,
   TarifFixe,
-  TarifFixeFormData
+  TarifFixeFormData,
+  TarifRC,
+  TarifRCFormData
 } from '@/types/tarification';
 import {
   Plus,
@@ -49,7 +51,10 @@ import {
   Copy,
   FileText,
   Grid3X3,
-  Database
+  Database,
+  Car,
+  Zap,
+  Fuel
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -64,6 +69,63 @@ export const AdminTarificationPage: React.FC = () => {
   const [selectedCoverageId, setSelectedCoverageId] = useState<string>('')
   const [availableFormulas, setAvailableFormulas] = useState<string[]>([])
   const [selectedFormulaName, setSelectedFormulaName] = useState<string>('')
+
+  // États pour la Responsabilité Civile
+  const [tarifRC, setTarifRC] = useState<TarifRC[]>([])
+  const [showRCEditForm, setShowRCEditForm] = useState(false)
+  const [editingRC, setEditingRC] = useState<TarifRC | null>(null)
+  const [searchRCEnergy, setSearchRCEnergy] = useState<'Tous' | 'Essence' | 'Diesel'>('Tous')
+
+  // Fonctions CRUD pour les tarifs RC
+  const handleCreateRC = async (tarif: Omit<TarifRC, 'id'>) => {
+    try {
+      setLoading(true)
+      const newTarif = await guaranteeService.createTarifRC(tarif)
+      setTarifRC(prev => [...prev, newTarif])
+      toast.success('Tranche tarifaire créée avec succès')
+      setShowRCEditForm(false)
+      setEditingRC(null)
+    } catch (error) {
+      logger.error('Error creating RC tariff:', error)
+      toast.error('Erreur lors de la création de la tranche tarifaire')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleUpdateRC = async (id: string, tarif: Partial<TarifRC>) => {
+    try {
+      setLoading(true)
+      const updatedTarif = await guaranteeService.updateTarifRC(id, tarif)
+      setTarifRC(prev => prev.map(t => t.id === id ? updatedTarif : t))
+      toast.success('Tranche tarifaire mise à jour avec succès')
+      setShowRCEditForm(false)
+      setEditingRC(null)
+    } catch (error) {
+      logger.error('Error updating RC tariff:', error)
+      toast.error('Erreur lors de la mise à jour de la tranche tarifaire')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDeleteRC = async (id: string) => {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cette tranche tarifaire ?')) {
+      return
+    }
+
+    try {
+      setLoading(true)
+      await guaranteeService.deleteTarifRC(id)
+      setTarifRC(prev => prev.filter(t => t.id !== id))
+      toast.success('Tranche tarifaire supprimée avec succès')
+    } catch (error) {
+      logger.error('Error deleting RC tariff:', error)
+      toast.error('Erreur lors de la suppression de la tranche tarifaire')
+    } finally {
+      setLoading(false)
+    }
+  }
   const [statistics, setStatistics] = useState<{
     totalGuarantees: number;
     activeGuarantees: number;
@@ -159,7 +221,7 @@ export const AdminTarificationPage: React.FC = () => {
       )
       logger.debug(`AdminTarificationPage.loadData: final supaGuaranteesData length: ${supaGuaranteesData.length}`)
 
-      const [statsData, grids, fixedTariffs, fixedOptions, freeCov] = await Promise.all([
+      const [statsData, grids, fixedTariffs, fixedOptions, freeCov, rcData] = await Promise.all([
         guaranteeService.getTarificationStats(),
         guaranteeService.getTarificationGrids(), // fallback data only
         // Protège contre un Supabase local non démarré en dev
@@ -177,7 +239,9 @@ export const AdminTarificationPage: React.FC = () => {
           tarificationSupabaseService.listFreeCoverages().catch(() => []),
           5000,
           [] as Array<{ id: string; name: string; isMandatory: boolean }>
-        )
+        ),
+        // Charger les tarifs RC
+        guaranteeService.getTarificationRC().catch(() => [])
       ]);
 
       // Fallback only if explicitly allowed via env flag
@@ -203,11 +267,13 @@ export const AdminTarificationPage: React.FC = () => {
       setTarifFixes(fixedTariffs as FixedTariffItem[]);
       setFixedCoverageOptions(fixedOptions as FixedCoverageOption[])
       setFreeCoverages(freeCov)
+      setTarifRC(rcData || grids.tarifRC || [])
       logger.debug('AdminTarificationPage.loadData: done', {
         guarantees: Array.isArray(supaGuaranteesData) ? supaGuaranteesData.length : 'n/a',
         fixedTariffs: Array.isArray(fixedTariffs) ? fixedTariffs.length : 'n/a',
         fixedOptions: Array.isArray(fixedOptions) ? fixedOptions.length : 'n/a',
         freeCoverages: Array.isArray(freeCov) ? freeCov.length : 'n/a',
+        rcTarifs: Array.isArray(rcData) ? rcData.length : 'n/a',
       })
     } catch (error) {
       logger.error('Error loading data:', error);
@@ -618,8 +684,9 @@ export const AdminTarificationPage: React.FC = () => {
       )}
 
       <Tabs defaultValue="guarantees" className="space-y-4">
-        <TabsList className="grid grid-cols-1 sm:grid-cols-3 w-full">
+        <TabsList className="grid grid-cols-1 sm:grid-cols-4 w-full">
           <TabsTrigger value="guarantees" className="text-xs sm:text-sm">Garanties</TabsTrigger>
+          <TabsTrigger value="responsibility" className="text-xs sm:text-sm">Responsabilité Civile</TabsTrigger>
           <TabsTrigger value="grids" className="text-xs sm:text-sm">Grilles</TabsTrigger>
           <TabsTrigger value="statistics" className="text-xs sm:text-sm">Statistiques</TabsTrigger>
         </TabsList>
@@ -940,6 +1007,322 @@ export const AdminTarificationPage: React.FC = () => {
             </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="responsibility" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <Shield className="h-5 w-5 text-yellow-600" />
+                  <span>Grilles de Responsabilité Civile (JAUNE)</span>
+                </div>
+                <Button
+                  onClick={() => {
+                    setEditingRC(null)
+                    setShowRCEditForm(true)
+                  }}
+                  size="sm"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Ajouter une tranche
+                </Button>
+              </CardTitle>
+              <CardDescription>
+                Configurez les tarifs de la Responsabilité Civile selon la puissance fiscale et le type de moteur (Essence/Diesel)
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Filtres */}
+              <div className="flex flex-wrap gap-4 items-center">
+                <div className="flex items-center gap-2">
+                  <Fuel className="h-4 w-4 text-muted-foreground" />
+                  <Label>Filtrer par moteur:</Label>
+                  <Select
+                    value={searchRCEnergy}
+                    onValueChange={(value: 'Tous' | 'Essence' | 'Diesel') => setSearchRCEnergy(value)}
+                  >
+                    <SelectTrigger className="w-32">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Tous">Tous</SelectItem>
+                      <SelectItem value="Essence">Essence</SelectItem>
+                      <SelectItem value="Diesel">Diesel</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex-1">
+                  <div className="text-sm text-muted-foreground">
+                    {searchRCEnergy === 'Tous'
+                      ? `${tarifRC.length} tranches au total`
+                      : `${tarifRC.filter(t => t.energy === searchRCEnergy).length} tranches ${searchRCEnergy.toLowerCase()}`
+                    }
+                  </div>
+                </div>
+              </div>
+
+              {/* Tableau des tarifs RC */}
+              <div className="border rounded-lg">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Type moteur</TableHead>
+                      <TableHead>Puissance fiscale</TableHead>
+                      <TableHead>Catégorie</TableHead>
+                      <TableHead className="text-right">Prime (FCFA)</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {tarifRC
+                      .filter(tarif => searchRCEnergy === 'Tous' || tarif.energy === searchRCEnergy)
+                      .map((tarif) => (
+                      <TableRow key={tarif.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <div className={`w-3 h-3 rounded-full ${
+                              tarif.energy === 'Essence'
+                                ? 'bg-green-500'
+                                : 'bg-blue-500'
+                            }`} />
+                            {tarif.energy}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className="font-medium">
+                            {tarif.powerMin === tarif.powerMax
+                              ? `${tarif.powerMin} CV`
+                              : tarif.powerMax >= 999
+                                ? `${tarif.powerMin} CV et plus`
+                                : `${tarif.powerMin} à ${tarif.powerMax} CV`
+                            }
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs">
+                            {tarif.category}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right font-mono">
+                          {tarif.prime.toLocaleString('fr-FR')}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setEditingRC(tarif)
+                                setShowRCEditForm(true)
+                              }}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteRC(tarif.id)}
+                              disabled={loading}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Statistiques rapides */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card className="bg-green-50 border-green-200">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-green-600">Moteur Essence</p>
+                        <p className="text-2xl font-bold text-green-800">
+                          {tarifRC.filter(t => t.energy === 'Essence').length}
+                        </p>
+                      </div>
+                      <Car className="h-8 w-8 text-green-600" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-blue-50 border-blue-200">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-blue-600">Moteur Diesel</p>
+                        <p className="text-2xl font-bold text-blue-800">
+                          {tarifRC.filter(t => t.energy === 'Diesel').length}
+                        </p>
+                      </div>
+                      <Zap className="h-8 w-8 text-blue-600" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-orange-50 border-orange-200">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-orange-600">Prime moyenne</p>
+                        <p className="text-2xl font-bold text-orange-800">
+                          {tarifRC.length > 0
+                            ? Math.round(tarifRC.reduce((sum, t) => sum + t.prime, 0) / tarifRC.length).toLocaleString('fr-FR')
+                            : '0'
+                          }
+                        </p>
+                      </div>
+                      <Calculator className="h-8 w-8 text-orange-600" />
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Modal d'ajout/modification RC */}
+          {showRCEditForm && (
+            <Dialog open={showRCEditForm} onOpenChange={setShowRCEditForm}>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>
+                    {editingRC ? 'Modifier' : 'Ajouter'} une tranche tarifaire
+                  </DialogTitle>
+                  <DialogDescription>
+                    Configurez les paramètres pour la tranche de Responsabilité Civile
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="energy">Type de moteur</Label>
+                    <Select
+                      value={editingRC?.energy || 'Essence'}
+                      onValueChange={(value) =>
+                        setEditingRC(editingRC ? {...editingRC, energy: value} : {
+                          id: '',
+                          category: '401',
+                          energy: value,
+                          powerMin: 1,
+                          powerMax: 2,
+                          prime: 0
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Essence">Essence</SelectItem>
+                        <SelectItem value="Diesel">Diesel</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="powerMin">Puissance min (CV)</Label>
+                      <Input
+                        id="powerMin"
+                        type="number"
+                        min="1"
+                        value={editingRC?.powerMin || 1}
+                        onChange={(e) =>
+                          setEditingRC(editingRC ? {...editingRC, powerMin: parseInt(e.target.value) || 1} : null)
+                        }
+                      />
+                    </div>
+
+                    <div className="grid gap-2">
+                      <Label htmlFor="powerMax">Puissance max (CV)</Label>
+                      <Input
+                        id="powerMax"
+                        type="number"
+                        min="1"
+                        value={editingRC?.powerMax || 2}
+                        onChange={(e) =>
+                          setEditingRC(editingRC ? {...editingRC, powerMax: parseInt(e.target.value) || 2} : null)
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="category">Catégorie</Label>
+                    <Select
+                      value={editingRC?.category || '401'}
+                      onValueChange={(value) =>
+                        setEditingRC(editingRC ? {...editingRC, category: value} : null)
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="401">401</SelectItem>
+                        <SelectItem value="402">402</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="prime">Prime (FCFA)</Label>
+                    <Input
+                      id="prime"
+                      type="number"
+                      min="0"
+                      value={editingRC?.prime || 0}
+                      onChange={(e) =>
+                        setEditingRC(editingRC ? {...editingRC, prime: parseInt(e.target.value) || 0} : null)
+                      }
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setShowRCEditForm(false)}>
+                    Annuler
+                  </Button>
+                  <Button
+                    onClick={async () => {
+                      if (!editingRC) return
+
+                      try {
+                        if (editingRC.id) {
+                          // Mise à jour
+                          await handleUpdateRC(editingRC.id, {
+                            energy: editingRC.energy,
+                            powerMin: editingRC.powerMin,
+                            powerMax: editingRC.powerMax,
+                            category: editingRC.category,
+                            prime: editingRC.prime
+                          })
+                        } else {
+                          // Création
+                          await handleCreateRC({
+                            energy: editingRC.energy,
+                            powerMin: editingRC.powerMin,
+                            powerMax: editingRC.powerMax,
+                            category: editingRC.category,
+                            prime: editingRC.prime
+                          })
+                        }
+                      } catch (error) {
+                        // Les erreurs sont déjà gérées dans les fonctions handle*
+                      }
+                    }}
+                    disabled={loading || !editingRC}
+                  >
+                    {editingRC?.id ? 'Mettre à jour' : 'Ajouter'}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
         </TabsContent>
 
         <TabsContent value="grids" className="space-y-4">

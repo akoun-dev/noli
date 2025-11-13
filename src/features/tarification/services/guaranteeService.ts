@@ -15,15 +15,20 @@ import {
 import { supabase } from '@/lib/supabase';
 import { logger } from '@/lib/logger';
 
-// Grilles de tarification initiales basées sur le document
+// Grilles de tarification initiales basées sur le document pour la Responsabilité Civile (JAUNE)
 const initialTarifRC: TarifRC[] = [
-  { id: 'rc-1', category: '401', energy: 'Essence', powerMin: 1, powerMax: 2, prime: 68675 },
-  { id: 'rc-2', category: '401', energy: 'Diesel', powerMin: 2, powerMax: 4, prime: 87885 },
-  { id: 'rc-3', category: '401', energy: 'Essence', powerMin: 3, powerMax: 6, prime: 87885 },
-  { id: 'rc-4', category: '401', energy: 'Diesel', powerMin: 5, powerMax: 6, prime: 102345 },
-  { id: 'rc-5', category: '401', energy: 'Essence', powerMin: 7, powerMax: 9, prime: 102345 },
-  { id: 'rc-6', category: '402', energy: 'Essence', powerMin: 1, powerMax: 2, prime: 58900 },
-  { id: 'rc-7', category: '402', energy: 'Diesel', powerMin: 2, powerMax: 4, prime: 78500 },
+  // Moteur Essence
+  { id: 'rc-essence-1', category: '401', energy: 'Essence', powerMin: 1, powerMax: 2, prime: 68675 },
+  { id: 'rc-essence-2', category: '401', energy: 'Essence', powerMin: 3, powerMax: 6, prime: 87885 },
+  { id: 'rc-essence-3', category: '401', energy: 'Essence', powerMin: 7, powerMax: 9, prime: 102345 },
+  { id: 'rc-essence-4', category: '401', energy: 'Essence', powerMin: 10, powerMax: 11, prime: 124693 },
+  { id: 'rc-essence-5', category: '401', energy: 'Essence', powerMin: 12, powerMax: 999, prime: 137058 },
+  // Moteur Diesel
+  { id: 'rc-diesel-1', category: '401', energy: 'Diesel', powerMin: 1, powerMax: 1, prime: 68675 },
+  { id: 'rc-diesel-2', category: '401', energy: 'Diesel', powerMin: 2, powerMax: 4, prime: 87885 },
+  { id: 'rc-diesel-3', category: '401', energy: 'Diesel', powerMin: 5, powerMax: 6, prime: 102345 },
+  { id: 'rc-diesel-4', category: '401', energy: 'Diesel', powerMin: 7, powerMax: 8, prime: 124693 },
+  { id: 'rc-diesel-5', category: '401', energy: 'Diesel', powerMin: 9, powerMax: 999, prime: 137058 },
 ];
 
 const initialTarifICIPT: TarifICIPT[] = [
@@ -986,6 +991,90 @@ class GuaranteeService {
       averagePackagePrice,
       priceRange
     };
+  }
+
+  // Grilles de tarification RC
+  async getTarificationRC(): Promise<TarifRC[]> {
+    // Essayer de charger depuis Supabase
+    try {
+      const { supabase } = await import('@/lib/supabase');
+      const { data, error } = await supabase
+        .from('tarif_rc')
+        .select('*')
+        .order('energy', { ascending: true })
+        .order('powerMin', { ascending: true });
+
+      if (!error && data && Array.isArray(data)) {
+        logger.auth('Loaded RC tariffs from database:', data.length);
+        return data;
+      }
+    } catch (err) {
+      logger.warn('Failed to load RC tariffs from database, using defaults:', err);
+    }
+
+    // Retourner les données initiales par défaut
+    return initialTarifRC;
+  }
+
+  // CRUD operations pour les tarifs RC
+  async createTarifRC(tarif: Omit<TarifRC, 'id'>): Promise<TarifRC> {
+    const { supabase } = await import('@/lib/supabase');
+
+    const { data, error } = await supabase
+      .from('tarif_rc')
+      .insert({
+        ...tarif,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (error) {
+      logger.error('Error creating RC tariff:', error);
+      throw new Error(`Erreur lors de la création: ${error.message}`);
+    }
+
+    logger.info('RC tariff created:', data);
+    return data;
+  }
+
+  async updateTarifRC(id: string, tarif: Partial<TarifRC>): Promise<TarifRC> {
+    const { supabase } = await import('@/lib/supabase');
+
+    const { data, error } = await supabase
+      .from('tarif_rc')
+      .update({
+        ...tarif,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      logger.error('Error updating RC tariff:', error);
+      throw new Error(`Erreur lors de la mise à jour: ${error.message}`);
+    }
+
+    logger.info('RC tariff updated:', data);
+    return data;
+  }
+
+  async deleteTarifRC(id: string): Promise<void> {
+    const { supabase } = await import('@/lib/supabase');
+
+    const { error } = await supabase
+      .from('tarif_rc')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      logger.error('Error deleting RC tariff:', error);
+      throw new Error(`Erreur lors de la suppression: ${error.message}`);
+    }
+
+    logger.info('RC tariff deleted:', id);
   }
 
   // Catégories de garanties
