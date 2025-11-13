@@ -59,34 +59,6 @@ import {
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
-const RC_DESCRIPTION_DEFAULT =
-  'Couvre les dommages corporels et matériels causés aux tiers conformément à l’obligation légale.';
-
-const RC_BASE_BENEFITS = ['Dommages corporels', 'Dommages matériels'];
-
-const RC_TARIFF_REFERENCE: TarifRC[] = [
-  { id: 'rc-ref-ess-1', category: '401', energy: 'Essence', powerMin: 1, powerMax: 2, prime: 68675 },
-  { id: 'rc-ref-ess-2', category: '401', energy: 'Essence', powerMin: 3, powerMax: 6, prime: 87885 },
-  { id: 'rc-ref-ess-3', category: '401', energy: 'Essence', powerMin: 7, powerMax: 9, prime: 102345 },
-  { id: 'rc-ref-ess-4', category: '401', energy: 'Essence', powerMin: 10, powerMax: 11, prime: 124693 },
-  { id: 'rc-ref-ess-5', category: '401', energy: 'Essence', powerMin: 12, powerMax: 999, prime: 137058 },
-  { id: 'rc-ref-diesel-1', category: '401', energy: 'Diesel', powerMin: 1, powerMax: 1, prime: 68675 },
-  { id: 'rc-ref-diesel-2', category: '401', energy: 'Diesel', powerMin: 2, powerMax: 4, prime: 87885 },
-  { id: 'rc-ref-diesel-3', category: '401', energy: 'Diesel', powerMin: 5, powerMax: 6, prime: 102345 },
-  { id: 'rc-ref-diesel-4', category: '401', energy: 'Diesel', powerMin: 7, powerMax: 8, prime: 124693 },
-  { id: 'rc-ref-diesel-5', category: '401', energy: 'Diesel', powerMin: 9, powerMax: 999, prime: 137058 }
-];
-
-const formatRcPowerRange = (row: Pick<TarifRC, 'powerMin' | 'powerMax'>) => {
-  if (row.powerMin === row.powerMax) {
-    return `${row.powerMin} CV`;
-  }
-  if (row.powerMax >= 999) {
-    return `${row.powerMin} CV et +`;
-  }
-  return `${row.powerMin} – ${row.powerMax} CV`;
-};
-
 export const AdminTarificationPage: React.FC = () => {
   // Important: wait for real authentication before loading data
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -100,8 +72,6 @@ export const AdminTarificationPage: React.FC = () => {
 
   // États pour la Responsabilité Civile
   const [tarifRC, setTarifRC] = useState<TarifRC[]>([])
-  const [rcPendingPrimes, setRcPendingPrimes] = useState<Record<string, number>>({})
-  const [rcSavingRow, setRcSavingRow] = useState<string | null>(null)
   const [showRCEditForm, setShowRCEditForm] = useState(false)
   const [editingRC, setEditingRC] = useState<TarifRC | null>(null)
   const [searchRCEnergy, setSearchRCEnergy] = useState<'Tous' | 'Essence' | 'Diesel'>('Tous')
@@ -615,69 +585,6 @@ export const AdminTarificationPage: React.FC = () => {
     }
   };
 
-  const handleCalculationMethodChange = (value: CalculationMethodType) => {
-    setNewGuarantee(prev => {
-      const next: GuaranteeFormData = {
-        ...prev,
-        calculationMethod: value,
-      };
-      if (value === 'MTPL_TARIFF') {
-        next.category = 'RESPONSABILITE_CIVILE';
-        next.isOptional = false;
-        next.description = prev.description?.trim()?.length ? prev.description : RC_DESCRIPTION_DEFAULT;
-        next.fixedAmount = undefined;
-        next.rate = undefined;
-        next.minValue = undefined;
-        next.maxValue = undefined;
-      } else if (prev.calculationMethod === 'MTPL_TARIFF') {
-        next.isOptional = true;
-      }
-      return next;
-    });
-  };
-
-  useEffect(() => {
-    if (tarifRC.length === 0) {
-      setRcPendingPrimes({})
-      return
-    }
-    const nextMap: Record<string, number> = {}
-    tarifRC.forEach(row => {
-      nextMap[row.id] = row.prime
-    })
-    setRcPendingPrimes(nextMap)
-  }, [tarifRC])
-
-  const updateRcPrimeValue = (id: string, value: number) => {
-    setRcPendingPrimes(prev => ({
-      ...prev,
-      [id]: value
-    }))
-  }
-
-  const handleInlineRCSave = async (row: TarifRC) => {
-    if (!row.id || row.id.length !== 36) {
-      toast.error('Enregistrez d\'abord la grille RC dans l’onglet dédié')
-      return
-    }
-    const newPrime = rcPendingPrimes[row.id] ?? row.prime
-    if (!Number.isFinite(newPrime) || newPrime <= 0) {
-      toast.error('La prime doit être un montant positif')
-      return
-    }
-    setRcSavingRow(row.id)
-    try {
-      const updated = await guaranteeService.updateTarifRC(row.id, { prime: newPrime })
-      setTarifRC(prev => prev.map(item => (item.id === row.id ? updated : item)))
-      toast.success('Prime RC mise à jour')
-    } catch (error) {
-      logger.error('Inline RC update failed', error)
-      toast.error('Impossible de mettre à jour la prime RC')
-    } finally {
-      setRcSavingRow(null)
-    }
-  }
-
   const openEditGuaranteeDialog = (guarantee: Guarantee) => {
     setSelectedGuarantee(guarantee);
     setNewGuarantee({
@@ -705,99 +612,10 @@ export const AdminTarificationPage: React.FC = () => {
     return matchesSearch && matchesActive;
   });
 
-  const renderRCCalculationHelper = (method?: CalculationMethodType) => {
-    if (method !== 'MTPL_TARIFF') {
-      return null;
-    }
-    const rcData = tarifRC.length > 0 ? tarifRC : RC_TARIFF_REFERENCE;
-    const energies: Array<'Essence' | 'Diesel'> = ['Essence', 'Diesel'];
-
-    return (
-      <Alert className="bg-yellow-50 border-yellow-200 text-yellow-900">
-        <AlertDescription className="space-y-3 text-sm">
-          <div>
-            <p className="font-semibold text-base">Responsabilité Civile (RC)</p>
-            <p className="text-yellow-900/80">
-              Cette garantie obligatoire s&apos;appuie sur la grille réglementaire et se calcule automatiquement selon la puissance fiscale.
-            </p>
-          </div>
-
-          <ul className="list-disc pl-5 space-y-1">
-            {RC_BASE_BENEFITS.map((benefit) => (
-              <li key={benefit}>{benefit}</li>
-            ))}
-          </ul>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {energies.map((energy) => {
-              const rows = rcData.filter(row => row.energy === energy);
-              return (
-                <div key={energy} className="rounded-md border border-yellow-100 bg-white/70 p-3 shadow-sm space-y-2">
-                  <p className="font-medium text-sm text-yellow-900">{energy}</p>
-                  <div className="space-y-2 text-xs text-yellow-900">
-                    {rows.length > 0 ? (
-                      rows.map((row) => (
-                        <div
-                          key={`${row.id}-${row.powerMin}-${row.powerMax}`}
-                          className="flex flex-col gap-1 rounded-md border border-yellow-100 bg-yellow-50/60 p-2"
-                        >
-                          <div className="flex items-center justify-between text-[11px] font-semibold uppercase">
-                            <span>{formatRcPowerRange(row)}</span>
-                            <span>{row.category}</span>
-                          </div>
-
-                          {row.id && row.id.length === 36 ? (
-                            <div className="flex items-center gap-2">
-                              <Input
-                                type="number"
-                                min={0}
-                                className="h-8"
-                                value={rcPendingPrimes[row.id] ?? row.prime}
-                                onChange={(e) =>
-                                  updateRcPrimeValue(row.id, parseInt(e.target.value, 10) || 0)
-                                }
-                              />
-                              <Button
-                                size="sm"
-                                variant="secondary"
-                                disabled={rcSavingRow === row.id}
-                                onClick={() => handleInlineRCSave(row)}
-                              >
-                                {rcSavingRow === row.id ? 'Sauvegarde…' : 'Mettre à jour'}
-                              </Button>
-                            </div>
-                          ) : (
-                            <div className="text-sm font-mono">
-                              {row.prime.toLocaleString('fr-FR')} FCFA
-                            </div>
-                          )}
-                        </div>
-                      ))
-                    ) : (
-                      <span className="text-yellow-900/70">
-                        Aucune tranche définie. Utilisez l&apos;onglet «Responsabilité Civile».
-                      </span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          <p className="text-xs text-yellow-900/70">
-            Les montants se gèrent depuis l&apos;onglet «Responsabilité Civile». Cette grille sera appliquée automatiquement lors du calcul des primes.
-          </p>
-        </AlertDescription>
-      </Alert>
-    );
-  };
-
   const calculationMethods = guaranteeService.getCalculationMethods();
-  const allowedCalculationMethods: CalculationMethodType[] = ['FREE', 'FIXED_AMOUNT', 'MTPL_TARIFF'];
-  const selectableCalculationMethods = calculationMethods.filter((m) =>
-    allowedCalculationMethods.includes(m.value as CalculationMethodType)
+  const selectableCalculationMethods = calculationMethods.filter(
+    (m) => m.value === 'FREE' || m.value === 'FIXED_AMOUNT'
   );
-  const isRcMethod = newGuarantee.calculationMethod === 'MTPL_TARIFF';
 
   if (loading) {
     return (
@@ -930,7 +748,9 @@ export const AdminTarificationPage: React.FC = () => {
                           <Label>Méthode de calcul</Label>
                           <Select
                             value={newGuarantee.calculationMethod}
-                            onValueChange={(value: CalculationMethodType) => handleCalculationMethodChange(value)}
+                            onValueChange={(value: CalculationMethodType) =>
+                              setNewGuarantee(prev => ({ ...prev, calculationMethod: value }))
+                            }
                           >
                             <SelectTrigger>
                               <SelectValue />
@@ -1029,8 +849,6 @@ export const AdminTarificationPage: React.FC = () => {
                         )
                       })()}
 
-                      {renderRCCalculationHelper(newGuarantee.calculationMethod)}
-
                       <div>
                         <Label htmlFor="guarantee-conditions">Conditions</Label>
                         <Textarea
@@ -1046,20 +864,12 @@ export const AdminTarificationPage: React.FC = () => {
                         <Checkbox
                           id="guarantee-optional"
                           checked={newGuarantee.isOptional}
-                          disabled={isRcMethod}
                           onCheckedChange={(checked) =>
                             setNewGuarantee(prev => ({ ...prev, isOptional: checked as boolean }))
                           }
                         />
-                        <Label htmlFor="guarantee-optional">
-                          {isRcMethod ? 'Garantie obligatoire (Responsabilité Civile)' : 'Garantie optionnelle'}
-                        </Label>
+                        <Label htmlFor="guarantee-optional">Garantie optionnelle</Label>
                       </div>
-                      {isRcMethod && (
-                        <p className="text-xs text-muted-foreground">
-                          La Responsabilité Civile est imposée par la réglementation et ne peut pas être rendue optionnelle.
-                        </p>
-                      )}
                     </div>
                     <DialogFooter>
                       <Button variant="outline" onClick={() => setIsCreateGuaranteeDialogOpen(false)}>
@@ -2036,7 +1846,9 @@ export const AdminTarificationPage: React.FC = () => {
               <Label>Méthode de calcul</Label>
               <Select
                 value={newGuarantee.calculationMethod}
-                onValueChange={(value: CalculationMethodType) => handleCalculationMethodChange(value)}
+                onValueChange={(value: CalculationMethodType) =>
+                  setNewGuarantee((prev) => ({ ...prev, calculationMethod: value }))
+                }
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -2134,26 +1946,16 @@ export const AdminTarificationPage: React.FC = () => {
               )
             })()}
 
-            {renderRCCalculationHelper(newGuarantee.calculationMethod)}
-
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="edit-guarantee-optional"
                 checked={newGuarantee.isOptional}
-                disabled={isRcMethod}
                 onCheckedChange={(checked) =>
                   setNewGuarantee((prev) => ({ ...prev, isOptional: checked as boolean }))
                 }
               />
-              <Label htmlFor="edit-guarantee-optional">
-                {isRcMethod ? 'Garantie obligatoire (Responsabilité Civile)' : 'Garantie optionnelle'}
-              </Label>
+              <Label htmlFor="edit-guarantee-optional">Garantie optionnelle</Label>
             </div>
-            {isRcMethod && (
-              <p className="text-xs text-muted-foreground">
-                Les paramètres RC se pilotent via la grille dédiée; la garantie reste toujours active.
-              </p>
-            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditGuaranteeDialogOpen(false)}>

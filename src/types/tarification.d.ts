@@ -55,13 +55,7 @@ export interface CalculationMethod {
 
 export type CalculationMethodType =
   | 'FIXED_AMOUNT'
-  | 'FREE'
-  | 'RATE_ON_SI'
-  | 'RATE_ON_NEW_VALUE'
-  | 'MTPL_TARIFF'
-  | 'TCM_TCL_MATRIX'
-  | 'IC_IPT_FORMULA'
-  | 'CONDITIONAL_RATE';
+  | 'FREE';
 
 export interface Guarantee {
   id: string;

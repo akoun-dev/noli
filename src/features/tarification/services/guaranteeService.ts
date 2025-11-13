@@ -944,23 +944,7 @@ class GuaranteeService {
     };
   }
 
-  async updateTarifRC(data: TarifRC[]): Promise<void> {
-    const grids = await this.getTarificationGrids();
-    grids.tarifRC = data;
-    localStorage.setItem(this.gridsStorageKey, JSON.stringify(grids));
-  }
-
-  async updateTarifICIPT(data: TarifICIPT[]): Promise<void> {
-    const grids = await this.getTarificationGrids();
-    grids.tarifICIPT = data;
-    localStorage.setItem(this.gridsStorageKey, JSON.stringify(grids));
-  }
-
-  async updateTarifTCMTCL(data: TarifTCMTCL[]): Promise<void> {
-    const grids = await this.getTarificationGrids();
-    grids.tarifTCMTCL = data;
-    localStorage.setItem(this.gridsStorageKey, JSON.stringify(grids));
-  }
+  // Les méthodes de mise à jour de grilles complexes ont été supprimées avec la simplification
 
   async updateTarifFixes(data: TarifFixe[]): Promise<void> {
     const grids = await this.getTarificationGrids();
