@@ -1111,36 +1111,6 @@ class GuaranteeService {
         value: 'FIXED_AMOUNT',
         label: 'Montant Fixe',
         description: 'Prime fixe indépendante du véhicule'
-      },
-      {
-        value: 'RATE_ON_SI',
-        label: 'Taux sur Valeur Assurée',
-        description: 'Pourcentage appliqué sur la valeur vénale'
-      },
-      {
-        value: 'RATE_ON_NEW_VALUE',
-        label: 'Taux sur Valeur Neuve',
-        description: 'Pourcentage appliqué sur la valeur neuve'
-      },
-      {
-        value: 'MTPL_TARIFF',
-        label: 'Grille Responsabilité Civile',
-        description: 'Basé sur la grille officielle RC'
-      },
-      {
-        value: 'TCM_TCL_MATRIX',
-        label: 'Matrice Tierce',
-        description: 'Basé sur la grille TCM/TCL'
-      },
-      {
-        value: 'IC_IPT_FORMULA',
-        label: 'Formule IC/IPT',
-        description: 'Basé sur la grille IC/IPT'
-      },
-      {
-        value: 'CONDITIONAL_RATE',
-        label: 'Taux Conditionnel',
-        description: 'Taux variable selon conditions'
       }
     ];
   }
