@@ -416,7 +416,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => subscription.unsubscribe()
   }, [])
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string, securityContextData?: any) => {
     logger.auth('🔐 AuthContext.login appelé avec:', email)
     setState((prev) => ({ ...prev, isLoading: true }))
 
@@ -440,7 +440,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       })
 
       logger.auth("🎉 État mis à jour, retour de l'utilisateur:", response.user)
-      return response.user
+
+      // Retourner le format attendu par la page de login
+      return {
+        user: response.user,
+        rateLimitInfo: response.rateLimitInfo,
+        captchaRequired: response.captchaRequired,
+        securityAlerts: response.securityAlerts
+      }
     } catch (error) {
       logger.error('❌ Erreur dans AuthContext.login:', error)
       setState((prev) => ({ ...prev, isLoading: false }))

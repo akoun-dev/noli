@@ -34,7 +34,7 @@ export const useSecurityContext = () => {
   useEffect(() => {
     const generateDeviceFingerprint = async () => {
       try {
-        const fingerprint = securityManager.generateDeviceFingerprint()
+        const fingerprint = anomalyDetector.generateDeviceFingerprint()
 
         setSecurityContext(prev => ({
           ...prev,

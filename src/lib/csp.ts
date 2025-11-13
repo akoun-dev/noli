@@ -58,6 +58,7 @@ export class CSPManager {
         'https://www.google-analytics.com',
         'wss://api.supabase.co',
         'wss://*.supabase.co', // Support pour les WebSockets dynamiques Supabase
+        'https://ipapi.co', // API pour la détection d'IP et de localisation
         // Ajout des URLs locales pour le développement
         'http://127.0.0.1:54321',
         'https://127.0.0.1:54321',
@@ -112,6 +113,7 @@ export class CSPManager {
         'https://cdn.supabase.co',
         'https://brznmveoycrwlyksffvh.supabase.co', // URL directe du projet
         'wss://brznmveoycrwlyksffvh.supabase.co', // WebSocket direct
+        'https://ipapi.co', // API pour la détection d'IP et de localisation
       ],
       'frame-src': ["'none'"],
       'object-src': ["'none'"],
@@ -210,6 +212,7 @@ export class CSPManager {
         'https://localhost:54321',
         'ws://localhost:54321',
         'wss://localhost:54321',
+        'https://ipapi.co', // API pour la détection d'IP et de localisation
       ],
       'frame-src': ["'none'"],
       'object-src': ["'none'"],

@@ -191,6 +191,18 @@ const LoginPage = () => {
       })
 
       logger.auth('🔄 Préparation de la redirection...')
+
+      // Vérification de sécurité - s'assurer que l'utilisateur et son rôle existent
+      if (!result.user || !result.user.role) {
+        logger.auth('❌ Erreur: utilisateur ou rôle non défini après connexion')
+        toast({
+          title: 'Erreur de connexion',
+          description: 'Impossible de récupérer les informations utilisateur. Veuillez réessayer.',
+          variant: 'destructive'
+        })
+        return
+      }
+
       // Redirect by role after successful login
       const redirectMap: Record<typeof result.user.role, string> = {
         USER: '/tableau-de-bord',
