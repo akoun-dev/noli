@@ -6,7 +6,12 @@ import {
   Guarantee,
   InsurancePackage,
   TarificationGrids,
-  TarifFixe
+  TarifFixe,
+  ICFormulaConfig,
+  ICIPTConfig,
+  IPTFormulaConfig,
+  IPTConfig,
+  IPTPlacesTariff
 } from '@/types/tarification';
 import { guaranteeService } from './guaranteeService';
 import { logger } from '@/lib/logger';
@@ -148,6 +153,22 @@ export class PricingService {
         const { amount, details } = this.calculateMTPLTariffAmount(vehicle, guarantee);
         calculatedPrice = amount;
         pricingMethod = 'Responsabilité Civile (grille tarification)';
+        calculationDetails = details;
+        break;
+      }
+
+      case 'IC_IPT_FORMULA': {
+        const { amount, details } = this.calculateICIPTFormulaAmount(guarantee, parameters);
+        calculatedPrice = amount;
+        pricingMethod = 'Individuelle Conducteur / Passagers (formules)';
+        calculationDetails = details;
+        break;
+      }
+
+      case 'IPT_PLACES_FORMULA': {
+        const { amount, details } = this.calculateIPTPlacesFormulaAmount(vehicle, guarantee, parameters);
+        calculatedPrice = amount;
+        pricingMethod = 'Individuelle Personnes Transportées (formules par places)';
         calculationDetails = details;
         break;
       }
@@ -450,6 +471,208 @@ export class PricingService {
         tarifId: applicableTarif.id,
         isDefaultTarif: true,
       },
+    };
+  }
+
+  private static calculateICIPTFormulaAmount(guarantee?: Guarantee, parameters?: any): {
+    amount: number;
+    details: Record<string, any>;
+  } {
+    // Formules par défaut basées sur les spécifications
+    const defaultFormulas: ICFormulaConfig[] = [
+      {
+        formula: 1,
+        capitalDeces: 1000000,
+        capitalInvalidite: 2000000,
+        fraisMedicaux: 100000,
+        prime: 5500,
+        label: 'Formule 1'
+      },
+      {
+        formula: 2,
+        capitalDeces: 3000000,
+        capitalInvalidite: 6000000,
+        fraisMedicaux: 400000,
+        prime: 8400,
+        label: 'Formule 2'
+      },
+      {
+        formula: 3,
+        capitalDeces: 5000000,
+        capitalInvalidite: 10000000,
+        fraisMedicaux: 500000,
+        prime: 15900,
+        label: 'Formule 3'
+      }
+    ];
+
+    // Obtenir la configuration depuis les parameters ou utiliser les valeurs par défaut
+    const icIptConfig: ICIPTConfig = guarantee?.parameters?.icIptConfig ?? {
+      defaultFormula: 1,
+      formulas: defaultFormulas
+    };
+
+    // Utiliser les formules personnalisées si elles existent, sinon utiliser les défauts
+    const formulas = icIptConfig.formulas && icIptConfig.formulas.length > 0
+      ? icIptConfig.formulas
+      : defaultFormulas;
+
+    // Obtenir la formule sélectionnée (depuis les parameters ou la formule par défaut)
+    const selectedFormula = parameters?.formula_name
+      ? parseInt(parameters.formula_name.replace('formula_', ''))
+      : icIptConfig.defaultFormula ?? 1;
+
+    // Trouver la formule correspondante
+    const formula = formulas.find(f => f.formula === selectedFormula) || formulas[0];
+
+    if (!formula) {
+      return {
+        amount: 0,
+        details: {
+          error: 'No formula found',
+          selectedFormula,
+          availableFormulas: formulas.length
+        }
+      };
+    }
+
+    return {
+      amount: formula.prime,
+      details: {
+        selectedFormula: formula.formula,
+        formulaLabel: formula.label,
+        capitalDeces: formula.capitalDeces,
+        capitalInvalidite: formula.capitalInvalidite,
+        fraisMedicaux: formula.fraisMedicaux,
+        prime: formula.prime,
+        isCustomConfig: !!guarantee?.parameters?.icIptConfig?.formulas
+      }
+    };
+  }
+
+  private static calculateIPTPlacesFormulaAmount(vehicle: Vehicle, guarantee?: Guarantee, parameters?: any): {
+    amount: number;
+    details: Record<string, any>;
+  } {
+    // Formules par défaut basées sur les spécifications
+    const defaultFormulas: IPTFormulaConfig[] = [
+      {
+        formula: 1,
+        capitalDeces: 1000000,
+        capitalInvalidite: 2000000,
+        fraisMedicaux: 100000,
+        prime: 0, // Sera déterminé par le nombre de places
+        label: 'Formule 1',
+        placesTariffs: [
+          { places: 3, prime: 8400, label: '3 places' },
+          { places: 4, prime: 10200, label: '4 places' },
+          { places: 5, prime: 16000, label: '5 places' },
+          { places: 6, prime: 17800, label: '6 places' },
+          { places: 7, prime: 19600, label: '7 places' },
+          { places: 8, prime: 25400, label: '8 places' }
+        ]
+      },
+      {
+        formula: 2,
+        capitalDeces: 3000000,
+        capitalInvalidite: 6000000,
+        fraisMedicaux: 400000,
+        prime: 0, // Sera déterminé par le nombre de places
+        label: 'Formule 2',
+        placesTariffs: [
+          { places: 3, prime: 10000, label: '3 places' },
+          { places: 4, prime: 11000, label: '4 places' },
+          { places: 5, prime: 17000, label: '5 places' },
+          { places: 6, prime: 18000, label: '6 places' },
+          { places: 7, prime: 27000, label: '7 places' },
+          { places: 8, prime: 32000, label: '8 places' }
+        ]
+      },
+      {
+        formula: 3,
+        capitalDeces: 5000000,
+        capitalInvalidite: 10000000,
+        fraisMedicaux: 500000,
+        prime: 0, // Sera déterminé par le nombre de places
+        label: 'Formule 3',
+        placesTariffs: [
+          { places: 3, prime: 18000, label: '3 places' },
+          { places: 4, prime: 16000, label: '4 places' },
+          { places: 5, prime: 30800, label: '5 places' },
+          { places: 6, prime: 32000, label: '6 places' },
+          { places: 7, prime: 33000, label: '7 places' },
+          { places: 8, prime: 35000, label: '8 places' }
+        ]
+      }
+    ];
+
+    // Obtenir la configuration depuis les parameters ou utiliser les valeurs par défaut
+    const iptConfig: IPTConfig = guarantee?.parameters?.iptConfig ?? {
+      defaultFormula: 1,
+      formulas: defaultFormulas
+    };
+
+    // Utiliser les formules personnalisées si elles existent, sinon utiliser les défauts
+    const formulas = iptConfig.formulas && iptConfig.formulas.length > 0
+      ? iptConfig.formulas
+      : defaultFormulas;
+
+    // Obtenir le nombre de places du véhicule
+    const vehiclePlaces = vehicle?.seats ?? parameters?.seats ?? vehicle?.passengerSeats ?? 5;
+
+    // Obtenir la formule sélectionnée (depuis les parameters ou la formule par défaut)
+    const selectedFormula = parameters?.formula_name
+      ? parseInt(parameters.formula_name.replace('formula_', ''))
+      : iptConfig.defaultFormula ?? 1;
+
+    // Trouver la formule correspondante
+    const formula = formulas.find(f => f.formula === selectedFormula) || formulas[0];
+
+    if (!formula) {
+      return {
+        amount: 0,
+        details: {
+          error: 'No formula found',
+          selectedFormula,
+          availableFormulas: formulas.length,
+          vehiclePlaces
+        }
+      };
+    }
+
+    // Utiliser les tarifs personnalisés ou les défauts
+    const placesTariffs = formula.placesTariffs ?? defaultFormulas[selectedFormula - 1].placesTariffs;
+
+    // Trouver le tarif correspondant au nombre de places
+    const applicableTariff = placesTariffs.find(tariff => tariff.places >= vehiclePlaces)
+      || placesTariffs[placesTariffs.length - 1]; // Utiliser le tarif le plus élevé si aucune correspondance exacte
+
+    if (!applicableTariff) {
+      return {
+        amount: 0,
+        details: {
+          error: 'No tariff found for vehicle places',
+          selectedFormula,
+          vehiclePlaces,
+          availableTariffs: placesTariffs.length
+        }
+      };
+    }
+
+    return {
+      amount: applicableTariff.prime,
+      details: {
+        selectedFormula: formula.formula,
+        formulaLabel: formula.label,
+        vehiclePlaces,
+        appliedTariffPlaces: applicableTariff.places,
+        capitalDeces: formula.capitalDeces,
+        capitalInvalidite: formula.capitalInvalidite,
+        fraisMedicaux: formula.fraisMedicaux,
+        prime: applicableTariff.prime,
+        isCustomConfig: !!guarantee?.parameters?.iptConfig?.formulas,
+        availableTariffs: placesTariffs.length
+      }
     };
   }
 

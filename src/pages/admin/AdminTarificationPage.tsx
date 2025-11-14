@@ -36,7 +36,10 @@ import {
   TarifFixeFormData,
   TarifRC,
   TarifRCFormData,
-  FireTheftConfig
+  FireTheftConfig,
+  IPTFormulaConfig,
+  IPTConfig,
+  IPTPlacesTariff
 } from '@/types/tarification';
 import {
   Plus,
@@ -785,7 +788,7 @@ export const AdminTarificationPage: React.FC = () => {
 
   const calculationMethods = guaranteeService.getCalculationMethods();
   const selectableCalculationMethods = calculationMethods.filter(
-    (m) => ['FREE', 'FIXED_AMOUNT', 'FIRE_THEFT', 'THEFT_ARMED', 'GLASS_ROOF', 'MTPL_TARIFF'].includes(m.value)
+    (m) => ['FREE', 'FIXED_AMOUNT', 'FIRE_THEFT', 'THEFT_ARMED', 'GLASS_ROOF', 'MTPL_TARIFF', 'IC_IPT_FORMULA', 'IPT_PLACES_FORMULA'].includes(m.value)
   );
 
   const removeFireTheftConfig = (parameters?: Guarantee['parameters']) => {
@@ -833,6 +836,190 @@ export const AdminTarificationPage: React.FC = () => {
       return;
     }
     updateMTPLTariffConfig({ [key]: parsed });
+  };
+
+  // Configuration pour IC/IPT Formules
+  const updateICIPTConfig = (updates: any) => {
+    setNewGuarantee((prev) => {
+      const nextParams = { ...(prev.parameters ?? {}) };
+      nextParams.icIptConfig = {
+        ...(nextParams.icIptConfig ?? {}),
+        ...updates,
+      };
+      return {
+        ...prev,
+        parameters: nextParams,
+      };
+    });
+  };
+
+  const handleFormulaChange = (formulaNumber: number, field: string, value: string) => {
+    const parsed = parseInt(value, 10);
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      return;
+    }
+
+    setNewGuarantee((prev) => {
+      const nextParams = { ...(prev.parameters ?? {}) };
+      const currentConfig = nextParams.icIptConfig ?? { defaultFormula: 1, formulas: [] };
+      const formulas = [...(currentConfig.formulas ?? [])];
+
+      // Trouver ou créer la formule
+      let formula = formulas.find(f => f.formula === formulaNumber);
+      if (!formula) {
+        formula = {
+          formula: formulaNumber,
+          capitalDeces: 0,
+          capitalInvalidite: 0,
+          fraisMedicaux: 0,
+          prime: 0,
+          label: `Formule ${formulaNumber}`
+        };
+        formulas.push(formula);
+      }
+
+      // Mettre à jour le champ
+      (formula as any)[field] = parsed;
+
+      nextParams.icIptConfig = {
+        ...currentConfig,
+        formulas
+      };
+
+      return {
+        ...prev,
+        parameters: nextParams,
+      };
+    });
+  };
+
+  const handleDefaultFormulaChange = (value: string) => {
+    const parsed = parseInt(value, 10);
+    if (!Number.isFinite(parsed) || parsed < 1 || parsed > 3) {
+      return;
+    }
+    updateICIPTConfig({ defaultFormula: parsed });
+  };
+
+  // Configuration pour IPT Formules par places
+  const updateIPTConfig = (updates: any) => {
+    setNewGuarantee((prev) => {
+      const nextParams = { ...(prev.parameters ?? {}) };
+      nextParams.iptConfig = {
+        ...(nextParams.iptConfig ?? {}),
+        ...updates,
+      };
+      return {
+        ...prev,
+        parameters: nextParams,
+      };
+    });
+  };
+
+  const handleIPTFormulaChange = (formulaNumber: number, field: string, value: string) => {
+    const parsed = parseInt(value, 10);
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      return;
+    }
+
+    setNewGuarantee((prev) => {
+      const nextParams = { ...(prev.parameters ?? {}) };
+      const currentConfig = nextParams.iptConfig ?? { defaultFormula: 1, formulas: [] };
+      const formulas = [...(currentConfig.formulas ?? [])];
+
+      // Trouver ou créer la formule
+      let formula = formulas.find(f => f.formula === formulaNumber);
+      if (!formula) {
+        formula = {
+          formula: formulaNumber,
+          capitalDeces: 0,
+          capitalInvalidite: 0,
+          fraisMedicaux: 0,
+          prime: 0,
+          label: `Formule ${formulaNumber}`,
+          placesTariffs: []
+        };
+        formulas.push(formula);
+      }
+
+      // Mettre à jour le champ
+      (formula as any)[field] = parsed;
+
+      nextParams.iptConfig = {
+        ...currentConfig,
+        formulas
+      };
+
+      return {
+        ...prev,
+        parameters: nextParams,
+      };
+    });
+  };
+
+  const handleIPTPlacesTariffChange = (formulaNumber: number, places: number, value: string) => {
+    const parsed = parseInt(value, 10);
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      return;
+    }
+
+    setNewGuarantee((prev) => {
+      const nextParams = { ...(prev.parameters ?? {}) };
+      const currentConfig = nextParams.iptConfig ?? { defaultFormula: 1, formulas: [] };
+      const formulas = [...(currentConfig.formulas ?? [])];
+
+      // Trouver ou créer la formule
+      let formula = formulas.find(f => f.formula === formulaNumber);
+      if (!formula) {
+        formula = {
+          formula: formulaNumber,
+          capitalDeces: 0,
+          capitalInvalidite: 0,
+          fraisMedicaux: 0,
+          prime: 0,
+          label: `Formule ${formulaNumber}`,
+          placesTariffs: []
+        };
+        formulas.push(formula);
+      }
+
+      // S'assurer que placesTariffs existe
+      if (!formula.placesTariffs) {
+        formula.placesTariffs = [];
+      }
+
+      // Trouver ou créer le tarif pour ce nombre de places
+      let placesTariff = formula.placesTariffs.find(t => t.places === places);
+      if (!placesTariff) {
+        placesTariff = {
+          places,
+          prime: 0,
+          label: `${places} places`
+        };
+        formula.placesTariffs.push(placesTariff);
+      }
+
+      // Mettre à jour la prime
+      placesTariff.prime = parsed;
+
+      nextParams.iptConfig = {
+        ...currentConfig,
+        formulas
+      };
+
+      return {
+        ...prev,
+        parameters: nextParams,
+      };
+    });
+  };
+
+  const handleIPTDefaultFormulaChange = (value: string) => {
+    const parsed = parseInt(value, 10);
+    if (!Number.isFinite(parsed) || parsed < 1 || parsed > 3) {
+      return;
+    }
+    updateIPTConfig({ defaultFormula: parsed });
   };
 
   const removeTierceCapConfig = (parameters?: Guarantee['parameters']) => {
@@ -1539,6 +1726,348 @@ export const AdminTarificationPage: React.FC = () => {
     );
   };
 
+  const renderICIPTFormulaConfigSection = () => {
+    const method = newGuarantee.calculationMethod;
+    if (method !== 'IC_IPT_FORMULA') {
+      return null;
+    }
+
+    const config = newGuarantee.parameters?.icIptConfig ?? {};
+
+    // Valeurs par défaut basées sur les spécifications
+    const defaultFormulas = [
+      {
+        formula: 1,
+        capitalDeces: 1000000,
+        capitalInvalidite: 2000000,
+        fraisMedicaux: 100000,
+        prime: 5500,
+        label: 'Formule 1'
+      },
+      {
+        formula: 2,
+        capitalDeces: 3000000,
+        capitalInvalidite: 6000000,
+        fraisMedicaux: 400000,
+        prime: 8400,
+        label: 'Formule 2'
+      },
+      {
+        formula: 3,
+        capitalDeces: 5000000,
+        capitalInvalidite: 10000000,
+        fraisMedicaux: 500000,
+        prime: 15900,
+        label: 'Formule 3'
+      }
+    ];
+
+    const formulas = config.formulas && config.formulas.length > 0
+      ? config.formulas
+      : defaultFormulas;
+
+    const getFormulaValue = (formulaNumber: number, field: string) => {
+      const formula = formulas.find(f => f.formula === formulaNumber);
+      return formula ? (formula as any)[field] : defaultFormulas[formulaNumber - 1][field as keyof typeof defaultFormulas[0]];
+    };
+
+    return (
+      <Card className="border border-dashed">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Configuration Individuelle Conducteur / Passagers</CardTitle>
+          <CardDescription>
+            Modifiez les capitaux et primes pour chaque formule de garantie.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Sélection de la formule par défaut */}
+          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <Label className="text-sm font-medium text-blue-900">Formule par défaut</Label>
+            <Select
+              value={config.defaultFormula?.toString() ?? '1'}
+              onValueChange={handleDefaultFormulaChange}
+            >
+              <SelectTrigger className="w-32 mt-2">
+                <SelectValue placeholder="Formule par défaut" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">Formule 1</SelectItem>
+                <SelectItem value="2">Formule 2</SelectItem>
+                <SelectItem value="3">Formule 3</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Configuration des formules */}
+          <div className="space-y-6">
+            {[1, 2, 3].map(formulaNumber => (
+              <div key={formulaNumber} className="border border-gray-200 rounded-lg p-4">
+                <h4 className="font-semibold text-sm mb-4 flex items-center gap-2">
+                  <span className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-bold">
+                    {formulaNumber}
+                  </span>
+                  Formule {formulaNumber}
+                </h4>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+                  <div>
+                    <Label className="text-gray-700">Capital Décès (FCFA)</Label>
+                    <Input
+                      type="number"
+                      value={getFormulaValue(formulaNumber, 'capitalDeces')}
+                      onChange={(e) => handleFormulaChange(formulaNumber, 'capitalDeces', e.target.value)}
+                      className="mt-1 h-8 text-xs"
+                      min="0"
+                      step="100000"
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-gray-700">Capital Invalidité (FCFA)</Label>
+                    <Input
+                      type="number"
+                      value={getFormulaValue(formulaNumber, 'capitalInvalidite')}
+                      onChange={(e) => handleFormulaChange(formulaNumber, 'capitalInvalidite', e.target.value)}
+                      className="mt-1 h-8 text-xs"
+                      min="0"
+                      step="100000"
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-gray-700">Frais Médicaux (FCFA)</Label>
+                    <Input
+                      type="number"
+                      value={getFormulaValue(formulaNumber, 'fraisMedicaux')}
+                      onChange={(e) => handleFormulaChange(formulaNumber, 'fraisMedicaux', e.target.value)}
+                      className="mt-1 h-8 text-xs"
+                      min="0"
+                      step="10000"
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-gray-700">PRIME (FCFA)</Label>
+                    <Input
+                      type="number"
+                      value={getFormulaValue(formulaNumber, 'prime')}
+                      onChange={(e) => handleFormulaChange(formulaNumber, 'prime', e.target.value)}
+                      className="mt-1 h-8 text-xs font-semibold text-green-700 border-green-200 focus:border-green-400"
+                      min="0"
+                      step="100"
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+            <p className="text-sm text-amber-800">
+              <strong>Note:</strong> Les capitaux et primes modifiés ici seront appliqués automatiquement lors du calcul.
+              La formule par défaut est sélectionnée automatiquement sauf si une autre est spécifiée manuellement.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const renderIPTPlacesFormulaConfigSection = () => {
+    const method = newGuarantee.calculationMethod;
+    if (method !== 'IPT_PLACES_FORMULA') {
+      return null;
+    }
+
+    const config = newGuarantee.parameters?.iptConfig ?? {};
+
+    // Valeurs par défaut basées sur les spécifications
+    const defaultFormulas: IPTFormulaConfig[] = [
+      {
+        formula: 1,
+        capitalDeces: 1000000,
+        capitalInvalidite: 2000000,
+        fraisMedicaux: 100000,
+        prime: 0,
+        label: 'Formule 1',
+        placesTariffs: [
+          { places: 3, prime: 8400, label: '3 places' },
+          { places: 4, prime: 10200, label: '4 places' },
+          { places: 5, prime: 16000, label: '5 places' },
+          { places: 6, prime: 17800, label: '6 places' },
+          { places: 7, prime: 19600, label: '7 places' },
+          { places: 8, prime: 25400, label: '8 places' }
+        ]
+      },
+      {
+        formula: 2,
+        capitalDeces: 3000000,
+        capitalInvalidite: 6000000,
+        fraisMedicaux: 400000,
+        prime: 0,
+        label: 'Formule 2',
+        placesTariffs: [
+          { places: 3, prime: 10000, label: '3 places' },
+          { places: 4, prime: 11000, label: '4 places' },
+          { places: 5, prime: 17000, label: '5 places' },
+          { places: 6, prime: 18000, label: '6 places' },
+          { places: 7, prime: 27000, label: '7 places' },
+          { places: 8, prime: 32000, label: '8 places' }
+        ]
+      },
+      {
+        formula: 3,
+        capitalDeces: 5000000,
+        capitalInvalidite: 10000000,
+        fraisMedicaux: 500000,
+        prime: 0,
+        label: 'Formule 3',
+        placesTariffs: [
+          { places: 3, prime: 18000, label: '3 places' },
+          { places: 4, prime: 16000, label: '4 places' },
+          { places: 5, prime: 30800, label: '5 places' },
+          { places: 6, prime: 32000, label: '6 places' },
+          { places: 7, prime: 33000, label: '7 places' },
+          { places: 8, prime: 35000, label: '8 places' }
+        ]
+      }
+    ];
+
+    const formulas = config.formulas && config.formulas.length > 0
+      ? config.formulas
+      : defaultFormulas;
+
+    const getFormulaValue = (formulaNumber: number, field: string) => {
+      const formula = formulas.find(f => f.formula === formulaNumber);
+      return formula ? (formula as any)[field] : defaultFormulas[formulaNumber - 1][field as keyof typeof defaultFormulas[0]];
+    };
+
+    const getPlacesTariffValue = (formulaNumber: number, places: number) => {
+      const formula = formulas.find(f => f.formula === formulaNumber);
+      if (formula && formula.placesTariffs) {
+        const placesTariff = formula.placesTariffs.find(t => t.places === places);
+        return placesTariff ? placesTariff.prime : defaultFormulas[formulaNumber - 1].placesTariffs?.find(t => t.places === places)?.prime ?? 0;
+      }
+      return defaultFormulas[formulaNumber - 1].placesTariffs?.find(t => t.places === places)?.prime ?? 0;
+    };
+
+    const placesOptions = [3, 4, 5, 6, 7, 8];
+
+    return (
+      <Card className="border border-dashed">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Configuration Individuelle Personnes Transportées</CardTitle>
+          <CardDescription>
+            Modifiez les capitaux et les primes selon le nombre de places pour chaque formule.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Sélection de la formule par défaut */}
+          <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+            <Label className="text-sm font-medium text-green-900">Formule par défaut</Label>
+            <Select
+              value={config.defaultFormula?.toString() ?? '1'}
+              onValueChange={handleIPTDefaultFormulaChange}
+            >
+              <SelectTrigger className="w-32 mt-2">
+                <SelectValue placeholder="Formule par défaut" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">Formule 1</SelectItem>
+                <SelectItem value="2">Formule 2</SelectItem>
+                <SelectItem value="3">Formule 3</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Configuration des formules */}
+          <div className="space-y-6">
+            {[1, 2, 3].map(formulaNumber => (
+              <div key={formulaNumber} className="border border-gray-200 rounded-lg p-4">
+                <h4 className="font-semibold text-sm mb-4 flex items-center gap-2">
+                  <span className="w-6 h-6 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-xs font-bold">
+                    {formulaNumber}
+                  </span>
+                  Formule {formulaNumber}
+                </h4>
+
+                {/* Capitaux */}
+                <div className="mb-4">
+                  <h5 className="text-xs font-medium text-gray-600 mb-2">CAPITAUX PAR PERSONNE</h5>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div>
+                      <Label className="text-gray-700">Capital Décès (FCFA)</Label>
+                      <Input
+                        type="number"
+                        value={getFormulaValue(formulaNumber, 'capitalDeces')}
+                        onChange={(e) => handleIPTFormulaChange(formulaNumber, 'capitalDeces', e.target.value)}
+                        className="mt-1 h-8 text-xs"
+                        min="0"
+                        step="100000"
+                      />
+                    </div>
+
+                    <div>
+                      <Label className="text-gray-700">Capital Invalidité (FCFA)</Label>
+                      <Input
+                        type="number"
+                        value={getFormulaValue(formulaNumber, 'capitalInvalidite')}
+                        onChange={(e) => handleIPTFormulaChange(formulaNumber, 'capitalInvalidite', e.target.value)}
+                        className="mt-1 h-8 text-xs"
+                        min="0"
+                        step="100000"
+                      />
+                    </div>
+
+                    <div>
+                      <Label className="text-gray-700">Frais Médicaux (FCFA)</Label>
+                      <Input
+                        type="number"
+                        value={getFormulaValue(formulaNumber, 'fraisMedicaux')}
+                        onChange={(e) => handleIPTFormulaChange(formulaNumber, 'fraisMedicaux', e.target.value)}
+                        className="mt-1 h-8 text-xs"
+                        min="0"
+                        step="10000"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tarifs par places */}
+                <div>
+                  <h5 className="text-xs font-medium text-gray-600 mb-2">PRIMES SELON NOMBRE DE PLACES</h5>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 text-sm">
+                    {placesOptions.map(places => (
+                      <div key={places} className="bg-gray-50 rounded p-2">
+                        <Label className="text-xs text-gray-600">{places} places</Label>
+                        <Input
+                          type="number"
+                          value={getPlacesTariffValue(formulaNumber, places)}
+                          onChange={(e) => handleIPTPlacesTariffChange(formulaNumber, places, e.target.value)}
+                          className="mt-1 h-8 text-xs font-semibold text-green-700 border-green-200 focus:border-green-400"
+                          min="0"
+                          step="100"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+            <p className="text-sm text-amber-800">
+              <strong>Note:</strong> Les capitaux et primes modifiés ici seront appliqués automatiquement lors du calcul.
+              Le tarif applicable est celui correspondant au nombre de places du véhicule (tarif supérieur si pas de correspondance exacte).
+              La formule par défaut est sélectionnée automatiquement sauf si une autre est spécifiée manuellement.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -1831,7 +2360,9 @@ export const AdminTarificationPage: React.FC = () => {
                       {(newGuarantee.calculationMethod === 'FIRE_THEFT' ||
                         newGuarantee.calculationMethod === 'THEFT_ARMED' ||
                         newGuarantee.calculationMethod === 'GLASS_ROOF' ||
-                        newGuarantee.calculationMethod === 'MTPL_TARIFF') && (
+                        newGuarantee.calculationMethod === 'MTPL_TARIFF' ||
+                        newGuarantee.calculationMethod === 'IC_IPT_FORMULA' ||
+                        newGuarantee.calculationMethod === 'IPT_PLACES_FORMULA') && (
                         <Card className="border border-gray-200 shadow-sm">
                           <CardHeader className="pb-3 bg-gray-50/50">
                             <CardTitle className="text-base flex items-center gap-2">
@@ -1850,6 +2381,8 @@ export const AdminTarificationPage: React.FC = () => {
                             {renderGlassStandardConfigSection()}
                             {renderTierceCapConfigSection()}
                             {renderMTPLTariffConfigSection()}
+                            {renderICIPTFormulaConfigSection()}
+                            {renderIPTPlacesFormulaConfigSection()}
                           </CardContent>
                         </Card>
                       )}
@@ -2604,7 +3137,9 @@ export const AdminTarificationPage: React.FC = () => {
             {(newGuarantee.calculationMethod === 'FIRE_THEFT' ||
               newGuarantee.calculationMethod === 'THEFT_ARMED' ||
               newGuarantee.calculationMethod === 'GLASS_ROOF' ||
-              newGuarantee.calculationMethod === 'MTPL_TARIFF') && (
+              newGuarantee.calculationMethod === 'MTPL_TARIFF' ||
+              newGuarantee.calculationMethod === 'IC_IPT_FORMULA' ||
+              newGuarantee.calculationMethod === 'IPT_PLACES_FORMULA') && (
               <Card className="border border-gray-200 shadow-sm">
                 <CardHeader className="pb-3 bg-gray-50/50">
                   <CardTitle className="text-base flex items-center gap-2">
@@ -2623,6 +3158,8 @@ export const AdminTarificationPage: React.FC = () => {
                   {renderGlassStandardConfigSection()}
                   {renderTierceCapConfigSection()}
                   {renderMTPLTariffConfigSection()}
+                  {renderICIPTFormulaConfigSection()}
+                  {renderIPTPlacesFormulaConfigSection()}
                 </CardContent>
               </Card>
             )}

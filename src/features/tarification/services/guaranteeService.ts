@@ -106,14 +106,14 @@ const initialGuarantees: Guarantee[] = [
   },
   {
     id: 'guar-4',
-    name: 'Individuelle Passagers',
+    name: 'Individuelle Personnes Transportées',
     code: 'IPT',
     category: 'INDIVIDUELLE_PASSAGERS',
-    description: 'Protection des passagers en cas d\'accident',
-    calculationMethod: 'IC_IPT_FORMULA',
+    description: 'Protection des passagers en cas d\'accident avec tarification par nombre de places',
+    calculationMethod: 'IPT_PLACES_FORMULA',
     isOptional: true,
     isActive: true,
-    conditions: 'Choix de formule (1 ou 2)',
+    conditions: 'Choix de formule (1, 2 ou 3) selon le nombre de places',
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-01'),
     createdBy: 'admin'
@@ -1162,6 +1162,16 @@ class GuaranteeService {
         value: 'MTPL_TARIFF',
         label: 'Responsabilité Civile',
         description: 'Grille de tarification selon puissance fiscale et type de moteur'
+      },
+      {
+        value: 'IC_IPT_FORMULA',
+        label: 'Individuelle Conducteur / Passagers',
+        description: 'Formules prédéfinies avec capitaux et primes fixes'
+      },
+      {
+        value: 'IPT_PLACES_FORMULA',
+        label: 'Individuelle Personnes Transportées',
+        description: 'Formules avec tarification par nombre de places du véhicule'
       }
     ];
   }

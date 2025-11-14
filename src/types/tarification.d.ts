@@ -85,11 +85,42 @@ export interface TierceCapConfig {
   options: TierceFranchiseOption[];
 }
 
+export interface ICFormulaConfig {
+  formula: number;
+  capitalDeces: number;
+  capitalInvalidite: number;
+  fraisMedicaux: number;
+  prime: number;
+  label: string;
+}
+
+export interface IPTPlacesTariff {
+  places: number;
+  prime: number;
+  label: string;
+}
+
+export interface IPTFormulaConfig extends ICFormulaConfig {
+  placesTariffs?: IPTPlacesTariff[];
+}
+
+export interface ICIPTConfig {
+  defaultFormula?: number;
+  formulas?: ICFormulaConfig[];
+}
+
+export interface IPTConfig {
+  defaultFormula?: number;
+  formulas?: IPTFormulaConfig[];
+}
+
 export interface GuaranteeParameters {
   fireTheftConfig?: FireTheftConfig;
   glassRoofConfig?: GlassRoofConfig;
   glassStandardConfig?: GlassStandardConfig;
   tierceCapConfig?: TierceCapConfig;
+  icIptConfig?: ICIPTConfig;
+  iptConfig?: IPTConfig;
   [key: string]: any;
 }
 
@@ -109,7 +140,9 @@ export type CalculationMethodType =
   | 'GLASS_STANDARD'
   | 'TIERCE_COMPLETE_CAP'
   | 'TIERCE_COLLISION_CAP'
-  | 'MTPL_TARIFF';
+  | 'MTPL_TARIFF'
+  | 'IC_IPT_FORMULA'
+  | 'IPT_PLACES_FORMULA';
 
 export interface Guarantee {
   id: string;
