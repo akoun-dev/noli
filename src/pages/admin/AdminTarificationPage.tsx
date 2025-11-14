@@ -32,7 +32,6 @@ import {
   CalculationMethodType,
   TierceFranchiseOptionType,
   TierceCapConfig,
-  TierceFranchiseOptionType,
   TarifFixe,
   TarifFixeFormData,
   TarifRC,
@@ -480,8 +479,17 @@ export const AdminTarificationPage: React.FC = () => {
       setIsCreatingGuarantee(true)
       const missing: string[] = []
       const method = newGuarantee.calculationMethod
-      if (!newGuarantee.name?.trim()) missing.push('Nom')
-      if (!method) missing.push('Méthode de calcul')
+      
+      // Validation améliorée avec messages plus précis
+      if (!newGuarantee.name?.trim()) {
+        missing.push('Nom de la garantie')
+      }
+      if (!newGuarantee.code?.trim()) {
+        missing.push('Code de la garantie')
+      }
+      if (!method) {
+        missing.push('Méthode de calcul')
+      }
 
       const needsRate = ['RATE_ON_SI', 'RATE_ON_NEW_VALUE', 'CONDITIONAL_RATE'].includes(method as string)
       if (needsRate && (!newGuarantee.rate || Number.isNaN(newGuarantee.rate) || (newGuarantee.rate as number) <= 0)) {
@@ -494,7 +502,10 @@ export const AdminTarificationPage: React.FC = () => {
 
       if (missing.length > 0) {
         logger.warn('handleCreateGuarantee: missing fields', missing)
-        toast.error(`Veuillez remplir tous les champs obligatoires: ${missing.join(', ')}`)
+        toast.error(`Champs obligatoires manquants: ${missing.join(', ')}`, {
+          description: 'Veuillez compléter les informations requises avant de continuer.',
+          duration: 5000
+        })
         return
       }
 
@@ -599,8 +610,17 @@ export const AdminTarificationPage: React.FC = () => {
 
       const missing: string[] = []
       const method = newGuarantee.calculationMethod
-      if (!newGuarantee.name?.trim()) missing.push('Nom')
-      if (!method) missing.push('Méthode de calcul')
+      
+      // Validation améliorée avec messages plus précis
+      if (!newGuarantee.name?.trim()) {
+        missing.push('Nom de la garantie')
+      }
+      if (!newGuarantee.code?.trim()) {
+        missing.push('Code de la garantie')
+      }
+      if (!method) {
+        missing.push('Méthode de calcul')
+      }
 
       const needsRate = ['RATE_ON_SI', 'RATE_ON_NEW_VALUE', 'CONDITIONAL_RATE'].includes(method as string)
       if (needsRate && (!newGuarantee.rate || Number.isNaN(newGuarantee.rate) || (newGuarantee.rate as number) <= 0)) {
@@ -613,7 +633,10 @@ export const AdminTarificationPage: React.FC = () => {
 
       if (missing.length > 0) {
         logger.warn('handleUpdateGuarantee: missing fields', missing)
-        toast.error(`Veuillez remplir tous les champs obligatoires: ${missing.join(', ')}`)
+        toast.error(`Champs obligatoires manquants: ${missing.join(', ')}`, {
+          description: 'Veuillez compléter les informations requises avant de continuer.',
+          duration: 5000
+        })
         return
       }
 
@@ -761,7 +784,9 @@ export const AdminTarificationPage: React.FC = () => {
   });
 
   const calculationMethods = guaranteeService.getCalculationMethods();
-  const selectableCalculationMethods = calculationMethods;
+  const selectableCalculationMethods = calculationMethods.filter(
+    (m) => ['FREE', 'FIXED_AMOUNT', 'FIRE_THEFT', 'THEFT_ARMED', 'GLASS_ROOF'].includes(m.value)
+  );
 
   const removeFireTheftConfig = (parameters?: Guarantee['parameters']) => {
     if (!parameters || !parameters.fireTheftConfig) {
@@ -1377,168 +1402,269 @@ export const AdminTarificationPage: React.FC = () => {
                     </DialogHeader>
                     
                     <div className="space-y-6 py-4">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="guarantee-name">Nom de la garantie</Label>
-                          <Input
-                            id="guarantee-name"
-                            value={newGuarantee.name}
-                            onChange={(e) => setNewGuarantee(prev => ({ ...prev, name: e.target.value }))}
-                            placeholder="Ex: Responsabilité Civile"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="guarantee-code">Code</Label>
-                          <Input
-                            id="guarantee-code"
-                            value={newGuarantee.code}
-                            onChange={(e) => setNewGuarantee(prev => ({ ...prev, code: e.target.value.toUpperCase() }))}
-                            placeholder="Ex: RC"
-                            maxLength={10}
-                          />
-                        </div>
-                      </div>
+                      {/* Section Informations générales */}
+                      <Card className="border border-gray-200 shadow-sm">
+                        <CardHeader className="pb-3 bg-gray-50/50">
+                          <CardTitle className="text-base flex items-center gap-2">
+                            <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center">
+                              <span className="text-blue-600 text-xs font-bold">1</span>
+                            </div>
+                            Informations générales
+                          </CardTitle>
+                          <CardDescription className="text-sm">
+                            Informations de base sur la garantie
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent className="pt-4 space-y-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="guarantee-name" className="flex items-center gap-1">
+                                Nom de la garantie <span className="text-red-500">*</span>
+                              </Label>
+                              <Input
+                                id="guarantee-name"
+                                value={newGuarantee.name}
+                                onChange={(e) => setNewGuarantee(prev => ({ ...prev, name: e.target.value }))}
+                                placeholder="Ex: Responsabilité Civile"
+                                className="transition-colors focus:border-blue-500"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="guarantee-code" className="flex items-center gap-1">
+                                Code <span className="text-red-500">*</span>
+                              </Label>
+                              <Input
+                                id="guarantee-code"
+                                value={newGuarantee.code}
+                                onChange={(e) => setNewGuarantee(prev => ({ ...prev, code: e.target.value.toUpperCase() }))}
+                                placeholder="Ex: RC"
+                                maxLength={10}
+                                className="transition-colors focus:border-blue-500"
+                              />
+                            </div>
+                          </div>
 
-                      <div>
-                        <Label htmlFor="guarantee-description">Description</Label>
-                        <Textarea
-                          id="guarantee-description"
-                          value={newGuarantee.description}
-                          onChange={(e) => setNewGuarantee(prev => ({ ...prev, description: e.target.value }))}
-                          placeholder="Description détaillée de la garantie"
-                          rows={3}
-                        />
-                      </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="guarantee-description">Description</Label>
+                            <Textarea
+                              id="guarantee-description"
+                              value={newGuarantee.description}
+                              onChange={(e) => setNewGuarantee(prev => ({ ...prev, description: e.target.value }))}
+                              placeholder="Description détaillée de la garantie"
+                              rows={3}
+                              className="transition-colors focus:border-blue-500"
+                            />
+                          </div>
+                        </CardContent>
+                      </Card>
 
-                      <div>
-                          <Label>Méthode de calcul</Label>
-                          <Select
-                            value={newGuarantee.calculationMethod}
-                            onValueChange={handleCalculationMethodChange}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {selectableCalculationMethods.map(method => (
-                                <SelectItem key={method.value} value={method.value}>
-                                  {method.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                      </div>
+                      {/* Section Méthode de calcul */}
+                      <Card className="border border-gray-200 shadow-sm">
+                        <CardHeader className="pb-3 bg-gray-50/50">
+                          <CardTitle className="text-base flex items-center gap-2">
+                            <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center">
+                              <span className="text-blue-600 text-xs font-bold">2</span>
+                            </div>
+                            Méthode de calcul
+                          </CardTitle>
+                          <CardDescription className="text-sm">
+                            Définissez comment la prime de cette garantie est calculée
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent className="pt-4 space-y-4">
+                          <div className="space-y-2">
+                            <Label className="flex items-center gap-1">
+                              Méthode de calcul <span className="text-red-500">*</span>
+                            </Label>
+                            <Select
+                              value={newGuarantee.calculationMethod}
+                              onValueChange={handleCalculationMethodChange}
+                            >
+                              <SelectTrigger className="transition-colors focus:border-blue-500">
+                                <SelectValue placeholder="Sélectionnez une méthode de calcul" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {selectableCalculationMethods.map(method => (
+                                  <SelectItem key={method.value} value={method.value}>
+                                    <div className="flex flex-col items-start">
+                                      <span className="font-medium">{method.label}</span>
+                                      <span className="text-xs text-muted-foreground mt-1">{method.description}</span>
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
 
-                      {/* Champs dynamiques selon la méthode de calcul */}
-                      {(() => {
-                        const method = newGuarantee.calculationMethod
-                        const showRate = ['RATE_ON_SI', 'RATE_ON_NEW_VALUE', 'CONDITIONAL_RATE'].includes(method as string)
-                        const showMinMax = showRate
-                        const isFixed = method === 'FIXED_AMOUNT'
-                        // FREE n'est pas sélectionnable ici (géré via Supabase), mais on prépare le cas
-                        const isFree = (method as any) === 'FREE'
+                          {/* Champs dynamiques selon la méthode de calcul */}
+                          {(() => {
+                            const method = newGuarantee.calculationMethod
+                            const showRate = ['RATE_ON_SI', 'RATE_ON_NEW_VALUE', 'CONDITIONAL_RATE'].includes(method as string)
+                            const showMinMax = showRate
+                            const isFixed = method === 'FIXED_AMOUNT'
+                            // FREE n'est pas sélectionnable ici (géré via Supabase), mais on prépare le cas
+                            const isFree = (method as any) === 'FREE'
 
-                        return (
-                          <>
-                            {isFixed && (
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div>
-                                  <Label>Montant fixe (FCFA)</Label>
-                                  <Input
-                                    type="number"
-                                    value={newGuarantee.fixedAmount ?? ''}
-                                    onChange={(e) =>
-                                      setNewGuarantee((prev) => ({
-                                        ...prev,
-                                        fixedAmount: parseFloat(e.target.value) || undefined,
-                                      }))
-                                    }
-                                    placeholder="Ex: 15000"
-                                  />
-                                </div>
-                              </div>
-                            )}
-                            {showRate && (
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div>
-                                  <Label>Taux (%)</Label>
-                                  <Input
-                                    type="number"
-                                    step="0.1"
-                                    value={newGuarantee.rate || ''}
-                                    onChange={(e) => setNewGuarantee(prev => ({ ...prev, rate: parseFloat(e.target.value) || undefined }))}
-                                    placeholder="Ex: 1.5"
-                                  />
-                                </div>
-                                {showMinMax && (
-                                  <div className="flex items-end text-sm text-muted-foreground">
-                                    Les montants mini/maxi ci‑dessous sont optionnels
+                            return (
+                              <div className="space-y-4 pt-2">
+                                {isFixed && (
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                      <Label className="flex items-center gap-1">
+                                        Montant fixe (FCFA) <span className="text-red-500">*</span>
+                                      </Label>
+                                      <Input
+                                        type="number"
+                                        value={newGuarantee.fixedAmount ?? ''}
+                                        onChange={(e) =>
+                                          setNewGuarantee((prev) => ({
+                                            ...prev,
+                                            fixedAmount: parseFloat(e.target.value) || undefined,
+                                          }))
+                                        }
+                                        placeholder="Ex: 15000"
+                                        className="transition-colors focus:border-blue-500"
+                                      />
+                                    </div>
                                   </div>
                                 )}
+                                
+                                {showRate && (
+                                  <div className="space-y-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                      <div className="space-y-2">
+                                        <Label className="flex items-center gap-1">
+                                          Taux (%) <span className="text-red-500">*</span>
+                                        </Label>
+                                        <Input
+                                          type="number"
+                                          step="0.1"
+                                          value={newGuarantee.rate || ''}
+                                          onChange={(e) => setNewGuarantee(prev => ({ ...prev, rate: parseFloat(e.target.value) || undefined }))}
+                                          placeholder="Ex: 1.5"
+                                          className="transition-colors focus:border-blue-500"
+                                        />
+                                      </div>
+                                    </div>
+                                    {showMinMax && (
+                                      <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+                                        <div className="flex items-center gap-2 text-sm text-blue-700">
+                                          <AlertTriangle className="h-4 w-4" />
+                                          Les montants minimum et maximum ci-dessous sont optionnels
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+
+                                {showMinMax && (
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                      <Label>Montant minimum (FCFA)</Label>
+                                      <Input
+                                        type="number"
+                                        value={newGuarantee.minValue || ''}
+                                        onChange={(e) => setNewGuarantee(prev => ({ ...prev, minValue: parseFloat(e.target.value) || undefined }))}
+                                        placeholder="Ex: 50000"
+                                        className="transition-colors focus:border-blue-500"
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <Label>Montant maximum (FCFA)</Label>
+                                      <Input
+                                        type="number"
+                                        value={newGuarantee.maxValue || ''}
+                                        onChange={(e) => setNewGuarantee(prev => ({ ...prev, maxValue: parseFloat(e.target.value) || undefined }))}
+                                        placeholder="Ex: 500000"
+                                        className="transition-colors focus:border-blue-500"
+                                      />
+                                    </div>
+                                  </div>
+                                )}
+
+                                {isFree && (
+                                  <Alert className="bg-green-50 border-green-200">
+                                    <AlertTriangle className="h-4 w-4 text-green-600" />
+                                    <AlertDescription className="text-green-700">
+                                      Cette garantie est gratuite: aucun taux ni montant à saisir ici.
+                                    </AlertDescription>
+                                  </Alert>
+                                )}
                               </div>
-                            )}
+                            )
+                          })()}
+                        </CardContent>
+                      </Card>
 
-                            {showMinMax && (
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div>
-                                  <Label>Montant minimum (FCFA)</Label>
-                                  <Input
-                                    type="number"
-                                    value={newGuarantee.minValue || ''}
-                                    onChange={(e) => setNewGuarantee(prev => ({ ...prev, minValue: parseFloat(e.target.value) || undefined }))}
-                                    placeholder="Ex: 50000"
-                                  />
-                                </div>
-                                <div>
-                                  <Label>Montant maximum (FCFA)</Label>
-                                  <Input
-                                    type="number"
-                                    value={newGuarantee.maxValue || ''}
-                                    onChange={(e) => setNewGuarantee(prev => ({ ...prev, maxValue: parseFloat(e.target.value) || undefined }))}
-                                    placeholder="Ex: 500000"
-                                  />
-                                </div>
+                      {/* Section Configuration avancée */}
+                      {(newGuarantee.calculationMethod === 'FIRE_THEFT' ||
+                        newGuarantee.calculationMethod === 'THEFT_ARMED' ||
+                        newGuarantee.calculationMethod === 'GLASS_ROOF') && (
+                        <Card className="border border-gray-200 shadow-sm">
+                          <CardHeader className="pb-3 bg-gray-50/50">
+                            <CardTitle className="text-base flex items-center gap-2">
+                              <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center">
+                                <span className="text-blue-600 text-xs font-bold">3</span>
                               </div>
-                            )}
+                              Configuration avancée
+                            </CardTitle>
+                            <CardDescription className="text-sm">
+                              Paramètres spécifiques à la méthode de calcul sélectionnée
+                            </CardDescription>
+                          </CardHeader>
+                          <CardContent className="pt-4 space-y-4">
+                            {renderFireTheftConfigSection()}
+                            {renderGlassRoofConfigSection()}
+                          </CardContent>
+                        </Card>
+                      )}
 
-                            {isFree && (
-                              <Alert>
-                                <AlertTriangle className="h-4 w-4" />
-                                <AlertDescription>
-                                  Cette garantie est gratuite: aucun taux ni montant à saisir ici.
-                                </AlertDescription>
-                              </Alert>
-                            )}
-                          </>
-                        )
-                      })()}
+                      {/* Section Options et conditions */}
+                      <Card className="border border-gray-200 shadow-sm">
+                        <CardHeader className="pb-3 bg-gray-50/50">
+                          <CardTitle className="text-base flex items-center gap-2">
+                            <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center">
+                              <span className="text-blue-600 text-xs font-bold">4</span>
+                            </div>
+                            Options et conditions
+                          </CardTitle>
+                          <CardDescription className="text-sm">
+                            Définissez les conditions d'application et les options de la garantie
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent className="pt-4 space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="guarantee-conditions">Conditions d'application</Label>
+                            <Textarea
+                              id="guarantee-conditions"
+                              value={newGuarantee.conditions || ''}
+                              onChange={(e) => setNewGuarantee(prev => ({ ...prev, conditions: e.target.value }))}
+                              placeholder="Conditions d'application (optionnel)"
+                              rows={2}
+                              className="transition-colors focus:border-blue-500"
+                            />
+                          </div>
 
-                      {renderFireTheftConfigSection()}
-                      {renderGlassRoofConfigSection()}
-                      {renderGlassStandardConfigSection()}
-                      {renderTierceCapConfigSection()}
-
-                      <div>
-                        <Label htmlFor="guarantee-conditions">Conditions</Label>
-                        <Textarea
-                          id="guarantee-conditions"
-                          value={newGuarantee.conditions || ''}
-                          onChange={(e) => setNewGuarantee(prev => ({ ...prev, conditions: e.target.value }))}
-                          placeholder="Conditions d'application (optionnel)"
-                          rows={2}
-                        />
-                      </div>
-
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="guarantee-optional"
-                          checked={newGuarantee.isOptional}
-                          onCheckedChange={(checked) =>
-                            setNewGuarantee(prev => ({ ...prev, isOptional: checked as boolean }))
-                          }
-                        />
-                        <Label htmlFor="guarantee-optional">Garantie optionnelle</Label>
-                      </div>
+                          <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-md">
+                            <Checkbox
+                              id="guarantee-optional"
+                              checked={newGuarantee.isOptional}
+                              onCheckedChange={(checked) =>
+                                setNewGuarantee(prev => ({ ...prev, isOptional: checked as boolean }))
+                              }
+                              className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                            />
+                            <div className="space-y-1">
+                              <Label htmlFor="guarantee-optional" className="cursor-pointer font-medium">
+                                Garantie optionnelle
+                              </Label>
+                              <p className="text-xs text-muted-foreground">
+                                Cochez si cette garantie n'est pas obligatoire dans le contrat
+                              </p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
                     </div>
                     <DialogFooter>
                       <Button variant="outline" onClick={() => setIsCreateGuaranteeDialogOpen(false)}>
@@ -2475,159 +2601,273 @@ export const AdminTarificationPage: React.FC = () => {
 
       {/* Dialog pour modifier une garantie */}
       <Dialog open={isEditGuaranteeDialogOpen} onOpenChange={setIsEditGuaranteeDialogOpen}>
-        <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-[95vw] sm:max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Modifier la garantie</DialogTitle>
-            <DialogDescription>Mettez à jour les informations de la garantie</DialogDescription>
+            <DialogTitle className="text-xl">Modifier la garantie</DialogTitle>
+            <DialogDescription className="text-base">Mettez à jour les informations de la garantie</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="edit-guarantee-name">Nom de la garantie</Label>
-                <Input
-                  id="edit-guarantee-name"
-                  value={newGuarantee.name}
-                  onChange={(e) => setNewGuarantee((prev) => ({ ...prev, name: e.target.value }))}
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit-guarantee-code">Code</Label>
-                <Input
-                  id="edit-guarantee-code"
-                  value={newGuarantee.code}
-                  onChange={(e) => setNewGuarantee((prev) => ({ ...prev, code: e.target.value.toUpperCase() }))}
-                  maxLength={10}
-                />
-              </div>
-            </div>
+          
+          <div className="space-y-6 py-4">
+            {/* Section Informations générales */}
+            <Card className="border border-gray-200 shadow-sm">
+              <CardHeader className="pb-3 bg-gray-50/50">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center">
+                    <span className="text-blue-600 text-xs font-bold">1</span>
+                  </div>
+                  Informations générales
+                </CardTitle>
+                <CardDescription className="text-sm">
+                  Informations de base sur la garantie
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-4 space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-guarantee-name" className="flex items-center gap-1">
+                      Nom de la garantie <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="edit-guarantee-name"
+                      value={newGuarantee.name}
+                      onChange={(e) => setNewGuarantee((prev) => ({ ...prev, name: e.target.value }))}
+                      className="transition-colors focus:border-blue-500"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-guarantee-code" className="flex items-center gap-1">
+                      Code <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="edit-guarantee-code"
+                      value={newGuarantee.code}
+                      onChange={(e) => setNewGuarantee((prev) => ({ ...prev, code: e.target.value.toUpperCase() }))}
+                      maxLength={10}
+                      className="transition-colors focus:border-blue-500"
+                    />
+                  </div>
+                </div>
 
-            <div>
-              <Label htmlFor="edit-guarantee-description">Description</Label>
-              <Textarea
-                id="edit-guarantee-description"
-                value={newGuarantee.description}
-                onChange={(e) => setNewGuarantee((prev) => ({ ...prev, description: e.target.value }))}
-                rows={3}
-              />
-            </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-guarantee-description">Description</Label>
+                  <Textarea
+                    id="edit-guarantee-description"
+                    value={newGuarantee.description}
+                    onChange={(e) => setNewGuarantee((prev) => ({ ...prev, description: e.target.value }))}
+                    rows={3}
+                    className="transition-colors focus:border-blue-500"
+                  />
+                </div>
+              </CardContent>
+            </Card>
 
-            <div>
-              <Label>Méthode de calcul</Label>
-              <Select
-                value={newGuarantee.calculationMethod}
-                onValueChange={handleCalculationMethodChange}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {selectableCalculationMethods.map((method) => (
-                    <SelectItem key={method.value} value={method.value}>
-                      {method.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Section Méthode de calcul */}
+            <Card className="border border-gray-200 shadow-sm">
+              <CardHeader className="pb-3 bg-gray-50/50">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center">
+                    <span className="text-blue-600 text-xs font-bold">2</span>
+                  </div>
+                  Méthode de calcul
+                </CardTitle>
+                <CardDescription className="text-sm">
+                  Définissez comment la prime de cette garantie est calculée
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-4 space-y-4">
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1">
+                    Méthode de calcul <span className="text-red-500">*</span>
+                  </Label>
+                  <Select
+                    value={newGuarantee.calculationMethod}
+                    onValueChange={handleCalculationMethodChange}
+                  >
+                    <SelectTrigger className="transition-colors focus:border-blue-500">
+                      <SelectValue placeholder="Sélectionnez une méthode de calcul" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {selectableCalculationMethods.map((method) => (
+                        <SelectItem key={method.value} value={method.value}>
+                          <div className="flex flex-col items-start">
+                            <span className="font-medium">{method.label}</span>
+                            <span className="text-xs text-muted-foreground mt-1">{method.description}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-            {/* Champs dynamiques selon la méthode de calcul (édition) */}
-            {(() => {
-              const method = newGuarantee.calculationMethod
-              const showRate = ['RATE_ON_SI', 'RATE_ON_NEW_VALUE', 'CONDITIONAL_RATE'].includes(method as string)
-              const showMinMax = showRate
-              const isFixed = method === 'FIXED_AMOUNT'
-              const isFree = (method as any) === 'FREE'
+                {/* Champs dynamiques selon la méthode de calcul (édition) */}
+                {(() => {
+                  const method = newGuarantee.calculationMethod
+                  const showRate = ['RATE_ON_SI', 'RATE_ON_NEW_VALUE', 'CONDITIONAL_RATE'].includes(method as string)
+                  const showMinMax = showRate
+                  const isFixed = method === 'FIXED_AMOUNT'
+                  const isFree = (method as any) === 'FREE'
 
-              return (
-                <>
-                  {isFixed && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <Label>Montant fixe (FCFA)</Label>
-                        <Input
-                          type="number"
-                          value={newGuarantee.fixedAmount ?? ''}
-                          onChange={(e) =>
-                            setNewGuarantee((prev) => ({
-                              ...prev,
-                              fixedAmount: parseFloat(e.target.value) || undefined,
-                            }))
-                          }
-                          placeholder="Ex: 15000"
-                        />
-                      </div>
-                    </div>
-                  )}
-                  {showRate && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <Label>Taux (%)</Label>
-                        <Input
-                          type="number"
-                          step="0.1"
-                          value={newGuarantee.rate || ''}
-                          onChange={(e) => setNewGuarantee(prev => ({ ...prev, rate: parseFloat(e.target.value) || undefined }))}
-                          placeholder="Ex: 1.5"
-                        />
-                      </div>
-                      {showMinMax && (
-                        <div className="flex items-end text-sm text-muted-foreground">
-                          Les montants mini/maxi ci‑dessous sont optionnels
+                  return (
+                    <div className="space-y-4 pt-2">
+                      {isFixed && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label className="flex items-center gap-1">
+                              Montant fixe (FCFA) <span className="text-red-500">*</span>
+                            </Label>
+                            <Input
+                              type="number"
+                              value={newGuarantee.fixedAmount ?? ''}
+                              onChange={(e) =>
+                                setNewGuarantee((prev) => ({
+                                  ...prev,
+                                  fixedAmount: parseFloat(e.target.value) || undefined,
+                                }))
+                              }
+                              placeholder="Ex: 15000"
+                              className="transition-colors focus:border-blue-500"
+                            />
+                          </div>
                         </div>
                       )}
+                      
+                      {showRate && (
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label className="flex items-center gap-1">
+                                Taux (%) <span className="text-red-500">*</span>
+                              </Label>
+                              <Input
+                                type="number"
+                                step="0.1"
+                                value={newGuarantee.rate || ''}
+                                onChange={(e) => setNewGuarantee(prev => ({ ...prev, rate: parseFloat(e.target.value) || undefined }))}
+                                placeholder="Ex: 1.5"
+                                className="transition-colors focus:border-blue-500"
+                              />
+                            </div>
+                          </div>
+                          {showMinMax && (
+                            <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+                              <div className="flex items-center gap-2 text-sm text-blue-700">
+                                <AlertTriangle className="h-4 w-4" />
+                                Les montants minimum et maximum ci-dessous sont optionnels
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {showMinMax && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Montant minimum (FCFA)</Label>
+                            <Input
+                              type="number"
+                              value={newGuarantee.minValue || ''}
+                              onChange={(e) => setNewGuarantee(prev => ({ ...prev, minValue: parseFloat(e.target.value) || undefined }))}
+                              placeholder="Ex: 50000"
+                              className="transition-colors focus:border-blue-500"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Montant maximum (FCFA)</Label>
+                            <Input
+                              type="number"
+                              value={newGuarantee.maxValue || ''}
+                              onChange={(e) => setNewGuarantee(prev => ({ ...prev, maxValue: parseFloat(e.target.value) || undefined }))}
+                              placeholder="Ex: 500000"
+                              className="transition-colors focus:border-blue-500"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {isFree && (
+                        <Alert className="bg-green-50 border-green-200">
+                          <AlertTriangle className="h-4 w-4 text-green-600" />
+                          <AlertDescription className="text-green-700">
+                            Cette garantie est gratuite: aucun taux ni montant à saisir ici.
+                          </AlertDescription>
+                        </Alert>
+                      )}
                     </div>
-                  )}
+                  )
+                })()}
+              </CardContent>
+            </Card>
 
-                  {showMinMax && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <Label>Montant minimum (FCFA)</Label>
-                        <Input
-                          type="number"
-                          value={newGuarantee.minValue || ''}
-                          onChange={(e) => setNewGuarantee(prev => ({ ...prev, minValue: parseFloat(e.target.value) || undefined }))}
-                          placeholder="Ex: 50000"
-                        />
-                      </div>
-                      <div>
-                        <Label>Montant maximum (FCFA)</Label>
-                        <Input
-                          type="number"
-                          value={newGuarantee.maxValue || ''}
-                          onChange={(e) => setNewGuarantee(prev => ({ ...prev, maxValue: parseFloat(e.target.value) || undefined }))}
-                          placeholder="Ex: 500000"
-                        />
-                      </div>
+            {/* Section Configuration avancée */}
+            {(newGuarantee.calculationMethod === 'FIRE_THEFT' ||
+              newGuarantee.calculationMethod === 'THEFT_ARMED' ||
+              newGuarantee.calculationMethod === 'GLASS_ROOF') && (
+              <Card className="border border-gray-200 shadow-sm">
+                <CardHeader className="pb-3 bg-gray-50/50">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center">
+                      <span className="text-blue-600 text-xs font-bold">3</span>
                     </div>
-                  )}
+                    Configuration avancée
+                  </CardTitle>
+                  <CardDescription className="text-sm">
+                    Paramètres spécifiques à la méthode de calcul sélectionnée
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-4 space-y-4">
+                  {renderFireTheftConfigSection()}
+                  {renderGlassRoofConfigSection()}
+                  {renderGlassStandardConfigSection()}
+                  {renderTierceCapConfigSection()}
+                </CardContent>
+              </Card>
+            )}
 
-                  {isFree && (
-                    <Alert>
-                      <AlertTriangle className="h-4 w-4" />
-                      <AlertDescription>
-                        Cette garantie est gratuite: aucun taux ni montant à saisir ici.
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                </>
-              )
-            })()}
+            {/* Section Options et conditions */}
+            <Card className="border border-gray-200 shadow-sm">
+              <CardHeader className="pb-3 bg-gray-50/50">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center">
+                    <span className="text-blue-600 text-xs font-bold">4</span>
+                  </div>
+                  Options et conditions
+                </CardTitle>
+                <CardDescription className="text-sm">
+                  Définissez les conditions d'application et les options de la garantie
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-4 space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-guarantee-conditions">Conditions d'application</Label>
+                  <Textarea
+                    id="edit-guarantee-conditions"
+                    value={newGuarantee.conditions || ''}
+                    onChange={(e) => setNewGuarantee(prev => ({ ...prev, conditions: e.target.value }))}
+                    rows={2}
+                    className="transition-colors focus:border-blue-500"
+                  />
+                </div>
 
-            {renderFireTheftConfigSection()}
-            {renderGlassRoofConfigSection()}
-            {renderGlassStandardConfigSection()}
-            {renderTierceCapConfigSection()}
-
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="edit-guarantee-optional"
-                checked={newGuarantee.isOptional}
-                onCheckedChange={(checked) =>
-                  setNewGuarantee((prev) => ({ ...prev, isOptional: checked as boolean }))
-                }
-              />
-              <Label htmlFor="edit-guarantee-optional">Garantie optionnelle</Label>
-            </div>
+                <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-md">
+                  <Checkbox
+                    id="edit-guarantee-optional"
+                    checked={newGuarantee.isOptional}
+                    onCheckedChange={(checked) =>
+                      setNewGuarantee((prev) => ({ ...prev, isOptional: checked as boolean }))
+                    }
+                    className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                  />
+                  <div className="space-y-1">
+                    <Label htmlFor="edit-guarantee-optional" className="cursor-pointer font-medium">
+                      Garantie optionnelle
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Cochez si cette garantie n'est pas obligatoire dans le contrat
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditGuaranteeDialogOpen(false)}>
