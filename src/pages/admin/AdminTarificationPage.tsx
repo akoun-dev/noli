@@ -1307,6 +1307,10 @@ export const AdminTarificationPage: React.FC = () => {
     );
   };
 
+<<<<<<< ours
+
+=======
+>>>>>>> theirs
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -1376,7 +1380,6 @@ export const AdminTarificationPage: React.FC = () => {
       <Tabs defaultValue="guarantees" className="space-y-4">
         <TabsList className="grid grid-cols-1 sm:grid-cols-4 w-full">
           <TabsTrigger value="guarantees" className="text-xs sm:text-sm">Garanties</TabsTrigger>
-          <TabsTrigger value="responsibility" className="text-xs sm:text-sm">Responsabilité Civile</TabsTrigger>
           <TabsTrigger value="grids" className="text-xs sm:text-sm">Grilles</TabsTrigger>
           <TabsTrigger value="statistics" className="text-xs sm:text-sm">Statistiques</TabsTrigger>
         </TabsList>
@@ -1614,7 +1617,13 @@ export const AdminTarificationPage: React.FC = () => {
                           </CardHeader>
                           <CardContent className="pt-4 space-y-4">
                             {renderFireTheftConfigSection()}
+<<<<<<< ours
+            {renderGlassRoofConfigSection()}
+            {renderGlassStandardConfigSection()}
+            {renderTierceCapConfigSection()}
+=======
                             {renderGlassRoofConfigSection()}
+>>>>>>> theirs
                           </CardContent>
                         </Card>
                       )}
@@ -1804,321 +1813,7 @@ export const AdminTarificationPage: React.FC = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="responsibility" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <Shield className="h-5 w-5 text-yellow-600" />
-                  <span>Grilles de Responsabilité Civile (JAUNE)</span>
-                </div>
-                <Button
-                  onClick={() => {
-                    setEditingRC(null)
-                    setShowRCEditForm(true)
-                  }}
-                  size="sm"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Ajouter une tranche
-                </Button>
-              </CardTitle>
-              <CardDescription>
-                Configurez les tarifs de la Responsabilité Civile selon la puissance fiscale et le type de moteur (Essence/Diesel)
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Filtres */}
-              <div className="flex flex-wrap gap-4 items-center">
-                <div className="flex items-center gap-2">
-                  <Fuel className="h-4 w-4 text-muted-foreground" />
-                  <Label>Filtrer par moteur:</Label>
-                  <Select
-                    value={searchRCEnergy}
-                    onValueChange={(value: 'Tous' | 'Essence' | 'Diesel') => setSearchRCEnergy(value)}
-                  >
-                    <SelectTrigger className="w-32">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Tous">Tous</SelectItem>
-                      <SelectItem value="Essence">Essence</SelectItem>
-                      <SelectItem value="Diesel">Diesel</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
 
-                <div className="flex-1">
-                  <div className="text-sm text-muted-foreground">
-                    {searchRCEnergy === 'Tous'
-                      ? `${tarifRC.length} tranches au total`
-                      : `${tarifRC.filter(t => t.energy === searchRCEnergy).length} tranches ${searchRCEnergy.toLowerCase()}`
-                    }
-                  </div>
-                </div>
-              </div>
-
-              {/* Tableau des tarifs RC */}
-              <div className="border rounded-lg">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Type moteur</TableHead>
-                      <TableHead>Puissance fiscale</TableHead>
-                      <TableHead>Catégorie</TableHead>
-                      <TableHead className="text-right">Prime (FCFA)</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {tarifRC
-                      .filter(tarif => searchRCEnergy === 'Tous' || tarif.energy === searchRCEnergy)
-                      .map((tarif) => (
-                      <TableRow key={tarif.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <div className={`w-3 h-3 rounded-full ${
-                              tarif.energy === 'Essence'
-                                ? 'bg-green-500'
-                                : 'bg-blue-500'
-                            }`} />
-                            {tarif.energy}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <span className="font-medium">
-                            {tarif.powerMin === tarif.powerMax
-                              ? `${tarif.powerMin} CV`
-                              : tarif.powerMax >= 999
-                                ? `${tarif.powerMin} CV et plus`
-                                : `${tarif.powerMin} à ${tarif.powerMax} CV`
-                            }
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs">
-                            {tarif.category}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-right font-mono">
-                          {tarif.prime.toLocaleString('fr-FR')}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setEditingRC(tarif)
-                                setShowRCEditForm(true)
-                              }}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDeleteRC(tarif.id)}
-                              disabled={loading}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-
-              {/* Statistiques rapides */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card className="bg-green-50 border-green-200">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-green-600">Moteur Essence</p>
-                        <p className="text-2xl font-bold text-green-800">
-                          {tarifRC.filter(t => t.energy === 'Essence').length}
-                        </p>
-                      </div>
-                      <Car className="h-8 w-8 text-green-600" />
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-blue-50 border-blue-200">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-blue-600">Moteur Diesel</p>
-                        <p className="text-2xl font-bold text-blue-800">
-                          {tarifRC.filter(t => t.energy === 'Diesel').length}
-                        </p>
-                      </div>
-                      <Zap className="h-8 w-8 text-blue-600" />
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-orange-50 border-orange-200">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-orange-600">Prime moyenne</p>
-                        <p className="text-2xl font-bold text-orange-800">
-                          {tarifRC.length > 0
-                            ? Math.round(tarifRC.reduce((sum, t) => sum + t.prime, 0) / tarifRC.length).toLocaleString('fr-FR')
-                            : '0'
-                          }
-                        </p>
-                      </div>
-                      <Calculator className="h-8 w-8 text-orange-600" />
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Modal d'ajout/modification RC */}
-          {showRCEditForm && (
-            <Dialog open={showRCEditForm} onOpenChange={setShowRCEditForm}>
-              <DialogContent className="max-w-md">
-                <DialogHeader>
-                  <DialogTitle>
-                    {editingRC ? 'Modifier' : 'Ajouter'} une tranche tarifaire
-                  </DialogTitle>
-                  <DialogDescription>
-                    Configurez les paramètres pour la tranche de Responsabilité Civile
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="energy">Type de moteur</Label>
-                    <Select
-                      value={editingRC?.energy || 'Essence'}
-                      onValueChange={(value) =>
-                        setEditingRC(editingRC ? {...editingRC, energy: value} : {
-                          id: '',
-                          category: '401',
-                          energy: value,
-                          powerMin: 1,
-                          powerMax: 2,
-                          prime: 0
-                        })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Essence">Essence</SelectItem>
-                        <SelectItem value="Diesel">Diesel</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="powerMin">Puissance min (CV)</Label>
-                      <Input
-                        id="powerMin"
-                        type="number"
-                        min="1"
-                        value={editingRC?.powerMin || 1}
-                        onChange={(e) =>
-                          setEditingRC(editingRC ? {...editingRC, powerMin: parseInt(e.target.value) || 1} : null)
-                        }
-                      />
-                    </div>
-
-                    <div className="grid gap-2">
-                      <Label htmlFor="powerMax">Puissance max (CV)</Label>
-                      <Input
-                        id="powerMax"
-                        type="number"
-                        min="1"
-                        value={editingRC?.powerMax || 2}
-                        onChange={(e) =>
-                          setEditingRC(editingRC ? {...editingRC, powerMax: parseInt(e.target.value) || 2} : null)
-                        }
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="category">Catégorie</Label>
-                    <Select
-                      value={editingRC?.category || '401'}
-                      onValueChange={(value) =>
-                        setEditingRC(editingRC ? {...editingRC, category: value} : null)
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="401">401</SelectItem>
-                        <SelectItem value="402">402</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="prime">Prime (FCFA)</Label>
-                    <Input
-                      id="prime"
-                      type="number"
-                      min="0"
-                      value={editingRC?.prime || 0}
-                      onChange={(e) =>
-                        setEditingRC(editingRC ? {...editingRC, prime: parseInt(e.target.value) || 0} : null)
-                      }
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setShowRCEditForm(false)}>
-                    Annuler
-                  </Button>
-                  <Button
-                    onClick={async () => {
-                      if (!editingRC) return
-
-                      try {
-                        if (editingRC.id) {
-                          // Mise à jour
-                          await handleUpdateRC(editingRC.id, {
-                            energy: editingRC.energy,
-                            powerMin: editingRC.powerMin,
-                            powerMax: editingRC.powerMax,
-                            category: editingRC.category,
-                            prime: editingRC.prime
-                          })
-                        } else {
-                          // Création
-                          await handleCreateRC({
-                            energy: editingRC.energy,
-                            powerMin: editingRC.powerMin,
-                            powerMax: editingRC.powerMax,
-                            category: editingRC.category,
-                            prime: editingRC.prime
-                          })
-                        }
-                      } catch (error) {
-                        // Les erreurs sont déjà gérées dans les fonctions handle*
-                      }
-                    }}
-                    disabled={loading || !editingRC}
-                  >
-                    {editingRC?.id ? 'Mettre à jour' : 'Ajouter'}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          )}
-        </TabsContent>
 
         <TabsContent value="grids" className="space-y-4">
           {import.meta.env.VITE_MOCK_DATA === 'true' && (
@@ -2162,125 +1857,6 @@ export const AdminTarificationPage: React.FC = () => {
             </Card>
           )}
 
-          {import.meta.env.VITE_MOCK_DATA === 'true' && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Database className="w-5 h-5" />
-                  Grille Responsabilité Civile
-                </CardTitle>
-                <CardDescription>
-                  Tarifs RC par catégorie, énergie et puissance fiscale
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-sm text-muted-foreground mb-4">
-                  Catégorie 401 - Essence (1-2 CV): 68,675 FCFA<br />
-                  Catégorie 401 - Diesel (2-4 CV): 87,885 FCFA<br />
-                  Catégorie 401 - Essence (3-6 CV): 87,885 FCFA<br />
-                  Catégorie 401 - Diesel (5-6 CV): 102,345 FCFA<br />
-                  Catégorie 401 - Essence (7-9 CV): 102,345 FCFA<br />
-                  Catégorie 402 - Essence (1-2 CV): 58,900 FCFA<br />
-                  Catégorie 402 - Diesel (2-4 CV): 78,500 FCFA
-                </div>
-                <Button variant="outline" className="w-full">
-                  <FileText className="w-4 h-4 mr-2" />
-                  Voir la grille complète
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Grid3X3 className="w-5 h-5" />
-                  Grille TCM/TCL (Tierce)
-                </CardTitle>
-                <CardDescription>
-                  Taux applicables selon valeur neuve et franchise
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-sm text-muted-foreground mb-4">
-                  Tierce Complète (401):<br />
-                  • Valeur ≤ 12M, Franchise 0%: 4.40%<br />
-                  • Valeur ≤ 12M, Franchise 250K: 3.52%<br />
-                  • Valeur 12M-25M, Franchise 250K: 3.828%<br />
-                  <br />
-                  Tierce Collision (401):<br />
-                  • Valeur ≤ 40M, Franchise 50K: 4.311%
-                </div>
-                <Button variant="outline" className="w-full">
-                  <FileText className="w-4 h-4 mr-2" />
-                  Voir la grille complète
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Settings className="w-5 h-5" />
-                  Grille IC/IPT
-                </CardTitle>
-                <CardDescription>
-                  Tarifs Individuelle Conducteur/Passagers
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-sm text-muted-foreground mb-4">
-                  Individuelle Conducteur:<br />
-                  • Formule 1: 5,500 FCFA<br />
-                  • Formule 2: 8,400 FCFA<br />
-                  • Formule 3: 15,900 FCFA<br />
-                  <br />
-                  Individuelle Passagers:<br />
-                  • Formule 1 (3 places): 8,400 FCFA<br />
-                  • Formule 1 (4 places): 10,200 FCFA<br />
-                  • Formule 2 (3 places): 10,000 FCFA<br />
-                  • Formule 2 (4 places): 12,000 FCFA
-                </div>
-                <Button variant="outline" className="w-full">
-                  <FileText className="w-4 h-4 mr-2" />
-                  Voir la grille complète
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calculator className="w-5 h-5" />
-                  Tarifs Fixes
-                </CardTitle>
-                <CardDescription>
-                  Garanties à montant fixe
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-sm text-muted-foreground mb-4">
-                  • Défense et Recours: 7,950 FCFA<br />
-                  • Avance sur recours: 15,000 FCFA<br />
-                  • Vol des accessoires: 15,000 FCFA<br />
-                  • Assistance Bronze: 48,000 FCFA<br />
-                  • Assistance Silver: 65,000 FCFA<br />
-                  • (Prix réduits pour packages disponibles)
-                </div>
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() =>
-                    document.getElementById('tarifs-fixes-section')?.scrollIntoView({ behavior: 'smooth' })
-                  }
-                >
-                  <FileText className="w-4 h-4 mr-2" />
-                  Voir tous les tarifs
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-          )}
 
           {/* Gestion des Tarifs Fixes */}
           <Card id="tarifs-fixes-section">
@@ -2818,7 +2394,11 @@ export const AdminTarificationPage: React.FC = () => {
                   {renderFireTheftConfigSection()}
                   {renderGlassRoofConfigSection()}
                   {renderGlassStandardConfigSection()}
+<<<<<<< ours
+                      {renderTierceCapConfigSection()}
+=======
                   {renderTierceCapConfigSection()}
+>>>>>>> theirs
                 </CardContent>
               </Card>
             )}
