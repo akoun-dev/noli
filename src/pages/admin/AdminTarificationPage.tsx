@@ -30,10 +30,14 @@ import {
   Guarantee,
   GuaranteeFormData,
   CalculationMethodType,
+  TierceFranchiseOptionType,
+  TierceCapConfig,
+  TierceFranchiseOptionType,
   TarifFixe,
   TarifFixeFormData,
   TarifRC,
-  TarifRCFormData
+  TarifRCFormData,
+  FireTheftConfig
 } from '@/types/tarification';
 import {
   Plus,
@@ -58,6 +62,84 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+
+const FIRE_THEFT_DEFAULT_CONFIG: FireTheftConfig = {
+  enabled: true,
+  includeFireComponent: true,
+  includeBaseTheftComponent: true,
+  includeArmedTheftComponent: false,
+  fireRatePercent: 0.42,
+  theftRateBelowThresholdPercent: 1.1,
+  theftRateAboveThresholdPercent: 2.1,
+  armedTheftRateBelowThresholdPercent: 1.6,
+  armedTheftRateAboveThresholdPercent: 2.2,
+  sumInsuredThreshold: 25_000_000,
+  autoLinkTheft: true,
+};
+
+const THEFT_ARMED_DEFAULT_CONFIG: FireTheftConfig = {
+  enabled: true,
+  includeFireComponent: false,
+  includeBaseTheftComponent: true,
+  includeArmedTheftComponent: true,
+  fireRatePercent: 0,
+  theftRateBelowThresholdPercent: 1.1,
+  theftRateAboveThresholdPercent: 2.1,
+  armedTheftRateBelowThresholdPercent: 1.6,
+  armedTheftRateAboveThresholdPercent: 2.2,
+  sumInsuredThreshold: 25_000_000,
+  autoLinkTheft: false,
+};
+
+const GLASS_ROOF_DEFAULT_CONFIG = {
+  enabled: true,
+  ratePercent: 0.42,
+};
+
+const GLASS_STANDARD_DEFAULT_CONFIG = {
+  enabled: true,
+  ratePercent: 0.4,
+};
+
+const TIERCE_CAP_DEFAULT_CONFIG = {
+  selectedOption: 'NONE' as TierceFranchiseOptionType,
+  options: [
+    {
+      type: 'NONE' as TierceFranchiseOptionType,
+      label: 'Sans franchise',
+      ratePercent: 8,
+      deductionPercent: 0,
+    },
+    {
+      type: 'FRANCHISE_250' as TierceFranchiseOptionType,
+      label: 'Franchise 250 000 FCFA',
+      franchiseAmount: 250000,
+      ratePercent: 7,
+      deductionPercent: 20,
+    },
+    {
+      type: 'FRANCHISE_500' as TierceFranchiseOptionType,
+      label: 'Franchise 500 000 FCFA',
+      franchiseAmount: 500000,
+      ratePercent: 6,
+      deductionPercent: 30,
+    },
+  ],
+};
+
+const getGlassRoofDefault = () => ({ ...GLASS_ROOF_DEFAULT_CONFIG });
+const getGlassStandardDefault = () => ({ ...GLASS_STANDARD_DEFAULT_CONFIG });
+const getTierceCapDefault = () => ({
+  selectedOption: TIERCE_CAP_DEFAULT_CONFIG.selectedOption,
+  options: TIERCE_CAP_DEFAULT_CONFIG.options.map(option => ({ ...option })),
+});
+
+const getDynamicCoverageDefault = (method: CalculationMethodType): FireTheftConfig => {
+  if (method === 'THEFT_ARMED') {
+    return { ...THEFT_ARMED_DEFAULT_CONFIG };
+  }
+  return { ...FIRE_THEFT_DEFAULT_CONFIG };
+};
 
 export const AdminTarificationPage: React.FC = () => {
   // Important: wait for real authentication before loading data
@@ -151,7 +233,8 @@ export const AdminTarificationPage: React.FC = () => {
     category: 'RESPONSABILITE_CIVILE',
     description: '',
     calculationMethod: 'FIXED_AMOUNT',
-    isOptional: true
+    isOptional: true,
+    parameters: undefined
   });
 
   const [isCreateTarifFixeDialogOpen, setIsCreateTarifFixeDialogOpen] = useState(false);
@@ -190,26 +273,43 @@ export const AdminTarificationPage: React.FC = () => {
           .then(rows => {
             logger.debug(`AdminTarificationPage.loadData: received ${rows.length} rows from Supabase`)
             return rows.map(row => {
-            const codeAuto = (row.name || '')
-              .trim()
-              .toUpperCase()
-              .replace(/[^A-Z0-9]/g, '')
-              .slice(0, 8)
-            return {
-              id: row.id,
-              name: row.name,
-              code: codeAuto || 'GAR',
-              category: 'RESPONSABILITE_CIVILE',
-              description: '',
-              calculationMethod: row.calculation_type as CalculationMethodType,
-              isOptional: !row.is_mandatory,
-              isActive: row.is_active,
-              fixedAmount: row.fixed_amount ?? undefined,
-              createdAt: new Date(),
-              updatedAt: new Date(),
-              createdBy: 'supabase'
-            } as Guarantee
-          })
+              const metadata = (row.metadata || {}) as Record<string, any>
+              const parameters = metadata.parameters as Guarantee['parameters'] | undefined
+              const category = (metadata.category as Guarantee['category']) || 'RESPONSABILITE_CIVILE'
+              const description =
+                row.description ||
+                (metadata.description as string | undefined) ||
+                ''
+              const existingCode =
+                row.code ||
+                (metadata.code as string | undefined) ||
+                ''
+              const fallbackCode = (row.name || '')
+                .trim()
+                .toUpperCase()
+                .replace(/[^A-Z0-9]/g, '')
+                .slice(0, 8)
+              return {
+                id: row.id,
+                name: row.name,
+                code: existingCode || fallbackCode || 'GAR',
+                category,
+                description,
+                calculationMethod:
+                  (metadata.calculationMethod as CalculationMethodType | undefined) ||
+                  (row.calculation_type as CalculationMethodType),
+                isOptional: !row.is_mandatory,
+                isActive: row.is_active,
+                fixedAmount: row.fixed_amount ?? undefined,
+                parameters,
+                minValue: typeof metadata.minValue === 'number' ? metadata.minValue : undefined,
+                maxValue: typeof metadata.maxValue === 'number' ? metadata.maxValue : undefined,
+                rate: typeof metadata.rate === 'number' ? metadata.rate : undefined,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+                createdBy: 'supabase'
+              } as Guarantee
+            })
           })
           .catch((err) => {
             logger.error('Erreur de chargement des garanties (DB):', err)
@@ -417,6 +517,28 @@ export const AdminTarificationPage: React.FC = () => {
         payload.rate = undefined
         payload.minValue = undefined
         payload.maxValue = undefined
+      } else if (method === 'FIRE_THEFT' || method === 'THEFT_ARMED') {
+        payload.rate = undefined
+        payload.minValue = undefined
+        payload.maxValue = undefined
+        payload.fixedAmount = undefined
+        payload.parameters = {
+          ...(payload.parameters ?? {}),
+          fireTheftConfig:
+            payload.parameters?.fireTheftConfig ?? {
+              ...getDynamicCoverageDefault(method),
+              enabled: true,
+            },
+        }
+      } else if (method === 'GLASS_ROOF') {
+        payload.rate = undefined
+        payload.minValue = undefined
+        payload.maxValue = undefined
+        payload.fixedAmount = undefined
+        payload.parameters = {
+          ...(payload.parameters ?? {}),
+          glassRoofConfig: payload.parameters?.glassRoofConfig ?? getGlassRoofDefault(),
+        }
       } else if (['RATE_ON_SI', 'RATE_ON_NEW_VALUE', 'CONDITIONAL_RATE'].includes(method as string)) {
         payload.fixedAmount = undefined
       }
@@ -440,6 +562,7 @@ export const AdminTarificationPage: React.FC = () => {
           await guaranteeService.createGuarantee(payload)
         } else {
           logger.api('handleCreateGuarantee: created coverage in Supabase', { coverageId })
+          await guaranteeService.updateGuarantee(coverageId, payload)
           if (method === 'FIXED_AMOUNT' && payload.fixedAmount) {
             await tarificationSupabaseService.upsertCoverageFixedTariff(coverageId, payload.fixedAmount)
             logger.api('handleCreateGuarantee: upserted fixed tariff', { coverageId, fixedAmount: payload.fixedAmount })
@@ -457,7 +580,8 @@ export const AdminTarificationPage: React.FC = () => {
         category: 'RESPONSABILITE_CIVILE',
         description: '',
         calculationMethod: 'FIXED_AMOUNT',
-        isOptional: true
+        isOptional: true,
+        parameters: undefined
       });
       toast.success('Garantie créée avec succès');
       loadData();
@@ -512,6 +636,28 @@ export const AdminTarificationPage: React.FC = () => {
         payload.rate = undefined
         payload.minValue = undefined
         payload.maxValue = undefined
+      } else if (method === 'FIRE_THEFT' || method === 'THEFT_ARMED') {
+        payload.rate = undefined
+        payload.minValue = undefined
+        payload.maxValue = undefined
+        payload.fixedAmount = undefined
+        payload.parameters = {
+          ...(payload.parameters ?? {}),
+          fireTheftConfig:
+            payload.parameters?.fireTheftConfig ?? {
+              ...getDynamicCoverageDefault(method),
+              enabled: true,
+            },
+        }
+      } else if (method === 'GLASS_ROOF') {
+        payload.rate = undefined
+        payload.minValue = undefined
+        payload.maxValue = undefined
+        payload.fixedAmount = undefined
+        payload.parameters = {
+          ...(payload.parameters ?? {}),
+          glassRoofConfig: payload.parameters?.glassRoofConfig ?? getGlassRoofDefault(),
+        }
       } else if (['RATE_ON_SI', 'RATE_ON_NEW_VALUE', 'CONDITIONAL_RATE'].includes(method as string)) {
         payload.fixedAmount = undefined
       }
@@ -524,6 +670,7 @@ export const AdminTarificationPage: React.FC = () => {
           isOptional: payload.isOptional!,
         })
         logger.api('handleUpdateGuarantee: updated coverage in Supabase', { id: selectedGuarantee.id })
+        await guaranteeService.updateGuarantee(selectedGuarantee.id, payload)
         if (method === 'FIXED_AMOUNT' && payload.fixedAmount) {
           await tarificationSupabaseService.upsertCoverageFixedTariff(selectedGuarantee.id, payload.fixedAmount)
           logger.api('handleUpdateGuarantee: upserted fixed tariff', { id: selectedGuarantee.id, fixedAmount: payload.fixedAmount })
@@ -540,7 +687,8 @@ export const AdminTarificationPage: React.FC = () => {
         category: 'RESPONSABILITE_CIVILE',
         description: '',
         calculationMethod: 'FIXED_AMOUNT',
-        isOptional: true
+        isOptional: true,
+        parameters: undefined
       });
       loadData();
     } catch (error) {
@@ -613,9 +761,526 @@ export const AdminTarificationPage: React.FC = () => {
   });
 
   const calculationMethods = guaranteeService.getCalculationMethods();
-  const selectableCalculationMethods = calculationMethods.filter(
-    (m) => m.value === 'FREE' || m.value === 'FIXED_AMOUNT'
-  );
+  const selectableCalculationMethods = calculationMethods;
+
+  const removeFireTheftConfig = (parameters?: Guarantee['parameters']) => {
+    if (!parameters || !parameters.fireTheftConfig) {
+      return parameters;
+    }
+    const { fireTheftConfig: _removed, ...rest } = parameters;
+    return Object.keys(rest).length > 0 ? rest : undefined;
+  };
+
+  const removeGlassRoofConfig = (parameters?: Guarantee['parameters']) => {
+    if (!parameters || !parameters.glassRoofConfig) {
+      return parameters;
+    }
+    const { glassRoofConfig: _removed, ...rest } = parameters;
+    return Object.keys(rest).length > 0 ? rest : undefined;
+  };
+
+  const removeGlassStandardConfig = (parameters?: Guarantee['parameters']) => {
+    if (!parameters || !parameters.glassStandardConfig) {
+      return parameters;
+    }
+    const { glassStandardConfig: _removed, ...rest } = parameters;
+    return Object.keys(rest).length > 0 ? rest : undefined;
+  };
+
+  const removeTierceCapConfig = (parameters?: Guarantee['parameters']) => {
+    if (!parameters || !parameters.tierceCapConfig) {
+      return parameters;
+    }
+    const { tierceCapConfig: _removed, ...rest } = parameters;
+    return Object.keys(rest).length > 0 ? rest : undefined;
+  };
+
+  const setFireTheftConfigEnabled = (enabled: boolean) => {
+    if (newGuarantee.calculationMethod !== 'FIRE_THEFT') {
+      return;
+    }
+    setNewGuarantee((prev) => {
+      if (!enabled) {
+        return {
+          ...prev,
+          parameters: removeFireTheftConfig(prev.parameters),
+        };
+      }
+      const nextParams = { ...(prev.parameters ?? {}) };
+      const defaults = getDynamicCoverageDefault(prev.calculationMethod);
+      const current = nextParams.fireTheftConfig ?? defaults;
+      nextParams.fireTheftConfig = {
+        ...defaults,
+        ...current,
+        enabled: true,
+      };
+      return { ...prev, parameters: nextParams };
+    });
+  };
+
+  const updateFireTheftConfig = (updates: Partial<FireTheftConfig>) => {
+    setNewGuarantee((prev) => {
+      const nextParams = { ...(prev.parameters ?? {}) };
+      const baseConfig = nextParams.fireTheftConfig
+        ? { ...nextParams.fireTheftConfig }
+        : { ...getDynamicCoverageDefault(prev.calculationMethod), enabled: true };
+      nextParams.fireTheftConfig = {
+        ...baseConfig,
+        ...updates,
+        enabled: true,
+      };
+      return { ...prev, parameters: nextParams };
+    });
+  };
+
+  const updateTierceCapConfig = (updater: (config: TierceCapConfig) => TierceCapConfig) => {
+    setNewGuarantee(prev => {
+      const nextParams = { ...(prev.parameters ?? {}) };
+      const current =
+        nextParams.tierceCapConfig
+          ? {
+              ...nextParams.tierceCapConfig,
+              options: nextParams.tierceCapConfig.options.map(option => ({ ...option })),
+            }
+          : getTierceCapDefault();
+      const updated = updater({
+        ...current,
+        options: current.options.map(option => ({ ...option })),
+      });
+      nextParams.tierceCapConfig = updated;
+      return { ...prev, parameters: nextParams };
+    });
+  };
+
+  const handleCalculationMethodChange = (value: CalculationMethodType) => {
+    setNewGuarantee((prev) => {
+      let nextParams = prev.parameters;
+      if (value === 'FIRE_THEFT' || value === 'THEFT_ARMED') {
+        const defaults = getDynamicCoverageDefault(value);
+        const existing = nextParams?.fireTheftConfig ?? {};
+        nextParams = {
+          ...(nextParams ?? {}),
+          fireTheftConfig: {
+            ...defaults,
+            ...existing,
+            enabled: existing.enabled ?? true,
+          },
+        };
+        nextParams = removeGlassRoofConfig(nextParams);
+        nextParams = removeGlassStandardConfig(nextParams);
+        nextParams = removeTierceCapConfig(nextParams);
+      } else if (value === 'GLASS_ROOF') {
+        nextParams = {
+          ...(nextParams ?? {}),
+          glassRoofConfig: nextParams?.glassRoofConfig ?? getGlassRoofDefault(),
+        };
+        nextParams = removeFireTheftConfig(nextParams);
+        nextParams = removeGlassStandardConfig(nextParams);
+        nextParams = removeTierceCapConfig(nextParams);
+      } else if (value === 'GLASS_STANDARD') {
+        nextParams = {
+          ...(nextParams ?? {}),
+          glassStandardConfig: nextParams?.glassStandardConfig ?? getGlassStandardDefault(),
+        };
+        nextParams = removeFireTheftConfig(nextParams);
+        nextParams = removeGlassRoofConfig(nextParams);
+        nextParams = removeTierceCapConfig(nextParams);
+      } else if (value === 'TIERCE_COMPLETE_CAP' || value === 'TIERCE_COLLISION_CAP') {
+        nextParams = {
+          ...(nextParams ?? {}),
+          tierceCapConfig: nextParams?.tierceCapConfig ?? getTierceCapDefault(),
+        };
+        nextParams = removeFireTheftConfig(nextParams);
+        nextParams = removeGlassRoofConfig(nextParams);
+        nextParams = removeGlassStandardConfig(nextParams);
+      } else {
+        nextParams = removeFireTheftConfig(nextParams);
+        nextParams = removeGlassRoofConfig(nextParams);
+        nextParams = removeGlassStandardConfig(nextParams);
+        nextParams = removeTierceCapConfig(nextParams);
+      }
+
+      return {
+        ...prev,
+        calculationMethod: value,
+        parameters: nextParams,
+      };
+    });
+  };
+
+  const renderFireTheftConfigSection = () => {
+    const method = newGuarantee.calculationMethod;
+    if (method !== 'FIRE_THEFT' && method !== 'THEFT_ARMED') {
+      return null;
+    }
+
+    const config = newGuarantee.parameters?.fireTheftConfig;
+    const defaults = getDynamicCoverageDefault(method);
+    const resolvedConfig = {
+      ...defaults,
+      ...(config ?? {}),
+    };
+
+    const handlePercentChange = (key: keyof FireTheftConfig) => (value: string) => {
+      const parsed = parseFloat(value);
+      if (!Number.isFinite(parsed)) {
+        return;
+      }
+      updateFireTheftConfig({ [key]: parsed } as Partial<FireTheftConfig>);
+    };
+
+    const handleThresholdChange = (value: string) => {
+      const parsed = parseInt(value, 10);
+      if (!Number.isFinite(parsed)) {
+        return;
+      }
+      updateFireTheftConfig({ sumInsuredThreshold: parsed });
+    };
+
+    if (method === 'THEFT_ARMED') {
+      return (
+        <Card className="border border-dashed">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Configuration Vol + Vol à mains armées</CardTitle>
+            <CardDescription>
+              Deux composantes s&apos;additionnent sur la valeur vénale selon le seuil SI (25M FCFA par défaut).
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label>Seuil valeur assurée (FCFA)</Label>
+                <Input
+                  type="number"
+                  value={resolvedConfig.sumInsuredThreshold ?? ''}
+                  onChange={(e) => handleThresholdChange(e.target.value)}
+                  placeholder="25000000"
+                />
+              </div>
+            </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label>Taux Vol simple (≤ seuil) (%)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={resolvedConfig.theftRateBelowThresholdPercent ?? ''}
+                  onChange={(e) => handlePercentChange('theftRateBelowThresholdPercent')(e.target.value)}
+                  placeholder="1.1"
+                />
+              </div>
+              <div>
+                <Label>Taux Vol simple (&gt; seuil) (%)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={resolvedConfig.theftRateAboveThresholdPercent ?? ''}
+                  onChange={(e) => handlePercentChange('theftRateAboveThresholdPercent')(e.target.value)}
+                  placeholder="2.1"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label>Taux Vol à mains armées (≤ seuil) (%)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={resolvedConfig.armedTheftRateBelowThresholdPercent ?? ''}
+                  onChange={(e) => handlePercentChange('armedTheftRateBelowThresholdPercent')(e.target.value)}
+                  placeholder="1.6"
+                />
+              </div>
+              <div>
+                <Label>Taux Vol à mains armées (&gt; seuil) (%)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={resolvedConfig.armedTheftRateAboveThresholdPercent ?? ''}
+                  onChange={(e) => handlePercentChange('armedTheftRateAboveThresholdPercent')(e.target.value)}
+                  placeholder="2.2"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    // FIRE_THEFT UI
+    const enabled = resolvedConfig.enabled !== false;
+    return (
+      <Card className="border border-dashed">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Configuration Incendie & Vol</CardTitle>
+          <CardDescription>
+            Les taux s&apos;appliquent sur la valeur vénale fournie par le prospect. Vous pouvez ajuster seuil et
+            pourcentages.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-start gap-3">
+            <Checkbox
+              id="fire-theft-enabled"
+              checked={enabled}
+              onCheckedChange={(checked) => setFireTheftConfigEnabled(Boolean(checked))}
+            />
+            <div>
+              <Label htmlFor="fire-theft-enabled">Activer la formule dynamique</Label>
+              <p className="text-xs text-muted-foreground">
+                Utilise la valeur vénale saisie lors de la demande de devis.
+              </p>
+            </div>
+          </div>
+
+          {enabled && (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label>Taux Incendie (%)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={resolvedConfig.fireRatePercent ?? ''}
+                    onChange={(e) => handlePercentChange('fireRatePercent')(e.target.value)}
+                    placeholder="0.42"
+                  />
+                  <p className="text-xs text-muted-foreground">Toujours appliqué.</p>
+                </div>
+                <div>
+                  <Label>Seuil valeur assurée (FCFA)</Label>
+                  <Input
+                    type="number"
+                    value={resolvedConfig.sumInsuredThreshold ?? ''}
+                    onChange={(e) => handleThresholdChange(e.target.value)}
+                    placeholder="25000000"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label>Taux Vol (≤ seuil) (%)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={resolvedConfig.theftRateBelowThresholdPercent ?? ''}
+                    onChange={(e) => handlePercentChange('theftRateBelowThresholdPercent')(e.target.value)}
+                    placeholder="1.1"
+                  />
+                </div>
+                <div>
+                  <Label>Taux Vol (&gt; seuil) (%)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={resolvedConfig.theftRateAboveThresholdPercent ?? ''}
+                    onChange={(e) => handlePercentChange('theftRateAboveThresholdPercent')(e.target.value)}
+                    placeholder="2.1"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <Checkbox
+                  id="fire-theft-link-vol"
+                  checked={!!resolvedConfig.autoLinkTheft}
+                  onCheckedChange={(checked) => updateFireTheftConfig({ autoLinkTheft: Boolean(checked) })}
+                />
+                <div>
+                  <Label htmlFor="fire-theft-link-vol">Associer automatiquement Vol simple</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Permet de regrouper Incendie et Vol dans la même offre.
+                  </p>
+                </div>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const renderGlassRoofConfigSection = () => {
+    if (newGuarantee.calculationMethod !== 'GLASS_ROOF') {
+      return null;
+    }
+
+    const config = newGuarantee.parameters?.glassRoofConfig ?? getGlassRoofDefault();
+    return (
+      <Card className="border border-dashed">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Configuration Bris de glaces – Toits ouvrants</CardTitle>
+          <CardDescription>
+            Saisissez le pourcentage appliqué sur le prix d&apos;achat (valeur neuve). Par défaut&nbsp;: 0,42&nbsp;%.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <Label>Taux (%)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={config.ratePercent ?? ''}
+                onChange={(e) => {
+                  const parsed = parseFloat(e.target.value);
+                  setNewGuarantee((prev) => ({
+                    ...prev,
+                    parameters: {
+                      ...(prev.parameters ?? {}),
+                      glassRoofConfig: {
+                        ...getGlassRoofDefault(),
+                        ...(prev.parameters?.glassRoofConfig ?? {}),
+                        ratePercent: Number.isFinite(parsed) ? parsed : undefined,
+                      },
+                    },
+                  }));
+                }}
+                placeholder="0.42"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const renderGlassStandardConfigSection = () => {
+    if (newGuarantee.calculationMethod !== 'GLASS_STANDARD') {
+      return null;
+    }
+
+    const config = newGuarantee.parameters?.glassStandardConfig ?? getGlassStandardDefault();
+    return (
+      <Card className="border border-dashed">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Configuration Bris de glaces</CardTitle>
+          <CardDescription>
+            Taux appliqué sur le prix d&apos;achat / valeur neuve. Par défaut&nbsp;: 0,4&nbsp;%.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <Label>Taux (%)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={config.ratePercent ?? ''}
+                onChange={(e) => {
+                  const parsed = parseFloat(e.target.value);
+                  setNewGuarantee(prev => ({
+                    ...prev,
+                    parameters: {
+                      ...(prev.parameters ?? {}),
+                      glassStandardConfig: {
+                        ...getGlassStandardDefault(),
+                        ...(prev.parameters?.glassStandardConfig ?? {}),
+                        ratePercent: Number.isFinite(parsed) ? parsed : undefined,
+                      },
+                    },
+                  }));
+                }}
+                placeholder="0.4"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const renderTierceCapConfigSection = () => {
+    const method = newGuarantee.calculationMethod;
+    if (method !== 'TIERCE_COMPLETE_CAP' && method !== 'TIERCE_COLLISION_CAP') {
+      return null;
+    }
+
+    const config = newGuarantee.parameters?.tierceCapConfig ?? getTierceCapDefault();
+
+    const handleOptionChange = (type: TierceFranchiseOptionType, field: 'ratePercent' | 'deductionPercent', value: string) => {
+      const parsed = parseFloat(value);
+      updateTierceCapConfig(cfg => ({
+        ...cfg,
+        options: cfg.options.map(option =>
+          option.type === type
+            ? {
+                ...option,
+                [field]: Number.isFinite(parsed) ? parsed : undefined,
+              }
+            : option
+        ),
+      }));
+    };
+
+    return (
+      <Card className="border border-dashed">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">
+            {method === 'TIERCE_COMPLETE_CAP' ? 'Tierce complète plafonnée' : 'Tierce collision plafonnée'}
+          </CardTitle>
+          <CardDescription>
+            Configurez les taux appliqués sur la valeur neuve selon le niveau de franchise.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label>Franchise appliquée</Label>
+            <Select
+              value={config.selectedOption}
+              onValueChange={(value: TierceFranchiseOptionType) =>
+                updateTierceCapConfig(cfg => ({ ...cfg, selectedOption: value }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {config.options.map(option => (
+                  <SelectItem key={option.type} value={option.type}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-6">
+            {config.options.map(option => (
+              <div key={option.type} className="border rounded-md p-4 space-y-3">
+                <div className="font-medium">{option.label}</div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <Label>Taux (%)</Label>
+                    <Input
+                      type="number"
+                      step="0.1"
+                      value={option.ratePercent ?? ''}
+                      onChange={(e) => handleOptionChange(option.type, 'ratePercent', e.target.value)}
+                      placeholder="8"
+                    />
+                  </div>
+                  <div>
+                    <Label>Réduction (%)</Label>
+                    <Input
+                      type="number"
+                      step="1"
+                      value={option.deductionPercent ?? ''}
+                      onChange={(e) => handleOptionChange(option.type, 'deductionPercent', e.target.value)}
+                      placeholder="20"
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
 
   if (loading) {
     return (
@@ -703,14 +1368,15 @@ export const AdminTarificationPage: React.FC = () => {
                       {isCreatingGuarantee ? 'Création…' : 'Nouvelle Garantie'}
                       </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[80vh] overflow-y-auto">
+                  <DialogContent className="max-w-[95vw] sm:max-w-3xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
-                      <DialogTitle>Créer une nouvelle garantie</DialogTitle>
-                      <DialogDescription>
-                        Définissez une nouvelle garantie avec sa méthode de calcul
+                      <DialogTitle className="text-xl">Créer une nouvelle garantie</DialogTitle>
+                      <DialogDescription className="text-base">
+                        Définissez une nouvelle garantie avec sa méthode de calcul et ses paramètres
                       </DialogDescription>
                     </DialogHeader>
-                    <div className="space-y-4">
+                    
+                    <div className="space-y-6 py-4">
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <Label htmlFor="guarantee-name">Nom de la garantie</Label>
@@ -748,9 +1414,7 @@ export const AdminTarificationPage: React.FC = () => {
                           <Label>Méthode de calcul</Label>
                           <Select
                             value={newGuarantee.calculationMethod}
-                            onValueChange={(value: CalculationMethodType) =>
-                              setNewGuarantee(prev => ({ ...prev, calculationMethod: value }))
-                            }
+                            onValueChange={handleCalculationMethodChange}
                           >
                             <SelectTrigger>
                               <SelectValue />
@@ -848,6 +1512,11 @@ export const AdminTarificationPage: React.FC = () => {
                           </>
                         )
                       })()}
+
+                      {renderFireTheftConfigSection()}
+                      {renderGlassRoofConfigSection()}
+                      {renderGlassStandardConfigSection()}
+                      {renderTierceCapConfigSection()}
 
                       <div>
                         <Label htmlFor="guarantee-conditions">Conditions</Label>
@@ -1846,9 +2515,7 @@ export const AdminTarificationPage: React.FC = () => {
               <Label>Méthode de calcul</Label>
               <Select
                 value={newGuarantee.calculationMethod}
-                onValueChange={(value: CalculationMethodType) =>
-                  setNewGuarantee((prev) => ({ ...prev, calculationMethod: value }))
-                }
+                onValueChange={handleCalculationMethodChange}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -1945,6 +2612,11 @@ export const AdminTarificationPage: React.FC = () => {
                 </>
               )
             })()}
+
+            {renderFireTheftConfigSection()}
+            {renderGlassRoofConfigSection()}
+            {renderGlassStandardConfigSection()}
+            {renderTierceCapConfigSection()}
 
             <div className="flex items-center space-x-2">
               <Checkbox

@@ -30,15 +30,21 @@ class TarificationSupabaseService {
   // ---------- COVERAGES (GARANTIES) ----------
   private mapCalcMethodToDb(method: string): string {
     // Keep same naming across app and DB
+    if (['FIRE_THEFT', 'THEFT_ARMED', 'GLASS_ROOF', 'GLASS_STANDARD', 'TIERCE_COMPLETE_CAP', 'TIERCE_COLLISION_CAP'].includes(method)) {
+      return 'FIXED_AMOUNT'
+    }
     return method
   }
 
   async listAdminCoverages(): Promise<Array<{
     id: string
     name: string
+    code?: string | null
+    description?: string | null
     calculation_type: string
     is_active: boolean
     is_mandatory: boolean
+    metadata?: Record<string, any> | null
     fixed_amount?: number | null
   }>> {
     // Nested select to get potential fixed_amount rules for display
@@ -49,7 +55,7 @@ class TarificationSupabaseService {
       const { data, error } = await supabase
         .from('coverages')
         .select(
-          'id, name, calculation_type, is_active, is_mandatory, coverage_tariff_rules:coverage_tariff_rules(fixed_amount)'
+          'id, code, name, description, calculation_type, metadata, is_active, is_mandatory, coverage_tariff_rules:coverage_tariff_rules(fixed_amount)'
         )
         .order('display_order', { ascending: true })
 
@@ -80,7 +86,7 @@ class TarificationSupabaseService {
             headers['Authorization'] = `Bearer ${sess.session.access_token}`
           }
           const response = await fetch(
-            `${supabaseUrl}/rest/v1/coverages?select=id,name,calculation_type,is_active,is_mandatory,coverage_tariff_rules:coverage_tariff_rules(fixed_amount)&order=display_order.asc`,
+            `${supabaseUrl}/rest/v1/coverages?select=id,code,name,description,calculation_type,metadata,is_active,is_mandatory,coverage_tariff_rules:coverage_tariff_rules(fixed_amount)&order=display_order.asc`,
             { headers }
           )
           if (response.ok) {
@@ -97,10 +103,13 @@ class TarificationSupabaseService {
         const fixed = rules.find((r) => r.fixed_amount != null)?.fixed_amount ?? null
         return {
           id: row.id,
+          code: row.code ?? null,
           name: row.name,
+          description: row.description ?? null,
           calculation_type: row.calculation_type,
           is_active: !!row.is_active,
           is_mandatory: !!row.is_mandatory,
+          metadata: row.metadata ?? null,
           fixed_amount: fixed != null ? Number(fixed) : null,
         }
       })
@@ -119,7 +128,7 @@ class TarificationSupabaseService {
           headers['Authorization'] = `Bearer ${sess.session.access_token}`
         }
         const response = await fetch(
-          `${supabaseUrl}/rest/v1/coverages?select=id,name,calculation_type,is_active,is_mandatory,coverage_tariff_rules:coverage_tariff_rules(fixed_amount)&order=display_order.asc`,
+          `${supabaseUrl}/rest/v1/coverages?select=id,code,name,description,calculation_type,metadata,is_active,is_mandatory,coverage_tariff_rules:coverage_tariff_rules(fixed_amount)&order=display_order.asc`,
           { headers }
         )
 
@@ -136,10 +145,13 @@ class TarificationSupabaseService {
           const fixed = rules.find((r) => r.fixed_amount != null)?.fixed_amount ?? null
           return {
             id: row.id,
+            code: row.code ?? null,
             name: row.name,
+            description: row.description ?? null,
             calculation_type: row.calculation_type,
             is_active: !!row.is_active,
             is_mandatory: !!row.is_mandatory,
+            metadata: row.metadata ?? null,
             fixed_amount: fixed != null ? Number(fixed) : null,
           }
         })

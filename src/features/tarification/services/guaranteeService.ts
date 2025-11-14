@@ -397,6 +397,20 @@ class GuaranteeService {
     return CATEGORY_TO_COVERAGE_TYPE[DEFAULT_CATEGORY];
   }
 
+  private mapCalculationMethodForDb(method?: CalculationMethodType): string {
+    if (
+      method === 'FIRE_THEFT' ||
+      method === 'THEFT_ARMED' ||
+      method === 'GLASS_ROOF' ||
+      method === 'GLASS_STANDARD' ||
+      method === 'TIERCE_COMPLETE_CAP' ||
+      method === 'TIERCE_COLLISION_CAP'
+    ) {
+      return 'FIXED_AMOUNT';
+    }
+    return method ?? 'FIXED_AMOUNT';
+  }
+
   private mapTarifRcRow(row: any): TarifRC {
     return {
       id: row.id,
@@ -699,7 +713,7 @@ class GuaranteeService {
       type: this.mapCategoryToCoverageType(data.category),
       name: data.name,
       description: data.description ?? null,
-      calculation_type: data.calculationMethod,
+      calculation_type: this.mapCalculationMethodForDb(data.calculationMethod),
       is_mandatory: !data.isOptional,
       is_active: true,
       metadata,
@@ -769,7 +783,9 @@ class GuaranteeService {
       const updatePayload: Record<string, any> = {};
       if (data.name !== undefined) updatePayload.name = data.name;
       if (data.description !== undefined) updatePayload.description = data.description ?? null;
-      if (data.calculationMethod !== undefined) updatePayload.calculation_type = data.calculationMethod;
+      if (data.calculationMethod !== undefined) {
+        updatePayload.calculation_type = this.mapCalculationMethodForDb(data.calculationMethod);
+      }
       if (data.isOptional !== undefined) updatePayload.is_mandatory = !data.isOptional;
       if (data.code !== undefined) {
         const normalized = this.normalizeCode(data.code);
@@ -1111,6 +1127,36 @@ class GuaranteeService {
         value: 'FIXED_AMOUNT',
         label: 'Montant Fixe',
         description: 'Prime fixe indépendante du véhicule'
+      },
+      {
+        value: 'FIRE_THEFT',
+        label: 'Incendie & Vol',
+        description: 'Pourcentage dynamique sur la valeur vénale'
+      },
+      {
+        value: 'THEFT_ARMED',
+        label: 'Vol + Vol à mains armées',
+        description: 'Double taux conditionnel sur la valeur vénale'
+      },
+      {
+        value: 'GLASS_ROOF',
+        label: 'Bris de glaces toits ouvrants',
+        description: 'Pourcentage sur le prix d’achat (valeur neuve)'
+      },
+      {
+        value: 'GLASS_STANDARD',
+        label: 'Bris de glaces',
+        description: 'Pourcentage sur le prix d’achat (valeur neuve)'
+      },
+      {
+        value: 'TIERCE_COMPLETE_CAP',
+        label: 'Tierce complète plafonnée',
+        description: 'Taux selon franchise sur valeur neuve'
+      },
+      {
+        value: 'TIERCE_COLLISION_CAP',
+        label: 'Tierce collision plafonnée',
+        description: 'Taux selon franchise sur valeur neuve'
       }
     ];
   }

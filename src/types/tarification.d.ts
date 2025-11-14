@@ -46,6 +46,53 @@ export interface TarifFixe {
   packPriceReduced?: number;
 }
 
+export interface FireTheftConfig {
+  enabled?: boolean;
+  autoLinkTheft?: boolean;
+  includeFireComponent?: boolean;
+  includeBaseTheftComponent?: boolean;
+  includeArmedTheftComponent?: boolean;
+  fireRatePercent?: number;
+  theftRateBelowThresholdPercent?: number;
+  theftRateAboveThresholdPercent?: number;
+  armedTheftRateBelowThresholdPercent?: number;
+  armedTheftRateAboveThresholdPercent?: number;
+  sumInsuredThreshold?: number;
+}
+
+export interface GlassRoofConfig {
+  enabled?: boolean;
+  ratePercent?: number;
+}
+
+export interface GlassStandardConfig {
+  enabled?: boolean;
+  ratePercent?: number;
+}
+
+export type TierceFranchiseOptionType = 'NONE' | 'FRANCHISE_250' | 'FRANCHISE_500';
+
+export interface TierceFranchiseOption {
+  type: TierceFranchiseOptionType;
+  label: string;
+  franchiseAmount?: number;
+  ratePercent: number;
+  deductionPercent?: number;
+}
+
+export interface TierceCapConfig {
+  selectedOption: TierceFranchiseOptionType;
+  options: TierceFranchiseOption[];
+}
+
+export interface GuaranteeParameters {
+  fireTheftConfig?: FireTheftConfig;
+  glassRoofConfig?: GlassRoofConfig;
+  glassStandardConfig?: GlassStandardConfig;
+  tierceCapConfig?: TierceCapConfig;
+  [key: string]: any;
+}
+
 export interface CalculationMethod {
   id: string;
   name: string;
@@ -55,7 +102,13 @@ export interface CalculationMethod {
 
 export type CalculationMethodType =
   | 'FIXED_AMOUNT'
-  | 'FREE';
+  | 'FREE'
+  | 'FIRE_THEFT'
+  | 'THEFT_ARMED'
+  | 'GLASS_ROOF'
+  | 'GLASS_STANDARD'
+  | 'TIERCE_COMPLETE_CAP'
+  | 'TIERCE_COLLISION_CAP';
 
 export interface Guarantee {
   id: string;
@@ -72,9 +125,7 @@ export interface Guarantee {
   rate?: number;
   fixedAmount?: number;
   franchiseOptions?: number[];
-  parameters?: {
-    [key: string]: any;
-  };
+  parameters?: GuaranteeParameters;
   createdAt: Date;
   updatedAt: Date;
   createdBy: string;
@@ -212,9 +263,7 @@ export interface GuaranteeFormData {
   rate?: number;
   fixedAmount?: number;
   franchiseOptions?: number[];
-  parameters?: {
-    [key: string]: any;
-  };
+  parameters?: GuaranteeParameters;
 }
 
 export interface PackageFormData {

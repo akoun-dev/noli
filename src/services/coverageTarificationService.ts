@@ -1,6 +1,7 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { logger } from '@/lib/logger';
+import type { FireTheftConfig } from '@/types/tarification';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -101,6 +102,134 @@ export interface CoverageOption {
 }
 
 class CoverageTarificationService {
+  private coverageMetadataCache = new Map<string, { metadata?: Record<string, any> }>();
+
+  private parseNumber(value: any): number | null {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value;
+    }
+    if (typeof value === 'string') {
+      const parsed = parseFloat(value);
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+    return null;
+  }
+
+  private async getCoverageDetailsWithMetadata(coverageId: string): Promise<{ metadata?: Record<string, any> } | null> {
+    if (this.coverageMetadataCache.has(coverageId)) {
+      return this.coverageMetadataCache.get(coverageId)!;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('coverages')
+        .select('id, metadata')
+        .eq('id', coverageId)
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      const entry = {
+        metadata: (data?.metadata as Record<string, any> | undefined) ?? undefined,
+      };
+      this.coverageMetadataCache.set(coverageId, entry);
+      return entry;
+    } catch (error) {
+      logger.warn('getCoverageDetailsWithMetadata: unable to fetch coverage metadata', error);
+      return null;
+    }
+  }
+
+  private calculateFireTheftPremium(config: FireTheftConfig, vehicleData: VehicleData): number {
+    const venal =
+      this.parseNumber(vehicleData.sum_insured) ??
+      this.parseNumber((vehicleData as any).vehicle_value) ??
+      this.parseNumber(vehicleData.new_value) ??
+      0;
+
+    if (!venal || venal <= 0) {
+      return 0;
+    }
+
+    const threshold = this.parseNumber(config.sumInsuredThreshold) ?? 25_000_000;
+    const fireRate = (this.parseNumber(config.fireRatePercent) ?? 0) / 100;
+    const theftRateLow = (this.parseNumber(config.theftRateBelowThresholdPercent) ?? 0) / 100;
+    const theftRateHigh = (this.parseNumber(config.theftRateAboveThresholdPercent) ?? 0) / 100;
+    const armedRateLow = (this.parseNumber(config.armedTheftRateBelowThresholdPercent) ?? 0) / 100;
+    const armedRateHigh = (this.parseNumber(config.armedTheftRateAboveThresholdPercent) ?? 0) / 100;
+    const includeFire = config.includeFireComponent !== false;
+    const includeBase = config.includeBaseTheftComponent !== false;
+    const includeArmed = !!config.includeArmedTheftComponent;
+
+    const baseRate = venal <= threshold ? theftRateLow : theftRateHigh;
+    const armedRate = venal <= threshold ? armedRateLow : armedRateHigh;
+
+    let totalRate = 0;
+    if (includeFire && fireRate > 0) totalRate += fireRate;
+    if (includeBase && baseRate > 0) totalRate += baseRate;
+    if (includeArmed && armedRate > 0) totalRate += armedRate;
+
+    const premium = venal * totalRate;
+    return premium > 0 ? premium : 0;
+  }
+
+  private calculateGlassRoofPremium(config: { ratePercent?: number }, vehicleData: VehicleData): number {
+    const newValue =
+      this.parseNumber(vehicleData.new_value) ??
+      this.parseNumber(vehicleData.sum_insured) ??
+      this.parseNumber((vehicleData as any).vehicle_value) ??
+      0;
+
+    if (!newValue || newValue <= 0) {
+      return 0;
+    }
+
+    const rate = (this.parseNumber(config.ratePercent) ?? 0) / 100;
+    if (rate <= 0) return 0;
+    return newValue * rate;
+  }
+
+  private calculateGlassStandardPremium(config: { ratePercent?: number }, vehicleData: VehicleData): number {
+    const newValue =
+      this.parseNumber(vehicleData.new_value) ??
+      this.parseNumber(vehicleData.sum_insured) ??
+      this.parseNumber((vehicleData as any).vehicle_value) ??
+      0;
+
+    if (!newValue || newValue <= 0) {
+      return 0;
+    }
+
+    const rate = (this.parseNumber(config.ratePercent) ?? 0) / 100;
+    if (rate <= 0) return 0;
+    return newValue * rate;
+  }
+
+  private calculateTierceCapPremium(config: any, vehicleData: VehicleData): number {
+    const newValue =
+      this.parseNumber(vehicleData.new_value) ??
+      this.parseNumber(vehicleData.sum_insured) ??
+      this.parseNumber((vehicleData as any).vehicle_value) ??
+      0;
+
+    if (!newValue || newValue <= 0 || !config) {
+      return 0;
+    }
+
+    const options = Array.isArray(config.options) ? config.options : [];
+    const selected =
+      options.find((opt: any) => opt.type === config.selectedOption) ||
+      options.find((opt: any) => opt.type === 'NONE');
+    if (!selected) return 0;
+
+    const rate = (this.parseNumber(selected.ratePercent) ?? 0) / 100;
+    const deduction = (this.parseNumber(selected.deductionPercent) ?? 0) / 100;
+    const amount = newValue * rate * (1 - deduction);
+    return amount > 0 ? amount : 0;
+  }
+
   // Get available coverages from DB (preferred: direct table), with RPC fallback
   async getAvailableCoverages(params: {
     category?: string
@@ -374,6 +503,30 @@ class CoverageTarificationService {
     vehicleData: VehicleData,
     quoteData: Record<string, any> = {}
   ): Promise<number> {
+    let fallbackPremium = 0;
+    let coverageDetails: { metadata?: Record<string, any> } | null = null;
+    try {
+      coverageDetails = await this.getCoverageDetailsWithMetadata(coverageId);
+      const glassRoofConfig = coverageDetails?.metadata?.parameters?.glassRoofConfig as { ratePercent?: number } | undefined;
+      if (glassRoofConfig) {
+        fallbackPremium = this.calculateGlassRoofPremium(glassRoofConfig, vehicleData);
+      }
+      const glassStandardConfig = coverageDetails?.metadata?.parameters?.glassStandardConfig as { ratePercent?: number } | undefined;
+      if (glassStandardConfig) {
+        fallbackPremium = this.calculateGlassStandardPremium(glassStandardConfig, vehicleData);
+      }
+      const tierceCapConfig = coverageDetails?.metadata?.parameters?.tierceCapConfig;
+      if (tierceCapConfig) {
+        fallbackPremium = this.calculateTierceCapPremium(tierceCapConfig, vehicleData);
+      }
+      const fireTheftConfig = coverageDetails?.metadata?.parameters?.fireTheftConfig as FireTheftConfig | undefined;
+      if (fireTheftConfig) {
+        fallbackPremium = this.calculateFireTheftPremium(fireTheftConfig, vehicleData);
+      }
+    } catch (metaError) {
+      logger.warn('calculateCoveragePremium: unable to load coverage metadata', metaError);
+    }
+
     try {
       const { data, error } = await (supabase.rpc as any)('calculate_coverage_premium', {
         p_coverage_id: coverageId,
@@ -382,9 +535,15 @@ class CoverageTarificationService {
       });
 
       if (error) throw error;
-      return data || 0;
+      if (typeof data === 'number' && data > 0) {
+        return data;
+      }
+      return fallbackPremium || 0;
     } catch (error) {
       console.error('Error calculating coverage premium:', error);
+      if (fallbackPremium > 0) {
+        return fallbackPremium;
+      }
       throw error;
     }
   }

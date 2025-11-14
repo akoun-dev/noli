@@ -104,6 +104,46 @@ export class PricingService {
         };
         break;
 
+      case 'FIRE_THEFT':
+      case 'THEFT_ARMED': {
+        const { amount, details } = this.calculateFireTheftAmount(guarantee, vehicle);
+        calculatedPrice = amount;
+        pricingMethod =
+          guarantee.calculationMethod === 'THEFT_ARMED'
+            ? 'Vol + Vol à mains armées (valeur vénale)'
+            : 'Incendie & Vol (valeur vénale)';
+        calculationDetails = details;
+        break;
+      }
+
+      case 'GLASS_ROOF': {
+        const { amount, details } = this.calculateGlassCoverageAmount(guarantee.parameters?.glassRoofConfig, vehicle);
+        calculatedPrice = amount;
+        pricingMethod = 'Bris de glaces (toit ouvrant)';
+        calculationDetails = details;
+        break;
+      }
+
+      case 'GLASS_STANDARD': {
+        const { amount, details } = this.calculateGlassCoverageAmount(guarantee.parameters?.glassStandardConfig, vehicle);
+        calculatedPrice = amount;
+        pricingMethod = 'Bris de glaces';
+        calculationDetails = details;
+        break;
+      }
+
+      case 'TIERCE_COMPLETE_CAP':
+      case 'TIERCE_COLLISION_CAP': {
+        const { amount, details } = this.calculateTierceCapAmount(guarantee, vehicle);
+        calculatedPrice = amount;
+        calculationDetails = details;
+        pricingMethod =
+          guarantee.calculationMethod === 'TIERCE_COMPLETE_CAP'
+            ? 'Tierce complète plafonnée'
+            : 'Tierce collision plafonnée';
+        break;
+      }
+
       default:
         calculatedPrice = 0;
         pricingMethod = 'Non défini';
@@ -134,6 +174,132 @@ export class PricingService {
     }
     // Utiliser fixedAmount en priorité, sinon rate pour compatibilité
     return guarantee.fixedAmount || guarantee.rate || 0;
+  }
+
+  private static calculateFireTheftAmount(guarantee: Guarantee, vehicle: Vehicle): {
+    amount: number;
+    details: Record<string, any>;
+  } {
+    const config = guarantee.parameters?.fireTheftConfig;
+    const venalValue = vehicle?.values?.venale ?? 0;
+
+    if (!config || !venalValue || venalValue <= 0) {
+      return {
+        amount: 0,
+        details: {
+          missingConfig: !config,
+          venalValue,
+        },
+      };
+    }
+
+    const threshold = config.sumInsuredThreshold ?? 25_000_000;
+    const fireRate = (config.fireRatePercent ?? 0) / 100;
+    const theftRateLow = (config.theftRateBelowThresholdPercent ?? 0) / 100;
+    const theftRateHigh = (config.theftRateAboveThresholdPercent ?? 0) / 100;
+    const armedRateLow = (config.armedTheftRateBelowThresholdPercent ?? 0) / 100;
+    const armedRateHigh = (config.armedTheftRateAboveThresholdPercent ?? 0) / 100;
+    const includeFire = config.includeFireComponent !== false;
+    const includeBaseTheft = config.includeBaseTheftComponent !== false;
+    const includeArmed = !!config.includeArmedTheftComponent;
+
+    const baseTheftRate = venalValue <= threshold ? theftRateLow : theftRateHigh;
+    const armedTheftRate = venalValue <= threshold ? armedRateLow : armedRateHigh;
+
+    let totalRate = 0;
+    if (includeFire && fireRate > 0) {
+      totalRate += fireRate;
+    }
+    if (includeBaseTheft && baseTheftRate > 0) {
+      totalRate += baseTheftRate;
+    }
+    if (includeArmed && armedTheftRate > 0) {
+      totalRate += armedTheftRate;
+    }
+
+    const amount = venalValue * totalRate;
+
+    return {
+      amount,
+      details: {
+        venalValue,
+        fireRate: includeFire ? fireRate : 0,
+        theftRate: includeBaseTheft ? baseTheftRate : 0,
+        armedTheftRate: includeArmed ? armedTheftRate : 0,
+        threshold,
+      },
+    };
+  }
+
+  private static calculateGlassCoverageAmount(
+    config: { ratePercent?: number } | undefined,
+    vehicle: Vehicle
+  ): {
+    amount: number;
+    details: Record<string, any>;
+  } {
+    const newValue = vehicle?.values?.neuve ?? vehicle?.values?.venale ?? 0;
+    if (!config || !newValue || newValue <= 0) {
+      return {
+        amount: 0,
+        details: {
+          missingConfig: !config,
+          newValue,
+        },
+      };
+    }
+
+    const rate = (config.ratePercent ?? 0) / 100;
+    const amount = newValue * rate;
+    return {
+      amount,
+      details: {
+        newValue,
+        rate,
+      },
+    };
+  }
+
+  private static calculateTierceCapAmount(guarantee: Guarantee, vehicle: Vehicle): {
+    amount: number;
+    details: Record<string, any>;
+  } {
+    const config = guarantee.parameters?.tierceCapConfig;
+    const newValue = vehicle?.values?.neuve ?? vehicle?.values?.venale ?? 0;
+    if (!config || !newValue || newValue <= 0) {
+      return {
+        amount: 0,
+        details: {
+          missingConfig: !config,
+          newValue,
+        },
+      };
+    }
+
+    const option =
+      config.options.find(opt => opt.type === config.selectedOption) ?? config.options.find(opt => opt.type === 'NONE');
+    if (!option) {
+      return {
+        amount: 0,
+        details: {
+          missingOption: true,
+        },
+      };
+    }
+
+    const baseRate = (option.ratePercent ?? 0) / 100;
+    const deduction = (option.deductionPercent ?? 0) / 100;
+    const amount = newValue * baseRate * (1 - deduction);
+
+    return {
+      amount,
+      details: {
+        newValue,
+        option: option.label,
+        rate: baseRate,
+        deduction,
+      },
+    };
   }
 
   // Les méthodes complexes ont été supprimées avec la simplification
