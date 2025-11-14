@@ -785,7 +785,7 @@ export const AdminTarificationPage: React.FC = () => {
 
   const calculationMethods = guaranteeService.getCalculationMethods();
   const selectableCalculationMethods = calculationMethods.filter(
-    (m) => ['FREE', 'FIXED_AMOUNT', 'FIRE_THEFT', 'THEFT_ARMED', 'GLASS_ROOF'].includes(m.value)
+    (m) => ['FREE', 'FIXED_AMOUNT', 'FIRE_THEFT', 'THEFT_ARMED', 'GLASS_ROOF', 'MTPL_TARIFF'].includes(m.value)
   );
 
   const removeFireTheftConfig = (parameters?: Guarantee['parameters']) => {
@@ -810,6 +810,29 @@ export const AdminTarificationPage: React.FC = () => {
     }
     const { glassStandardConfig: _removed, ...rest } = parameters;
     return Object.keys(rest).length > 0 ? rest : undefined;
+  };
+
+  // Configuration pour les tarifs RC
+  const updateMTPLTariffConfig = (updates: any) => {
+    setNewGuarantee((prev) => {
+      const nextParams = { ...(prev.parameters ?? {}) };
+      nextParams.mtplTariffConfig = {
+        ...(nextParams.mtplTariffConfig ?? {}),
+        ...updates,
+      };
+      return {
+        ...prev,
+        parameters: nextParams,
+      };
+    });
+  };
+
+  const handleTarifChange = (key: string, value: string) => {
+    const parsed = parseInt(value, 10);
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      return;
+    }
+    updateMTPLTariffConfig({ [key]: parsed });
   };
 
   const removeTierceCapConfig = (parameters?: Guarantee['parameters']) => {
@@ -1307,10 +1330,215 @@ export const AdminTarificationPage: React.FC = () => {
     );
   };
 
-<<<<<<< ours
+  const renderMTPLTariffConfigSection = () => {
+    const method = newGuarantee.calculationMethod;
+    if (method !== 'MTPL_TARIFF') {
+      return null;
+    }
 
-=======
->>>>>>> theirs
+    const config = newGuarantee.parameters?.mtplTariffConfig ?? {};
+
+    // Valeurs par défaut basées sur les spécifications
+    const defaultTarifs = {
+      essence_1_2: 68675,
+      essence_3_6: 87885,
+      essence_7_9: 102345,
+      essence_10_11: 124693,
+      essence_12_plus: 137058,
+      diesel_1: 68675,
+      diesel_2_4: 87885,
+      diesel_5_6: 102345,
+      diesel_7_8: 124693,
+      diesel_9_plus: 137058,
+    };
+
+    const getTarifValue = (key: string) => {
+      return config[key] ?? defaultTarifs[key as keyof typeof defaultTarifs] ?? 0;
+    };
+
+    return (
+      <Card className="border border-dashed">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Configuration Responsabilité Civile (JAUNE)</CardTitle>
+          <CardDescription>
+            Modifiez les tarifs selon la puissance fiscale et le type de moteur.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Moteur Essence */}
+            <div>
+              <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                <Fuel className="h-4 w-4" />
+                Moteur Essence
+              </h4>
+              <div className="space-y-3 text-sm">
+                <div className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded">
+                  <span className="text-gray-700">1 à 2 CV</span>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      value={getTarifValue('essence_1_2')}
+                      onChange={(e) => handleTarifChange('essence_1_2', e.target.value)}
+                      className="w-28 h-8 text-xs"
+                      min="0"
+                      step="1000"
+                    />
+                    <span className="text-xs text-gray-600">FCFA</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded">
+                  <span className="text-gray-700">3 à 6 CV</span>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      value={getTarifValue('essence_3_6')}
+                      onChange={(e) => handleTarifChange('essence_3_6', e.target.value)}
+                      className="w-28 h-8 text-xs"
+                      min="0"
+                      step="1000"
+                    />
+                    <span className="text-xs text-gray-600">FCFA</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded">
+                  <span className="text-gray-700">7 à 9 CV</span>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      value={getTarifValue('essence_7_9')}
+                      onChange={(e) => handleTarifChange('essence_7_9', e.target.value)}
+                      className="w-28 h-8 text-xs"
+                      min="0"
+                      step="1000"
+                    />
+                    <span className="text-xs text-gray-600">FCFA</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded">
+                  <span className="text-gray-700">10 à 11 CV</span>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      value={getTarifValue('essence_10_11')}
+                      onChange={(e) => handleTarifChange('essence_10_11', e.target.value)}
+                      className="w-28 h-8 text-xs"
+                      min="0"
+                      step="1000"
+                    />
+                    <span className="text-xs text-gray-600">FCFA</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded">
+                  <span className="text-gray-700">12 CV et plus</span>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      value={getTarifValue('essence_12_plus')}
+                      onChange={(e) => handleTarifChange('essence_12_plus', e.target.value)}
+                      className="w-28 h-8 text-xs"
+                      min="0"
+                      step="1000"
+                    />
+                    <span className="text-xs text-gray-600">FCFA</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Moteur Diesel */}
+            <div>
+              <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                <Car className="h-4 w-4" />
+                Moteur Diesel
+              </h4>
+              <div className="space-y-3 text-sm">
+                <div className="flex items-center justify-between py-2 px-3 bg-blue-50 rounded">
+                  <span className="text-gray-700">1 CV</span>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      value={getTarifValue('diesel_1')}
+                      onChange={(e) => handleTarifChange('diesel_1', e.target.value)}
+                      className="w-28 h-8 text-xs"
+                      min="0"
+                      step="1000"
+                    />
+                    <span className="text-xs text-gray-600">FCFA</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between py-2 px-3 bg-blue-50 rounded">
+                  <span className="text-gray-700">2 à 4 CV</span>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      value={getTarifValue('diesel_2_4')}
+                      onChange={(e) => handleTarifChange('diesel_2_4', e.target.value)}
+                      className="w-28 h-8 text-xs"
+                      min="0"
+                      step="1000"
+                    />
+                    <span className="text-xs text-gray-600">FCFA</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between py-2 px-3 bg-blue-50 rounded">
+                  <span className="text-gray-700">5 à 6 CV</span>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      value={getTarifValue('diesel_5_6')}
+                      onChange={(e) => handleTarifChange('diesel_5_6', e.target.value)}
+                      className="w-28 h-8 text-xs"
+                      min="0"
+                      step="1000"
+                    />
+                    <span className="text-xs text-gray-600">FCFA</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between py-2 px-3 bg-blue-50 rounded">
+                  <span className="text-gray-700">7 à 8 CV</span>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      value={getTarifValue('diesel_7_8')}
+                      onChange={(e) => handleTarifChange('diesel_7_8', e.target.value)}
+                      className="w-28 h-8 text-xs"
+                      min="0"
+                      step="1000"
+                    />
+                    <span className="text-xs text-gray-600">FCFA</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between py-2 px-3 bg-blue-50 rounded">
+                  <span className="text-gray-700">9 CV et plus</span>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      value={getTarifValue('diesel_9_plus')}
+                      onChange={(e) => handleTarifChange('diesel_9_plus', e.target.value)}
+                      className="w-28 h-8 text-xs"
+                      min="0"
+                      step="1000"
+                    />
+                    <span className="text-xs text-gray-600">FCFA</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+            <p className="text-sm text-amber-800">
+              <strong>Note:</strong> Les tarifs modifiés ici seront appliqués automatiquement lors du calcul
+              des primes selon la puissance fiscale et le type de moteur du véhicule.
+              Les modifications sont sauvegardées avec la garantie.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -1602,7 +1830,8 @@ export const AdminTarificationPage: React.FC = () => {
                       {/* Section Configuration avancée */}
                       {(newGuarantee.calculationMethod === 'FIRE_THEFT' ||
                         newGuarantee.calculationMethod === 'THEFT_ARMED' ||
-                        newGuarantee.calculationMethod === 'GLASS_ROOF') && (
+                        newGuarantee.calculationMethod === 'GLASS_ROOF' ||
+                        newGuarantee.calculationMethod === 'MTPL_TARIFF') && (
                         <Card className="border border-gray-200 shadow-sm">
                           <CardHeader className="pb-3 bg-gray-50/50">
                             <CardTitle className="text-base flex items-center gap-2">
@@ -1617,13 +1846,10 @@ export const AdminTarificationPage: React.FC = () => {
                           </CardHeader>
                           <CardContent className="pt-4 space-y-4">
                             {renderFireTheftConfigSection()}
-<<<<<<< ours
-            {renderGlassRoofConfigSection()}
-            {renderGlassStandardConfigSection()}
-            {renderTierceCapConfigSection()}
-=======
                             {renderGlassRoofConfigSection()}
->>>>>>> theirs
+                            {renderGlassStandardConfigSection()}
+                            {renderTierceCapConfigSection()}
+                            {renderMTPLTariffConfigSection()}
                           </CardContent>
                         </Card>
                       )}
@@ -2377,7 +2603,8 @@ export const AdminTarificationPage: React.FC = () => {
             {/* Section Configuration avancée */}
             {(newGuarantee.calculationMethod === 'FIRE_THEFT' ||
               newGuarantee.calculationMethod === 'THEFT_ARMED' ||
-              newGuarantee.calculationMethod === 'GLASS_ROOF') && (
+              newGuarantee.calculationMethod === 'GLASS_ROOF' ||
+              newGuarantee.calculationMethod === 'MTPL_TARIFF') && (
               <Card className="border border-gray-200 shadow-sm">
                 <CardHeader className="pb-3 bg-gray-50/50">
                   <CardTitle className="text-base flex items-center gap-2">
@@ -2394,11 +2621,8 @@ export const AdminTarificationPage: React.FC = () => {
                   {renderFireTheftConfigSection()}
                   {renderGlassRoofConfigSection()}
                   {renderGlassStandardConfigSection()}
-<<<<<<< ours
-                      {renderTierceCapConfigSection()}
-=======
                   {renderTierceCapConfigSection()}
->>>>>>> theirs
+                  {renderMTPLTariffConfigSection()}
                 </CardContent>
               </Card>
             )}

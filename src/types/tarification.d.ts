@@ -108,7 +108,8 @@ export type CalculationMethodType =
   | 'GLASS_ROOF'
   | 'GLASS_STANDARD'
   | 'TIERCE_COMPLETE_CAP'
-  | 'TIERCE_COLLISION_CAP';
+  | 'TIERCE_COLLISION_CAP'
+  | 'MTPL_TARIFF';
 
 export interface Guarantee {
   id: string;

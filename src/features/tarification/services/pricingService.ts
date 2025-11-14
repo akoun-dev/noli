@@ -144,6 +144,14 @@ export class PricingService {
         break;
       }
 
+      case 'MTPL_TARIFF': {
+        const { amount, details } = this.calculateMTPLTariffAmount(vehicle, guarantee);
+        calculatedPrice = amount;
+        pricingMethod = 'Responsabilité Civile (grille tarification)';
+        calculationDetails = details;
+        break;
+      }
+
       default:
         calculatedPrice = 0;
         pricingMethod = 'Non défini';
@@ -298,6 +306,149 @@ export class PricingService {
         option: option.label,
         rate: baseRate,
         deduction,
+      },
+    };
+  }
+
+  private static calculateMTPLTariffAmount(vehicle: Vehicle, guarantee?: Guarantee): {
+    amount: number;
+    details: Record<string, any>;
+  } {
+    const fiscalPower = vehicle?.fiscalPower ?? 0;
+    const energy = vehicle?.energy ?? '';
+    const category = vehicle?.categoryCode ?? '401';
+
+    if (!fiscalPower || fiscalPower <= 0 || !energy) {
+      return {
+        amount: 0,
+        details: {
+          missingData: true,
+          fiscalPower,
+          energy,
+          category,
+        },
+      };
+    }
+
+    // Vérifier d'abord s'il y a des tarifs personnalisés dans les parameters de la garantie
+    const customTarifs = guarantee?.parameters?.mtplTariffConfig;
+    if (customTarifs) {
+      // Tarifs personnalisés disponibles
+      const defaultTarifs = {
+        essence_1_2: 68675,
+        essence_3_6: 87885,
+        essence_7_9: 102345,
+        essence_10_11: 124693,
+        essence_12_plus: 137058,
+        diesel_1: 68675,
+        diesel_2_4: 87885,
+        diesel_5_6: 102345,
+        diesel_7_8: 124693,
+        diesel_9_plus: 137058,
+      };
+
+      let tarifKey = '';
+      let tarifRange = '';
+
+      // Déterminer la clé du tarif applicable
+      const energyLower = energy.toLowerCase();
+      if (energyLower.includes('essence')) {
+        if (fiscalPower >= 1 && fiscalPower <= 2) {
+          tarifKey = 'essence_1_2';
+          tarifRange = '1-2 CV';
+        } else if (fiscalPower >= 3 && fiscalPower <= 6) {
+          tarifKey = 'essence_3_6';
+          tarifRange = '3-6 CV';
+        } else if (fiscalPower >= 7 && fiscalPower <= 9) {
+          tarifKey = 'essence_7_9';
+          tarifRange = '7-9 CV';
+        } else if (fiscalPower >= 10 && fiscalPower <= 11) {
+          tarifKey = 'essence_10_11';
+          tarifRange = '10-11 CV';
+        } else if (fiscalPower >= 12) {
+          tarifKey = 'essence_12_plus';
+          tarifRange = '12+ CV';
+        }
+      } else if (energyLower.includes('diesel')) {
+        if (fiscalPower === 1) {
+          tarifKey = 'diesel_1';
+          tarifRange = '1 CV';
+        } else if (fiscalPower >= 2 && fiscalPower <= 4) {
+          tarifKey = 'diesel_2_4';
+          tarifRange = '2-4 CV';
+        } else if (fiscalPower >= 5 && fiscalPower <= 6) {
+          tarifKey = 'diesel_5_6';
+          tarifRange = '5-6 CV';
+        } else if (fiscalPower >= 7 && fiscalPower <= 8) {
+          tarifKey = 'diesel_7_8';
+          tarifRange = '7-8 CV';
+        } else if (fiscalPower >= 9) {
+          tarifKey = 'diesel_9_plus';
+          tarifRange = '9+ CV';
+        }
+      }
+
+      if (tarifKey && customTarifs[tarifKey]) {
+        return {
+          amount: customTarifs[tarifKey],
+          details: {
+            fiscalPower,
+            energy,
+            category,
+            tarifRange,
+            isCustomTarif: true,
+            prime: customTarifs[tarifKey],
+          },
+        };
+      }
+    }
+
+    // Si pas de tarif personnalisé ou non trouvé, utiliser les grilles par défaut
+    const grids = this.grids;
+    if (!grids || !grids.tarifRC || grids.tarifRC.length === 0) {
+      return {
+        amount: 0,
+        details: {
+          missingGrille: true,
+          fiscalPower,
+          energy,
+          category,
+        },
+      };
+    }
+
+    // Rechercher la tarification applicable
+    const applicableTarif = grids.tarifRC.find(tarif =>
+      tarif.category === category &&
+      tarif.energy.toLowerCase() === energy.toLowerCase() &&
+      fiscalPower >= tarif.powerMin &&
+      fiscalPower <= tarif.powerMax
+    );
+
+    if (!applicableTarif) {
+      return {
+        amount: 0,
+        details: {
+          noTarifFound: true,
+          fiscalPower,
+          energy,
+          category,
+          availableTarifs: grids.tarifRC.length,
+        },
+      };
+    }
+
+    return {
+      amount: applicableTarif.prime,
+      details: {
+        fiscalPower,
+        energy,
+        category,
+        powerMin: applicableTarif.powerMin,
+        powerMax: applicableTarif.powerMax,
+        prime: applicableTarif.prime,
+        tarifId: applicableTarif.id,
+        isDefaultTarif: true,
       },
     };
   }

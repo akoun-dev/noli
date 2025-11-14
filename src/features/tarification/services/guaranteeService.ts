@@ -1157,6 +1157,11 @@ class GuaranteeService {
         value: 'TIERCE_COLLISION_CAP',
         label: 'Tierce collision plafonnée',
         description: 'Taux selon franchise sur valeur neuve'
+      },
+      {
+        value: 'MTPL_TARIFF',
+        label: 'Responsabilité Civile',
+        description: 'Grille de tarification selon puissance fiscale et type de moteur'
       }
     ];
   }
