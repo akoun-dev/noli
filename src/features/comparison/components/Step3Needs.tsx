@@ -156,12 +156,22 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
   const selectedOptions = watch('options') || []
 
   const findCoverageDetails = (coverageId: string) => {
-    // Essayer différentes propriétés d'ID
-    return availableCoverages.find((coverage) =>
+    // D'abord essayer dans availableCoverages
+    let coverage = availableCoverages.find((coverage) =>
       coverage.id === coverageId ||
       coverage.coverage_id === coverageId ||
       coverage.code === coverageId
     )
+
+    // Si pas trouvé, essayer dans allGuarantees
+    if (!coverage) {
+      coverage = allGuarantees.find((guarantee) =>
+        guarantee.id === coverageId ||
+        guarantee.code === coverageId
+      )
+    }
+
+    return coverage
   }
 
   const getEstimatedPremium = (coverageId: string): number => {
@@ -372,6 +382,27 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
       setSelectedCoverages((prev) => ({ ...prev, [coverageId]: !isIncluded }))
     }
   }
+
+  // Charger toutes les garanties disponibles pour avoir les noms
+  useEffect(() => {
+    const loadGuarantees = async () => {
+      try {
+        // Importer guaranteeService
+        const { guaranteeService } = await import('@/features/tarification/services/guaranteeService')
+        const guarantees = await guaranteeService.getGuarantees()
+        setAllGuarantees(guarantees)
+
+        // Débug pour voir ce qu'on a chargé
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Loaded guarantees:', guarantees)
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement des garanties:', error)
+      }
+    }
+
+    loadGuarantees()
+  }, [])
 
   const onSubmit = async (data: InsuranceNeedsFormData) => {
     // Merge coverage selections with form
