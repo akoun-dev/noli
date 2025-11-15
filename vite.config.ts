@@ -9,6 +9,15 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    proxy: mode === 'development'
+      ? {
+          '/admin': {
+            target: 'http://127.0.0.1:54321',
+            changeOrigin: true,
+            secure: false,
+          },
+        }
+      : undefined,
   },
   plugins: [
     react(),
