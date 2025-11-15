@@ -228,20 +228,18 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
 
     let localPremium = 0
     if (isIncluded) {
-      if (user) {
-        try {
-          const premium = await coverageTarificationService.calculateCoveragePremium(
-            coverageId,
-            calculationPayload
-          )
+      try {
+        const premium = await coverageTarificationService.calculateCoveragePremium(
+          coverageId,
+          calculationPayload
+        )
 
-          if (premium && premium > 0) {
-            localPremium = premium
-            console.log(`Calculated premium for ${coverageId}:`, premium)
-          }
-        } catch (premiumError) {
-          console.error('Error calculating individual premium:', premiumError)
+        if (premium && premium > 0) {
+          localPremium = premium
+          console.log(`Calculated premium for ${coverageId}:`, premium)
         }
+      } catch (premiumError) {
+        console.error('Error calculating individual premium:', premiumError)
       }
 
       if (!localPremium || localPremium <= 0) {

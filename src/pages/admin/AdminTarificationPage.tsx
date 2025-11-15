@@ -238,6 +238,42 @@ export const AdminTarificationPage: React.FC = () => {
     isOptional: true,
     parameters: undefined
   });
+  const [existingGuaranteeCodes, setExistingGuaranteeCodes] = useState<string[]>([]);
+
+  // Générer automatiquement le code lorsque le nom change
+  const generateCodeFromName = async (name: string) => {
+    if (!name.trim()) {
+      setNewGuarantee(prev => ({ ...prev, code: '' }));
+      return;
+    }
+
+    try {
+      // Récupérer les garanties existantes si pas déjà chargées
+      if (existingGuaranteeCodes.length === 0) {
+        const guarantees = await guaranteeService.getGuarantees();
+        const codes = guarantees.map(g => g.code);
+        setExistingGuaranteeCodes(codes);
+      }
+
+      // Générer le code automatiquement
+      const generatedCode = guaranteeService.generateGuaranteeCode(name, existingGuaranteeCodes);
+      setNewGuarantee(prev => ({ ...prev, code: generatedCode }));
+    } catch (error) {
+      console.error('Erreur lors de la génération du code:', error);
+      // En cas d'erreur, générer un code de base
+      const fallbackCode = name
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, '')
+        .slice(0, 8) || `GAR_${Date.now().toString().slice(-6)}`;
+      setNewGuarantee(prev => ({ ...prev, code: fallbackCode }));
+    }
+  };
+
+  // Gérer le changement du nom pour générer automatiquement le code
+  const handleGuaranteeNameChange = async (value: string) => {
+    setNewGuarantee(prev => ({ ...prev, name: value }));
+    await generateCodeFromName(value);
+  };
 
   const [isCreateTarifFixeDialogOpen, setIsCreateTarifFixeDialogOpen] = useState(false);
   const [isEditTarifFixeDialogOpen, setIsEditTarifFixeDialogOpen] = useState(false);
@@ -487,9 +523,7 @@ export const AdminTarificationPage: React.FC = () => {
       if (!newGuarantee.name?.trim()) {
         missing.push('Nom de la garantie')
       }
-      if (!newGuarantee.code?.trim()) {
-        missing.push('Code de la garantie')
-      }
+      // Le code est généré automatiquement, pas besoin de valider
       if (!method) {
         missing.push('Méthode de calcul')
       }
@@ -618,9 +652,7 @@ export const AdminTarificationPage: React.FC = () => {
       if (!newGuarantee.name?.trim()) {
         missing.push('Nom de la garantie')
       }
-      if (!newGuarantee.code?.trim()) {
-        missing.push('Code de la garantie')
-      }
+      // Le code est généré automatiquement, pas besoin de valider
       if (!method) {
         missing.push('Méthode de calcul')
       }
@@ -2176,33 +2208,21 @@ export const AdminTarificationPage: React.FC = () => {
                           </CardDescription>
                         </CardHeader>
                         <CardContent className="pt-4 space-y-4">
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="space-y-2">
+                          <div className="space-y-2">
                               <Label htmlFor="guarantee-name" className="flex items-center gap-1">
                                 Nom de la garantie <span className="text-red-500">*</span>
                               </Label>
                               <Input
                                 id="guarantee-name"
                                 value={newGuarantee.name}
-                                onChange={(e) => setNewGuarantee(prev => ({ ...prev, name: e.target.value }))}
+                                onChange={(e) => handleGuaranteeNameChange(e.target.value)}
                                 placeholder="Ex: Responsabilité Civile"
                                 className="transition-colors focus:border-blue-500"
                               />
+                              <p className="text-xs text-gray-500 mt-1">
+                                Le code sera généré automatiquement à partir du nom
+                              </p>
                             </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="guarantee-code" className="flex items-center gap-1">
-                                Code <span className="text-red-500">*</span>
-                              </Label>
-                              <Input
-                                id="guarantee-code"
-                                value={newGuarantee.code}
-                                onChange={(e) => setNewGuarantee(prev => ({ ...prev, code: e.target.value.toUpperCase() }))}
-                                placeholder="Ex: RC"
-                                maxLength={10}
-                                className="transition-colors focus:border-blue-500"
-                              />
-                            </div>
-                          </div>
 
                           <div className="space-y-2">
                             <Label htmlFor="guarantee-description">Description</Label>
@@ -2972,6 +2992,7 @@ export const AdminTarificationPage: React.FC = () => {
                   <div className="space-y-2">
                     <Label htmlFor="edit-guarantee-code" className="flex items-center gap-1">
                       Code <span className="text-red-500">*</span>
+                      <span className="text-xs text-orange-600">(modifiable)</span>
                     </Label>
                     <Input
                       id="edit-guarantee-code"
@@ -2980,6 +3001,9 @@ export const AdminTarificationPage: React.FC = () => {
                       maxLength={10}
                       className="transition-colors focus:border-blue-500"
                     />
+                    <p className="text-xs text-gray-500">
+                      Attention : modifier ce code peut affecter les contrats existants
+                    </p>
                   </div>
                 </div>
 

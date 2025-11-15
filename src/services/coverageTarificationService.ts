@@ -1,7 +1,14 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { logger } from '@/lib/logger';
-import type { FireTheftConfig } from '@/types/tarification';
+import type {
+  FireTheftConfig,
+  CalculationMethodType,
+  ICFormulaConfig,
+  ICIPTConfig,
+  IPTFormulaConfig,
+  IPTConfig
+} from '@/types/tarification';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -77,6 +84,9 @@ export interface VehicleData {
   fuel_type?: string;
   category?: string; // 401, 402, etc.
   formula_name?: string;
+  seats?: number;
+  passenger_seats?: number;
+  nb_places?: number;
 }
 
 export interface QuoteCoveragePremium {
@@ -120,7 +130,13 @@ class CoverageTarificationService {
       return this.coverageMetadataCache.get(coverageId)!;
     }
 
-    try {
+    const buildEntry = (metadata: Record<string, any> | undefined) => {
+      const entry = { metadata: metadata ?? undefined };
+      this.coverageMetadataCache.set(coverageId, entry);
+      return entry;
+    };
+
+    const fetchWithSupabase = async () => {
       const { data, error } = await supabase
         .from('coverages')
         .select('id, metadata')
@@ -131,14 +147,33 @@ class CoverageTarificationService {
         throw error;
       }
 
-      const entry = {
-        metadata: (data?.metadata as Record<string, any> | undefined) ?? undefined,
-      };
-      this.coverageMetadataCache.set(coverageId, entry);
-      return entry;
+      return buildEntry((data?.metadata as Record<string, any> | undefined) ?? undefined);
+    };
+
+    const fetchWithPublicClient = async () => {
+      const { data, error } = await supabasePublicFetch
+        .from<{ id: string; metadata?: Record<string, any> }>('coverages')
+        .select('id, metadata')
+        .eq('id', coverageId)
+        .single();
+
+      if (error || !data) {
+        throw error || new Error('Coverage not found');
+      }
+
+      return buildEntry(data.metadata);
+    };
+
+    try {
+      return await fetchWithSupabase();
     } catch (error) {
-      logger.warn('getCoverageDetailsWithMetadata: unable to fetch coverage metadata', error);
-      return null;
+      logger.warn('getCoverageDetailsWithMetadata: unable to fetch via auth client', error);
+      try {
+        return await fetchWithPublicClient();
+      } catch (fallbackError) {
+        logger.warn('getCoverageDetailsWithMetadata: unable to fetch via public client', fallbackError);
+        return null;
+      }
     }
   }
 
@@ -228,6 +263,254 @@ class CoverageTarificationService {
     const deduction = (this.parseNumber(selected.deductionPercent) ?? 0) / 100;
     const amount = newValue * rate * (1 - deduction);
     return amount > 0 ? amount : 0;
+  }
+
+  private calculateMTPLTariffPremium(vehicleData: VehicleData, customTarifs?: Record<string, any>): number {
+    const fiscalPower = this.parseNumber(vehicleData.fiscal_power) ?? 0;
+    const energy = (vehicleData.fuel_type ?? '').toLowerCase();
+
+    if (!fiscalPower || fiscalPower <= 0 || !energy) {
+      return 0;
+    }
+
+    const defaultTarifs: Record<string, number> = {
+      essence_1_2: 68675,
+      essence_3_6: 87885,
+      essence_7_9: 102345,
+      essence_10_11: 124693,
+      essence_12_plus: 137058,
+      diesel_1: 68675,
+      diesel_2_4: 87885,
+      diesel_5_6: 102345,
+      diesel_7_8: 124693,
+      diesel_9_plus: 137058,
+    };
+
+    const mergedTarifs: Record<string, number> = { ...defaultTarifs };
+    if (customTarifs && typeof customTarifs === 'object') {
+      for (const [key, value] of Object.entries(customTarifs)) {
+        const parsed = this.parseNumber(value);
+        if (parsed !== null) {
+          mergedTarifs[key] = parsed;
+        }
+      }
+    }
+
+    const determineKey = (): string => {
+      if (energy.includes('essence')) {
+        if (fiscalPower >= 1 && fiscalPower <= 2) return 'essence_1_2';
+        if (fiscalPower >= 3 && fiscalPower <= 6) return 'essence_3_6';
+        if (fiscalPower >= 7 && fiscalPower <= 9) return 'essence_7_9';
+        if (fiscalPower >= 10 && fiscalPower <= 11) return 'essence_10_11';
+        if (fiscalPower >= 12) return 'essence_12_plus';
+      }
+
+      if (energy.includes('diesel')) {
+        if (fiscalPower === 1) return 'diesel_1';
+        if (fiscalPower >= 2 && fiscalPower <= 4) return 'diesel_2_4';
+        if (fiscalPower >= 5 && fiscalPower <= 6) return 'diesel_5_6';
+        if (fiscalPower >= 7 && fiscalPower <= 8) return 'diesel_7_8';
+        if (fiscalPower >= 9) return 'diesel_9_plus';
+      }
+
+      return '';
+    };
+
+    const key = determineKey();
+    if (!key) {
+      return 0;
+    }
+
+    const amount = mergedTarifs[key];
+    return typeof amount === 'number' && amount > 0 ? amount : 0;
+  }
+
+  private calculateICFormulaPremium(config?: ICIPTConfig, vehicleData?: VehicleData): number {
+    const defaultFormulas: ICFormulaConfig[] = [
+      {
+        formula: 1,
+        capitalDeces: 1000000,
+        capitalInvalidite: 2000000,
+        fraisMedicaux: 100000,
+        prime: 5500,
+        label: 'Formule 1',
+      },
+      {
+        formula: 2,
+        capitalDeces: 3000000,
+        capitalInvalidite: 6000000,
+        fraisMedicaux: 400000,
+        prime: 8400,
+        label: 'Formule 2',
+      },
+      {
+        formula: 3,
+        capitalDeces: 5000000,
+        capitalInvalidite: 10000000,
+        fraisMedicaux: 500000,
+        prime: 15900,
+        label: 'Formule 3',
+      },
+    ];
+
+    const resolvedConfig: ICIPTConfig = config ?? { defaultFormula: 1, formulas: defaultFormulas };
+    const formulas =
+      resolvedConfig.formulas && resolvedConfig.formulas.length > 0 ? resolvedConfig.formulas : defaultFormulas;
+
+    const selectedFormula = this.parseFormulaSelection(
+      vehicleData?.formula_name,
+      resolvedConfig.defaultFormula ?? 1
+    );
+    const formula = formulas.find(f => f.formula === selectedFormula) ?? formulas[0];
+    return formula?.prime ?? 0;
+  }
+
+  private calculateIPTPlacesPremium(vehicleData: VehicleData, config?: IPTConfig): number {
+    const defaultFormulas: IPTFormulaConfig[] = [
+      {
+        formula: 1,
+        capitalDeces: 1000000,
+        capitalInvalidite: 2000000,
+        fraisMedicaux: 100000,
+        prime: 0,
+        label: 'Formule 1',
+        placesTariffs: [
+          { places: 3, prime: 8400, label: '3 places' },
+          { places: 4, prime: 10200, label: '4 places' },
+          { places: 5, prime: 16000, label: '5 places' },
+          { places: 6, prime: 17800, label: '6 places' },
+          { places: 7, prime: 19600, label: '7 places' },
+          { places: 8, prime: 25400, label: '8 places' },
+        ],
+      },
+      {
+        formula: 2,
+        capitalDeces: 3000000,
+        capitalInvalidite: 6000000,
+        fraisMedicaux: 400000,
+        prime: 0,
+        label: 'Formule 2',
+        placesTariffs: [
+          { places: 3, prime: 10000, label: '3 places' },
+          { places: 4, prime: 11000, label: '4 places' },
+          { places: 5, prime: 17000, label: '5 places' },
+          { places: 6, prime: 18000, label: '6 places' },
+          { places: 7, prime: 27000, label: '7 places' },
+          { places: 8, prime: 32000, label: '8 places' },
+        ],
+      },
+      {
+        formula: 3,
+        capitalDeces: 5000000,
+        capitalInvalidite: 10000000,
+        fraisMedicaux: 500000,
+        prime: 0,
+        label: 'Formule 3',
+        placesTariffs: [
+          { places: 3, prime: 18000, label: '3 places' },
+          { places: 4, prime: 16000, label: '4 places' },
+          { places: 5, prime: 30800, label: '5 places' },
+          { places: 6, prime: 32000, label: '6 places' },
+          { places: 7, prime: 33000, label: '7 places' },
+          { places: 8, prime: 35000, label: '8 places' },
+        ],
+      },
+    ];
+
+    const resolvedConfig: IPTConfig = config ?? { defaultFormula: 1, formulas: defaultFormulas };
+    const formulas =
+      resolvedConfig.formulas && resolvedConfig.formulas.length > 0 ? resolvedConfig.formulas : defaultFormulas;
+
+    const selectedFormula = this.parseFormulaSelection(
+      vehicleData.formula_name,
+      resolvedConfig.defaultFormula ?? 1
+    );
+    const formula = formulas.find(f => f.formula === selectedFormula) ?? formulas[0];
+    if (!formula) {
+      return 0;
+    }
+
+    const seats =
+      this.parseNumber(vehicleData.seats) ??
+      this.parseNumber(vehicleData.passenger_seats) ??
+      this.parseNumber(vehicleData.nb_places) ??
+      5;
+
+    const defaultTariffs = defaultFormulas.find(f => f.formula === formula.formula)?.placesTariffs ?? [];
+    const placesTariffs =
+      (formula as IPTFormulaConfig).placesTariffs && (formula as IPTFormulaConfig).placesTariffs!.length > 0
+        ? (formula as IPTFormulaConfig).placesTariffs!
+        : defaultTariffs;
+
+    if (!placesTariffs.length) {
+      return formula.prime ?? 0;
+    }
+
+    const applicable =
+      placesTariffs.find(tariff => seats <= tariff.places) ?? placesTariffs[placesTariffs.length - 1];
+    return applicable?.prime ?? formula.prime ?? 0;
+  }
+
+  private parseFormulaSelection(formulaName?: string | number | null, defaultFormula = 1): number {
+    if (typeof formulaName === 'number' && Number.isFinite(formulaName)) {
+      return formulaName;
+    }
+
+    if (typeof formulaName === 'string' && formulaName.trim().length > 0) {
+      const raw = formulaName.trim();
+      const numeric = /^-?\d+$/.test(raw) ? parseInt(raw, 10) : parseInt(raw.replace('formula_', ''), 10);
+      if (!Number.isNaN(numeric)) {
+        return numeric;
+      }
+    }
+
+    return defaultFormula;
+  }
+
+  private calculatePremiumFromMetadata(metadata: Record<string, any> | undefined, vehicleData: VehicleData): number {
+    if (!metadata || typeof metadata !== 'object') {
+      return 0;
+    }
+
+    const params = (metadata.parameters ?? {}) as Record<string, any>;
+    const method = metadata.calculationMethod as CalculationMethodType | undefined;
+
+    switch (method) {
+      case 'FIXED_AMOUNT': {
+        const amount =
+          this.parseNumber(metadata.fixedAmount) ??
+          this.parseNumber(metadata.rate) ??
+          this.parseNumber(params.fixedAmount);
+        return amount ?? 0;
+      }
+      case 'FREE':
+        return 0;
+      case 'FIRE_THEFT':
+      case 'THEFT_ARMED':
+        return params.fireTheftConfig ? this.calculateFireTheftPremium(params.fireTheftConfig, vehicleData) : 0;
+      case 'GLASS_ROOF':
+        return params.glassRoofConfig ? this.calculateGlassRoofPremium(params.glassRoofConfig, vehicleData) : 0;
+      case 'GLASS_STANDARD':
+        return params.glassStandardConfig
+          ? this.calculateGlassStandardPremium(params.glassStandardConfig, vehicleData)
+          : 0;
+      case 'TIERCE_COMPLETE_CAP':
+      case 'TIERCE_COLLISION_CAP':
+        return params.tierceCapConfig ? this.calculateTierceCapPremium(params.tierceCapConfig, vehicleData) : 0;
+      case 'MTPL_TARIFF':
+        return this.calculateMTPLTariffPremium(vehicleData, params.mtplTariffConfig);
+      case 'IC_IPT_FORMULA':
+        return this.calculateICFormulaPremium(params.icIptConfig, vehicleData);
+      case 'IPT_PLACES_FORMULA':
+        return this.calculateIPTPlacesPremium(vehicleData, params.iptConfig);
+      default: {
+        const fallbackAmount =
+          this.parseNumber(metadata.fixedAmount) ??
+          this.parseNumber(metadata.rate) ??
+          this.parseNumber(params.fixedAmount);
+        return fallbackAmount ?? 0;
+      }
+    }
   }
 
   // Get available coverages from DB (preferred: direct table), with RPC fallback
@@ -507,22 +790,7 @@ class CoverageTarificationService {
     let coverageDetails: { metadata?: Record<string, any> } | null = null;
     try {
       coverageDetails = await this.getCoverageDetailsWithMetadata(coverageId);
-      const glassRoofConfig = coverageDetails?.metadata?.parameters?.glassRoofConfig as { ratePercent?: number } | undefined;
-      if (glassRoofConfig) {
-        fallbackPremium = this.calculateGlassRoofPremium(glassRoofConfig, vehicleData);
-      }
-      const glassStandardConfig = coverageDetails?.metadata?.parameters?.glassStandardConfig as { ratePercent?: number } | undefined;
-      if (glassStandardConfig) {
-        fallbackPremium = this.calculateGlassStandardPremium(glassStandardConfig, vehicleData);
-      }
-      const tierceCapConfig = coverageDetails?.metadata?.parameters?.tierceCapConfig;
-      if (tierceCapConfig) {
-        fallbackPremium = this.calculateTierceCapPremium(tierceCapConfig, vehicleData);
-      }
-      const fireTheftConfig = coverageDetails?.metadata?.parameters?.fireTheftConfig as FireTheftConfig | undefined;
-      if (fireTheftConfig) {
-        fallbackPremium = this.calculateFireTheftPremium(fireTheftConfig, vehicleData);
-      }
+      fallbackPremium = this.calculatePremiumFromMetadata(coverageDetails?.metadata, vehicleData);
     } catch (metaError) {
       logger.warn('calculateCoveragePremium: unable to load coverage metadata', metaError);
     }

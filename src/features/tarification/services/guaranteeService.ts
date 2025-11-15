@@ -356,7 +356,9 @@ class GuaranteeService {
         localStorage.removeItem(this.storageKey);
         localStorage.removeItem(this.packagesStorageKey);
         localStorage.removeItem(this.gridsStorageKey);
-      } catch (_) {}
+      } catch {
+      // Ignore localStorage errors
+    }
       return;
     }
 
@@ -388,6 +390,76 @@ class GuaranteeService {
     const trimmed = value.trim();
     if (!trimmed) return null;
     return trimmed.toUpperCase().replace(/[^A-Z0-9_]/g, '').slice(0, 32);
+  }
+
+  /**
+   * Génère automatiquement un code de garantie unique à partir du nom
+   * @param name Nom de la garantie
+   * @param existingCodes Liste des codes existants pour éviter les doublons
+   * @returns Un code unique généré automatiquement
+   */
+  generateGuaranteeCode(name: string, existingCodes: string[] = []): string {
+    if (!name || !name.trim()) {
+      return `GAR_${Date.now().toString().slice(-6)}`;
+    }
+
+    // Générer un code de base à partir du nom
+    let baseCode = name
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9\s]/g, '') // Garder seulement lettres, chiffres et espaces
+      .replace(/\s+/g, '_') // Remplacer les espaces par des underscores
+      .slice(0, 10); // Limiter à 10 caractères pour la base
+
+    // Si le code est trop court, utiliser des abréviations communes
+    if (baseCode.length < 2) {
+      const commonAbbreviations: Record<string, string> = {
+        'RESPONSABILITÉ': 'RC',
+        'RESPONSABILITE': 'RC',
+        'DÉFENSE': 'DEF',
+        'DEFENSE': 'DEF',
+        'RECOURS': 'REC',
+        'INDIVIDUELLE': 'IND',
+        'CONDUCTEUR': 'COND',
+        'PASSAGERS': 'PASS',
+        'INCENDIE': 'INC',
+        'BRIS': 'BDG',
+        'GLACES': 'BDG',
+        'ASSISTANCE': 'ASSIST',
+        'VOL': 'VOL',
+        'TIERCE': 'T',
+        'COLLISION': 'COLL',
+        'COMPLÈTE': 'COMP',
+        'COMPLETE': 'COMP'
+      };
+
+      for (const [word, abbrev] of Object.entries(commonAbbreviations)) {
+        if (name.toUpperCase().includes(word)) {
+          baseCode = abbrev;
+          break;
+        }
+      }
+    }
+
+    // Si toujours trop court, générer un code aléatoire
+    if (baseCode.length < 2) {
+      baseCode = `GAR_${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+    }
+
+    // Vérifier l'unicité et ajouter un suffixe si nécessaire
+    let finalCode = baseCode;
+    let counter = 1;
+
+    while (existingCodes.includes(finalCode)) {
+      if (baseCode.length <= 6) {
+        finalCode = `${baseCode}_${counter}`;
+      } else {
+        finalCode = `${baseCode.slice(0, 8)}_${counter}`;
+      }
+      counter++;
+    }
+
+    return finalCode;
   }
 
   private mapCategoryToCoverageType(category?: GuaranteeCategory): string {
@@ -666,8 +738,12 @@ class GuaranteeService {
   async createGuarantee(data: GuaranteeFormData): Promise<Guarantee> {
     if (this.useMockData) {
       const guarantees = await this.getGuarantees();
+      const existingCodes = guarantees.map(g => g.code);
+      const generatedCode = this.generateGuaranteeCode(data.name, existingCodes);
+
       const newGuarantee: Guarantee = {
         ...data,
+        code: generatedCode,
         category: data.category || DEFAULT_CATEGORY,
         id: Math.random().toString(36).substr(2, 9),
         isActive: true,
@@ -681,19 +757,20 @@ class GuaranteeService {
       return newGuarantee;
     }
 
-    const normalizedCode =
-      this.normalizeCode(data.code) ||
-      this.normalizeCode(data.name) ||
-      null;
+    // Récupérer les codes existants pour garantir l'unicité
+    const existingGuarantees = await this.getGuarantees();
+    const existingCodes = existingGuarantees.map(g => g.code);
+
+    // Générer automatiquement le code (ignorer le code fourni dans data.code)
+    const generatedCode = this.generateGuaranteeCode(data.name, existingCodes);
+
     const userId = await this.getCurrentUserId();
     const metadata = this.buildMetadataFromForm(data, {
       createdBy: userId ?? 'system',
     });
-    const fallbackCode =
-      this.normalizeCode(`${data.name}-${Date.now()}`) ??
-      `GAR_${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
-    const finalCode = normalizedCode ?? fallbackCode;
-    metadata.code = finalCode;
+
+    // Forcer l'utilisation du code généré
+    metadata.code = generatedCode;
     metadata.category = data.category || DEFAULT_CATEGORY;
     metadata.isOptional = data.isOptional;
 
@@ -709,7 +786,7 @@ class GuaranteeService {
       display_order?: number;
       created_by?: string;
     } = {
-      code: finalCode,
+      code: generatedCode,
       type: this.mapCategoryToCoverageType(data.category),
       name: data.name,
       description: data.description ?? null,
