@@ -24,6 +24,9 @@ const supabasePublic = createClient(supabaseUrl, supabaseAnonKey, {
 // Essayer avec le client supabase-public.ts qui utilise fetch natif
 import { supabasePublic as supabasePublicFetch } from '@/lib/supabase-public';
 
+const isJwtToken = (token?: string | null): boolean =>
+  typeof token === 'string' && token.split('.').length >= 3;
+
 // Types for the coverage-based tarification system
 export type CoverageType =
   | 'RC'
@@ -113,6 +116,22 @@ export interface CoverageOption {
 
 class CoverageTarificationService {
   private coverageMetadataCache = new Map<string, { metadata?: Record<string, any> }>();
+  private readonly hasJwtAnonKey = isJwtToken(supabaseAnonKey);
+
+  private async canInvokeProtectedRpc(): Promise<boolean> {
+    if (this.hasJwtAnonKey) {
+      return true;
+    }
+
+    try {
+      const { data } = await supabase.auth.getSession();
+      const accessToken = data.session?.access_token;
+      return isJwtToken(accessToken);
+    } catch (error) {
+      logger.warn('coverageTarificationService: unable to fetch auth session', error);
+      return false;
+    }
+  }
 
   private parseNumber(value: any): number | null {
     if (typeof value === 'number' && Number.isFinite(value)) {
@@ -164,16 +183,21 @@ class CoverageTarificationService {
       return buildEntry(data.metadata);
     };
 
-    try {
-      return await fetchWithSupabase();
-    } catch (error) {
-      logger.warn('getCoverageDetailsWithMetadata: unable to fetch via auth client', error);
+    const canUseAuthClient = await this.canInvokeProtectedRpc();
+
+    if (canUseAuthClient) {
       try {
-        return await fetchWithPublicClient();
-      } catch (fallbackError) {
-        logger.warn('getCoverageDetailsWithMetadata: unable to fetch via public client', fallbackError);
-        return null;
+        return await fetchWithSupabase();
+      } catch (error) {
+        logger.warn('getCoverageDetailsWithMetadata: unable to fetch via auth client', error);
       }
+    }
+
+    try {
+      return await fetchWithPublicClient();
+    } catch (fallbackError) {
+      logger.warn('getCoverageDetailsWithMetadata: unable to fetch via public client', fallbackError);
+      return null;
     }
   }
 
@@ -796,6 +820,11 @@ class CoverageTarificationService {
     }
 
     try {
+      const canCallRpc = await this.canInvokeProtectedRpc();
+      if (!canCallRpc) {
+        return fallbackPremium || 0;
+      }
+
       const { data, error } = await (supabase.rpc as any)('calculate_coverage_premium', {
         p_coverage_id: coverageId,
         p_vehicle_data: vehicleData,
