@@ -9,25 +9,6 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
-    proxy: mode === 'development' ? {
-      // Proxy admin API requests to handle CORS and missing backend
-      '/admin': {
-        target: 'http://localhost:8080',
-        changeOrigin: true,
-        secure: false,
-        configure: (proxy, options) => {
-          proxy.on('error', (err, req, res) => {
-            console.log('Proxy error:', err);
-          });
-          proxy.on('proxyReq', (proxyReq, req, res) => {
-            console.log('Proxying request:', req.method, req.url, '->', options.target + req.url);
-          });
-          proxy.on('proxyRes', (proxyRes, req, res) => {
-            console.log('Proxy response:', proxyRes.statusCode, req.url);
-          });
-        }
-      }
-    } : undefined,
   },
   plugins: [
     react(),

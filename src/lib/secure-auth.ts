@@ -116,10 +116,7 @@ export class SecureAuthService {
     try {
       logger.auth('Starting migration to secure cookie storage');
 
-      // 1. Nettoyer les anciens tokens
-      this.cleanupLegacyTokens();
-
-      // 2. Forcer la vérification de session
+      // Vérifier la session actuelle avant toute suppression
       const { data: { session }, error } = await supabase.auth.getSession();
 
       if (error) {
@@ -128,11 +125,14 @@ export class SecureAuthService {
       }
 
       if (!session) {
-        logger.auth('No active session - migration completed');
+        // Aucun utilisateur connecté: on peut nettoyer les anciens tokens
+        this.cleanupLegacyTokens();
+        logger.auth('No active session - cleaned legacy tokens and completed migration');
         return true;
       }
 
-      // 3. Rafraîchir la session pour s'assurer qu'elle utilise les cookies
+      // Session active: ne pas supprimer les tokens utilisés par Supabase
+      // On se contente de rafraîchir pour forcer l'utilisation des cookies
       const { error: refreshError } = await supabase.auth.refreshSession();
 
       if (refreshError) {
@@ -140,7 +140,7 @@ export class SecureAuthService {
         return false;
       }
 
-      logger.auth('Migration to secure storage completed successfully');
+      logger.auth('Active session detected - refreshed without removing tokens');
       return true;
     } catch (error) {
       logger.error('Migration to secure storage failed:', error);

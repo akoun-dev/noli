@@ -425,19 +425,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const response = await authService.login({ email, password })
       logger.auth('✅ authService.login réussi:', response.user)
 
-      logger.auth('📞 Chargement des permissions avec cache...')
-      const permissions = await getUserPermissions(
-        response.user.id,
-        () => authService.getUserPermissions(response.user.id)
-      )
-      logger.auth('✅ Permissions chargées:', permissions)
-
       setState({
         user: response.user,
         isAuthenticated: true,
         isLoading: false,
-        permissions,
+        permissions: [],
       })
+
+      // Charger les permissions en arrière-plan sans bloquer la connexion
+      ;(async () => {
+        try {
+          logger.auth('📦 Chargement asynchrone des permissions après login...')
+          const permissions = await getUserPermissions(
+            response.user.id,
+            () => authService.getUserPermissions(response.user.id)
+          )
+          logger.auth('✅ Permissions asynchrones chargées:', permissions)
+          setState((prev) => ({ ...prev, permissions }))
+
+          try {
+            localStorage.setItem('noli_permissions', JSON.stringify({
+              permissions,
+              timestamp: Date.now()
+            }))
+          } catch (storageError) {
+            logger.warn('Could not cache permissions after login:', storageError)
+          }
+        } catch (permError) {
+          logger.warn('Impossible de charger les permissions après login:', permError)
+        }
+      })()
 
       logger.auth("🎉 État mis à jour, retour de l'utilisateur:", response.user)
 
