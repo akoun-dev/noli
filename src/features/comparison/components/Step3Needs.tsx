@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Card } from '@/components/ui/card'
-import { ArrowRight, ArrowLeft, AlertTriangle, Shield, Car } from 'lucide-react'
+import { ArrowRight, ArrowLeft, AlertTriangle, Shield, Car, MessageCircle, Download, Mail } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useNavigate } from 'react-router-dom'
 import { CoverageSelector } from '@/components/coverage/CoverageSelector'
@@ -57,7 +57,66 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
   const [coverageLoading, setCoverageLoading] = useState(false)
   const [coverageErrors, setCoverageErrors] = useState<string[]>([])
   const [availableCoverages, setAvailableCoverages] = useState<any[]>([])
+  const [allGuarantees, setAllGuarantees] = useState<any[]>([])
   const [isQuoteModalOpen, setIsQuoteModalOpen] = useState(false)
+  const [isGeneratingQuote, setIsGeneratingQuote] = useState(false)
+
+  // Fonction pour générer et télécharger le PDF
+  const handleDownloadPDF = async () => {
+    setIsGeneratingQuote(true)
+    try {
+      // TODO: Implémenter la génération PDF avec pdfService
+      const { pdfService } = await import('@/features/quotes/services/pdfService')
+
+      const quoteData = {
+        id: tempQuoteId || `temp_${Date.now()}`,
+        vehicleInfo: formData.vehicleInfo,
+        coverages: selectedCoverages,
+        premiumBreakdown,
+        totalPremium,
+        createdAt: new Date()
+      }
+
+      await pdfService.generateQuotePDF(quoteData)
+    } catch (error) {
+      console.error('Erreur lors de la génération du PDF:', error)
+      // TODO: Afficher une notification d'erreur
+    } finally {
+      setIsGeneratingQuote(false)
+    }
+  }
+
+  // Fonction pour partager par WhatsApp
+  const handleShareWhatsApp = () => {
+    const message = `🚗 *Devis NOLI Assurance*\n\n` +
+      `*Véhicule*: ${formData.vehicleInfo?.brand || ''} ${formData.vehicleInfo?.model || ''} (${formData.vehicleInfo?.year || ''})\n` +
+      `*Total*: ${totalPremium.toLocaleString('fr-FR')} FCFA\n` +
+      `*Mensuel*: ${Math.round(totalPremium / 12).toLocaleString('fr-FR')} FCFA\n` +
+      `*Garanties*: ${Object.entries(selectedCoverages).filter(([_, isSelected]) => isSelected).length} sélectionnée(s)\n\n` +
+      `Pour recevoir votre devis complet, contactez-nous !\n` +
+      `📞 +225 00 00 00 00\n` +
+      `🌐 www.noli-assurance.ci`
+
+    const whatsappUrl = `https://wa.me/22500000000?text=${encodeURIComponent(message)}`
+    window.open(whatsappUrl, '_blank')
+  }
+
+  // Fonction pour partager par email
+  const handleShareEmail = () => {
+    const subject = encodeURIComponent('Devis NOLI Assurance - Assurance Automobile')
+    const body = encodeURIComponent(
+      `Bonjour,\n\n` +
+      `Je souhaite recevoir un devis pour l'assurance de mon véhicule :\n\n` +
+      `Véhicule: ${formData.vehicleInfo?.brand || ''} ${formData.vehicleInfo?.model || ''} (${formData.vehicleInfo?.year || ''})\n` +
+      `Total: ${totalPremium.toLocaleString('fr-FR')} FCFA\n` +
+      `Mensuel: ${Math.round(totalPremium / 12).toLocaleString('fr-FR')} FCFA\n` +
+      `Garanties: ${Object.entries(selectedCoverages).filter(([_, isSelected]) => isSelected).length} sélectionnée(s)\n\n` +
+      `Merci de me contacter pour finaliser ce devis.\n\n` +
+      `Cordialement`
+    )
+
+    window.location.href = `mailto:devis@noli-assurance.ci?subject=${subject}&body=${body}`
+  }
 
   // Prepare vehicle data for coverage calculation
   const vehicleInfo = formData.vehicleInfo || {}
@@ -96,8 +155,14 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
   })
   const selectedOptions = watch('options') || []
 
-  const findCoverageDetails = (coverageId: string) =>
-    availableCoverages.find((coverage) => coverage.coverage_id === coverageId)
+  const findCoverageDetails = (coverageId: string) => {
+    // Essayer différentes propriétés d'ID
+    return availableCoverages.find((coverage) =>
+      coverage.id === coverageId ||
+      coverage.coverage_id === coverageId ||
+      coverage.code === coverageId
+    )
+  }
 
   const getEstimatedPremium = (coverageId: string): number => {
     const coverage = findCoverageDetails(coverageId)
@@ -488,30 +553,174 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
            </Button>
          </DialogTrigger>
          <DialogContent className={cn(
-           isMobile ? "w-11/12 max-w-sm" : "max-w-md"
+           isMobile ? "w-11/12 max-w-md" : "max-w-lg"
          )}>
            <DialogHeader>
-             <DialogTitle>Votre devis personnalisé</DialogTitle>
+             <DialogTitle className="text-xl">Votre devis personnalisé</DialogTitle>
              <DialogDescription>
-               Récapitulatif de votre protection
+               Récapitulatif de votre protection automobile
              </DialogDescription>
            </DialogHeader>
-           <div className="space-y-4 py-4">
-             <div className="text-center space-y-2">
-               <div className="text-3xl font-bold text-primary">
+
+           <div className="space-y-6 py-4">
+             {/* Section Prix */}
+             <div className="text-center space-y-3 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-100">
+               <div className="text-4xl font-bold text-primary">
                  {totalPremium.toLocaleString('fr-FR')} FCFA
                </div>
-               <div className="text-sm text-muted-foreground">
+               <div className="text-sm text-muted-foreground font-medium">
                  {Math.round(totalPremium / 12).toLocaleString('fr-FR')} FCFA par mois
                </div>
                <div className="text-xs text-muted-foreground">
                  {Object.entries(selectedCoverages).filter(([_, isSelected]) => isSelected).length} garantie(s) sélectionnée(s)
                </div>
              </div>
-             
+
+             {/* Section Véhicule */}
+             <div className="space-y-2">
+               <h4 className="text-sm font-semibold text-gray-700">Véhicule assuré</h4>
+               <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded">
+                 {formData.vehicleInfo?.brand || ''} {formData.vehicleInfo?.model || ''} ({formData.vehicleInfo?.year || ''})
+               </div>
+             </div>
+
+             {/* Section Garanties */}
+             <div className="space-y-2">
+               <h4 className="text-sm font-semibold text-gray-700">Garanties incluses</h4>
+               <div className="space-y-2 max-h-48 overflow-y-auto">
+                 {Object.entries(selectedCoverages)
+                   .filter(([_, isSelected]) => isSelected)
+                   .map(([coverageId]) => {
+                     // Utiliser la fonction améliorée pour trouver les détails
+                     const coverage = findCoverageDetails(coverageId)
+
+                     // Fonction améliorée pour récupérer le nom de la garantie
+                     const getCoverageName = () => {
+                       // 1. D'abord essayer de trouver dans les données complètes
+                       if (coverage?.name) return coverage.name
+                       if (coverage?.display_name) return coverage.display_name
+                       if (coverage?.label) return coverage.label
+
+                       // 2. Ensuite essayer avec les noms communs basés sur l'ID ou code
+                       const commonNames: Record<string, string> = {
+                         'RC': 'Responsabilité Civile',
+                         'RESPONSABILITE_CIVILE': 'Responsabilité Civile',
+                         'DR': 'Défense et Recours',
+                         'DEFENSE_RECOURS': 'Défense et Recours',
+                         'IC': 'Individuelle Conducteur',
+                         'INDIVIDUELLE_CONDUCTEUR': 'Individuelle Conducteur',
+                         'IPT': 'Individuelle Passagers',
+                         'INDIVIDUELLE_PASSAGERS': 'Individuelle Passagers',
+                         'INC': 'Incendie',
+                         'VOL': 'Vol',
+                         'VMA': 'Vol à mains armées',
+                         'VOL_MAINS_ARMEES': 'Vol à mains armées',
+                         'BDG': 'Bris de glaces',
+                         'BRIS_GLACES': 'Bris de glaces',
+                         'TDC': 'Tierce Complète',
+                         'TIERCE_COMPLETE': 'Tierce Complète',
+                         'TCL': 'Tierce Collision',
+                         'TIERCE_COLLISION': 'Tierce Collision',
+                         'ASSIST': 'Assistance',
+                         'ASR': 'Avance sur recours',
+                         'AVANCE_RECOURS': 'Avance sur recours'
+                       }
+
+                       // 3. Essayer avec le code de la garantie si disponible
+                       if (coverage?.code && commonNames[coverage.code]) {
+                         return commonNames[coverage.code]
+                       }
+
+                       // 4. Si l'ID correspond à un nom connu
+                       if (commonNames[coverageId]) return commonNames[coverageId]
+
+                       // 5. Dernier fallback : transformer l'ID en nom lisible
+                       const transformed = coverageId
+                         .replace(/_/g, ' ')
+                         .replace(/([A-Z])/g, ' $1')
+                         .replace(/^./, str => str.toUpperCase())
+                         .trim()
+
+                       return transformed || coverageId
+                     }
+
+                     const coverageName = getCoverageName()
+                     const coveragePrice = premiumBreakdown[coverageId] || 0
+
+                     // Debug : afficher dans la console pour le développement
+                     if (process.env.NODE_ENV === 'development') {
+                       console.log(`Coverage Debug:`, {
+                         id: coverageId,
+                         name: coverageName,
+                         coverage: coverage,
+                         price: coveragePrice
+                       })
+                     }
+
+                     return (
+                       <div key={coverageId} className="flex justify-between items-center text-sm bg-white border border-gray-200 p-3 rounded">
+                         <div className="flex items-center gap-2">
+                           <Shield className="w-4 h-4 text-green-600" />
+                           <span className="text-gray-700">{coverageName}</span>
+                         </div>
+                         <div className="text-right">
+                           <div className="font-medium text-gray-900">
+                             {coveragePrice.toLocaleString('fr-FR')} FCFA
+                           </div>
+                           <div className="text-xs text-gray-500">
+                             {Math.round(coveragePrice / 12).toLocaleString('fr-FR')} FCFA/mois
+                           </div>
+                         </div>
+                       </div>
+                     )
+                   })}
+
+                 {Object.entries(selectedCoverages).filter(([_, isSelected]) => isSelected).length === 0 && (
+                   <div className="text-sm text-gray-500 italic bg-gray-50 p-3 rounded">
+                     Aucune garantie sélectionnée
+                   </div>
+                 )}
+               </div>
+             </div>
+
+             {/* Section Actions */}
+             <div className="space-y-3">
+               <h4 className="text-sm font-semibold text-gray-700">Recevoir votre devis</h4>
+               <div className="grid grid-cols-1 gap-3">
+                 <Button
+                   variant="outline"
+                   className="flex items-center gap-2 h-12 text-sm"
+                   onClick={handleShareWhatsApp}
+                 >
+                   <MessageCircle className="w-4 h-4 text-green-600" />
+                   Recevoir par WhatsApp
+                 </Button>
+
+                 <Button
+                   variant="outline"
+                   className="flex items-center gap-2 h-12 text-sm"
+                   onClick={handleDownloadPDF}
+                   disabled={isGeneratingQuote}
+                 >
+                   <Download className="w-4 h-4 text-blue-600" />
+                   {isGeneratingQuote ? 'Génération...' : 'Télécharger le PDF'}
+                 </Button>
+
+                 <Button
+                   variant="outline"
+                   className="flex items-center gap-2 h-12 text-sm"
+                   onClick={handleShareEmail}
+                 >
+                   <Mail className="w-4 h-4 text-red-600" />
+                   Recevoir par email
+                 </Button>
+               </div>
+             </div>
+
+             {/* Footer */}
              <div className="border-t pt-4">
                <Button
-                 variant="outline"
+                 variant="ghost"
                  className="w-full"
                  onClick={() => setIsQuoteModalOpen(false)}
                >
