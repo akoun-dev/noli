@@ -289,92 +289,36 @@ export class AuthService {
         authData.user = signInData.user
       }
 
-      // Créer le profil dans la table profiles
-      let profileCreated = false
-      
-      try {
-        logger.auth('Tentative de création du profil via RPC pour:', authData.user.id)
-
-        // Utiliser la fonction RPC qui contourne les RLS
-        const { data: rpcResult, error: rpcError } = await (supabase.rpc as any)('create_user_profile', {
-          user_id: authData.user.id,
-          user_email: data.email,
-          first_name: data.firstName || '',
-          last_name: data.lastName || '',
-          phone: data.phone || '',
-          company_name: data.companyName || '',
-          user_role: userRole
-        })
-
-        if (rpcError) {
-          logger.error('Erreur lors de la création du profil via RPC:', rpcError)
-          logger.error("Détails de l'erreur RPC:", {
-            code: rpcError.code,
-            message: rpcError.message,
-            details: rpcError.details,
-            hint: rpcError.hint,
-          })
-          throw new Error(`Erreur création profil RPC: ${rpcError.message}`)
-        }
-
-        if (!rpcResult) {
-          throw new Error('La fonction RPC a retourné false')
-        }
-
-        logger.auth('✅ Profil créé avec succès via RPC pour:', authData.user.id)
-        profileCreated = true
-      } catch (rpcErr) {
-        logger.warn('Échec de la création via RPC, tentative directe:', rpcErr)
-        
-        // Si la RPC échoue, essayer directement avec le service client
-        try {
-          logger.auth('Tentative de création directe du profil pour:', authData.user.id)
-          
-          const profileData: ProfileInsert = {
-            id: authData.user.id,
-            email: data.email,
-            first_name: data.firstName || '',
-            last_name: data.lastName || '',
-            phone: data.phone || '',
-            company_name: data.companyName || '',
-            role: userRole,
-            is_active: true,
-            email_verified: true, // Auto-confirmation en développement
-            phone_verified: false,
-            avatar_url: '',
-          }
-
-          logger.auth('Données du profil à insérer:', profileData)
-
-          // Utiliser le service client pour contourner les RLS
-          const { error: directError } = await (supabase.from('profiles') as any)
-            .insert(profileData)
-            .select()
-
-          if (directError) {
-            logger.error('Erreur lors de la création directe du profil:', directError)
-            logger.error("Détails de l'erreur directe:", {
-              code: directError.code,
-              message: directError.message,
-              details: directError.details,
-              hint: directError.hint,
-            })
-            throw new Error(`Erreur création profil directe: ${directError.message}`)
-          }
-
-          logger.auth('✅ Profil créé avec succès directement pour:', authData.user.id)
-          profileCreated = true
-        } catch (directErr) {
-          logger.error('Les deux méthodes de création de profil ont échoué:', directErr)
-          throw new Error(
-            `Échec création profil: ${directErr instanceof Error ? directErr.message : 'Erreur inconnue'}`
-          )
-        }
+      // Créer ou mettre à jour le profil dans la table profiles
+      const profileData: ProfileInsert = {
+        id: authData.user.id,
+        email: data.email,
+        first_name: data.firstName || '',
+        last_name: data.lastName || '',
+        phone: data.phone || '',
+        company_name: data.companyName || '',
+        role: userRole,
+        is_active: true,
+        email_verified: true, // Auto-confirmation en développement
+        phone_verified: false,
+        avatar_url: '',
       }
 
-      if (!profileCreated) {
-        throw new Error('Impossible de créer le profil utilisateur')
+      logger.auth('Synchronisation du profil utilisateur avec upsert:', profileData)
+
+      const { error: upsertError } = await (supabase.from('profiles') as any)
+        .upsert(profileData, { onConflict: 'email' })
+        .eq('email', data.email)
+        .select()
+
+      if (upsertError) {
+        logger.error('Erreur lors de la synchronisation du profil:', upsertError)
+        throw new Error(
+          `Échec création profil: ${upsertError.message || 'Erreur inconnue'}`
+        )
       }
+
+      logger.auth('✅ Profil synchronisé avec succès pour:', authData.user.id)
 
       // Logger la création du compte
       try {

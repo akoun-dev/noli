@@ -67,6 +67,7 @@ export const AdminDataManagementPage = lazy(() => import('@/pages/admin/AdminDat
 export const AdminAnalyticsPage = lazy(() => import('@/pages/admin/AdminAnalyticsPage'))
 export const AdminModerationPage = lazy(() => import('@/pages/admin/AdminModerationPage'))
 export const AdminOffersPage = lazy(() => import('@/pages/admin/AdminOffersPage'))
+export const AdminDevisPage = lazy(() => import('@/pages/admin/AdminDevisPage'))
 export const AdminTarificationPage = lazy(() => import('@/pages/admin/AdminTarificationPage'))
 
 // Composants admin complexes - Très basse priorité

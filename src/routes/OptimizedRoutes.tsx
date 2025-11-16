@@ -49,6 +49,7 @@ import {
   AdminAnalyticsPage,
   AdminModerationPage,
   AdminOffersPage,
+  AdminDevisPage,
   AdminTarificationPage,
   AuditLogsPage,
   RoleManagementPage,
@@ -336,6 +337,14 @@ export const OptimizedAppRoutes = () => {
             element={
               <LazyWrapper>
                 <AdminOffersPage />
+              </LazyWrapper>
+            }
+          />
+          <Route
+            path='/admin/devis'
+            element={
+              <LazyWrapper>
+                <AdminDevisPage />
               </LazyWrapper>
             }
           />

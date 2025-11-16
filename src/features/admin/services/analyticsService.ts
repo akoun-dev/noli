@@ -50,6 +50,8 @@ export interface QuoteAnalytics {
   byInsurer: { insurer: string; count: number }[];
 }
 
+const ACTIVE_PROFILE_ROLES = ['USER', 'INSURER', 'ADMIN'] as const;
+
 // API Functions utilisant les vraies données de la base
 export const fetchPlatformStats = async (): Promise<PlatformStats> => {
   try {
@@ -87,7 +89,7 @@ export const fetchPlatformStats = async (): Promise<PlatformStats> => {
       supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true })
-        .neq('role', 'ANONYMOUS'),
+        .in('role', ACTIVE_PROFILE_ROLES),
       supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true })
@@ -126,13 +128,13 @@ export const fetchPlatformStats = async (): Promise<PlatformStats> => {
         .from('profiles')
         .select('*', { count: 'exact', head: true })
         .gte('created_at', thisMonth.toISOString())
-        .neq('role', 'ANONYMOUS'),
+        .in('role', ACTIVE_PROFILE_ROLES),
       supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true })
         .gte('created_at', lastMonth.toISOString())
         .lt('created_at', thisMonth.toISOString())
-        .neq('role', 'ANONYMOUS')
+        .in('role', ACTIVE_PROFILE_ROLES)
     ]);
 
     const usersThisMonth = extractCount(usersThisMonthResult);
