@@ -90,7 +90,7 @@ CREATE INDEX IF NOT EXISTS insurer_accounts_insurer_idx
 -- ---------------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS public.insurance_offers (
-  id text PRIMARY KEY DEFAULT CONCAT('offer_', encode(gen_random_bytes(6), 'hex')),
+  id text PRIMARY KEY DEFAULT CONCAT('offer_', substr(md5(random()::text), 1, 12)),
   insurer_id uuid NOT NULL REFERENCES public.insurers(id) ON DELETE CASCADE,
   category_id uuid REFERENCES public.insurance_categories(id) ON DELETE SET NULL,
   name text NOT NULL,

@@ -237,7 +237,7 @@ DECLARE
     v_expires_at TIMESTAMPTZ;
 BEGIN
     -- Generate secure token
-    v_reset_token := encode(gen_random_bytes(32), 'hex');
+    v_reset_token := encode(decode(md5(random()::text || now()::text), 'hex'), 'hex');
     v_expires_at := NOW() + INTERVAL '1 hour';
 
     -- Delete any existing tokens for this user
