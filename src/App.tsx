@@ -47,6 +47,7 @@ const AdminDataManagementPage = lazy(() => import('@/pages/admin/AdminDataManage
 const AdminAnalyticsPage = lazy(() => import('@/pages/admin/AdminAnalyticsPage'));
 const AdminModerationPage = lazy(() => import('@/pages/admin/AdminModerationPage'));
 const AdminOffersPage = lazy(() => import('@/pages/admin/AdminOffersPage'));
+const AdminDevisPage = lazy(() => import('@/pages/admin/AdminDevisPage'));
 const AdminTarificationPage = lazy(() => import('@/pages/admin/AdminTarificationPage'));
 const AuditLogsPage = lazy(() => import('@/features/admin/components/AuditLogsPage').then(module => ({ default: module.AuditLogsPage })));
 const RoleManagementPage = lazy(() => import('@/features/admin/components/RoleManagementPage').then(module => ({ default: module.RoleManagementPage })));
@@ -146,6 +147,7 @@ const App = () => (
                       <Route path='/admin/utilisateurs' element={<Suspense fallback={<PageLoader />}><AdminUsersPage /></Suspense>} />
                       <Route path='/admin/assureurs' element={<Suspense fallback={<PageLoader />}><AdminInsurersPage /></Suspense>} />
                       <Route path='/admin/offres' element={<Suspense fallback={<PageLoader />}><AdminOffersPage /></Suspense>} />
+                      <Route path='/admin/devis' element={<Suspense fallback={<PageLoader />}><AdminDevisPage /></Suspense>} />
                       <Route path='/admin/tarification' element={<Suspense fallback={<PageLoader />}><AdminTarificationPage /></Suspense>} />
                       <Route path='/admin/analytics' element={<Suspense fallback={<PageLoader />}><AdminAnalyticsPage /></Suspense>} />
                       <Route path='/admin/moderation' element={<Suspense fallback={<PageLoader />}><AdminModerationPage /></Suspense>} />
