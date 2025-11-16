@@ -23,6 +23,39 @@ export const supabase: SupabaseClient<Database> = createClient<Database>(
       // Configuration sécurisée pour forcer l'utilisation de cookies httpOnly
       flowType: 'pkce', // Recommended for web apps
       debug: false,
+      // Configuration spécifique pour la persistance de session
+      storageKey: 'noli-auth-token',
+      // S'assurer que la session est persistée correctement
+      storage: {
+        // Utiliser le storage par défaut (localStorage) mais avec une clé spécifique
+        // pour éviter les conflits avec d'autres applications Supabase
+        getItem: (key: string) => {
+          try {
+            const item = localStorage.getItem(key);
+            logger.auth(`Storage getItem: ${key}`, item ? 'found' : 'not found');
+            return item;
+          } catch (error) {
+            logger.error('Storage getItem error:', error);
+            return null;
+          }
+        },
+        setItem: (key: string, value: string) => {
+          try {
+            logger.auth(`Storage setItem: ${key}`, 'saving');
+            localStorage.setItem(key, value);
+          } catch (error) {
+            logger.error('Storage setItem error:', error);
+          }
+        },
+        removeItem: (key: string) => {
+          try {
+            logger.auth(`Storage removeItem: ${key}`, 'removing');
+            localStorage.removeItem(key);
+          } catch (error) {
+            logger.error('Storage removeItem error:', error);
+          }
+        }
+      }
     },
     db: {
       schema: 'public',

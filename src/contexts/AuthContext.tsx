@@ -92,61 +92,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         })
 
         if (session?.user) {
-          // Priorité 1: Essayer de récupérer le profil complet depuis la base de données
-          let user: User | null = null
-
-          // Lire le cache local pour éviter le downgrade de rôle lors d'un refresh
-          let cachedRole: string | undefined
-          try {
-            const cachedUserRaw = localStorage.getItem('noli_user')
-            if (cachedUserRaw) {
-              const cachedUser = JSON.parse(cachedUserRaw)
-              if (cachedUser?.id === session.user.id && typeof cachedUser?.role === 'string') {
-                cachedRole = cachedUser.role
-              }
+          // Priorité 1: Lire le cache local pour préserver le rôle admin lors du refresh
+        let cachedRole: string | undefined
+        let cachedUserData: any = null
+        try {
+          const cachedUserRaw = localStorage.getItem('noli_user')
+          if (cachedUserRaw) {
+            cachedUserData = JSON.parse(cachedUserRaw)
+            if (cachedUserData?.id === session.user.id && typeof cachedUserData?.role === 'string') {
+              cachedRole = cachedUserData.role
+              logger.auth('Found cached role for user:', cachedRole)
             }
-          } catch (_) {
-            // Ignorer les erreurs de lecture du cache
           }
+        } catch (_) {
+          // Ignorer les erreurs de lecture du cache
+        }
 
-          try {
-            const profile = await supabaseHelpers.getProfile(session.user.id)
-            if (profile) {
-              user = {
-                id: profile.id,
-                email: profile.email,
-                firstName: profile.first_name,
-                lastName: profile.last_name,
-                companyName: profile.company_name,
-                role: profile.role,
-                phone: profile.phone,
-                avatar: profile.avatar_url,
-                createdAt: new Date(profile.created_at),
-                updatedAt: new Date(profile.updated_at),
-              }
-              logger.auth('User profile loaded from database:', profile.role)
-            }
-          } catch (profileError) {
-            logger.warn('Could not load profile from database, using session data:', profileError)
-          }
+        // Priorité 2: Construire l'utilisateur directement depuis les métadonnées de session
+        // Éviter les appels RPC qui peuvent échouer et causer la perte de rôle
+        const user: User = {
+          id: session.user.id,
+          email: session.user.email || '',
+          firstName: session.user.user_metadata?.first_name || cachedUserData?.firstName || '',
+          lastName: session.user.user_metadata?.last_name || cachedUserData?.lastName || '',
+          companyName: session.user.user_metadata?.company || cachedUserData?.companyName || '',
+          // Important: préserver le rôle du cache pour éviter la régression vers USER
+          role: session.user.user_metadata?.role || cachedRole || cachedUserData?.role || 'USER',
+          phone: session.user.phone || cachedUserData?.phone || '',
+          avatar: session.user.user_metadata?.avatar_url || cachedUserData?.avatar || '',
+          createdAt: new Date(session.user.created_at),
+          updatedAt: new Date(),
+        }
 
-          // Priorité 2: Utiliser les données de la session si le profil n'est pas disponible
-          if (!user) {
-            user = {
-              id: session.user.id,
-              email: session.user.email || '',
-              firstName: session.user.user_metadata?.first_name || '',
-              lastName: session.user.user_metadata?.last_name || '',
-              companyName: session.user.user_metadata?.company || '',
-              // Important: préférer le rôle du cache si disponible pour éviter la régression vers USER
-              role: session.user.user_metadata?.role || (cachedRole as any) || 'USER',
-              phone: session.user.phone || '',
-              avatar: session.user.user_metadata?.avatar_url || '',
-              createdAt: new Date(session.user.created_at),
-              updatedAt: new Date(),
-            }
-            logger.auth('User created from session metadata, role:', user.role)
-          }
+        logger.auth('User created from session, role preserved:', user.role)
 
           logger.auth('Setting authenticated state for:', user.email)
           setState({
@@ -156,16 +134,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             permissions: [], // Sera chargé en arrière-plan
           })
 
-          // Sauvegarder dans le localStorage pour la persistance
+          // Sauvegarder dans le localStorage pour la persistance (priorité haute pour le rôle)
           try {
-            localStorage.setItem('noli_user', JSON.stringify({
+            const cacheData = {
               id: user.id,
               email: user.email,
               firstName: user.firstName,
               lastName: user.lastName,
-              role: user.role,
+              role: user.role, // Critique: préserver le rôle exact
+              companyName: user.companyName,
+              phone: user.phone,
+              avatar: user.avatar,
               timestamp: Date.now()
-            }))
+            }
+            localStorage.setItem('noli_user', JSON.stringify(cacheData))
+            logger.auth('User cached with role:', user.role)
           } catch (storageError) {
             logger.warn('Could not save user to localStorage:', storageError)
           }
@@ -333,16 +316,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           permissions: [], // Sera chargé en arrière-plan
         })
 
-        // Sauvegarder dans le cache
+        // Sauvegarder dans le cache avec toutes les données nécessaires
         try {
-          localStorage.setItem('noli_user', JSON.stringify({
+          const cacheData = {
             id: user.id,
             email: user.email,
             firstName: user.firstName,
             lastName: user.lastName,
-            role: user.role,
+            role: user.role, // Critique: préserver le rôle exact
+            companyName: user.companyName,
+            phone: user.phone,
+            avatar: user.avatar,
             timestamp: Date.now()
-          }))
+          }
+          localStorage.setItem('noli_user', JSON.stringify(cacheData))
+          logger.auth('User cached on sign in with role:', user.role)
         } catch (storageError) {
           logger.warn('Could not save user to localStorage on sign in:', storageError)
         }
