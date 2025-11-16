@@ -7,6 +7,7 @@ import { logger } from '@/lib/logger'
 import { secureAuthService } from '@/lib/secure-auth'
 import { usePermissionCache } from '@/lib/permission-cache'
 import { useQueryClient } from '@tanstack/react-query'
+import { securityUtils } from '@/lib/security-utils'
 
 export interface AuthState {
   user: User | null
@@ -16,7 +17,12 @@ export interface AuthState {
 }
 
 interface AuthContextType extends AuthState {
-  login: (email: string, password: string) => Promise<User>
+  login: (email: string, password: string, securityContextData?: any) => Promise<{
+    user: User;
+    rateLimitInfo?: { allowed: boolean; remainingAttempts: number; lockoutTime?: number };
+    captchaRequired?: boolean;
+    securityAlerts?: any[];
+  }>
   register: (userData: Partial<User> & { password: string }) => Promise<User>
   loginWithOAuth: (provider: 'google' | 'facebook' | 'github') => Promise<void>
   logout: () => Promise<void>
@@ -358,22 +364,66 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           logger.warn('Could not load permissions in background:', error)
         }
       } else if (event === 'SIGNED_OUT') {
-        logger.auth('Processing SIGNED_OUT event')
+        logger.auth('🚪 Processing SIGNED_OUT event - NETTOYAGE SÉCURISÉ')
         setState({
           user: null,
           isAuthenticated: false,
           isLoading: false,
           permissions: [],
         })
-        // Nettoyer le cache local pour éviter une restauration indésirable
-        try {
-          localStorage.removeItem('noli_user')
-          localStorage.removeItem('noli_permissions')
-        } catch (_) {}
 
-        // Nettoyer le cache
-        localStorage.removeItem('noli_user')
-        localStorage.removeItem('noli_permissions')
+        // Nettoyage SÉCURISÉ complet du cache local
+        try {
+          // Nettoyer toutes les clés liées à l'application
+          const keysToRemove = [
+            'noli_user',
+            'noli_permissions',
+            'noli_last_activity',
+            'noli_admin_data',
+            'noli_user_preferences',
+            'noli_session_data'
+          ]
+
+          keysToRemove.forEach(key => {
+            try {
+              localStorage.removeItem(key)
+            } catch (e) {
+              logger.warn(`Erreur suppression ${key} dans SIGNED_OUT:`, e)
+            }
+          })
+
+          // Nettoyer toutes les clés Supabase restantes
+          try {
+            const dynamicKeys: string[] = []
+            for (let i = 0; i < localStorage.length; i++) {
+              const key = localStorage.key(i)
+              if (!key) continue
+              if (key.startsWith('sb-') || key.startsWith('supabase.') || key.startsWith('noli-')) {
+                dynamicKeys.push(key)
+              }
+            }
+            dynamicKeys.forEach(key => {
+              try {
+                localStorage.removeItem(key)
+              } catch (e) {
+                logger.warn(`Erreur suppression clé dynamique ${key} dans SIGNED_OUT:`, e)
+              }
+            })
+          } catch (e) {
+            logger.warn('Erreur nettoyage clés dynamiques dans SIGNED_OUT:', e)
+          }
+
+          // Vider sessionStorage
+          try {
+            sessionStorage.clear()
+          } catch (e) {
+            logger.warn('Erreur nettoyage sessionStorage dans SIGNED_OUT:', e)
+          }
+
+          logger.auth('✅ Nettoyage complet dans SIGNED_OUT terminé')
+        } catch (e) {
+          logger.warn('Erreur nettoyage dans SIGNED_OUT:', e)
+        }
       } else if (event === 'TOKEN_REFRESHED') {
         // Rafraîchir les permissions après le refresh du token
         try {
@@ -503,14 +553,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }
 
   const logout = async () => {
-    logger.auth('🚪 AuthContext.logout appelé')
+    // Réduire les logs en production - seulement en mode développement
+    if (import.meta.env.DEV) {
+      logger.auth('🚪 AuthContext.logout appelé')
+    }
 
     // 1) Réinitialiser immédiatement l'état pour refléter la déconnexion dans l'UI (Header, etc.)
     setState({ user: null, isAuthenticated: false, isLoading: false, permissions: [] })
 
-    // 2) Nettoyer le stockage local et la session (best-effort)
+    // 2) NETTOYAGE SÉCURISÉ mais moins verbeux du stockage
     try {
-      // Supabase storage keys
+      // a) Nettoyer les clés Supabase et application en une seule passe
       const keysToRemove = [
         'supabase.auth.token',
         'supabase.auth.refreshToken',
@@ -519,53 +572,151 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         'supabase.auth.expires_at',
         'supabase.auth.provider_token',
         'supabase.auth.provider_refresh_token',
+        'noli-auth-token',
+        'noli_user',
+        'noli_permissions',
+        'noli_last_activity',
+        'noli_admin_data',
+        'noli_user_preferences',
+        'noli_session_data'
       ]
-      keysToRemove.forEach((k) => localStorage.removeItem(k))
 
-      // Supprimer également toute clé dynamique sb-* utilisée par supabase-js v2
+      // Supprimer les clés statiques
+      keysToRemove.forEach(key => {
+        try {
+          localStorage.removeItem(key)
+        } catch (e) {
+          // Ignorer silencieusement les erreurs de suppression
+        }
+      })
+
+      // b) Nettoyer les clés dynamiques Supabase (sb-*, supabase.*, noli-*)
       try {
         const dynamicKeys: string[] = []
         for (let i = 0; i < localStorage.length; i++) {
           const key = localStorage.key(i)
-          if (!key) continue
-          if (key.startsWith('sb-') || key.startsWith('supabase.')) {
+          if (key && (key.startsWith('sb-') || key.startsWith('supabase.') || key.startsWith('noli-'))) {
             dynamicKeys.push(key)
           }
         }
-        dynamicKeys.forEach((k) => localStorage.removeItem(k))
-      } catch (_) {
-        // ignore
+
+        dynamicKeys.forEach(key => {
+          try {
+            localStorage.removeItem(key)
+          } catch (e) {
+            // Ignorer silencieusement les erreurs
+          }
+        })
+      } catch (e) {
+        // Ignorer silencieusement les erreurs
       }
 
-      // Application-specific keys
-      localStorage.removeItem('noli_user')
-      localStorage.removeItem('noli_permissions')
-      localStorage.removeItem('noli_last_activity')
+      // c) Nettoyer sessionStorage
+      try {
+        sessionStorage.clear()
+      } catch (e) {
+        // Ignorer silencieusement les erreurs
+      }
 
-      sessionStorage.clear()
     } catch (storageError) {
-      logger.warn('Storage cleanup error:', storageError)
+      // Ignorer silencieusement les erreurs de nettoyage
     }
 
-    // 2b) Nettoyer les caches de requêtes pour éviter tout résidu de données
+    // 3) Nettoyer les caches de requêtes React Query
     try {
       queryClient.clear()
-    } catch (_) {
-      // ignore
+    } catch (e) {
+      // Ignorer silencieusement les erreurs
     }
 
-    // 3) Déconnexion Supabase
-    // Priorité: invalider localement (rapide), puis tenter une révocation globale non bloquante
+    // 4) Nettoyage sélectif du localStorage - préserver les préférences utilisateur
     try {
-      const { supabase } = await import('@/lib/supabase')
-      await supabase.auth.signOut({ scope: 'local' })
-      // Lancer la révocation globale sans bloquer ni bruiter les logs
-      supabase.auth.signOut({ scope: 'global' }).catch(() => {})
-    } catch (_) {
-      // Non bloquant, ignorer silencieusement pour ne pas polluer les logs
+      const essentialKeys = new Set([
+        'theme',
+        'donia-bf-language',
+        'debug_errors',
+        'userPreferences',
+        'noli:theme',
+        'admin-theme',
+        'ui-theme',
+        'theme-preferences'
+      ])
+
+      const keysToPreserve: Array<{ key: string; value: string }> = []
+      
+      // Sauvegarder les clés essentielles
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i)
+        if (key && essentialKeys.has(key)) {
+          const value = localStorage.getItem(key)
+          if (value) {
+            keysToPreserve.push({ key, value })
+          }
+        }
+      }
+
+      // Vider le localStorage
+      localStorage.clear()
+
+      // Restaurer uniquement les clés essentielles
+      keysToPreserve.forEach(({ key, value }) => {
+        try {
+          localStorage.setItem(key, value)
+        } catch (e) {
+          // Ignorer les erreurs de restauration
+        }
+      })
+
+      if (import.meta.env.DEV && keysToPreserve.length > 0) {
+        logger.auth(`♻️ ${keysToPreserve.length} préférences utilisateur préservées`)
+      }
+
+    } catch (e) {
+      // En cas d'erreur, vider complètement le localStorage
+      try {
+        localStorage.clear()
+      } catch (e2) {
+        // Ignorer les erreurs finales
+      }
     }
 
-    // 4) Navigation vers la page de connexion (plus explicite côté UX)
+    // 5) Nettoyer les cookies si accessible
+    try {
+      document.cookie.split(';').forEach(cookie => {
+        const eqPos = cookie.indexOf('=')
+        const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim()
+        if (name.includes('sb-') || name.includes('supabase') || name.includes('noli')) {
+          document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${window.location.hostname};`
+          document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;`
+        }
+      })
+    } catch (e) {
+      // Ignorer les erreurs de nettoyage des cookies
+    }
+
+    // 6) Déconnexion Supabase
+    try {
+      await supabase.auth.signOut({ scope: 'local' })
+      // Tenter la révocation globale sans bloquer
+      supabase.auth.signOut({ scope: 'global' }).catch(() => {
+        // Ignorer silencieusement les erreurs de révocation globale
+      })
+    } catch (e) {
+      // Ignorer les erreurs de déconnexion Supabase
+    }
+
+    if (import.meta.env.DEV) {
+      logger.auth('✅ Déconnexion terminée')
+    }
+
+    // 7) Vérification de sécurité (silencieuse)
+    try {
+      securityUtils.scheduleSecurityCheck()
+    } catch (e) {
+      // Ignorer les erreurs de planification
+    }
+
+    // 8) Navigation immédiate vers la page de connexion
     navigate('/auth/connexion', { replace: true })
   }
 

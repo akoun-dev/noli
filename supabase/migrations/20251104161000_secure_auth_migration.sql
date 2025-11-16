@@ -286,7 +286,18 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Indexes for user_sessions performance
 CREATE INDEX IF NOT EXISTS idx_user_sessions_user_id ON public.user_sessions(user_id);
-CREATE INDEX IF NOT EXISTS idx_user_sessions_token ON public.user_sessions(session_token);
+-- Only create token index if session_token column exists
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'user_sessions'
+        AND column_name = 'session_token'
+        AND table_schema = 'public'
+    ) THEN
+        CREATE INDEX IF NOT EXISTS idx_user_sessions_token ON public.user_sessions(session_token);
+    END IF;
+END $$;
 CREATE INDEX IF NOT EXISTS idx_user_sessions_active ON public.user_sessions(is_active, expires_at);
 CREATE INDEX IF NOT EXISTS idx_user_sessions_last_accessed ON public.user_sessions(last_accessed_at DESC);
 

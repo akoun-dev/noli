@@ -419,6 +419,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- ===============================
 
 -- System health check
+DROP FUNCTION IF EXISTS system_health_check();
 CREATE OR REPLACE FUNCTION system_health_check() RETURNS TABLE (
     component TEXT,
     status TEXT,

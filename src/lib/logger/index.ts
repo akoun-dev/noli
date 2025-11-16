@@ -58,7 +58,9 @@ class Logger {
     if (envLevel && ['debug', 'info', 'warn', 'error'].includes(envLevel)) {
       return envLevel as LogLevel
     }
-    return this.isDevelopment ? 'debug' : 'info'
+    // Par défaut, utiliser 'warn' en développement pour réduire le bruit
+    // Passer à 'debug' explicitement si nécessaire via VITE_LOG_LEVEL=debug
+    return this.isDevelopment ? 'warn' : 'info'
   }
 
   private shouldLog(level: LogLevel): boolean {
@@ -104,8 +106,8 @@ class Logger {
     const formattedMessage = this.formatMessage(entry)
 
     // Envoyer vers Sentry pour les erreurs
-    if (entry.level === 'error' && window.Sentry) {
-      window.Sentry.captureException(entry.error || new Error(entry.message), {
+    if (entry.level === 'error' && (window as any).Sentry) {
+      (window as any).Sentry.captureException(entry.error || new Error(entry.message), {
         tags: entry.context,
         extra: {
           level: entry.level,
@@ -158,8 +160,8 @@ class Logger {
       }
 
       // Exemple: envoi vers Supabase
-      if (window.supabase) {
-        await window.supabase.from('application_logs').insert(logPayload)
+      if ((window as any).supabase) {
+        await (window as any).supabase.from('application_logs').insert(logPayload)
       }
     } catch (error) {
       // Éviter les boucles infinies de logging
@@ -258,6 +260,20 @@ class Logger {
     })
     this.log(entry)
   }
+
+  // Authentication specific logging
+  auth(message: string, additionalContext?: LogContext): void {
+    // Vérifier si les logs d'auth sont désactivés
+    if (import.meta.env.VITE_AUTH_DEBUG === 'false' && import.meta.env.DEV) {
+      return
+    }
+    
+    const entry = this.createLogEntry('warn', `🔐 [AUTH] ${message}`, undefined, {
+      type: 'auth',
+      ...additionalContext,
+    })
+    this.log(entry)
+  }
 }
 
 // Export du logger singleton
@@ -265,4 +281,3 @@ export const logger = Logger.getInstance()
 
 // Export des types pour usage externe
 export { Logger }
-export type { LogLevel, LogContext, LogEntry }
