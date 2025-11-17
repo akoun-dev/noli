@@ -61,8 +61,6 @@ const Step2Vehicle: React.FC<Step2VehicleProps> = ({ onNext, onBack }: Step2Vehi
           <SelectContent>
             <SelectItem value='essence'>Essence</SelectItem>
             <SelectItem value='diesel'>Diesel</SelectItem>
-            <SelectItem value='hybride'>Hybride</SelectItem>
-            <SelectItem value='electrique'>Électrique</SelectItem>
           </SelectContent>
         </Select>
         {errors.fuel && <p className='text-sm text-destructive'>{errors.fuel.message}</p>}

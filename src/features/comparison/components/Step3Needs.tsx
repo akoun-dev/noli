@@ -543,8 +543,11 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
                 <SelectValue placeholder='Sélectionner' />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value='1_an'>1 an</SelectItem>
+                <SelectItem value='1_mois'>1 mois</SelectItem>
+                <SelectItem value='3_mois'>3 mois</SelectItem>
                 <SelectItem value='6_mois'>6 mois</SelectItem>
+                <SelectItem value='9_mois'>9 mois</SelectItem>
+                <SelectItem value='plus_9_mois'>+ 9 mois</SelectItem>
               </SelectContent>
             </Select>
             {errors.contractDuration && (
