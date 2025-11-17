@@ -47,20 +47,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   })
 
   useEffect(() => {
-    // Timeout de sécurité pour éviter le loading infini
-    const loadingTimeout = setTimeout(() => {
-      setState((prev) => {
-        if (prev.isLoading) {
-          logger.warn('Forcing isLoading to false after timeout')
-          return {
-            ...prev,
-            isLoading: false
-          }
-        }
-        return prev
-      })
-    }, 5000) // 5 secondes max
-
     // Initialiser l'authentification sécurisée avec Supabase
     const initializeAuth = async () => {
       try {
@@ -465,10 +451,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     })
 
     // Cleanup
-    return () => {
-      clearTimeout(loadingTimeout)
-      subscription.unsubscribe()
-    }
+    return () => subscription.unsubscribe()
   }, [])
 
   const login = async (email: string, password: string, securityContextData?: any) => {

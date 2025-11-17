@@ -9,7 +9,6 @@ import { UserProvider } from '@/contexts/UserContext'
 import { ThemeProvider } from '@/contexts/ThemeContext'
 import { CSPProvider } from '@/components/security/CSPProvider'
 import { SecurityInitializer } from '@/components/security/SecurityInitializer'
-import { GlobalLoadingProvider } from '@/components/common/GlobalLoading'
 import { PublicLayout } from '@/layouts/PublicLayout'
 import { UserLayout } from '@/layouts/UserLayout'
 import { InsurerLayout } from '@/layouts/InsurerLayout'
@@ -70,31 +69,18 @@ const InsurerNotificationsPage = lazy(() => import('@/pages/insurer/InsurerNotif
 const ComparisonPage = lazy(() => import('@/features/comparison/pages/ComparisonPage'));
 const OfferListPage = lazy(() => import('@/features/offers/pages/OfferListPage'));
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutes au lieu de 2-3 minutes
-      refetchOnWindowFocus: false, // Éviter le rechargement automatique au focus
-      retry: 2,
-      retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
-    },
-    mutations: {
-      retry: 1,
-    },
-  },
-})
+const queryClient = new QueryClient()
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <GlobalLoadingProvider>
-      <SecurityInitializer>
-        <CSPProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <ThemeProvider>
-                <AuthProvider>
+    <SecurityInitializer>
+      <CSPProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <ThemeProvider>
+              <AuthProvider>
                 <Routes>
                   {/* Public Routes */}
                   <Route element={<PublicLayout />}>
@@ -182,7 +168,6 @@ const App = () => (
         </TooltipProvider>
       </CSPProvider>
     </SecurityInitializer>
-    </GlobalLoadingProvider>
   </QueryClientProvider>
 )
 

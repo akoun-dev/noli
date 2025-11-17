@@ -12,8 +12,10 @@ if (!supabaseUrl || !supabaseAnonKey) {
   )
 }
 
-const createSupabaseClient = () =>
-  createClient<Database>(supabaseUrl, supabaseAnonKey, {
+export const supabase: SupabaseClient<Database> = createClient<Database>(
+  supabaseUrl,
+  supabaseAnonKey,
+  {
     auth: {
       autoRefreshToken: true,
       persistSession: true,
@@ -63,18 +65,8 @@ const createSupabaseClient = () =>
         'X-Application-Name': 'noli-assurance',
       },
     },
-  })
-
-const globalForSupabase = globalThis as unknown as {
-  __noliSupabase?: SupabaseClient<Database>
-}
-
-export const supabase: SupabaseClient<Database> =
-  globalForSupabase.__noliSupabase ?? createSupabaseClient()
-
-if (!globalForSupabase.__noliSupabase) {
-  globalForSupabase.__noliSupabase = supabase
-}
+  }
+)
 
 // Note: supabasePublic est maintenant défini dans supabase-public.ts
 

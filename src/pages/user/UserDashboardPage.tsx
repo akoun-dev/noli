@@ -51,74 +51,37 @@ export const UserDashboardPage: React.FC = () => {
   const loadData = useCallback(async () => {
     try {
       setLoading(true)
-      setError(null)
 
       if (!user?.id) {
         logger.warn('User ID not found, skipping data loading')
+        setLoading(false)
         return
       }
 
       logger.info('Loading dashboard data for user:', user.id)
 
-      // ⚡ SOLUTION: Timeout de 5 secondes maximum pour éviter le chargement infini
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Dashboard loading timeout')), 5000)
-      )
+      // Load user quotes
+      const userQuotes = await quoteService.getUserQuotes(user.id)
+      logger.info(`Loaded ${userQuotes.length} quotes for user:`, user.id)
+      setQuotes(userQuotes)
 
-      // Promise de chargement des données
-      const dataPromise = quoteService.getUserQuotes(user.id)
-
-      try {
-        // Race entre le chargement et le timeout
-        const userQuotes = await Promise.race([dataPromise, timeoutPromise]) as any[]
-        logger.info(`Successfully loaded ${userQuotes.length} quotes for user:`, user.id)
-        setQuotes(userQuotes)
-
-        // Convertir les quotes approuvées en politiques
-        const approvedPolicies: Policy[] = userQuotes
-          .filter((q) => q.status === 'approved')
-          .map((q) => ({
-            id: q.id,
-            insurerName: q.insurerName,
-            offerName: q.offerName,
-            price: q.price.annual,
-            startDate: new Date(),
-            endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
-            status: 'active',
-          }))
-        setPolicies(approvedPolicies)
-
-      } catch (err) {
-        if (err instanceof Error && err.message === 'Dashboard loading timeout') {
-          logger.warn('Dashboard loading timeout - using fallback data')
-          // En cas de timeout, utiliser des données de démonstration
-          const fallbackQuotes = [
-            {
-              id: 'demo-1',
-              insurerName: 'AXA Côte d\'Ivoire',
-              offerName: 'Assurance Tous Risques',
-              status: 'pending',
-              price: { monthly: 85000, annual: 1020000 },
-              createdAt: new Date(),
-              validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-              vehicleInfo: 'Véhicule de démonstration'
-            }
-          ]
-          setQuotes(fallbackQuotes)
-          setPolicies([])
-          setError('Chargement terminé avec données de démonstration')
-        } else {
-          throw err // Relancer les autres erreurs
-        }
-      }
-
+      // Load user policies (simulated - would need a real policy service)
+      // For now, convert approved quotes to policies
+      const approvedPolicies: Policy[] = userQuotes
+        .filter((q) => q.status === 'approved')
+        .map((q) => ({
+          id: q.id,
+          insurerName: q.insurerName,
+          offerName: q.offerName,
+          price: q.price.annual,
+          startDate: new Date(),
+          endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+          status: 'active',
+        }))
+      setPolicies(approvedPolicies)
     } catch (err) {
       logger.error('Error loading dashboard data:', err)
-      setError('Erreur lors du chargement - Données non disponibles')
-
-      // Garantir que l'interface reste utilisable même en cas d'erreur
-      setQuotes([])
-      setPolicies([])
+      setError('Erreur lors du chargement des données')
     } finally {
       setLoading(false)
     }
@@ -196,7 +159,7 @@ export const UserDashboardPage: React.FC = () => {
       <div className='flex items-center justify-center min-h-[400px]'>
         <div className='text-center'>
           <Loader2 className='w-8 h-8 animate-spin mx-auto mb-4 text-primary' />
-          <p className='text-muted-foreground'>Initialisation de votre espace...</p>
+          <p className='text-muted-foreground'>Chargement du tableau de bord...</p>
         </div>
       </div>
     )
