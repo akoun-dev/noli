@@ -39,6 +39,20 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 
+const DEFAULT_CONTRACT_DURATION = 'plus_9_mois'
+
+const CONTRACT_DURATION_CONFIG: Record<string, { percentage: number; months: number }> = {
+  '1_mois': { percentage: 0.15, months: 1 },
+  '3_mois': { percentage: 0.30, months: 3 },
+  '6_mois': { percentage: 0.55, months: 6 },
+  '9_mois': { percentage: 0.80, months: 9 },
+  plus_9_mois: { percentage: 1, months: 12 },
+}
+
+const getDurationConfig = (duration?: string) =>
+  CONTRACT_DURATION_CONFIG[duration || DEFAULT_CONTRACT_DURATION] ||
+  CONTRACT_DURATION_CONFIG[DEFAULT_CONTRACT_DURATION]
+
 interface Step3NeedsProps {
   onBack: () => void
 }
@@ -73,7 +87,8 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
         vehicleInfo: formData.vehicleInfo,
         coverages: selectedCoverages,
         premiumBreakdown,
-        totalPremium,
+        totalPremium: adjustedPremium,
+        contractDuration,
         createdAt: new Date()
       }
 
@@ -90,8 +105,8 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
   const handleShareWhatsApp = () => {
     const message = `🚗 *Devis NOLI Assurance*\n\n` +
       `*Véhicule*: ${formData.vehicleInfo?.brand || ''} ${formData.vehicleInfo?.model || ''} (${formData.vehicleInfo?.year || ''})\n` +
-      `*Total*: ${totalPremium.toLocaleString('fr-FR')} FCFA\n` +
-      `*Mensuel*: ${Math.round(totalPremium / 12).toLocaleString('fr-FR')} FCFA\n` +
+      `*Total*: ${adjustedPremium.toLocaleString('fr-FR')} FCFA\n` +
+      `*Mensuel*: ${monthlyPremium.toLocaleString('fr-FR')} FCFA\n` +
       `*Garanties*: ${Object.entries(selectedCoverages).filter(([_, isSelected]) => isSelected).length} sélectionnée(s)\n\n` +
       `Pour recevoir votre devis complet, contactez-nous !\n` +
       `📞 +225 00 00 00 00\n` +
@@ -108,8 +123,8 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
       `Bonjour,\n\n` +
       `Je souhaite recevoir un devis pour l'assurance de mon véhicule :\n\n` +
       `Véhicule: ${formData.vehicleInfo?.brand || ''} ${formData.vehicleInfo?.model || ''} (${formData.vehicleInfo?.year || ''})\n` +
-      `Total: ${totalPremium.toLocaleString('fr-FR')} FCFA\n` +
-      `Mensuel: ${Math.round(totalPremium / 12).toLocaleString('fr-FR')} FCFA\n` +
+      `Total: ${adjustedPremium.toLocaleString('fr-FR')} FCFA\n` +
+      `Mensuel: ${monthlyPremium.toLocaleString('fr-FR')} FCFA\n` +
       `Garanties: ${Object.entries(selectedCoverages).filter(([_, isSelected]) => isSelected).length} sélectionnée(s)\n\n` +
       `Merci de me contacter pour finaliser ce devis.\n\n` +
       `Cordialement`
@@ -154,6 +169,12 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
     },
   })
   const selectedOptions = watch('options') || []
+  const contractDuration = watch('contractDuration') || DEFAULT_CONTRACT_DURATION
+  const durationConfig = getDurationConfig(contractDuration)
+  const adjustedPremium = Math.round(totalPremium * durationConfig.percentage)
+  const monthlyPremium = durationConfig.months > 0
+    ? Math.round((adjustedPremium || 0) / durationConfig.months)
+    : adjustedPremium
 
   const findCoverageDetails = (coverageId: string) => {
     // D'abord essayer dans availableCoverages
@@ -411,6 +432,8 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
       coverageData: {
         selectedCoverages,
         totalPremium,
+        adjustedPremium,
+        durationConfig,
         premiumBreakdown,
         vehicleData,
       },
@@ -423,7 +446,10 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
       try {
         await coverageTarificationService.updateQuoteCoveragePremiums(tempQuoteId)
         const total = await coverageTarificationService.calculateQuoteTotalPremium(tempQuoteId)
-        const monthly = Math.round((total || 0) / 12)
+        const durationPricing = getDurationConfig(data.contractDuration)
+        const adjustedTotal = Math.round((total || 0) * durationPricing.percentage)
+        const periodMonths = durationPricing.months > 0 ? durationPricing.months : 12
+        const monthly = periodMonths > 0 ? Math.round(adjustedTotal / periodMonths) : adjustedTotal
 
         await (supabase
           .from('quotes') as any)
@@ -600,10 +626,10 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
              {/* Section Prix */}
              <div className="text-center space-y-3 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-100">
                <div className="text-4xl font-bold text-primary">
-                 {totalPremium.toLocaleString('fr-FR')} FCFA
+                 {adjustedPremium.toLocaleString('fr-FR')} FCFA
                </div>
                <div className="text-sm text-muted-foreground font-medium">
-                 {Math.round(totalPremium / 12).toLocaleString('fr-FR')} FCFA par mois
+                 {monthlyPremium.toLocaleString('fr-FR')} FCFA par mois
                </div>
                <div className="text-xs text-muted-foreground">
                  {Object.entries(selectedCoverages).filter(([_, isSelected]) => isSelected).length} garantie(s) sélectionnée(s)
@@ -773,14 +799,14 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
            isMobile ? "w-full" : "flex-1"
          )}
        >
-         <span>
-           {totalPremium > 0
-             ? (isMobile
-               ? `Voir les offres (${Math.round(totalPremium / 12).toLocaleString('fr-FR')}€/mois)`
-               : `Voir les offres (${totalPremium.toLocaleString('fr-FR')} FCFA/an)`)
-             : 'Voir les offres'
-           }
-         </span>
+        <span>
+          {adjustedPremium > 0
+            ? (isMobile
+              ? `Voir les offres (${monthlyPremium.toLocaleString('fr-FR')} FCFA/mois)`
+              : `Voir les offres (${adjustedPremium.toLocaleString('fr-FR')} FCFA)`)
+            : 'Voir les offres'
+          }
+        </span>
          <ArrowRight className={cn(
            "transition-transform",
            isMobile ? "w-4 h-4" : "w-5 h-5 group-hover:translate-x-1"

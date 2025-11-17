@@ -111,6 +111,7 @@ export interface CoverageOption {
   is_mandatory: boolean;
   estimated_min_premium?: number;
   estimated_max_premium?: number;
+  fixed_price?: number;
   available_formulas?: string[];
 }
 
@@ -555,6 +556,17 @@ class CoverageTarificationService {
     const isJwt = (token: string | undefined | null) =>
       typeof token === 'string' && token.split('.').length >= 3
 
+    const parseAmount = (value: any): number | undefined => {
+      if (typeof value === 'number' && Number.isFinite(value)) {
+        return value
+      }
+      if (typeof value === 'string' && value.trim().length > 0) {
+        const parsed = parseFloat(value)
+        return Number.isFinite(parsed) ? parsed : undefined
+      }
+      return undefined
+    }
+
     try {
       console.log('🔍 Step 1: Trying direct fetch to avoid JWT issues...')
       // 1) Use direct fetch to avoid JWT issues completely
@@ -567,7 +579,7 @@ class CoverageTarificationService {
         headers.Authorization = `Bearer ${supabaseAnonKey}`
       }
 
-      const response = await fetch(`${supabaseUrl}/rest/v1/coverages?select=id,type,name,description,calculation_type,is_mandatory,is_active,display_order,coverage_tariff_rules:coverage_tariff_rules(formula_name,fixed_amount,min_amount,max_amount,base_rate)&is_active=eq.true&order=display_order`, {
+      const response = await fetch(`${supabaseUrl}/rest/v1/coverages?select=id,type,name,description,calculation_type,is_mandatory,is_active,display_order,metadata,coverage_tariff_rules:coverage_tariff_rules(formula_name,fixed_amount,min_amount,max_amount,base_rate)&is_active=eq.true&order=display_order`, {
         headers,
       })
 
@@ -590,31 +602,40 @@ class CoverageTarificationService {
                 .filter((x: any): x is string => typeof x === 'string' && x.length > 0)
             )
           )
-        const fixeds = rules
-            .map((rr: any) => rr?.fixed_amount)
-            .filter((n: any) => typeof n === 'number') as number[]
-        const mins = rules
-            .map((rr: any) => rr?.min_amount)
-            .filter((n: any) => typeof n === 'number') as number[]
-        const maxs = rules
-            .map((rr: any) => rr?.max_amount)
-            .filter((n: any) => typeof n === 'number') as number[]
+          const fixeds = rules
+            .map((rr: any) => parseAmount(rr?.fixed_amount))
+            .filter((n): n is number => typeof n === 'number')
+          const mins = rules
+            .map((rr: any) => parseAmount(rr?.min_amount))
+            .filter((n): n is number => typeof n === 'number')
+          const maxs = rules
+            .map((rr: any) => parseAmount(rr?.max_amount))
+            .filter((n): n is number => typeof n === 'number')
 
-        const estMin = fixeds.length ? Math.min(...fixeds) : mins.length ? Math.min(...mins) : undefined
-        const estMax = fixeds.length ? Math.max(...fixeds) : maxs.length ? Math.max(...maxs) : undefined
+          const estMin = fixeds.length ? Math.min(...fixeds) : mins.length ? Math.min(...mins) : undefined
+          const estMax = fixeds.length ? Math.max(...fixeds) : maxs.length ? Math.max(...maxs) : undefined
 
-        return {
-          coverage_id: r.id,
-          coverage_type: r.type as CoverageType,
-          name: r.name,
-          description: r.description,
-          calculation_type: r.calculation_type as CalculationType,
-          is_mandatory: !!r.is_mandatory,
-          estimated_min_premium: estMin,
-          estimated_max_premium: estMax,
-          available_formulas: formulas,
-        } as CoverageOption
-      })
+          let fixedPrice = fixeds.length === 1 ? fixeds[0] : undefined
+          if (!fixedPrice && r.metadata) {
+            const metaFixed = parseAmount(r.metadata.fixedAmount || r.metadata.fixed_price)
+            if (typeof metaFixed === 'number') {
+              fixedPrice = metaFixed
+            }
+          }
+
+          return {
+            coverage_id: r.id,
+            coverage_type: r.type as CoverageType,
+            name: r.name,
+            description: r.description,
+            calculation_type: r.calculation_type as CalculationType,
+            is_mandatory: !!r.is_mandatory,
+            estimated_min_premium: estMin,
+            estimated_max_premium: estMax,
+            fixed_price: fixedPrice,
+            available_formulas: formulas,
+          } as CoverageOption
+        })
       }
 
       console.log('🔍 Step 1 FAILED: Direct query failed or returned no data')
@@ -624,7 +645,7 @@ class CoverageTarificationService {
       const { data, error } = await (supabase
         .from('coverages')
         .select(
-          'id, type, name, description, calculation_type, is_mandatory, is_active, display_order, coverage_tariff_rules:coverage_tariff_rules(formula_name, fixed_amount, min_amount, max_amount, base_rate)'
+          'id, type, name, description, calculation_type, is_mandatory, is_active, display_order, metadata, coverage_tariff_rules:coverage_tariff_rules(formula_name, fixed_amount, min_amount, max_amount, base_rate)'
         )
         .eq('is_active', true)
         .order('display_order', { ascending: true }) as any)
@@ -646,17 +667,24 @@ class CoverageTarificationService {
             )
           )
           const fixeds = rules
-            .map((rr: any) => rr?.fixed_amount)
-            .filter((n: any) => typeof n === 'number') as number[]
+            .map((rr: any) => parseAmount(rr?.fixed_amount))
+            .filter((n): n is number => typeof n === 'number')
           const mins = rules
-            .map((rr: any) => rr?.min_amount)
-            .filter((n: any) => typeof n === 'number') as number[]
+            .map((rr: any) => parseAmount(rr?.min_amount))
+            .filter((n): n is number => typeof n === 'number')
           const maxs = rules
-            .map((rr: any) => rr?.max_amount)
-            .filter((n: any) => typeof n === 'number') as number[]
+            .map((rr: any) => parseAmount(rr?.max_amount))
+            .filter((n): n is number => typeof n === 'number')
 
           const estMin = fixeds.length ? Math.min(...fixeds) : mins.length ? Math.min(...mins) : undefined
           const estMax = fixeds.length ? Math.max(...fixeds) : maxs.length ? Math.max(...maxs) : undefined
+          let fixedPrice = fixeds.length === 1 ? fixeds[0] : undefined
+          if (!fixedPrice && r.metadata) {
+            const metaFixed = parseAmount(r.metadata.fixedAmount || r.metadata.fixed_price)
+            if (typeof metaFixed === 'number') {
+              fixedPrice = metaFixed
+            }
+          }
 
           return {
             coverage_id: r.id,
@@ -667,6 +695,7 @@ class CoverageTarificationService {
             is_mandatory: !!r.is_mandatory,
             estimated_min_premium: estMin,
             estimated_max_premium: estMax,
+            fixed_price: fixedPrice,
             available_formulas: formulas,
           } as CoverageOption
         })
