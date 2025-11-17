@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+
 export interface QuoteUpdateEvent {
   quoteId: string;
   status: 'pending' | 'approved' | 'rejected' | 'expired';

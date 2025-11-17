@@ -161,10 +161,10 @@ export const OptimizedAppRoutes = () => {
       <Route element={<AuthGuard requiredRole='USER' />}>
         <Route element={<UserLayout />}>
           <Route
-            path='/tableau-de-bord'
+            path='/mes-devis'
             element={
               <LazyWrapper>
-                <UserDashboardPage />
+                <UserQuotesPage />
               </LazyWrapper>
             }
           />

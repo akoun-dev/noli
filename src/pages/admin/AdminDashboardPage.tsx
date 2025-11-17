@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -37,6 +37,7 @@ import RealtimeNotifications from '@/features/admin/components/RealtimeNotificat
 export const AdminDashboardPage: React.FC = () => {
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d'>('7d');
   const [activeTab, setActiveTab] = useState('overview');
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   const { data: stats, isLoading: statsLoading, refetch: refetchStats } = usePlatformStats();
   const { data: activityData, isLoading: activityLoading } = useActivityData(timeRange);
@@ -53,6 +54,18 @@ export const AdminDashboardPage: React.FC = () => {
   const approveInsurerMutation = useApproveInsurer();
   const approveOfferMutation = useApproveOffer();
   const rejectApprovalMutation = useRejectApproval();
+
+  // Désactiver l'état de chargement initial après le premier chargement
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsInitialLoad(false);
+    }, 3000); // 3 secondes pour éviter le flash de chargement
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Calculer l'état de chargement global
+  const isLoading = isInitialLoad || statsLoading || activityLoading || insurersLoading || healthLoading || demographicsLoading || quotesLoading || approvalsLoading;
 
   const handleRefresh = () => {
     refetchStats();
@@ -361,7 +374,7 @@ export const AdminDashboardPage: React.FC = () => {
                   <CardContent className="p-6">
                     <div className="text-center py-8">
                       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-                      <p className="text-sm text-muted-foreground">Chargement de l'état système...</p>
+                      <p className="text-sm text-muted-foreground">Analyse de l'état système...</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -459,10 +472,10 @@ export const AdminDashboardPage: React.FC = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {statsLoading ? (
+              {statsLoading && !isInitialLoad ? (
                 <div className="text-center py-8">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-                  <p className="text-sm text-muted-foreground">Chargement des statistiques...</p>
+                  <p className="text-sm text-muted-foreground">Mise à jour des statistiques...</p>
                 </div>
               ) : primaryMetrics.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-6">

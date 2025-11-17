@@ -4,6 +4,7 @@ import { QuoteWithDetails, QuoteHistoryFilters, QuoteHistoryStats } from '../typ
 import { PDFService } from '../../../services/pdfService'
 import { NotificationService } from '../../../services/notificationService'
 import { supabase } from '@/lib/supabase'
+import { useGlobalLoading } from '@/components/common/GlobalLoading'
 
 // API functions
 export const fetchUserQuotes = async (
@@ -358,10 +359,13 @@ export const updateQuoteStatus = async (
 
 // React Query hooks
 export const useUserQuotes = (filters?: QuoteHistoryFilters) => {
+  const { setLoading } = useGlobalLoading();
+  
   return useQuery({
     queryKey: ['user-quotes', filters],
     queryFn: () => fetchUserQuotes(filters),
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 10 * 60 * 1000, // 10 minutes au lieu de 5
+    refetchOnWindowFocus: false,
   })
 }
 
@@ -369,7 +373,8 @@ export const useQuoteStats = () => {
   return useQuery({
     queryKey: ['quote-stats'],
     queryFn: fetchQuoteStats,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 10 * 60 * 1000, // 10 minutes au lieu de 5
+    refetchOnWindowFocus: false,
   })
 }
 

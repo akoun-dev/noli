@@ -246,8 +246,9 @@ export const usePendingApprovals = () => {
   return useQuery({
     queryKey: ['admin-pending-approvals'],
     queryFn: fetchPendingApprovals,
-    staleTime: 30 * 1000, // 30 seconds
-    refetchInterval: 2 * 60 * 1000, // Refetch every 2 minutes
+    staleTime: 5 * 60 * 1000, // 5 minutes au lieu de 30 secondes
+    refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes au lieu de 2
+    refetchOnWindowFocus: false,
   });
 };
 

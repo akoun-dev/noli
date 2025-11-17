@@ -700,8 +700,9 @@ export const usePlatformStats = () => {
   return useQuery({
     queryKey: ['admin-platform-stats'],
     queryFn: fetchPlatformStats,
-    staleTime: 2 * 60 * 1000, // 2 minutes
-    refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
+    staleTime: 10 * 60 * 1000, // 10 minutes au lieu de 2
+    refetchInterval: 10 * 60 * 1000, // Refetch every 10 minutes au lieu de 5
+    refetchOnWindowFocus: false,
   });
 };
 
@@ -709,7 +710,8 @@ export const useActivityData = (period: '7d' | '30d' | '90d' = '7d') => {
   return useQuery({
     queryKey: ['admin-activity-data', period],
     queryFn: () => fetchActivityData(period),
-    staleTime: 2 * 60 * 1000,
+    staleTime: 10 * 60 * 1000, // 10 minutes au lieu de 2
+    refetchOnWindowFocus: false,
   });
 };
 
@@ -717,7 +719,8 @@ export const useTopInsurers = () => {
   return useQuery({
     queryKey: ['admin-top-insurers'],
     queryFn: fetchTopInsurers,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 10 * 60 * 1000, // 10 minutes au lieu de 5
+    refetchOnWindowFocus: false,
   });
 };
 
@@ -725,8 +728,9 @@ export const useSystemHealth = () => {
   return useQuery({
     queryKey: ['admin-system-health'],
     queryFn: fetchSystemHealth,
-    staleTime: 30 * 1000, // 30 seconds for real-time data
-    refetchInterval: 60 * 1000, // Refetch every minute
+    staleTime: 2 * 60 * 1000, // 2 minutes au lieu de 30 secondes
+    refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes au lieu de 1
+    refetchOnWindowFocus: false,
   });
 };
 
@@ -734,7 +738,8 @@ export const useUserDemographics = () => {
   return useQuery({
     queryKey: ['admin-user-demographics'],
     queryFn: fetchUserDemographics,
-    staleTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: 15 * 60 * 1000, // 15 minutes au lieu de 10
+    refetchOnWindowFocus: false,
   });
 };
 
@@ -742,7 +747,8 @@ export const useQuoteAnalytics = () => {
   return useQuery({
     queryKey: ['admin-quote-analytics'],
     queryFn: fetchQuoteAnalytics,
-    staleTime: 3 * 60 * 1000,
+    staleTime: 10 * 60 * 1000, // 10 minutes au lieu de 3
+    refetchOnWindowFocus: false,
   });
 };
 
