@@ -348,7 +348,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         } catch (storageError) {
           logger.warn('Could not save user to localStorage on sign in:', storageError)
               // Essayer de charger les permissions en arrière-plan avec cache
-          loadPermissions(user.id)ckground:', error)
+          loadPermissions(user.id)
         }
       } else if (event === 'SIGNED_OUT') {
         logger.auth('🚪 Processing SIGNED_OUT event - NETTOYAGE SÉCURISÉ')
@@ -457,10 +457,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         permissions: [],
       })
 
-        // Charger les permissions en arrière-plan sans bloquer avec cache
-        loadPermissions(user.id)login:', permError)
-        }
-      })()
+      // Charger les permissions en arrière-plan sans bloquer avec cache
+      loadPermissions(response.user.id)
 
       logger.auth("🎉 État mis à jour, retour de l'utilisateur:", response.user)
 
