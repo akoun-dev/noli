@@ -46,6 +46,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     permissions: [],
   })
 
+  // Fonction pour charger les permissions
+  const loadPermissions = async (userId: string) => {
+    try {
+      const permissions = await getUserPermissions(
+        userId,
+        () => authService.getUserPermissions(userId)
+      )
+      logger.auth('Permissions loaded:', permissions.length)
+      setState((prev) => ({ ...prev, permissions }))
+
+      // Sauvegarder les permissions pour la persistance
+      try {
+        localStorage.setItem('noli_permissions', JSON.stringify({
+          permissions,
+          timestamp: Date.now()
+        }))
+      } catch (storageError) {
+        logger.warn('Could not save permissions to localStorage:', storageError)
+      }
+    } catch (error) {
+      logger.warn('Could not load permissions:', error)
+    }
+  }
+
   useEffect(() => {
     // Initialiser l'authentification sécurisée avec Supabase
     const initializeAuth = async () => {
@@ -99,38 +123,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         if (session?.user) {
           // Priorité 1: Lire le cache local pour préserver le rôle admin lors du refresh
-        let cachedRole: string | undefined
-        let cachedUserData: any = null
-        try {
-          const cachedUserRaw = localStorage.getItem('noli_user')
-          if (cachedUserRaw) {
-            cachedUserData = JSON.parse(cachedUserRaw)
-            if (cachedUserData?.id === session.user.id && typeof cachedUserData?.role === 'string') {
-              cachedRole = cachedUserData.role
-              logger.auth('Found cached role for user:', cachedRole)
+          let cachedRole: string | undefined
+          let cachedUserData: any = null
+          try {
+            const cachedUserRaw = localStorage.getItem('noli_user')
+            if (cachedUserRaw) {
+              cachedUserData = JSON.parse(cachedUserRaw)
+              if (cachedUserData?.id === session.user.id && typeof cachedUserData?.role === 'string') {
+                cachedRole = cachedUserData.role
+                logger.auth('Found cached role for user:', cachedRole)
+              }
             }
+          } catch (_) {
+            // Ignorer les erreurs de lecture du cache
           }
-        } catch (_) {
-          // Ignorer les erreurs de lecture du cache
-        }
 
-        // Priorité 2: Construire l'utilisateur directement depuis les métadonnées de session
-        // Éviter les appels RPC qui peuvent échouer et causer la perte de rôle
-        const user: User = {
-          id: session.user.id,
-          email: session.user.email || '',
-          firstName: session.user.user_metadata?.first_name || cachedUserData?.firstName || '',
-          lastName: session.user.user_metadata?.last_name || cachedUserData?.lastName || '',
-          companyName: session.user.user_metadata?.company || cachedUserData?.companyName || '',
-          // Important: préserver le rôle du cache pour éviter la régression vers USER
-          role: session.user.user_metadata?.role || cachedRole || cachedUserData?.role || 'USER',
-          phone: session.user.phone || cachedUserData?.phone || '',
-          avatar: session.user.user_metadata?.avatar_url || cachedUserData?.avatar || '',
-          createdAt: new Date(session.user.created_at),
-          updatedAt: new Date(),
-        }
+          // Priorité 2: Construire l'utilisateur directement depuis les métadonnées de session
+          // Éviter les appels RPC qui peuvent échouer et causer la perte de rôle
+          const user: User = {
+            id: session.user.id,
+            email: session.user.email || '',
+            firstName: session.user.user_metadata?.first_name || cachedUserData?.firstName || '',
+            lastName: session.user.user_metadata?.last_name || cachedUserData?.lastName || '',
+            companyName: session.user.user_metadata?.company || cachedUserData?.companyName || '',
+            // Important: préserver le rôle du cache pour éviter la régression vers USER
+            role: session.user.user_metadata?.role || (cachedRole as any) || cachedUserData?.role || 'USER',
+            phone: session.user.phone || cachedUserData?.phone || '',
+            avatar: session.user.user_metadata?.avatar_url || cachedUserData?.avatar || '',
+            createdAt: new Date(session.user.created_at),
+            updatedAt: new Date(),
+          }
 
-        logger.auth('User created from session, role preserved:', user.role)
+          logger.auth('User created from session, role preserved:', user.role)
 
           logger.auth('Setting authenticated state for:', user.email)
           setState({
@@ -160,26 +184,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
 
           // Essayer de charger les permissions en arrière-plan avec cache
-          try {
-            const permissions = await getUserPermissions(
-              user.id,
-              () => authService.getUserPermissions(user.id)
-            )
-            logger.auth('Permissions loaded:', permissions.length)
-            setState((prev) => ({ ...prev, permissions }))
+          // La fonction de chargement des permissions est déplacée en dehors du bloc pour la réutiliser
+          loadPermissions(user.id)
 
-            // Sauvegarder les permissions pour la persistance
-            try {
-              localStorage.setItem('noli_permissions', JSON.stringify({
-                permissions,
-                timestamp: Date.now()
-              }))
-            } catch (storageError) {
-              logger.warn('Could not save permissions to localStorage:', storageError)
-            }
-          } catch (error) {
-            logger.warn('Could not load permissions on init:', error)
-          }
         } else {
           // Essayer de restaurer depuis le cache si disponible
           try {
@@ -220,7 +227,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 setState({
                   user,
                   isAuthenticated: false,
-                  isLoading: false,
+                  isLoading: false, // <-- Correction: On met isLoading à false ici
                   permissions: [],
                 })
 
@@ -228,12 +235,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 setTimeout(() => {
                   if (!session) {
                     logger.auth('Cache expired, clearing state')
-                    setState({
+                    setState((prev) => ({
+                      ...prev,
                       user: null,
                       isAuthenticated: false,
                       isLoading: false,
                       permissions: [],
-                    })
+                    }))
                     localStorage.removeItem('noli_user')
                     localStorage.removeItem('noli_permissions')
                   }
@@ -250,7 +258,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setState((prev) => ({
             user: null,
             isAuthenticated: false,
-            isLoading: false,
+            isLoading: false, // <-- Correction: On met isLoading à false ici
             permissions: []
           }))
 
@@ -263,7 +271,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setState((prev) => ({
           user: null,
           isAuthenticated: false,
-          isLoading: false,
+          isLoading: false, // <-- Correction: On met isLoading à false ici
           permissions: []
         }))
       }
@@ -339,29 +347,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           logger.auth('User cached on sign in with role:', user.role)
         } catch (storageError) {
           logger.warn('Could not save user to localStorage on sign in:', storageError)
-        }
-
-        // Charger les permissions en arrière-plan sans bloquer avec cache
-        try {
-          logger.auth('Loading permissions in background...')
-          const permissions = await getUserPermissions(
-            user.id,
-            () => authService.getUserPermissions(user.id)
-          )
-          logger.auth('Background permissions loaded:', permissions.length)
-          setState((prev) => ({ ...prev, permissions }))
-
-          // Sauvegarder les permissions
-          try {
-            localStorage.setItem('noli_permissions', JSON.stringify({
-              permissions,
-              timestamp: Date.now()
-            }))
-          } catch (storageError) {
-            logger.warn('Could not save permissions to localStorage:', storageError)
-          }
-        } catch (error) {
-          logger.warn('Could not load permissions in background:', error)
+              // Essayer de charger les permissions en arrière-plan avec cache
+          loadPermissions(user.id)ckground:', error)
         }
       } else if (event === 'SIGNED_OUT') {
         logger.auth('🚪 Processing SIGNED_OUT event - NETTOYAGE SÉCURISÉ')
@@ -470,27 +457,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         permissions: [],
       })
 
-      // Charger les permissions en arrière-plan sans bloquer la connexion
-      ;(async () => {
-        try {
-          logger.auth('📦 Chargement asynchrone des permissions après login...')
-          const permissions = await getUserPermissions(
-            response.user.id,
-            () => authService.getUserPermissions(response.user.id)
-          )
-          logger.auth('✅ Permissions asynchrones chargées:', permissions)
-          setState((prev) => ({ ...prev, permissions }))
-
-          try {
-            localStorage.setItem('noli_permissions', JSON.stringify({
-              permissions,
-              timestamp: Date.now()
-            }))
-          } catch (storageError) {
-            logger.warn('Could not cache permissions after login:', storageError)
-          }
-        } catch (permError) {
-          logger.warn('Impossible de charger les permissions après login:', permError)
+        // Charger les permissions en arrière-plan sans bloquer avec cache
+        loadPermissions(user.id)login:', permError)
         }
       })()
 

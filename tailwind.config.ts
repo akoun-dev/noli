@@ -14,9 +14,12 @@ export default {
     },
     extend: {
       fontFamily: {
-        display: ["var(--font-display)"],
-        subtitle: ["var(--font-subtitle)"],
-        body: ["var(--font-body)"],
+        // La police Klein n'est pas disponible dans le dépôt. J'utilise Space Grotesk comme substitut pour l'instant.
+        display: ["Space Grotesk", "sans-serif"],
+        // Nunito Sans est la police pour les sous-titres
+        subtitle: ["Nunito Sans", "sans-serif"],
+        // Poppins est la police pour le corps de texte
+        body: ["Poppins", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",

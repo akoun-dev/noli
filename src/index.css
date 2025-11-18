@@ -1,4 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700&family=Poppins:wght@400;500;600&family=Space+Grotesk:wght@600&display=swap');
+/* Ajout des polices pour correspondre à la charte */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap');
+/* Klein n'est pas une police Google Fonts standard, je la laisse comme "Klein" dans la variable CSS pour l'instant. */
 
 @tailwind base;
 @tailwind components;
@@ -14,8 +17,8 @@ All colors MUST be HSL.
     --font-subtitle: "Nunito Sans", "Poppins", sans-serif;
     --font-body: "Poppins", "Nunito Sans", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
 
-    --background: 153 23% 96%;
-    --foreground: 120 2% 9%;
+    --background: 0 0% 100%; /* Blanc */
+    --foreground: 120 2% 9%; /* Noir profond #171817 */
 
     --card: 153 16% 92%;
     --card-foreground: 120 2% 9%;
@@ -23,32 +26,32 @@ All colors MUST be HSL.
     --popover: 153 16% 98%;
     --popover-foreground: 120 2% 9%;
 
-    --primary: 188 48% 22%; /* Azur foncé */
-    --primary-foreground: 66 84% 61%;
+    --primary: 195 65% 21%; /* Azur Foncé #1B464D */
+    --primary-foreground: 68 76% 54%; /* Jaune vert #DEEF4A */
 
-    --secondary: 176 58% 33%; /* Cyan */
+    --secondary: 177 60% 31%; /* Cyan #23847E */
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 153 13% 88%; /* Vert grisé */
+    --muted: 148 13% 73%; /* Vert grisé #A0B6AC */
     --muted-foreground: 188 30% 30%;
 
-    --accent: 66 85% 61%; /* Jaune vert */
+    --accent: 68 76% 54%; /* Jaune vert #DEEF4A */
     --accent-foreground: 120 2% 9%;
 
     --destructive: 4 84% 58%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 153 13% 80%;
-    --input: 153 13% 80%;
-    --ring: 66 85% 61%;
-    --sidebar-background: 188 48% 20%;
+    --border: 148 13% 73%; /* Vert grisé #A0B6AC */
+    --input: 148 13% 73%; /* Vert grisé #A0B6AC */
+    --ring: 68 76% 54%; /* Jaune vert #DEEF4A */
+    --sidebar-background: 195 65% 21%; /* Azur Foncé #1B464D */
     --sidebar-foreground: 66 85% 96%;
-    --sidebar-primary: 176 58% 33%;
+    --sidebar-primary: 177 60% 31%; /* Cyan #23847E */
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 66 85% 61%;
+    --sidebar-accent: 68 76% 54%; /* Jaune vert #DEEF4A */
     --sidebar-accent-foreground: 120 2% 9%;
     --sidebar-border: 188 35% 35%;
-    --sidebar-ring: 188 48% 22%;
+    --sidebar-ring: 195 65% 21%; /* Azur Foncé #1B464D */
 
     --radius: 0.75rem;
 
@@ -90,7 +93,7 @@ All colors MUST be HSL.
 
     --border: 188 30% 22%;
     --input: 188 30% 22%;
-    --ring: 66 85% 61%;
+    --ring: 68 76% 54%; /* Jaune vert #DEEF4A */
     --sidebar-background: 120 3% 8%;
     --sidebar-foreground: 153 23% 96%;
     --sidebar-primary: 66 85% 61%;
