@@ -484,7 +484,7 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
         )}
 
         {coverageLoading ? (
-          <Card className='p-8'>
+          <Card className='p-8 bg-card/90 dark:bg-[#0b171a]/80 border border-border/40 dark:border-border/20'>
             <div className='text-center'>
               <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4'></div>
               <p className='text-sm text-muted-foreground'>Chargement des garanties...</p>
@@ -507,9 +507,13 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
       </div>
 
       {/* Contract Details - Mobile optimized */}
-      <Card className={cn(
-        isMobile ? "p-4" : "p-6"
-      )}>
+      <Card
+        className={cn(
+          isMobile ? "p-4" : "p-6",
+          "bg-card/95 border border-border/40 shadow-sm",
+          "dark:bg-[#071215]/90 dark:border-border/20 dark:shadow-[0_25px_60px_rgba(0,0,0,0.6)]"
+        )}
+      >
         <h3 className={cn(
           "font-semibold mb-4 flex items-center gap-2",
           isMobile ? "text-base" : "text-lg"

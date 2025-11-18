@@ -23,10 +23,10 @@ const featureCards = [
 
 const Hero = () => {
   return (
-    <section className="relative isolate overflow-hidden">
+    <section className="relative isolate overflow-hidden bg-gradient-to-b from-primary/20 via-background to-background dark:from-[#0f1c1e] dark:via-[#0a1315] dark:to-[#050808]">
       <div className="absolute inset-0 z-0">
-        <div className="absolute inset-0 bg-hero blur-[120px] opacity-60" />
-        <div className="absolute inset-0 bg-gradient-to-b from-primary/50 via-secondary/40 to-background" />
+        <div className="absolute inset-0 bg-hero blur-[120px] opacity-60 dark:opacity-30" />
+        <div className="absolute inset-0 bg-gradient-to-b from-primary/50 via-secondary/40 to-background dark:from-[#103136]/60 dark:via-transparent dark:to-[#050808]" />
       </div>
       <div className="relative z-10 px-4 py-20 lg:py-24">
         <div className="max-w-7xl mx-auto grid lg:grid-cols-[1.1fr_0.9fr] gap-12 lg:gap-20 items-center text-white">
@@ -71,7 +71,7 @@ const Hero = () => {
           </div>
 
           <div className="relative">
-            <Card className="p-8 bg-white/95 text-foreground shadow-[0_30px_80px_rgba(23,24,23,0.2)] border-0 rounded-[32px]">
+            <Card className="p-8 bg-white/95 text-foreground shadow-[0_30px_80px_rgba(23,24,23,0.2)] border-0 rounded-[32px] dark:bg-card/90 dark:text-card-foreground">
               <div className="flex items-center justify-between mb-8">
                 <div>
                   <p className="text-sm text-muted-foreground">Compas assurance</p>
@@ -103,7 +103,7 @@ const Hero = () => {
                 )}
               </div>
 
-              <Button className="w-full h-12 bg-primary text-primary-foreground font-semibold text-base">
+              <Button className="w-full h-12 bg-primary text-primary-foreground font-semibold text-base hover:bg-primary/90">
                 Obtenir mon devis gratuit
               </Button>
 
@@ -117,10 +117,13 @@ const Hero = () => {
       </div>
 
       <div className="relative z-10 mt-16">
-        <div className="bg-foreground text-background py-10">
+        <div className="bg-foreground text-background py-10 dark:bg-card dark:text-card-foreground">
           <div className="max-w-6xl mx-auto px-4 grid gap-6 md:grid-cols-3">
             {featureCards.map((card) => (
-              <Card key={card.title} className="p-6 rounded-2xl bg-white/95 shadow-xl text-foreground">
+              <Card
+                key={card.title}
+                className="p-6 rounded-2xl bg-white/95 shadow-xl text-foreground dark:bg-background/80 dark:text-foreground"
+              >
                 <div className="text-3xl">{card.icon}</div>
                 <h3 className="mt-4 text-xl font-semibold text-foreground">{card.title}</h3>
                 <p className="text-sm text-muted-foreground mt-2">{card.description}</p>
