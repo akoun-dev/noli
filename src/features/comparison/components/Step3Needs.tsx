@@ -18,8 +18,6 @@ import { Card } from '@/components/ui/card'
 import { ArrowRight, ArrowLeft, AlertTriangle, Shield, Car, MessageCircle, Download, Mail } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useNavigate } from 'react-router-dom'
-import { CoverageSelector } from '@/components/coverage/CoverageSelector'
-import ProgressiveCoverageSelector from '@/components/coverage/ProgressiveCoverageSelector'
 import SimplifiedCoverageSelector from '@/components/coverage/SimplifiedCoverageSelector'
 import {
   coverageTarificationService,
@@ -493,29 +491,18 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
             </div>
           </Card>
         ) : (
-          (() => {
-            console.log('🔧 Step3Needs: About to render ProgressiveCoverageSelector')
-            console.log('🔧 Props:', {
-              tempQuoteId,
-              vehicleData,
-              selectedCoverages,
-              user: !!user
-            })
-            return (
-              <SimplifiedCoverageSelector
-                quoteId={tempQuoteId || ''}
-                vehicleData={vehicleData}
-                selectedCoverages={selectedCoverages}
-                onCoverageChange={handleCoverageChange}
-                onPremiumsChange={(total: number, breakdown: Record<string, number>) => {
-                  setTotalPremium(total)
-                  setPremiumBreakdown(breakdown)
-                }}
-                canCalculate={!!user}
-                onCoveragesLoaded={setAvailableCoverages}
-              />
-            )
-          })()
+          <SimplifiedCoverageSelector
+            quoteId={tempQuoteId || ''}
+            vehicleData={vehicleData}
+            selectedCoverages={selectedCoverages}
+            onCoverageChange={handleCoverageChange}
+            onPremiumsChange={(total: number, breakdown: Record<string, number>) => {
+              setTotalPremium(total)
+              setPremiumBreakdown(breakdown)
+            }}
+            canCalculate={!!user}
+            onCoveragesLoaded={setAvailableCoverages}
+          />
         )}
       </div>
 

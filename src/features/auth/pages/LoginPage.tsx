@@ -258,9 +258,11 @@ const LoginPage = () => {
       <div className='w-full max-w-md space-y-6'>
         {/* Logo */}
         <Link to='/' className='flex items-center justify-center gap-2'>
-          <div className='w-12 h-12 rounded-xl bg-primary flex items-center justify-center'>
-            <Shield className='w-7 h-7 text-primary-foreground' />
-          </div>
+          <img
+            src="/img/noli vertical sans fond.png"
+            alt="NOLI Assurance"
+            className="h-12 w-auto"
+          />
           <div className='flex flex-col'>
             <span className='font-bold text-2xl'>NOLI</span>
             <span className='text-xs text-muted-foreground'>Assurance Auto</span>

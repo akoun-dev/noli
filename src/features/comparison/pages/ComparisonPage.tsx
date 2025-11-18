@@ -42,9 +42,11 @@ const CompareForm = () => {
       <div className="border-b border-border bg-background/80 backdrop-blur-md">
         <div className="container mx-auto px-4 py-4">
           <Link to="/" className="flex items-center gap-2 w-fit">
-            <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
-              <Shield className="w-6 h-6 text-primary-foreground" />
-            </div>
+            <img
+              src="/img/noli vertical sans fond.png"
+              alt="NOLI Assurance"
+              className="h-10 w-auto"
+            />
             <div className="flex flex-col">
               <span className="font-bold text-xl">NOLI</span>
               <span className="text-xs text-muted-foreground">Assurance Auto</span>

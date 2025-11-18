@@ -100,7 +100,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ userRole }) => {
         <div className='flex items-center justify-between p-4 border-b'>
           {!isCollapsed && (
             <div className='flex items-center space-x-2'>
-              <Shield className='h-6 w-6 text-primary' />
+              <img
+                src="/img/noli vertical sans fond.png"
+                alt="NOLI Assurance"
+                className="h-6 w-auto"
+              />
               <span className='text-sm font-semibold'>NOLI Assurance</span>
             </div>
           )}

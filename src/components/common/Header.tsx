@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { Menu, X, User, LogOut, Shield } from 'lucide-react'
+import { Menu, X, User, LogOut, Shield, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
@@ -58,36 +58,38 @@ export const Header: React.FC = () => {
   }
 
   return (
-    <header className='bg-background shadow-sm border-b sticky top-0 z-50'>
+    <header className='border-b border-border/60 bg-card/90 backdrop-blur-xl sticky top-0 z-50 shadow-[0px_10px_30px_rgba(23,24,23,0.05)]'>
       <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
-        <div className='flex justify-between items-center h-16'>
-          {/* Logo/Nom du site - centré sur mobile, à gauche sur desktop */}
-          <div className='flex items-center'>
-            <Link to='/' className='text-xl font-bold text-primary'>
-              NOLI
+        <div className='flex justify-between items-center h-20 gap-4'>
+          {/* Logo */}
+          <div className='flex items-center gap-4'>
+            <Link to='/' className='flex items-center gap-2 group'>
+              <img
+                src="/img/noli vertical sans fond.png"
+                alt="NOLI Comparateur"
+                className="h-10 w-auto group-hover:opacity-80 transition-opacity"
+              />
+             
             </Link>
           </div>
 
-          {/* Desktop Navigation - uniquement pour non connectés */}
-          {/* cspell:ignore uniquement connectés */}
-          {!isAuthenticated && (
-            <nav className='hidden lg:flex space-x-8' aria-label='Navigation principale'>
-              {navigation.map((item) => (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  className={`text-sm font-medium transition-colors duration-200 ${
-                    location.pathname === item.href
-                      ? 'text-primary'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                  aria-current={location.pathname === item.href ? 'page' : undefined}
-                >
-                  {item.name}
-                </Link>
-              ))}
-            </nav>
-          )}
+          {/* Desktop Navigation */}
+          <nav className='hidden lg:flex items-center gap-6' aria-label='Navigation principale'>
+            {navigation.map((item) => (
+              <Link
+                key={item.name}
+                to={item.href}
+                className={`text-sm font-semibold uppercase tracking-wide transition-colors relative after:absolute after:left-0 after:-bottom-1 after:h-0.5 after:w-full after:origin-left after:scale-x-0 after:bg-accent after:transition-transform ${
+                  location.pathname === item.href
+                    ? 'text-foreground after:scale-x-100'
+                    : 'text-muted-foreground hover:text-foreground hover:after:scale-x-100'
+                }`}
+                aria-current={location.pathname === item.href ? 'page' : undefined}
+              >
+                {item.name}
+              </Link>
+            ))}
+          </nav>
 
           {/* Desktop User Menu */}
           <div className='hidden lg:flex items-center space-x-3'>
@@ -132,12 +134,14 @@ export const Header: React.FC = () => {
               <div className='flex items-center space-x-3'>
                 <ThemeToggle />
                 <Link to='/auth/connexion'>
-                  {/* cspell:ignore Connexion */}
-                  <Button variant='ghost' size='sm'>Connexion</Button>
+                  <Button variant='ghost' size='sm' className='font-semibold text-foreground'>
+                    Connexion
+                  </Button>
                 </Link>
                 <Link to='/auth/inscription'>
-                  {/* cspell:ignore S'inscrire */}
-                  <Button size='sm'>S'inscrire</Button>
+                  <Button size='sm' className='font-semibold bg-secondary text-secondary-foreground'>
+                    S'inscrire
+                  </Button>
                 </Link>
               </div>
             )}
@@ -145,7 +149,11 @@ export const Header: React.FC = () => {
 
           {/* Mobile menu button */}
           <div className='lg:hidden flex items-center space-x-2'>
-            <ThemeToggle />
+            <Link to='/comparer'>
+              <Button size='sm' className='bg-accent text-accent-foreground font-semibold px-4'>
+                Passe à l'action
+              </Button>
+            </Link>
             <Button
               variant='ghost'
               size='sm'
@@ -164,29 +172,28 @@ export const Header: React.FC = () => {
       {isMenuOpen && (
         <div
           id='mobile-menu'
-          className='lg:hidden'
+          className='lg:hidden bg-card/95 backdrop-blur-xl border-t border-border/50'
           role='navigation'
           aria-label='Menu principal mobile'
         >
-          <div className='px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-background border-t'>
-            {!isAuthenticated &&
-              navigation.map((item) => (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  className={`block px-3 py-2 rounded-md text-base font-medium ${
-                    location.pathname === item.href
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-foreground hover:bg-accent'
-                  }`}
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  {item.name}
-                </Link>
-              ))}
+          <div className='px-4 pt-4 pb-6 space-y-3'>
+            {navigation.map((item) => (
+              <Link
+                key={item.name}
+                to={item.href}
+                className={`block px-4 py-3 rounded-xl text-base font-semibold uppercase tracking-wide ${
+                  location.pathname === item.href
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-foreground bg-muted hover:bg-muted/80'
+                }`}
+                onClick={() => setIsMenuOpen(false)}
+              >
+                {item.name}
+              </Link>
+            ))}
             {isAuthenticated && user ? (
               <>
-                <div className='border-t pt-4 mt-4'>
+                <div className='border-t pt-4 mt-4 space-y-2'>
                   <div className='px-3 py-2'>
                     <p className='text-sm font-medium text-foreground'>Bonjour, {user.firstName}</p>
                   </div>
@@ -231,6 +238,13 @@ export const Header: React.FC = () => {
                 </Link>
               </div>
             )}
+            <Link
+              to='/comparer'
+              className='block px-4 py-3 rounded-xl text-center font-semibold bg-accent text-accent-foreground'
+              onClick={() => setIsMenuOpen(false)}
+            >
+              Passe à l'action
+            </Link>
           </div>
         </div>
       )}

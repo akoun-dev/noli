@@ -41,7 +41,11 @@ export const Footer: React.FC = () => {
           {/* Logo and Description */}
           <div className="lg:col-span-2">
             <div className="flex items-center space-x-2 mb-4">
-              <Shield className="h-8 w-8 text-primary" />
+              <img
+                src="/img/noli vertical sans fond.png"
+                alt="NOLI Assurance"
+                className="h-8 w-auto"
+              />
               <span className="text-xl font-bold">NOLI Assurance</span>
             </div>
             <p className="text-gray-300 mb-6">
