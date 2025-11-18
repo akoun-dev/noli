@@ -73,51 +73,72 @@ npm run fix:logging           # Fix logging issues
 ```
 src/
 ├── components/           # Reusable UI components
-│   ├── ui/              # shadcn/ui components (42+ components)
+│   ├── ui/              # shadcn/ui components (Radix UI + Tailwind)
 │   ├── common/          # Shared components (Header, Footer, etc.)
-│   ├── forms/           # Form components
+│   ├── auth/            # Authentication components
 │   └── layout/          # Layout components
-├── features/            # Feature-based modules
+├── features/            # Feature-based modules (PRIMARY ORGANIZATION)
 │   ├── auth/           # Authentication flow
 │   ├── comparison/     # Insurance comparison process
-│   ├── offers/         # Offer management
-│   ├── insurers/       # Insurer dashboard
-│   └── admin/          # Admin functionality
-├── pages/              # Route components
+│   ├── chat/           # Real-time chat functionality
+│   ├── payments/       # Payment processing
+│   ├── insurers/       # Insurer management
+│   ├── admin/          # Admin functionality
+│   ├── quotes/         # Quote management
+│   ├── notifications/  # Notification system
+│   └── tarification/   # Pricing and rules engine
+├── pages/              # Route components organized by role
 │   ├── public/         # Public pages
-│   ├── admin/          # Admin pages
-│   ├── insurer/        # Insurer pages
-│   └── user/           # User pages
-├── services/           # API services and business logic
+│   ├── user/           # User-facing pages
+│   ├── insurer/        # Insurer-specific pages
+│   └── admin/          # Admin pages
+├── services/           # Core business logic services
+├── api/                # API layer and service interfaces
 ├── lib/                # Utilities and configurations
-├── types/              # TypeScript type definitions
+│   ├── supabase/       # Supabase client and helpers
+│   ├── logger/         # Structured logging system
+│   ├── monitoring/     # Performance monitoring
+│   ├── analytics/      # Analytics tracking
+│   └── utils/          # Utility functions
+├── contexts/           # React contexts (Auth, User, Theme)
 ├── hooks/              # Custom React hooks
-├── contexts/           # React contexts
 ├── guards/             # Route guards (RBAC)
-├── layouts/            # Page layouts
-└── config/             # App configuration
+├── layouts/            # Page layouts by role
+├── types/              # TypeScript type definitions
+└── routes/             # Optimized routing with lazy loading
 ```
 
 ### Key Architectural Patterns
 
-**Feature-Driven Development**: Code is organized by business features (auth, comparison, offers, etc.) rather than technical layers.
+**Feature-Driven Development**: Primary organization by business features with encapsulated components, services, pages, and types within each feature directory.
+
+**Service Layer Architecture**:
+- Core business logic in `src/services/`
+- Feature-specific services in `src/features/[name]/services/`
+- Clear separation between UI components and business logic
 
 **Component Architecture**:
-- Base UI components in `components/ui/` (shadcn/ui)
+- Base UI components in `components/ui/` (shadcn/ui built on Radix UI)
 - Business components in respective feature folders
 - Shared components in `components/common/`
 
 **State Management**:
 - Authentication state via `AuthContext`
 - User data via `UserContext`
-- Server state with TanStack Query
-- Form state with React Hook Form + Zod
+- Server state with TanStack Query and caching
+- Form state with React Hook Form + Zod validation
 
 **Security Architecture**:
 - Row Level Security (RLS) with Supabase
 - Role-based access control (USER/INSURER/ADMIN)
 - httpOnly cookies for auth tokens
-- Content Security Policy with nonces
+- Content Security Policy with cryptographic nonces
+- Structured logging and audit trails
+
+**Type-Safe Database Integration**:
+- Comprehensive TypeScript types in `types/database.ts`
+- Supabase client configured with PKCE flow
+- Database-first approach with strong typing
 
 ### Data Flow
 
@@ -158,7 +179,14 @@ src/
 **Unit Tests**: Component and utility tests with Vitest
 **Integration Tests**: API service tests
 **E2E Tests**: Critical user journey tests
-**Coverage Target**: 90%+ maintained
+**Coverage Target**: 75%+ maintained
+
+### Testing Configuration with Playwright
+- Configuration in `playwright.config.ts`
+- Tests run against multiple browsers (Chrome, Firefox, Safari, Mobile)
+- Automatic server startup for development
+- Screenshots and traces on failure
+- CI-optimized with retries and parallel execution
 
 ### Environment Configuration
 
@@ -346,12 +374,30 @@ VITE_MOCK_DATA=true
 - Secure file handling with validation
 - Progress tracking for uploads
 
+### Domain-Specific Features
+
+**French Insurance Market**:
+- Specialized for French insurance regulations and requirements
+- Multi-category insurance support (auto, property, health, etc.)
+- Comprehensive pricing rules and tarification engine
+- Localization and French language support
+
+**Real-time Features**:
+- Chat system for insurer-client communication via `features/chat/`
+- Live notifications and updates via `features/notifications/`
+- Real-time quote comparisons and status tracking
+
+**Multi-Tenant Architecture**:
+- Separate dashboards for different user roles
+- Role-based UI components and layouts
+- Permission-based data access and features
+
 ### Common Development Tasks
 
 **Adding New Features:**
 1. Create feature folder in `src/features/[feature-name]/`
 2. Add components, pages, services, and types
-3. Update routing in route configuration
+3. Update routing in `src/routes/` with lazy loading
 4. Add tests for new functionality
 5. Update Storybook documentation
 
@@ -363,7 +409,7 @@ VITE_MOCK_DATA=true
 
 **Adding New UI Components:**
 1. Create in `src/components/ui/` if reusable
-2. Use shadcn/ui as base when possible
+2. Use shadcn/ui (Radix UI) as base when possible
 3. Add Storybook stories
 4. Include accessibility tests
 
