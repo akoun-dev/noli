@@ -5,6 +5,7 @@ import TrustedBy from "@/components/home/TrustedBy";
 import Testimonials from "@/components/home/Testimonials";
 import FAQ from "@/components/home/FAQ";
 import FinalCTA from "@/components/home/FinalCTA";
+import SwitchingSteps from "@/components/home/SwitchingSteps";
 
 const HomePage = () => {
   return (
@@ -16,6 +17,7 @@ const HomePage = () => {
         <TrustedBy />
         <Features />
         <HowItWorks />
+        <SwitchingSteps />
         <Testimonials />
         <FAQ />
         <FinalCTA />

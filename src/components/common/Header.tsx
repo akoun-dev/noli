@@ -34,7 +34,6 @@ export const Header: React.FC = () => {
   // cspell:ignore NOLI
   const publicNavigation = [
     { name: 'Accueil', href: '/' },
-    { name: 'Comparer', href: '/comparer' },
     { name: 'À propos', href: '/a-propos' },
     { name: 'Contact', href: '/contact' },
   ]
