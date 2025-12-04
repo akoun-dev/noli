@@ -5,6 +5,7 @@ import { insuranceNeedsSchema, InsuranceNeedsFormData } from '@/lib/zod-schemas'
 import { useCompare } from '@/features/comparison/services/ComparisonContext'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
 // Removed coverage type radio group
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -37,14 +38,14 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 
-const DEFAULT_CONTRACT_DURATION = 'plus_9_mois'
+const DEFAULT_CONTRACT_DURATION = '12_mois'
 
 const CONTRACT_DURATION_CONFIG: Record<string, { percentage: number; months: number }> = {
   '1_mois': { percentage: 0.15, months: 1 },
   '3_mois': { percentage: 0.30, months: 3 },
   '6_mois': { percentage: 0.55, months: 6 },
   '9_mois': { percentage: 0.80, months: 9 },
-  plus_9_mois: { percentage: 1, months: 12 },
+  '12_mois': { percentage: 1, months: 12 },
 }
 
 const getDurationConfig = (duration?: string) =>
@@ -101,15 +102,14 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
 
   // Fonction pour partager par WhatsApp
   const handleShareWhatsApp = () => {
-    const message = `🚗 *Devis NOLI Assurance*\n\n` +
+    const message = `🚗 *Devis NOLI Assurance*\n` +
       `*Véhicule*: ${formData.vehicleInfo?.brand || ''} ${formData.vehicleInfo?.model || ''} (${formData.vehicleInfo?.year || ''})\n` +
       `*Total*: ${adjustedPremium.toLocaleString('fr-FR')} FCFA\n` +
       `*Mensuel*: ${monthlyPremium.toLocaleString('fr-FR')} FCFA\n` +
-      `*Garanties*: ${Object.entries(selectedCoverages).filter(([_, isSelected]) => isSelected).length} sélectionnée(s)\n\n` +
-      `Pour recevoir votre devis complet, contactez-nous !\n` +
-      `📞 +225 00 00 00 00\n` +
+      `*Garanties*: ${Object.entries(selectedCoverages).filter(([_, isSelected]) => isSelected).length} sélectionnée(s)\n` +
+      `*Pour recevoir votre devis complet, contactez-nous !\n` +
+      `📞 +225 00 00 00\n` +
       `🌐 www.noli-assurance.ci`
-
     const whatsappUrl = `https://wa.me/22500000000?text=${encodeURIComponent(message)}`
     window.open(whatsappUrl, '_blank')
   }
@@ -204,13 +204,41 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
     if (typeof estimated_max_premium === 'number' && estimated_max_premium > 0) {
       return estimated_max_premium
     }
-
     return 0
   }
 
   const getCoverageName = (coverageId: string) => {
     const coverage = findCoverageDetails(coverageId)
-    return coverage?.name || `Garantie ${coverageId}`
+    if (coverage?.name) return coverage.name
+    if (coverage?.display_name) return coverage.display_name
+    if (coverage?.label) return coverage.label
+
+    // Noms communs basés sur l'ID
+    const commonNames: Record<string, string> = {
+      'RC': 'Responsabilité Civile',
+      'RESPONSABILITE_CIVILE': 'Responsabilité Civile',
+      'DR': 'Défense et Recours',
+      'DEFENSE_RETOUR': 'Défense et Recours',
+      'IC': 'Individuelle Conducteur',
+      'INDIVIDUELLE_CONDUCTEUR': 'Individuelle Conducteur',
+      'IPT': 'Individuelle Passagers',
+      'INDIVIDUELLE_PASSAGERS': 'Individuel Passagers',
+      'INC': 'Incendie',
+      'VOL': 'Vol',
+      'VMA': 'Vol à mains armées',
+      'VOL_MAINS_ARMEES': 'Vol à mains armées',
+      'BDG': 'Bris de glaces',
+      'BRIS_GLACES': 'Bris de glaces',
+      'TDC': 'Tierce Complète',
+      'TIERCE_COLLISION': 'Tierce Collision',
+      'TCL': 'Tierce Collision',
+      'ASSIST': 'Assistance',
+      'ASR': 'Avance sur recours',
+      'AVANCE_RECOURS': 'Avance sur recours',
+      'INDIVIDUELLE_PASSAGER': 'Individuel Passager',
+    }
+
+    return commonNames[coverageId] || `Garantie ${coverageId}`
   }
 
   // Create temporary quote for coverage calculation
@@ -270,7 +298,7 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
         options: formData.insuranceNeeds.options || [],
       }
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase
         .from('quotes')
         .insert({
           user_id: user.id,
@@ -282,7 +310,7 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
           valid_until: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
         } as any)
         .select('id')
-        .single() as any
+        .single() as any)
 
       console.log('🔧 Quote creation result:', { error, data })
       if (error || !data?.id) {
@@ -335,14 +363,14 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
       } catch (premiumError) {
         console.error('Error calculating individual premium:', premiumError)
       }
+    }
 
-      if (!localPremium || localPremium <= 0) {
-        localPremium = getEstimatedPremium(coverageId)
-        if (localPremium > 0) {
-          console.log(`Using estimated premium for ${coverageId}:`, localPremium)
-        } else {
-          console.warn(`No premium found for coverage ${coverageId}`)
-        }
+    if (!localPremium || localPremium <= 0) {
+      localPremium = getEstimatedPremium(coverageId)
+      if (localPremium > 0) {
+        console.log(`Using estimated premium for ${coverageId}:`, localPremium)
+      } else {
+        console.warn(`No premium found for coverage ${coverageId}`)
       }
     }
 
@@ -371,7 +399,6 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
       )
 
       const newTotal = await coverageTarificationService.calculateQuoteTotalPremium(tempQuoteId)
-
       const premiums = await coverageTarificationService.getQuoteCoveragePremiums(tempQuoteId)
       const serverBreakdown: Record<string, number> = {}
       premiums
@@ -397,31 +424,10 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
     } catch (error) {
       console.error('Error updating coverage:', error)
       setCoverageErrors(['Erreur lors de la mise à jour des garanties'])
-      // Revert the state change on error
+      // Revert state change on error
       setSelectedCoverages((prev) => ({ ...prev, [coverageId]: !isIncluded }))
     }
   }
-
-  // Charger toutes les garanties disponibles pour avoir les noms
-  useEffect(() => {
-    const loadGuarantees = async () => {
-      try {
-        // Importer guaranteeService
-        const { guaranteeService } = await import('@/features/tarification/services/guaranteeService')
-        const guarantees = await guaranteeService.getGuarantees()
-        setAllGuarantees(guarantees)
-
-        // Débug pour voir ce qu'on a chargé
-        if (process.env.NODE_ENV === 'development') {
-          console.log('Loaded guarantees:', guarantees)
-        }
-      } catch (error) {
-        console.error('Erreur lors du chargement des garanties:', error)
-      }
-    }
-
-    loadGuarantees()
-  }, [])
 
   const onSubmit = async (data: InsuranceNeedsFormData) => {
     // Merge coverage selections with form
@@ -450,30 +456,31 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
         const monthly = periodMonths > 0 ? Math.round(adjustedTotal / periodMonths) : adjustedTotal
 
         await (supabase
-          .from('quotes') as any)
+          .from('quotes')
           .update({
             estimated_price: monthly,
             status: 'PENDING' as any,
             coverage_requirements: {
               ...(enhancedData as any),
             } as any,
+            valid_until: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
           } as any)
           .eq('id', tempQuoteId)
-      } catch (err) {
-        console.error('Error finalizing quote:', err)
-      }
+          .single() as any)
+        } catch (err) {
+          console.error('Error finalizing quote:', err)
+        }
     }
 
-    navigate('/offres')
+    // Navigate to next step
+    navigate('/comparison/results')
   }
-
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className={cn(
       "space-y-6",
       isMobile ? "px-2" : "max-w-5xl mx-auto px-4"
     )}>
-
       {/* Enhanced Coverage Selection */}
       <div className='space-y-4'>
         {coverageErrors.length > 0 && (
@@ -511,7 +518,7 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
         className={cn(
           isMobile ? "p-4" : "p-6",
           "bg-card/95 border border-border/40 shadow-sm",
-          "dark:bg-[#071215]/90 dark:border-border/20 dark:shadow-[0_25px_60px_rgba(0,0,0,0.6)]"
+          "dark:bg-[#0b171a]/90 dark:border-border/20 dark:shadow-[0_25px_60px_rgba(0,0,0.6)]"
         )}
       >
         <h3 className={cn(
@@ -531,7 +538,7 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
             )}>
               Date d'effet *
             </Label>
-            <input
+            <Input
               id='effectiveDate'
               type='date'
               value={watch('effectiveDate') || ''}
@@ -564,7 +571,7 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
                 <SelectItem value='3_mois'>3 mois</SelectItem>
                 <SelectItem value='6_mois'>6 mois</SelectItem>
                 <SelectItem value='9_mois'>9 mois</SelectItem>
-                <SelectItem value='plus_9_mois'>+ 9 mois</SelectItem>
+                <SelectItem value='12_mois'>12 mois</SelectItem>
               </SelectContent>
             </Select>
             {errors.contractDuration && (
@@ -574,260 +581,143 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
         </div>
       </Card>
 
-     {/* Floating Action Buttons - Mobile optimized */}
-     <div className={cn(
-       "sticky bottom-0 bg-background/95 backdrop-blur-sm border-t p-4 -mx-4",
-       isMobile ? "gap-2 flex-col" : "flex gap-4 max-w-5xl mx-auto"
-     )}>
-       <Button
-         type='button'
-         variant='outline'
-         size={isMobile ? "default" : "lg"}
-         onClick={onBack}
-         className={cn(
-           "flex items-center justify-center gap-2",
-           isMobile ? "w-full" : "flex-1"
-         )}
-       >
-         <ArrowLeft className={cn("w-4 h-4", !isMobile && "w-5 h-5")} />
-         {isMobile ? "Retour" : "Précédent"}
-       </Button>
-       <Dialog open={isQuoteModalOpen} onOpenChange={setIsQuoteModalOpen}>
-         <DialogTrigger asChild>
-           <Button
-             type='button'
-             variant='ghost'
-             size="sm"
-             className="text-muted-foreground"
-           >
-             Voir le devis
-           </Button>
-         </DialogTrigger>
-         <DialogContent className={cn(
-           isMobile ? "w-11/12 max-w-md" : "max-w-lg"
-         )}>
-           <DialogHeader>
-             <DialogTitle className="text-xl">Votre devis personnalisé</DialogTitle>
-             <DialogDescription>
-               Récapitulatif de votre protection automobile
-             </DialogDescription>
-           </DialogHeader>
-
-           <div className="space-y-6 py-4">
-             {/* Section Prix */}
-             <div className="text-center space-y-3 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-100">
-               <div className="text-4xl font-bold text-primary">
-                 {adjustedPremium.toLocaleString('fr-FR')} FCFA
-               </div>
-               <div className="text-sm text-muted-foreground font-medium">
-                 {monthlyPremium.toLocaleString('fr-FR')} FCFA par mois
-               </div>
-               <div className="text-xs text-muted-foreground">
-                 {Object.entries(selectedCoverages).filter(([_, isSelected]) => isSelected).length} garantie(s) sélectionnée(s)
-               </div>
-             </div>
-
-             {/* Section Véhicule */}
-             <div className="space-y-2">
-               <h4 className="text-sm font-semibold text-gray-700">Véhicule assuré</h4>
-               <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded">
-                 {formData.vehicleInfo?.brand || ''} {formData.vehicleInfo?.model || ''} ({formData.vehicleInfo?.year || ''})
-               </div>
-             </div>
-
-             {/* Section Garanties */}
-             <div className="space-y-2">
-               <h4 className="text-sm font-semibold text-gray-700">Garanties incluses</h4>
-               <div className="space-y-2 max-h-48 overflow-y-auto">
-                 {Object.entries(selectedCoverages)
-                   .filter(([_, isSelected]) => isSelected)
-                   .map(([coverageId]) => {
-                     // Utiliser la fonction améliorée pour trouver les détails
-                     const coverage = findCoverageDetails(coverageId)
-
-                     // Fonction améliorée pour récupérer le nom de la garantie
-                     const getCoverageName = () => {
-                       // 1. D'abord essayer de trouver dans les données complètes
-                       if (coverage?.name) return coverage.name
-                       if (coverage?.display_name) return coverage.display_name
-                       if (coverage?.label) return coverage.label
-
-                       // 2. Ensuite essayer avec les noms communs basés sur l'ID ou code
-                       const commonNames: Record<string, string> = {
-                         'RC': 'Responsabilité Civile',
-                         'RESPONSABILITE_CIVILE': 'Responsabilité Civile',
-                         'DR': 'Défense et Recours',
-                         'DEFENSE_RECOURS': 'Défense et Recours',
-                         'IC': 'Individuelle Conducteur',
-                         'INDIVIDUELLE_CONDUCTEUR': 'Individuelle Conducteur',
-                         'IPT': 'Individuelle Passagers',
-                         'INDIVIDUELLE_PASSAGERS': 'Individuelle Passagers',
-                         'INC': 'Incendie',
-                         'VOL': 'Vol',
-                         'VMA': 'Vol à mains armées',
-                         'VOL_MAINS_ARMEES': 'Vol à mains armées',
-                         'BDG': 'Bris de glaces',
-                         'BRIS_GLACES': 'Bris de glaces',
-                         'TDC': 'Tierce Complète',
-                         'TIERCE_COMPLETE': 'Tierce Complète',
-                         'TCL': 'Tierce Collision',
-                         'TIERCE_COLLISION': 'Tierce Collision',
-                         'ASSIST': 'Assistance',
-                         'ASR': 'Avance sur recours',
-                         'AVANCE_RECOURS': 'Avance sur recours'
-                       }
-
-                       // 3. Essayer avec le code de la garantie si disponible
-                       if (coverage?.code && commonNames[coverage.code]) {
-                         return commonNames[coverage.code]
-                       }
-
-                       // 4. Si l'ID correspond à un nom connu
-                       if (commonNames[coverageId]) return commonNames[coverageId]
-
-                       // 5. Dernier fallback : transformer l'ID en nom lisible
-                       const transformed = coverageId
-                         .replace(/_/g, ' ')
-                         .replace(/([A-Z])/g, ' $1')
-                         .replace(/^./, str => str.toUpperCase())
-                         .trim()
-
-                       return transformed || coverageId
-                     }
-
-                     const coverageName = getCoverageName()
-                     const coveragePrice = premiumBreakdown[coverageId] || 0
-
-                     // Debug : afficher dans la console pour le développement
-                     if (process.env.NODE_ENV === 'development') {
-                       console.log(`Coverage Debug:`, {
-                         id: coverageId,
-                         name: coverageName,
-                         coverage: coverage,
-                         price: coveragePrice
-                       })
-                     }
-
-                     return (
-                       <div key={coverageId} className="flex justify-between items-center text-sm bg-white border border-gray-200 p-3 rounded">
-                         <div className="flex items-center gap-2">
-                           <Shield className="w-4 h-4 text-green-600" />
-                           <span className="text-gray-700">{coverageName}</span>
-                         </div>
-                         <div className="text-right">
-                           <div className="font-medium text-gray-900">
-                             {coveragePrice.toLocaleString('fr-FR')} FCFA
-                           </div>
-                           <div className="text-xs text-gray-500">
-                             {Math.round(coveragePrice / 12).toLocaleString('fr-FR')} FCFA/mois
-                           </div>
-                         </div>
-                       </div>
-                     )
-                   })}
-
-                 {Object.entries(selectedCoverages).filter(([_, isSelected]) => isSelected).length === 0 && (
-                   <div className="text-sm text-gray-500 italic bg-gray-50 p-3 rounded">
-                     Aucune garantie sélectionnée
-                   </div>
-                 )}
-               </div>
-             </div>
-
-             {/* Section Actions */}
-             <div className="space-y-3">
-               <h4 className="text-sm font-semibold text-gray-700">Recevoir votre devis</h4>
-               <div className="grid grid-cols-1 gap-3">
-                 <Button
-                   variant="outline"
-                   className="flex items-center gap-2 h-12 text-sm"
-                   onClick={handleShareWhatsApp}
-                 >
-                   <MessageCircle className="w-4 h-4 text-green-600" />
-                   Recevoir par WhatsApp
-                 </Button>
-
-                 <Button
-                   variant="outline"
-                   className="flex items-center gap-2 h-12 text-sm"
-                   onClick={handleDownloadPDF}
-                   disabled={isGeneratingQuote}
-                 >
-                   <Download className="w-4 h-4 text-blue-600" />
-                   {isGeneratingQuote ? 'Génération...' : 'Télécharger le PDF'}
-                 </Button>
-
-                 <Button
-                   variant="outline"
-                   className="flex items-center gap-2 h-12 text-sm"
-                   onClick={handleShareEmail}
-                 >
-                   <Mail className="w-4 h-4 text-red-600" />
-                   Recevoir par email
-                 </Button>
-               </div>
-             </div>
-
-             {/* Footer */}
-             <div className="border-t pt-4">
-               <Button
-                 variant="ghost"
-                 className="w-full"
-                 onClick={() => setIsQuoteModalOpen(false)}
-               >
-                 Fermer
-               </Button>
-             </div>
-           </div>
-         </DialogContent>
-       </Dialog>
-       <Button
-         type='submit'
-         size={isMobile ? "default" : "lg"}
-         className={cn(
-           "flex items-center justify-center gap-2 bg-accent hover:bg-accent/90 text-accent-foreground",
-           "transition-all duration-200 group",
-           isMobile ? "w-full" : "flex-1"
-         )}
-       >
-        <span>
-          {adjustedPremium > 0
-            ? (isMobile
-              ? `Voir les offres (${monthlyPremium.toLocaleString('fr-FR')} FCFA/mois)`
-              : `Voir les offres (${adjustedPremium.toLocaleString('fr-FR')} FCFA)`)
-            : 'Voir les offres'
-          }
-        </span>
-         <ArrowRight className={cn(
-           "transition-transform",
-           isMobile ? "w-4 h-4" : "w-5 h-5 group-hover:translate-x-1"
-         )} />
-       </Button>
-     </div>
-
-      {/* Trust indicators - Mobile footer */}
+      {/* Floating Action Buttons - Mobile optimized */}
       <div className={cn(
-        "text-center text-xs text-muted-foreground border-t pt-4",
-        isMobile ? "-mx-2 px-2" : "-mx-4 px-4"
+        "sticky bottom-0 bg-background/95 backdrop-blur-sm border-t p-4 -mx-4",
+        isMobile ? "gap-2 flex-col" : "flex gap-4 max-w-5xl mx-auto"
       )}>
-        <div className={cn(
-          "flex items-center justify-center gap-4",
-          isMobile ? "flex-col gap-2" : "gap-4"
-        )}>
-          <div className="flex items-center gap-1">
-            <Shield className="w-3 h-3" />
-            <span>Paiement sécurisé</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <AlertTriangle className="w-3 h-3" />
-            <span>Modification possible</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <ArrowRight className="w-3 h-3" />
-            <span>Sans engagement</span>
-          </div>
-        </div>
+        <Button
+          type='button'
+          variant='outline'
+          size={isMobile ? "default" : "lg"}
+          onClick={onBack}
+          className={cn(
+            "flex items-center justify-center gap-2",
+            isMobile ? "w-full" : "flex-1"
+          )}
+        >
+          <ArrowLeft className={cn("w-4 h-4", !isMobile && "w-5 h-5")} />
+          {isMobile ? "Retour" : "Précédent"}
+        </Button>
+        <Button
+          type='submit'
+          size={isMobile ? "default" : "lg"}
+          className={cn(
+            "flex items-center justify-center gap-2 bg-accent hover:bg-accent/90 text-accent-foreground",
+            "transition-all duration-200 group",
+            isMobile ? "w-full" : "flex-1"
+          )}
+        >
+          <span>
+            {adjustedPremium > 0
+              ? (isMobile
+                ? `Voir les offres (${monthlyPremium.toLocaleString('fr-FR')} FCFA/mois)`
+                : `Voir les offres (${adjustedPremium.toLocaleString('fr-FR')} FCFA)`)
+              : 'Voir les offres'
+            }
+          </span>
+          <ArrowRight className={cn(
+            "transition-transform",
+            isMobile ? "w-4 h-4" : "w-5 h-5 group-hover:translate-x-1"
+          )} />
+        </Button>
       </div>
+
+      {/* Quote Modal */}
+      <Dialog open={isQuoteModalOpen} onOpenChange={setIsQuoteModalOpen}>
+        <DialogTrigger asChild>
+          <Button
+            type='button'
+            variant='ghost'
+            size="sm"
+            className="text-muted-foreground"
+          >
+            Voir le devis
+          </Button>
+        </DialogTrigger>
+        <DialogContent className={cn(
+          isMobile ? "w-11/12 max-w-md" : "max-w-lg"
+        )}>
+          <DialogHeader>
+            <DialogTitle className="text-xl">Votre devis personnalisé</DialogTitle>
+            <DialogDescription>
+              Récapitulatif de votre protection automobile
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 py-4">
+            {/* Section Prix */}
+            <div className="text-center space-y-3 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-100">
+              <div className="text-4xl font-bold text-primary">
+                {adjustedPremium.toLocaleString('fr-FR')} FCFA
+              </div>
+              <div className="text-sm text-muted-foreground font-medium">
+                {monthlyPremium.toLocaleString('fr-FR')} FCFA par mois
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {Object.entries(selectedCoverages).filter(([_, isSelected]) => isSelected).length} garantie(s) sélectionnée(s)
+              </div>
+            </div>
+
+            {/* Section Véhicule */}
+            <div className="space-y-2">
+              <h4 className="text-sm font-semibold text-gray-700">Véhicule assuré</h4>
+              <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded">
+                {formData.vehicleInfo?.brand || ''} {formData.vehicleInfo?.model || ''} ({formData.vehicleInfo?.year || ''})
+              </div>
+            </div>
+
+            {/* Section Garanties */}
+            <div className="space-y-2">
+              <h4 className="text-sm font-semibold text-gray-700">Garanties incluses</h4>
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {Object.entries(selectedCoverages)
+                  .filter(([_, isSelected]) => isSelected)
+                  .map(([coverageId]) => (
+                    <div key={coverageId} className="flex items-center justify-between text-sm">
+                      <span>{getCoverageName(coverageId)}</span>
+                      <span className="text-muted-foreground">
+                        {premiumBreakdown[coverageId]?.toLocaleString('fr-FR')} FCFA
+                      </span>
+                    </div>
+                  ))}
+              </div>
+            </div>
+
+            {/* Section Actions */}
+            <div className="space-y-3">
+              <h4 className="text-sm font-semibold text-gray-700">Recevoir votre devis</h4>
+              <div className="grid grid-cols-1 gap-3">
+                <Button
+                  variant="outline"
+                  className="flex items-center gap-2 h-12 text-sm"
+                  onClick={handleShareWhatsApp}
+                >
+                  <MessageCircle className="w-4 h-4 text-green-600" />
+                  Recevoir par WhatsApp
+                </Button>
+                <Button
+                  variant="outline"
+                  className="flex items-center gap-2 h-12 text-sm"
+                  onClick={handleDownloadPDF}
+                  disabled={isGeneratingQuote}
+                >
+                  <Download className="w-4 h-4 text-blue-600" />
+                  {isGeneratingQuote ? 'Génération...' : 'Télécharger le PDF'}
+                </Button>
+                <Button
+                  variant="outline"
+                  className="flex items-center gap-2 h-12 text-sm"
+                  onClick={handleShareEmail}
+                >
+                  <Mail className="w-4 h-4 text-red-600" />
+                  Recevoir par email
+                </Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </form>
   )
 }

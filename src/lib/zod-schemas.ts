@@ -200,7 +200,20 @@ export const vehicleInfoSchema = z.object({
   fuel: z.string().min(1, 'Le type de carburant est requis'),
   fiscalPower: z.string().min(1, 'La puissance fiscale est requise'),
   seats: z.string().min(1, 'Le nombre de places est requis'),
-  circulationDate: z.string().min(1, 'La date de mise en circulation est requise'),
+  circulationYear: z
+    .string()
+    .min(1, 'L\'année de mise en circulation est requise')
+    .regex(/^\d{4}$/, 'L\'année doit être au format YYYY (ex: 2025)')
+    .refine(
+      (year) => {
+        const currentYear = new Date().getFullYear();
+        const selectedYear = parseInt(year);
+        return selectedYear <= currentYear && selectedYear >= currentYear - 50;
+      },
+      {
+        message: 'L\'année doit être comprise entre ' + (new Date().getFullYear() - 50) + ' et ' + new Date().getFullYear(),
+      }
+    ),
   newValue: z.string().min(1, 'La valeur neuve est requise'),
   currentValue: z.string().min(1, 'La valeur actuelle est requise'),
   vehicleUsage: z.enum(['personnel', 'professionnel', 'taxi', 'autre'], {
@@ -212,7 +225,21 @@ export const insuranceNeedsSchema = z.object({
   coverageType: z.enum(['tiers', 'vol_incendie', 'tous_risques'], {
     required_error: 'Le type de couverture est requis',
   }),
-  effectiveDate: z.string().min(1, "La date d'effet est requise"),
+  effectiveDate: z
+    .string()
+    .min(1, "La date d'effet est requise")
+    .refine(
+      (dateString) => {
+        const selectedDate = new Date(dateString);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Reset time to start of day
+        selectedDate.setHours(0, 0, 0, 0); // Reset time to start of day
+        return selectedDate >= today;
+      },
+      {
+        message: "La date d'effet ne peut pas être antérieure à aujourd'hui",
+      }
+    ),
   contractDuration: z.string().min(1, 'La durée du contrat est requise'),
   options: z.array(z.string()).default([]),
 })

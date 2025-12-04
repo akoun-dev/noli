@@ -12,7 +12,7 @@ export interface VehicleInfo {
   fuel: string;
   fiscalPower: string;
   seats: string;
-  circulationDate: string;
+  circulationYear: string;
   newValue: string;
   currentValue: string;
   vehicleUsage: 'personnel' | 'professionnel' | 'taxi' | 'autre';

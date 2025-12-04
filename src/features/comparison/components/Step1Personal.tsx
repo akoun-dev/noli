@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -104,10 +105,14 @@ const Step1Personal: React.FC<Step1PersonalProps> = ({ onNext }: Step1PersonalPr
 
         <div className="space-y-2">
           <Label htmlFor="phone">Numéro de téléphone *</Label>
-          <Input
-            id="phone"
-            {...register("phone", { required: "Le téléphone est requis" })}
-            placeholder="07 00 00 00 00"
+          <PhoneInput
+            value={watch("phone") || ""}
+            onChange={(value, country) => {
+              setValue("phone", value);
+              console.log("Phone changed:", { value, country });
+            }}
+            placeholder="XX XX XX XX XX"
+            defaultCountry="CI"
             className={cn(errors.phone && "border-destructive")}
           />
           {errors.phone && (

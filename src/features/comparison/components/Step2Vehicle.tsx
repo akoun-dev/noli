@@ -6,6 +6,7 @@ import { useCompare } from '@/features/comparison/services/ComparisonContext'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { YearInput } from '@/components/ui/year-input'
 import {
   Select,
   SelectContent,
@@ -113,19 +114,20 @@ const Step2Vehicle: React.FC<Step2VehicleProps> = ({ onNext, onBack }: Step2Vehi
         </div>
       </div>
 
-      {/* Circulation Date */}
+      {/* Circulation Year */}
       <div className='space-y-2'>
-        <Label htmlFor='circulationDate'>Date de mise en circulation *</Label>
-        <Input
-          id='circulationDate'
-          type='date'
-          value={watch('circulationDate') || ''}
-          onChange={(e) => setValue('circulationDate', e.target.value)}
-          className={cn(errors.circulationDate && 'border-destructive')}
+        <YearInput
+          id='circulationYear'
+          label='Année de mise en circulation *'
+          value={watch('circulationYear') || ''}
+          onChange={(value) => setValue('circulationYear', value)}
+          error={errors.circulationYear?.message}
+          currentYear={2025}
+          maxYearsBack={30}
+          minYearsBack={2}
+          placeholder="Sélectionner l'année de première mise en circulation"
+          className={cn(errors.circulationYear && 'border-destructive')}
         />
-        {errors.circulationDate && (
-          <p className='text-sm text-destructive'>{errors.circulationDate.message}</p>
-        )}
       </div>
 
       {/* Values */}
