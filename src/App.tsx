@@ -100,6 +100,7 @@ const App = () => (
 
                   {/* Offer Routes */}
                   <Route path='/offres' element={<Suspense fallback={<PageLoader />}><OfferListPage /></Suspense>} />
+                  <Route path='/comparison/results' element={<Suspense fallback={<PageLoader />}><OfferListPage /></Suspense>} />
 
                   {/* Protected User Routes */}
                   <Route element={<AuthGuard requiredRole='USER' />}>

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { CONTRACT_TYPES, CONTRACT_TYPE_LABELS } from '@/lib/zod-schemas';
 import {
   Dialog,
   DialogContent,
@@ -32,7 +33,7 @@ import { X } from 'lucide-react';
 
 const offerSchema = z.object({
   name: z.string().min(1, 'Le nom est requis'),
-  type: z.enum(['Tiers Simple', 'Tiers +', 'Tous Risques']),
+  contract_type: z.enum([CONTRACT_TYPES.TIERS_SIMPLE, CONTRACT_TYPES.TIERS_PLUS, CONTRACT_TYPES.TOUS_RISQUES]),
   price: z.number().min(0, 'Le prix doit être positif'),
   coverage: z.string().min(1, 'La description de la couverture est requise'),
   description: z.string().min(1, 'La description est requise'),
@@ -53,9 +54,21 @@ interface OfferFormModalProps {
 }
 
 const INSURANCE_TYPES = [
-  { value: 'Tiers Simple', label: 'Tiers Simple', description: 'Responsabilité civile de base' },
-  { value: 'Tiers +', label: 'Tiers +', description: 'RC + Vol + Incendie + Bris de glace' },
-  { value: 'Tous Risques', label: 'Tous Risques', description: 'Protection complète tous risques' },
+  {
+    value: CONTRACT_TYPES.TIERS_SIMPLE,
+    label: CONTRACT_TYPE_LABELS[CONTRACT_TYPES.TIERS_SIMPLE],
+    description: 'Responsabilité civile de base'
+  },
+  {
+    value: CONTRACT_TYPES.TIERS_PLUS,
+    label: CONTRACT_TYPE_LABELS[CONTRACT_TYPES.TIERS_PLUS],
+    description: 'RC + Vol + Incendie + Bris de glace'
+  },
+  {
+    value: CONTRACT_TYPES.TOUS_RISQUES,
+    label: CONTRACT_TYPE_LABELS[CONTRACT_TYPES.TOUS_RISQUES],
+    description: 'Protection complète tous risques'
+  },
 ];
 
 const COMMON_FEATURES = [
@@ -84,7 +97,7 @@ export const OfferFormModal: React.FC<OfferFormModalProps> = ({
     resolver: zodResolver(offerSchema),
     defaultValues: {
       name: initialData?.name || '',
-      type: initialData?.type || 'Tiers Simple',
+      contract_type: initialData?.contract_type || CONTRACT_TYPES.TIERS_SIMPLE,
       price: initialData?.price || 0,
       coverage: initialData?.coverage || '',
       description: initialData?.description || '',
@@ -148,7 +161,7 @@ export const OfferFormModal: React.FC<OfferFormModalProps> = ({
 
               <FormField
                 control={form.control}
-                name="type"
+                name="contract_type"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Type d'assurance</FormLabel>

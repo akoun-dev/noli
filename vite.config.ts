@@ -1,6 +1,7 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
+import fs from "fs";
 import { componentTagger } from "lovable-tagger";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
 
@@ -18,6 +19,20 @@ export default defineConfig(({ mode }) => ({
           },
         }
       : undefined,
+    // Bypass proxy for SPA admin pages (avoid 404 when refreshing /admin/... in dev)
+    configureServer: (server) => {
+      server.middlewares.use((req, res, next) => {
+        const accept = req.headers.accept || '';
+        if (req.url?.startsWith('/admin') && accept.includes('text/html')) {
+          const indexHtml = fs.readFileSync(path.resolve(__dirname, 'index.html'), 'utf-8');
+          res.setHeader('Content-Type', 'text/html');
+          res.statusCode = 200;
+          res.end(indexHtml);
+          return;
+        }
+        next();
+      });
+    },
   },
   plugins: [
     react(),

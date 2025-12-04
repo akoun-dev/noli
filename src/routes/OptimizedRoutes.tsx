@@ -144,6 +144,14 @@ export const OptimizedAppRoutes = () => {
           </LazyWrapper>
         }
       />
+      <Route
+        path='/comparison/results'
+        element={
+          <LazyWrapper>
+            <OfferListPage />
+          </LazyWrapper>
+        }
+      />
 
       {/* Dashboard Redirect Route - Redirection automatique selon le rôle */}
       <Route

@@ -11,12 +11,14 @@ import {
   GitCompare,
   X,
   Trash2,
-  Filter,
   ChevronDown,
-  ChevronUp,
   Save,
   Clock,
   Search,
+  Car,
+  Info,
+  TrendingDown,
+  Award,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
@@ -44,11 +46,59 @@ import offerService from '@/data/api/offerService'
 import { Offer } from '@/data/api/offerService'
 import { logger } from '@/lib/logger'
 
+const FORMULA_PRESETS = [
+  {
+    key: 'tiers',
+    label: 'Tiers',
+    features: [
+      { label: 'Responsabilité civile', active: true },
+      { label: 'Vol & incendie', active: false },
+      { label: 'Dommages tous accidents', active: false },
+    ],
+  },
+  {
+    key: 'vol_incendie',
+    label: 'Vol & incendie',
+    features: [
+      { label: 'Responsabilité civile', active: true },
+      { label: 'Vol & incendie', active: true },
+      { label: 'Dommages tous accidents', active: false },
+    ],
+  },
+  {
+    key: 'tous_risques',
+    label: 'Tous risques',
+    features: [
+      { label: 'Responsabilité civile', active: true },
+      { label: 'Vol & incendie', active: true },
+      { label: 'Dommages tous accidents', active: true },
+    ],
+  },
+]
+
+const FORMULA_SYNONYMS: Record<string, string[]> = {
+  tiers: ['tiers', 'rc', 'responsabilite', 'responsabilité'],
+  vol_incendie: ['vol', 'incendie', 'vol incendie', 'vol/incendie'],
+  tous_risques: ['tous risques', 'tous_risques', 'omnium', 'tout risque'],
+}
+
+const OPTION_FILTERS = [
+  { key: 'bris de glace', label: 'Bris de glace' },
+  { key: 'assistance panne 0 km', label: 'Assistance panne 0 km' },
+  { key: 'assistance accident', label: 'Assistance accident' },
+  { key: 'vehicule de remplacement', label: 'Véhicule de remplacement' },
+]
+
 const Results = () => {
   const [sortBy, setSortBy] = useState('price-asc')
   const [selectedInsurers, setSelectedInsurers] = useState<string[]>([])
   const [selectedCoverage, setSelectedCoverage] = useState<string[]>([])
   const [favoritesOnly, setFavoritesOnly] = useState(false)
+  const [selectedOptions, setSelectedOptions] = useState<string[]>([])
+  const [driverProtection, setDriverProtection] = useState<number>(50)
+  const [priceView, setPriceView] = useState<'yearly' | 'monthly'>('yearly')
+  const [comparisonSummary, setComparisonSummary] = useState<any>(null)
+  const [openFormulas, setOpenFormulas] = useState<Record<string, boolean>>({})
   const [offers, setOffers] = useState<Offer[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -57,7 +107,6 @@ const Results = () => {
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 300000])
   const [maxFranchise, setMaxFranchise] = useState<number>(500000)
   const [minRating, setMinRating] = useState<number>(0)
-  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
 
   // Search save functionality
   type SavedSearch = {
@@ -68,10 +117,12 @@ const Results = () => {
       sortBy: string
       selectedInsurers: string[]
       selectedCoverage: string[]
+      selectedOptions?: string[]
       favoritesOnly: boolean
       priceRange: [number, number]
       maxFranchise: number
       minRating: number
+      driverProtection?: number
     }
     resultsCount: number
   }
@@ -97,6 +148,18 @@ const Results = () => {
   useEffect(() => {
     localStorage.setItem('noli:savedSearches', JSON.stringify(savedSearches))
   }, [savedSearches])
+
+  // Last comparison context (from the quotation workflow)
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('noli:comparison:last')
+      if (raw) {
+        setComparisonSummary(JSON.parse(raw))
+      }
+    } catch (err) {
+      logger.warn('Cannot read saved comparison summary', err)
+    }
+  }, [])
 
   // Load offers from database
   useEffect(() => {
@@ -155,10 +218,12 @@ const Results = () => {
         sortBy,
         selectedInsurers,
         selectedCoverage,
+        selectedOptions,
         favoritesOnly,
         priceRange,
         maxFranchise,
         minRating,
+        driverProtection,
       },
       resultsCount: filteredOffers.length,
     }
@@ -174,10 +239,14 @@ const Results = () => {
     setSortBy(filters.sortBy)
     setSelectedInsurers(filters.selectedInsurers)
     setSelectedCoverage(filters.selectedCoverage)
+    setSelectedOptions(filters.selectedOptions || [])
     setFavoritesOnly(filters.favoritesOnly)
     setPriceRange(filters.priceRange)
     setMaxFranchise(filters.maxFranchise)
     setMinRating(filters.minRating)
+    if (typeof filters.driverProtection === 'number') {
+      setDriverProtection(filters.driverProtection)
+    }
   }
 
   // Delete saved search
@@ -201,10 +270,18 @@ const Results = () => {
     () => Array.from(new Set(offers.map((o) => o.insurer_name || 'Assureur'))),
     [offers]
   )
-  const coverageTypes = useMemo(
-    () => Array.from(new Set(offers.map((o) => o.contract_type || 'Standard'))),
-    [offers]
-  )
+
+  // Pré-sélectionner la formule choisie durant le workflow
+  useEffect(() => {
+    if (!comparisonSummary?.insuranceNeeds?.coverageType) return
+    if (selectedCoverage.length > 0) return
+
+    const targetKey = comparisonSummary.insuranceNeeds.coverageType as string
+    const preset = FORMULA_PRESETS.find((f) => f.key === targetKey)
+    if (preset) {
+      setSelectedCoverage([preset.key])
+    }
+  }, [comparisonSummary?.insuranceNeeds?.coverageType, selectedCoverage.length])
 
   const toggleInsurer = (insurer: string) => {
     setSelectedInsurers((prev) =>
@@ -218,6 +295,23 @@ const Results = () => {
     )
   }
 
+  const toggleOption = (option: string) => {
+    setSelectedOptions((prev) =>
+      prev.includes(option) ? prev.filter((o) => o !== option) : [...prev, option]
+    )
+  }
+
+  const formatCurrency = (value: number) => `€${Math.round(value || 0).toLocaleString('fr-FR')}`
+
+  const matchesCoverageFormula = (offer: Offer, formulas: string[]) => {
+    if (formulas.length === 0) return true
+    const contract = (offer.contract_type || 'standard').toLowerCase()
+    return formulas.some((key) => {
+      const terms = FORMULA_SYNONYMS[key] || [key]
+      return terms.some((term) => contract.includes(term))
+    })
+  }
+
   const filteredOffers = useMemo(
     () =>
       offers
@@ -228,10 +322,7 @@ const Results = () => {
             !selectedInsurers.includes(offer.insurer_name || 'Assureur')
           )
             return false
-          if (
-            selectedCoverage.length > 0 &&
-            !selectedCoverage.includes(offer.contract_type || 'Standard')
-          )
+          if (selectedCoverage.length > 0 && !matchesCoverageFormula(offer, selectedCoverage))
             return false
           if (favoritesOnly && !favorites.includes(offer.id)) return false
 
@@ -239,6 +330,13 @@ const Results = () => {
           const monthlyPrice = (offer.price_min || 0) / 12
           if (monthlyPrice < priceRange[0] || monthlyPrice > priceRange[1]) return false
           if (offer.deductible > maxFranchise) return false
+
+          // Option filters (simple text match on features)
+          if (selectedOptions.length > 0) {
+            const featureText = (offer.features || []).join(' ').toLowerCase()
+            const allMatched = selectedOptions.every((opt) => featureText.includes(opt))
+            if (!allMatched) return false
+          }
 
           return true
         })
@@ -260,9 +358,62 @@ const Results = () => {
       priceRange,
       maxFranchise,
       minRating,
+      selectedOptions,
       favorites,
     ]
   )
+
+  const toggleFormulaDetails = (key: string) => {
+    setOpenFormulas((prev) => ({ ...prev, [key]: !prev[key] }))
+  }
+
+  const sortedByPrice = useMemo(
+    () => [...filteredOffers].sort((a, b) => (a.price_min || 0) - (b.price_min || 0)),
+    [filteredOffers]
+  )
+  const cheapestOffers = sortedByPrice.slice(0, 3)
+  const bestRatedOffers = useMemo(
+    () =>
+      [...filteredOffers]
+        .filter((o) => typeof o.insurer_rating === 'number')
+        .sort((a, b) => (b.insurer_rating || 0) - (a.insurer_rating || 0))
+        .slice(0, 3),
+    [filteredOffers]
+  )
+
+  const insuredName = useMemo(() => {
+    const info = comparisonSummary?.personalInfo || {}
+    const full = `${info.firstName || ''} ${info.lastName || ''}`.trim()
+    return full || 'Votre sélection'
+  }, [comparisonSummary])
+
+  const vehicleLabel = useMemo(() => {
+    const v = comparisonSummary?.vehicleInfo || {}
+    const parts = [v.brand, v.model, v.year || v.circulationYear].filter(Boolean)
+    return parts.join(' ') || 'votre véhicule'
+  }, [comparisonSummary])
+
+  const coverageLabel = useMemo(() => {
+    const type = comparisonSummary?.insuranceNeeds?.coverageType
+    if (!type) return 'Formule'
+    if (type === 'tiers') return 'Formule Tiers'
+    if (type === 'vol_incendie') return 'Vol & Incendie'
+    if (type === 'tous_risques') return 'Tous risques'
+    return type
+  }, [comparisonSummary])
+
+  const durationLabel = useMemo(() => {
+    const duration = comparisonSummary?.insuranceNeeds?.contractDuration
+    if (!duration) return null
+    const mapping: Record<string, string> = {
+      '1_mois': '1 mois',
+      '3_mois': '3 mois',
+      '6_mois': '6 mois',
+      '9_mois': '9 mois',
+      '12_mois': '12 mois',
+    }
+    return mapping[duration] || duration
+  }, [comparisonSummary])
 
   if (loading) {
     return (
@@ -321,32 +472,146 @@ const Results = () => {
 
       <div className='container mx-auto px-4 py-8'>
         {/* Results Header */}
-        <div className='mb-8 animate-fade-in'>
-          <div className='flex items-center justify-between mb-4'>
-            <div>
-              <h1 className='text-3xl md:text-4xl font-bold text-foreground mb-3'>
-                {filteredOffers.length} offres disponibles
+        <div className='mb-8 space-y-6 animate-fade-in'>
+          <div className='flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4'>
+            <div className='space-y-2'>
+              <p className='text-sm text-muted-foreground'>Bonjour {insuredName},</p>
+              <h1 className='text-3xl md:text-4xl font-bold text-foreground leading-tight'>
+                {filteredOffers.length} meilleures offres pour votre {vehicleLabel}
               </h1>
               <p className='text-muted-foreground'>
-                Comparez et choisissez l'assurance qui vous convient le mieux
+                Classées par prix croissant et adaptées à vos réponses.
               </p>
+              <div className='flex flex-wrap gap-2 pt-2'>
+                <Badge variant='outline'>{coverageLabel}</Badge>
+                {durationLabel && <Badge variant='outline'>Durée {durationLabel}</Badge>}
+                {comparisonSummary?.insuranceNeeds?.effectiveDate && (
+                  <Badge variant='outline'>
+                    Effet au {new Date(comparisonSummary.insuranceNeeds.effectiveDate).toLocaleDateString('fr-FR')}
+                  </Badge>
+                )}
+              </div>
             </div>
-            <div className='flex items-center gap-2'>
-              <Button
-                variant='outline'
-                size='sm'
-                onClick={() => setSaveSearchModalOpen(true)}
-                className='flex items-center gap-2'
-              >
-                <Save className='w-4 h-4' />
-                Sauvegarder la recherche
-              </Button>
+
+            <div className='flex flex-col sm:flex-row items-stretch gap-3'>
+              <div className='p-1 bg-muted rounded-full flex items-center shadow-sm'>
+                <Button
+                  size='sm'
+                  variant={priceView === 'yearly' ? 'default' : 'ghost'}
+                  className='rounded-full'
+                  onClick={() => setPriceView('yearly')}
+                >
+                  Par an
+                </Button>
+                <Button
+                  size='sm'
+                  variant={priceView === 'monthly' ? 'default' : 'ghost'}
+                  className='rounded-full'
+                  onClick={() => setPriceView('monthly')}
+                >
+                  Par mois
+                </Button>
+              </div>
+              <Card className='px-4 py-3 flex items-center gap-3 shadow-sm'>
+                <div className='w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center'>
+                  <Car className='w-5 h-5 text-primary' />
+                </div>
+                <div className='text-sm'>
+                  <div className='font-semibold'>{vehicleLabel}</div>
+                  <div className='text-muted-foreground'>
+                    {coverageLabel}
+                    {comparisonSummary?.estimated?.monthly
+                      ? ` · ${formatCurrency(comparisonSummary.estimated.monthly)}/mois`
+                      : ''}
+                  </div>
+                </div>
+              </Card>
             </div>
+          </div>
+
+          <div className='grid md:grid-cols-2 gap-4'>
+            <Card className='p-4 border-primary/20 shadow-sm'>
+              <div className='flex items-center justify-between mb-3'>
+                <div className='flex items-center gap-2'>
+                  <TrendingDown className='w-4 h-4 text-primary' />
+                  <span className='font-semibold'>Offres les moins chères</span>
+                </div>
+                <Info className='w-4 h-4 text-muted-foreground' />
+              </div>
+              <div className='space-y-3'>
+                {cheapestOffers.length === 0 && (
+                  <p className='text-sm text-muted-foreground'>En attente de résultats.</p>
+                )}
+                {cheapestOffers.map((offer) => (
+                  <div key={offer.id} className='flex items-center justify-between text-sm'>
+                    <div className='flex items-center gap-2'>
+                      {offer.logo_url ? (
+                        <img src={offer.logo_url} alt={offer.insurer_name} className='w-8 h-8 object-contain' />
+                      ) : (
+                        <div className='w-8 h-8 rounded bg-muted flex items-center justify-center'>
+                          <Shield className='w-4 h-4 text-primary' />
+                        </div>
+                      )}
+                      <div>
+                        <div className='font-medium'>{offer.insurer_name}</div>
+                        <div className='text-xs text-muted-foreground'>{offer.contract_type}</div>
+                      </div>
+                    </div>
+                    <div className='text-right'>
+                      <div className='font-semibold text-primary'>
+                        {priceView === 'yearly'
+                          ? `${formatCurrency(offer.price_min || 0)}/an`
+                          : `${formatCurrency((offer.price_min || 0) / 12)}/mois`}
+                      </div>
+                      <div className='text-xs text-muted-foreground'>dossier inclus</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+
+            <Card className='p-4 border-primary/20 shadow-sm'>
+              <div className='flex items-center justify-between mb-3'>
+                <div className='flex items-center gap-2'>
+                  <Award className='w-4 h-4 text-primary' />
+                  <span className='font-semibold'>Assureurs les mieux notés</span>
+                </div>
+                <Info className='w-4 h-4 text-muted-foreground' />
+              </div>
+              <div className='space-y-3'>
+                {bestRatedOffers.length === 0 && (
+                  <p className='text-sm text-muted-foreground'>En attente de résultats.</p>
+                )}
+                {bestRatedOffers.map((offer) => (
+                  <div key={offer.id} className='flex items-center justify-between text-sm'>
+                    <div className='flex items-center gap-2'>
+                      {offer.logo_url ? (
+                        <img src={offer.logo_url} alt={offer.insurer_name} className='w-8 h-8 object-contain' />
+                      ) : (
+                        <div className='w-8 h-8 rounded bg-muted flex items-center justify-center'>
+                          <Shield className='w-4 h-4 text-primary' />
+                        </div>
+                      )}
+                      <div>
+                        <div className='font-medium'>{offer.insurer_name}</div>
+                        <div className='flex items-center gap-1 text-xs text-muted-foreground'>
+                          <Star className='w-3 h-3 fill-yellow-400 text-yellow-400' />
+                          <span>{offer.insurer_rating || 'N/A'}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className='text-right text-xs text-muted-foreground'>
+                      {offer.contract_type}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
           </div>
 
           {/* Saved Searches */}
           {savedSearches.length > 0 && (
-            <div className='mb-6'>
+            <div className='pt-2'>
               <div className='flex items-center gap-2 mb-3'>
                 <Clock className='w-4 h-4 text-muted-foreground' />
                 <h3 className='text-sm font-medium text-muted-foreground'>
@@ -383,31 +648,132 @@ const Results = () => {
         <div className='grid lg:grid-cols-4 gap-6'>
           {/* Filters Sidebar */}
           <aside className='lg:col-span-1'>
-            <Card className='p-6 sticky top-24'>
-              <div className='flex items-center gap-2 mb-6'>
+            <Card className='p-6 sticky top-24 space-y-8'>
+              <div className='flex items-center gap-2'>
                 <SlidersHorizontal className='w-5 h-5 text-primary' />
                 <h2 className='font-semibold text-lg'>Filtres</h2>
               </div>
 
-              {/* Sort */}
-              <div className='mb-6'>
-                <Label className='text-sm font-medium mb-3 block'>Trier par</Label>
-                <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value='price-asc'>Prix croissant</SelectItem>
-                    <SelectItem value='price-desc'>Prix décroissant</SelectItem>
-                    <SelectItem value='rating'>Note</SelectItem>
-                  </SelectContent>
-                </Select>
+              {/* Formules */}
+              <div className='space-y-3'>
+                <div className='flex items-center justify-between'>
+                  <p className='text-sm font-medium text-foreground'>Formules</p>
+                  <Button variant='ghost' size='sm' className='h-8 px-2 text-xs' onClick={() => setSelectedCoverage([])}>
+                    Réinitialiser
+                  </Button>
+                </div>
+                <div className='space-y-3'>
+                  {FORMULA_PRESETS.map((formula) => (
+                    <div key={formula.key} className='p-3 border rounded-lg hover:border-primary/40 transition-colors'>
+                      <div className='flex items-start justify-between gap-2'>
+                        <div className='flex items-center gap-2'>
+                          <Checkbox
+                            id={formula.key}
+                            checked={selectedCoverage.includes(formula.key)}
+                            onCheckedChange={() => toggleCoverage(formula.key)}
+                          />
+                          <div>
+                            <Label htmlFor={formula.key} className='text-sm font-semibold cursor-pointer'>
+                              {formula.label}
+                            </Label>
+                            <p className='text-xs text-muted-foreground'>Formule {formula.label}</p>
+                          </div>
+                        </div>
+                        <button
+                          type='button'
+                          onClick={() => toggleFormulaDetails(formula.key)}
+                          className='p-1 rounded hover:bg-muted/60 transition-colors'
+                          aria-label={`Détails ${formula.label}`}
+                        >
+                          <ChevronDown
+                            className={`w-4 h-4 text-muted-foreground transition-transform ${
+                              openFormulas[formula.key] ? 'rotate-180' : ''
+                            }`}
+                          />
+                        </button>
+                      </div>
+                      {openFormulas[formula.key] && (
+                        <div className='mt-3 grid gap-2'>
+                          {formula.features.map((feature) => (
+                            <div key={feature.label} className='flex items-center gap-2 text-sm'>
+                              {feature.active ? (
+                                <Check className='w-4 h-4 text-accent' />
+                              ) : (
+                                <X className='w-4 h-4 text-muted-foreground/60' />
+                              )}
+                              <span className={feature.active ? 'text-foreground' : 'text-muted-foreground'}>
+                                {feature.label}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
 
-              {/* Insurers Filter */}
-              <div className='mb-6'>
-                <Label className='text-sm font-medium mb-3 block'>Assureurs</Label>
-                <div className='space-y-3'>
+              {/* Garanties et franchises */}
+              <div className='space-y-3'>
+                <div className='flex items-center gap-2'>
+                  <Label className='text-sm font-medium'>Garanties et franchises</Label>
+                  <Info className='w-4 h-4 text-primary' />
+                </div>
+                <div className='space-y-2'>
+                  <p className='text-xs text-muted-foreground leading-relaxed'>
+                    Protection du conducteur — Couvre les dommages corporels dont vous pouvez être victime.
+                  </p>
+                  <Slider
+                    value={[driverProtection]}
+                    onValueChange={(value) => setDriverProtection(value[0])}
+                    max={100}
+                    min={0}
+                    step={5}
+                    className='w-full'
+                  />
+                  <div className='flex justify-between text-xs text-muted-foreground'>
+                    <span>Sans préférence</span>
+                    <span>Plafond max.</span>
+                  </div>
+                </div>
+                <div className='space-y-2 text-xs text-muted-foreground border-t pt-3'>
+                  <div className='flex items-center justify-between'>
+                    <span>Vol & incendie</span>
+                    <ChevronDown className='w-3 h-3' />
+                  </div>
+                  <div className='flex items-center justify-between'>
+                    <span>Dommages tous accidents</span>
+                    <ChevronDown className='w-3 h-3' />
+                  </div>
+                </div>
+              </div>
+
+              {/* Options */}
+              <div className='space-y-3'>
+                <p className='text-sm font-medium text-foreground'>Options</p>
+                <div className='space-y-2'>
+                  {OPTION_FILTERS.map((opt) => (
+                    <div key={opt.key} className='flex items-center justify-between'>
+                      <div className='flex items-center gap-2'>
+                        <Checkbox
+                          id={opt.key}
+                          checked={selectedOptions.includes(opt.key)}
+                          onCheckedChange={() => toggleOption(opt.key)}
+                        />
+                        <Label htmlFor={opt.key} className='text-sm cursor-pointer'>
+                          {opt.label}
+                        </Label>
+                      </div>
+                      <ChevronDown className='w-4 h-4 text-muted-foreground' />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Assureurs */}
+              <div className='space-y-3 border-t pt-3'>
+                <p className='text-sm font-medium text-foreground'>Assureurs</p>
+                <div className='space-y-2 max-h-48 overflow-auto pr-1'>
                   {insurers.map((insurer) => (
                     <div key={insurer} className='flex items-center space-x-2'>
                       <Checkbox
@@ -423,9 +789,9 @@ const Results = () => {
                 </div>
               </div>
 
-              {/* Favorites toggle */}
-              <div className='mb-6'>
-                <Label className='text-sm font-medium mb-3 block'>Affichage</Label>
+              {/* Affichage */}
+              <div className='space-y-3'>
+                <p className='text-sm font-medium text-foreground'>Affichage</p>
                 <div className='flex items-center space-x-2'>
                   <Checkbox
                     id='favOnly'
@@ -438,86 +804,24 @@ const Results = () => {
                 </div>
               </div>
 
-              {/* Coverage Filter */}
-              <div>
-                <Label className='text-sm font-medium mb-3 block'>Type de contrat</Label>
-                <div className='space-y-3'>
-                  {coverageTypes.map((coverage) => (
-                    <div key={coverage} className='flex items-center space-x-2'>
-                      <Checkbox
-                        id={coverage}
-                        checked={selectedCoverage.includes(coverage)}
-                        onCheckedChange={() => toggleCoverage(coverage)}
-                      />
-                      <Label htmlFor={coverage} className='text-sm cursor-pointer'>
-                        {coverage}
-                      </Label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Advanced Filters Toggle */}
-              <div className='pt-4 border-t border-border'>
-                <Button
-                  variant='outline'
-                  size='sm'
-                  className='w-full justify-between'
-                  onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-                >
-                  <div className='flex items-center gap-2'>
-                    <Filter className='w-4 h-4' />
-                    Filtres avancés
-                  </div>
-                  {showAdvancedFilters ? (
-                    <ChevronUp className='w-4 h-4' />
-                  ) : (
-                    <ChevronDown className='w-4 h-4' />
-                  )}
-                </Button>
-              </div>
-
-              {/* Advanced Filters */}
-              {showAdvancedFilters && (
-                <div className='pt-4 space-y-6 border-t border-border mt-4'>
-                  {/* Price Range */}
-                  <div>
-                    <Label className='text-sm font-medium mb-3 block'>
-                      Fourchette de prix (€/mois)
-                    </Label>
-                    <div className='space-y-3'>
-                      <Slider
-                        value={priceRange}
-                        onValueChange={(value) => setPriceRange([value[0], value[1]])}
-                        max={300000}
-                        min={0}
-                        step={1000}
-                        className='w-full'
-                      />
-                      <div className='flex justify-between text-sm text-muted-foreground'>
-                        <span>€{priceRange[0].toLocaleString()}</span>
-                        <span>€{priceRange[1].toLocaleString()}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Franchise */}
-                  <div>
-                    <Label className='text-sm font-medium mb-3 block'>Franchise maximum</Label>
-                    <Slider
-                      value={[maxFranchise]}
-                      onValueChange={(value) => setMaxFranchise(value[0])}
-                      max={1000000}
-                      min={0}
-                      step={5000}
-                      className='w-full'
-                    />
-                    <div className='text-sm text-muted-foreground mt-1'>
-                      €{maxFranchise.toLocaleString()}
-                    </div>
+              {/* Prix */}
+              <div className='space-y-3'>
+                <p className='text-sm font-medium text-foreground'>Budget mensuel</p>
+                <div className='space-y-2'>
+                  <Slider
+                    value={priceRange}
+                    onValueChange={(value) => setPriceRange([value[0], value[1]])}
+                    max={300000}
+                    min={0}
+                    step={1000}
+                    className='w-full'
+                  />
+                  <div className='flex justify-between text-xs text-muted-foreground'>
+                    <span>{formatCurrency(priceRange[0])}</span>
+                    <span>{formatCurrency(priceRange[1])}</span>
                   </div>
                 </div>
-              )}
+              </div>
             </Card>
           </aside>
 
@@ -599,12 +903,18 @@ const Results = () => {
                       <div className='text-sm text-muted-foreground mb-1'>À partir de</div>
                       <div className='flex items-baseline justify-center md:justify-end gap-1'>
                         <span className='text-3xl font-bold text-primary'>
-                          €{((offer.price_min || 0) / 12).toLocaleString()}
+                          {priceView === 'yearly'
+                            ? formatCurrency(offer.price_min || 0)
+                            : formatCurrency((offer.price_min || 0) / 12)}
                         </span>
-                        <span className='text-sm font-medium text-muted-foreground'>/mois</span>
+                        <span className='text-sm font-medium text-muted-foreground'>
+                          {priceView === 'yearly' ? '/an' : '/mois'}
+                        </span>
                       </div>
                       <div className='text-xs text-muted-foreground mt-1'>
-                        Soit €{(offer.price_min || 0).toLocaleString()}/an
+                        {priceView === 'yearly'
+                          ? `Soit ${formatCurrency((offer.price_min || 0) / 12)}/mois`
+                          : `Soit ${formatCurrency(offer.price_min || 0)}/an`}
                       </div>
                     </div>
 

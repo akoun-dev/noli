@@ -221,9 +221,31 @@ export const vehicleInfoSchema = z.object({
   }),
 })
 
+// Standardized contract types for consistency
+export const CONTRACT_TYPES = {
+  TIERS_SIMPLE: 'tiers_simple',
+  TIERS_PLUS: 'tiers_plus',
+  TOUS_RISQUES: 'tous_risques',
+} as const;
+
+// Contract type display labels
+export const CONTRACT_TYPE_LABELS = {
+  [CONTRACT_TYPES.TIERS_SIMPLE]: 'Tiers Simple',
+  [CONTRACT_TYPES.TIERS_PLUS]: 'Tiers +',
+  [CONTRACT_TYPES.TOUS_RISQUES]: 'Tous Risques',
+} as const;
+
 export const insuranceNeedsSchema = z.object({
-  coverageType: z.enum(['tiers', 'vol_incendie', 'tous_risques'], {
-    required_error: 'Le type de couverture est requis',
+  coverageType: z.enum([CONTRACT_TYPES.TIERS_SIMPLE, CONTRACT_TYPES.TIERS_PLUS, CONTRACT_TYPES.TOUS_RISQUES], {
+    errorMap: (issue, ctx) => {
+      if (issue.code === z.ZodIssueCode.invalid_enum_value) {
+        return { message: 'Veuillez sélectionner un type de couverture valide' };
+      }
+      if (issue.code === z.ZodIssueCode.invalid_type && issue.received === 'undefined') {
+        return { message: 'Le type de couverture est requis' };
+      }
+      return { message: ctx.defaultError };
+    },
   }),
   effectiveDate: z
     .string()

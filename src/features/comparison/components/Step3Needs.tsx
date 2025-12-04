@@ -472,6 +472,23 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
         }
     }
 
+    // Persist the comparison summary locally so the results page can tailor offers
+    try {
+      const summaryPayload = {
+        personalInfo: formData.personalInfo,
+        vehicleInfo: formData.vehicleInfo,
+        insuranceNeeds: enhancedData,
+        estimated: {
+          total: adjustedPremium,
+          monthly: monthlyPremium,
+        },
+        timestamp: new Date().toISOString(),
+      }
+      localStorage.setItem('noli:comparison:last', JSON.stringify(summaryPayload))
+    } catch (err) {
+      console.warn('Unable to persist comparison summary', err)
+    }
+
     // Navigate to next step
     navigate('/comparison/results')
   }

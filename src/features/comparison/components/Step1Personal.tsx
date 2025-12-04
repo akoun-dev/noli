@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useCompare } from "@/features/comparison/services/ComparisonContext";
 
 interface Step1PersonalProps {
   onNext: () => void;
@@ -22,22 +23,34 @@ interface PersonalInfoFormData {
 
 const Step1Personal: React.FC<Step1PersonalProps> = ({ onNext }: Step1PersonalProps) => {
   console.log('Step1Personal rendering...');
+  const { formData, updatePersonalInfo } = useCompare();
 
-  // Initialize form without zodResolver to isolate the issue
-  const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm<PersonalInfoFormData>({
-    defaultValues: {
+  const defaultValues = useMemo(
+    () => ({
       firstName: '',
       lastName: '',
       email: '',
       phone: '',
       isWhatsapp: false,
-    },
+      ...formData.personalInfo,
+    }),
+    [formData.personalInfo]
+  );
+
+  // Initialize form without zodResolver to isolate the issue
+  const { register, handleSubmit, formState: { errors }, setValue, watch, reset } = useForm<PersonalInfoFormData>({
+    defaultValues,
   });
+
+  useEffect(() => {
+    reset(defaultValues);
+  }, [defaultValues, reset]);
 
   console.log('useForm initialized successfully');
 
   const onSubmit = (data: PersonalInfoFormData) => {
     console.log('Form submitted:', data);
+    updatePersonalInfo(data);
     onNext();
   };
 
