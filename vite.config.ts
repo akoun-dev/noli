@@ -2,8 +2,58 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import fs from "fs";
+import type { NextHandleFunction } from "connect";
 import { componentTagger } from "lovable-tagger";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
+
+const ADMIN_ROUTE_PREFIX = "/admin";
+const PROJECT_ROOT_INDEX = path.resolve(__dirname, "index.html");
+const BUILD_INDEX = path.resolve(__dirname, "dist/index.html");
+
+const prependMiddleware = (middlewares: any, middleware: NextHandleFunction) => {
+  const stack = middlewares?.stack;
+  if (Array.isArray(stack)) {
+    stack.unshift({ route: "", handle: middleware });
+  } else {
+    middlewares.use(middleware);
+  }
+};
+
+const createAdminHtmlFallback = (
+  getHtml: (url: string) => Promise<string>
+): NextHandleFunction => {
+  return async (req, res, next) => {
+    const accept = req.headers.accept || "";
+    const url = req.url || "";
+
+    if (url.startsWith(ADMIN_ROUTE_PREFIX) && accept.includes("text/html")) {
+      const html = await getHtml(url);
+      res.statusCode = 200;
+      res.setHeader("Content-Type", "text/html");
+      res.end(html);
+      return;
+    }
+
+    next();
+  };
+};
+
+const adminSpaFallbackPlugin = () => ({
+  name: "admin-spa-fallback",
+  configureServer(server: any) {
+    const middleware = createAdminHtmlFallback(async (url) => {
+      const rawHtml = fs.readFileSync(PROJECT_ROOT_INDEX, "utf-8");
+      return server.transformIndexHtml(url, rawHtml);
+    });
+    prependMiddleware(server.middlewares, middleware);
+  },
+  configurePreviewServer(server: any) {
+    const htmlPath = fs.existsSync(BUILD_INDEX) ? BUILD_INDEX : PROJECT_ROOT_INDEX;
+    const rawHtml = fs.readFileSync(htmlPath, "utf-8");
+    const middleware = createAdminHtmlFallback(async () => rawHtml);
+    prependMiddleware(server.middlewares, middleware);
+  },
+});
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -19,22 +69,9 @@ export default defineConfig(({ mode }) => ({
           },
         }
       : undefined,
-    // Bypass proxy for SPA admin pages (avoid 404 when refreshing /admin/... in dev)
-    configureServer: (server) => {
-      server.middlewares.use((req, res, next) => {
-        const accept = req.headers.accept || '';
-        if (req.url?.startsWith('/admin') && accept.includes('text/html')) {
-          const indexHtml = fs.readFileSync(path.resolve(__dirname, 'index.html'), 'utf-8');
-          res.setHeader('Content-Type', 'text/html');
-          res.statusCode = 200;
-          res.end(indexHtml);
-          return;
-        }
-        next();
-      });
-    },
   },
   plugins: [
+    adminSpaFallbackPlugin(),
     react(),
     mode === "development" && componentTagger(),
     sentryVitePlugin({

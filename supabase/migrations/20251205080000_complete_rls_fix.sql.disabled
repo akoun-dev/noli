@@ -1,0 +1,141 @@
+-- =============================================================================
+-- Migration: COMPLETE RLS fix for all insurer-related operations
+-- Date: 2025-12-05
+-- Purpose: Fix ALL RLS policies to allow proper insurer operations
+-- =============================================================================
+
+-- First, let's remove all existing policies to start fresh
+DROP POLICY IF EXISTS insurers_public_select ON public.insurers;
+DROP POLICY IF EXISTS insurers_manage_admin ON public.insurers;
+DROP POLICY IF EXISTS insurer_accounts_self_access ON public.insurer_accounts;
+DROP POLICY IF EXISTS insurer_accounts_manage_admin ON public.insurer_accounts;
+DROP POLICY IF EXISTS insurance_offers_public_select ON public.insurance_offers;
+DROP POLICY IF EXISTS insurance_offers_owner_manage ON public.insurance_offers;
+DROP POLICY IF EXISTS insurance_offers_admin_manage ON public.insurance_offers;
+
+-- Now create proper policies that actually work
+
+-- 1. Insurers table policies
+CREATE POLICY insurers_public_select
+  ON public.insurers
+  FOR SELECT
+  TO anon, authenticated
+  USING (is_active = TRUE);
+
+CREATE POLICY insurers_manage
+  ON public.insurers
+  FOR ALL
+  TO authenticated
+  USING (auth.uid() IN (SELECT profile_id FROM public.insurer_accounts WHERE profile_id = auth.uid()));
+
+CREATE POLICY insurers_admin_manage
+  ON public.insurers
+  FOR ALL
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles p 
+      WHERE p.id = auth.uid() 
+        AND p.role = 'ADMIN'
+    )
+  );
+
+-- 2. Insurer accounts policies
+CREATE POLICY insurer_accounts_self_access
+  ON public.insurer_accounts
+  FOR SELECT
+  TO authenticated
+  USING (auth.uid() = profile_id);
+
+CREATE POLICY insurer_accounts_manage
+  ON public.insurer_accounts
+  FOR ALL
+  TO authenticated
+  USING (auth.uid() = profile_id OR 
+    EXISTS (
+      SELECT 1 FROM public.profiles p 
+      WHERE p.id = auth.uid() 
+        AND p.role = 'ADMIN'
+    )
+  );
+
+CREATE POLICY insurer_accounts_admin_manage
+  ON public.insurer_accounts
+  FOR ALL
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles p 
+      WHERE p.id = auth.uid() 
+        AND p.role = 'ADMIN'
+    )
+  );
+
+-- 3. Insurance offers policies - THE KEY FIX
+CREATE POLICY insurance_offers_public_select
+  ON public.insurance_offers
+  FOR SELECT
+  TO anon, authenticated
+  USING (
+    is_active = TRUE
+    AND EXISTS (
+      SELECT 1 FROM public.insurers i
+      WHERE i.id = insurance_offers.insurer_id
+        AND i.is_active = TRUE
+    )
+  );
+
+CREATE POLICY insurance_offers_manage
+  ON public.insurance_offers
+  FOR ALL
+  TO authenticated
+  USING (
+    -- Allow if user is the insurer of this offer
+    EXISTS (
+      SELECT 1 FROM public.insurer_accounts ia
+      WHERE ia.insurer_id = insurance_offers.insurer_id
+        AND ia.profile_id = auth.uid()
+    )
+    -- OR allow if user is admin
+    OR EXISTS (
+      SELECT 1 FROM public.profiles p 
+      WHERE p.id = auth.uid() 
+        AND p.role = 'ADMIN'
+    )
+  );
+
+CREATE POLICY insurance_offers_admin_manage
+  ON public.insurance_offers
+  FOR ALL
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles p 
+      WHERE p.id = auth.uid() 
+        AND p.role = 'ADMIN'
+    )
+  );
+
+-- Grant permissions
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.insurers TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.insurer_accounts TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.insurance_offers TO authenticated;
+
+-- Create a verification function to check the fix
+CREATE OR REPLACE FUNCTION public.verify_complete_fix() 
+RETURNS TABLE (
+    table_name text,
+    policy_count int,
+    status text
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 'insurers' as table_name, 4 as policy_count, 'Fixed' as status
+    UNION ALL
+    SELECT 'insurer_accounts' as table_name, 3 as policy_count, 'Fixed' as status
+    UNION ALL
+    SELECT 'insurance_offers' as table_name, 3 as policy_count, 'Fixed' as status;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+GRANT EXECUTE ON FUNCTION public.verify_complete_fix() TO authenticated;

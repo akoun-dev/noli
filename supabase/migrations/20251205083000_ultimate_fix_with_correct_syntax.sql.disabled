@@ -1,0 +1,81 @@
+-- =============================================================================
+-- Migration: FIX insurance_offers RLS policies
+-- Date: 2025-12-05
+-- Purpose: Fix Row Level Security policies for insurance_offers table
+-- Problem: "new row violates row-level security policy for table 'insurance_offers'"
+-- =============================================================================
+
+-- Step 1: Drop all existing RLS policies on insurance_offers to avoid conflicts
+DROP POLICY IF EXISTS "Users can view their own insurance_offers" ON public.insurance_offers;
+DROP POLICY IF EXISTS "Insurers can manage their own offers" ON public.insurance_offers;
+DROP POLICY IF EXISTS "Admins can manage all offers" ON public.insurance_offers;
+DROP POLICY IF EXISTS "Public can view active offers" ON public.insurance_offers;
+DROP POLICY IF EXISTS insurance_offers_public_select ON public.insurance_offers;
+DROP POLICY IF EXISTS insurance_offers_owner_manage ON public.insurance_offers;
+DROP POLICY IF EXISTS insurance_offers_admin_manage ON public.insurance_offers;
+DROP POLICY IF EXISTS insurance_offers_insurer_manage ON public.insurance_offers;
+DROP POLICY IF EXISTS insurance_offers_manage ON public.insurance_offers;
+
+-- Step 2: Ensure RLS is enabled on insurance_offers
+ALTER TABLE public.insurance_offers ENABLE ROW LEVEL SECURITY;
+
+-- Step 3: Create proper RLS policies for insurance_offers
+
+-- 3.1 Public read access for active offers
+CREATE POLICY insurance_offers_public_select ON public.insurance_offers
+  FOR SELECT
+  TO anon, authenticated
+  USING (
+    is_active = TRUE
+    AND EXISTS (
+      SELECT 1 FROM public.insurers i
+      WHERE i.id = insurance_offers.insurer_id
+        AND i.is_active = TRUE
+    )
+  );
+
+-- 3.2 Insurers can manage (INSERT, UPDATE, DELETE, SELECT) their own offers
+CREATE POLICY insurance_offers_insurer_manage ON public.insurance_offers
+  FOR ALL
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.insurer_accounts ia
+      WHERE ia.profile_id = auth.uid()
+        AND ia.insurer_id = insurance_offers.insurer_id
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.insurer_accounts ia
+      WHERE ia.profile_id = auth.uid()
+        AND ia.insurer_id = insurance_offers.insurer_id
+    )
+  );
+
+-- 3.3 Admins can manage all offers
+CREATE POLICY insurance_offers_admin_manage ON public.insurance_offers
+  FOR ALL
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles p
+      WHERE p.id = auth.uid()
+        AND p.role = 'ADMIN'
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.profiles p
+      WHERE p.id = auth.uid()
+        AND p.role = 'ADMIN'
+    )
+  );
+
+-- Step 4: Grant necessary permissions
+GRANT SELECT ON public.insurance_offers TO anon;
+GRANT ALL ON public.insurance_offers TO authenticated;
+
+-- Step 5: Add comment to document the fix
+COMMENT ON POLICY insurance_offers_insurer_manage ON public.insurance_offers IS 'Allows insurers to manage their own offers via insurer_accounts table';
+COMMENT ON POLICY insurance_offers_admin_manage ON public.insurance_offers IS 'Allows admins to manage all insurance offers';

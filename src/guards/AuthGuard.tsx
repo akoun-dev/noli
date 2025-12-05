@@ -82,9 +82,11 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({
   }, [isAuthenticated, user, isLoading, location, requiredRole, navigate]);
 
   if (isLoading) {
+    // Afficher un loader pendant l'initialisation de l'authentification
+    // mais éviter une redirection trop rapide
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }

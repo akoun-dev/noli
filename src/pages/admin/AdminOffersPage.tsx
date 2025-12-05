@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -121,7 +121,7 @@ export const AdminOffersPage: React.FC = () => {
     }
   }, [offers.length]);
 
-  // Use API categories if available, otherwise use fallback categories
+  // Use API categories directly (already in correct format from admin service)
   const categories = apiCategories.length > 0 ? apiCategories : [
     { value: 'auto', label: 'Auto' },
     { value: 'moto', label: 'Moto' },
@@ -254,7 +254,7 @@ export const AdminOffersPage: React.FC = () => {
   const renderStars = (rating: number) => {
     return Array.from({ length: 5 }, (_, i) => (
       <Star
-        key={i}
+        key={`star-${i}`}
         className={`h-4 w-4 ${i < Math.floor(rating) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
       />
     ));
@@ -303,6 +303,9 @@ export const AdminOffersPage: React.FC = () => {
             <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Créer une nouvelle offre</DialogTitle>
+                <DialogDescription>
+                  Remplissez les informations ci-dessous pour créer une nouvelle offre d'assurance.
+                </DialogDescription>
               </DialogHeader>
               <OfferForm insurers={insurers} categories={categories} />
             </DialogContent>
@@ -315,7 +318,7 @@ export const AdminOffersPage: React.FC = () => {
         {isLoading ? (
           // Loading skeletons for stats cards
           Array.from({ length: 4 }).map((_, index) => (
-            <Card key={index}>
+            <Card key={`stats-card-${index}`}>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div className="space-y-2">
@@ -439,7 +442,7 @@ export const AdminOffersPage: React.FC = () => {
                     <SelectContent>
                       <SelectItem value="all">Tous assureurs</SelectItem>
                       {insurers.map(insurer => (
-                        <SelectItem key={insurer.id} value={insurer.id}>
+                        <SelectItem key={`insurer-${insurer.id}`} value={insurer.id}>
                           {insurer.name}
                         </SelectItem>
                       ))}
@@ -451,8 +454,8 @@ export const AdminOffersPage: React.FC = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Toutes catégories</SelectItem>
-                      {categories.map(category => (
-                        <SelectItem key={category.value} value={category.value}>
+                      {categories.map((category, index) => (
+                        <SelectItem key={`category-${category.value || `fallback-${index}`}`} value={category.value || ''}>
                           {category.label}
                         </SelectItem>
                       ))}
@@ -486,7 +489,7 @@ export const AdminOffersPage: React.FC = () => {
                     {isLoading ? (
                       // Loading skeletons for table rows
                       Array.from({ length: 5 }).map((_, index) => (
-                        <tr key={index} className="border-b">
+                        <tr key={`loading-row-${index}`} className="border-b">
                           <td className="p-2 sm:p-4">
                             <div className="space-y-2">
                               <Skeleton className="h-4 w-40" />
@@ -535,12 +538,12 @@ export const AdminOffersPage: React.FC = () => {
                             <div className="text-xs text-muted-foreground">{offer.category?.name || 'Non catégorisé'}</div>
                             <div className="flex flex-wrap gap-1 mt-1">
                               {offer.features.slice(0, 2).map((feature, index) => (
-                                <Badge key={index} className="text-xs bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400" style={{ fontSize: '0.65rem' }}>
+                                <Badge key={`feature-${index}`} className="text-xs bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400" style={{ fontSize: '0.65rem' }}>
                                   {feature}
                                 </Badge>
                               ))}
                               {offer.features.length > 2 && (
-                                <Badge className="text-xs bg-gray-100 text-gray-800 dark:bg-gray-500/20 dark:text-gray-400" style={{ fontSize: '0.65rem' }}>
+                                <Badge key="more-features" className="text-xs bg-gray-100 text-gray-800 dark:bg-gray-500/20 dark:text-gray-400" style={{ fontSize: '0.65rem' }}>
                                   +{offer.features.length - 2}
                                 </Badge>
                               )}
@@ -673,14 +676,14 @@ export const AdminOffersPage: React.FC = () => {
                 {analyticsLoading ? (
                   <div className="space-y-4">
                     {Array.from({ length: 3 }).map((_, index) => (
-                      <div key={index} className="p-4 border rounded-lg">
+                      <div key={`analytics-loading-${index}`} className="p-4 border rounded-lg">
                         <div className="flex items-center justify-between mb-3">
                           <Skeleton className="h-5 w-32" />
                           <Skeleton className="h-5 w-16 rounded" />
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                           {Array.from({ length: 4 }).map((_, i) => (
-                            <div key={i}>
+                            <div key={`analytics-metric-${i}`}>
                               <Skeleton className="h-3 w-16 mb-1" />
                               <Skeleton className="h-6 w-20" />
                             </div>
@@ -694,7 +697,7 @@ export const AdminOffersPage: React.FC = () => {
                     {offerAnalytics.map((analytics) => {
                       const offer = offers.find(o => o.id === analytics.offerId);
                       return (
-                        <div key={analytics.offerId} className="p-4 border rounded-lg">
+                        <div key={`analytics-${analytics.offerId}`} className="p-4 border rounded-lg">
                           <div className="flex items-center justify-between mb-3">
                             <h4 className="font-medium">{offer?.title}</h4>
                             <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400">
@@ -745,7 +748,7 @@ export const AdminOffersPage: React.FC = () => {
                 {isLoading ? (
                   <div className="space-y-4">
                     {Array.from({ length: 5 }).map((_, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div key={`top-offer-loading-${index}`} className="flex items-center justify-between p-3 border rounded-lg">
                         <div className="flex items-center space-x-3">
                           <Skeleton className="h-8 w-8 rounded-full" />
                           <div className="space-y-2">
@@ -767,7 +770,7 @@ export const AdminOffersPage: React.FC = () => {
                       .sort((a, b) => b.conversionRate - a.conversionRate)
                       .slice(0, 5)
                       .map((offer, index) => (
-                        <div key={offer.id} className="flex items-center justify-between p-3 border rounded-lg">
+                        <div key={`top-offer-${offer.id}`} className="flex items-center justify-between p-3 border rounded-lg">
                           <div className="flex items-center space-x-3">
                             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold ${
                               index === 0 ? 'bg-yellow-500' :
@@ -930,13 +933,58 @@ const OfferForm: React.FC<{ offer?: any; insurers: any[]; categories: any[] }> =
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
+
+    // Debug: Log form data
+    console.log('Form data being submitted:', formData);
+    console.log('Insurers available:', insurers);
+
+    // Validation: Check required fields
+    if (!formData.insurerId) {
+      console.error('No insurer selected. formData.insurerId:', formData.insurerId);
+      toast.error('Veuillez sélectionner un assureur');
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (!formData.title) {
+      toast.error('Veuillez entrer un titre pour l\'offre');
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (!formData.description) {
+      toast.error('Veuillez entrer une description pour l\'offre');
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (!formData.price || parseFloat(formData.price) <= 0) {
+      toast.error('Veuillez entrer un prix valide');
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
+      // Transform form data to match database schema
+      const transformedData = {
+        insurer_id: formData.insurerId, // Required field
+        category_id: formData.category || null, // Optional
+        name: formData.title,
+        description: formData.description,
+        price_min: parseFloat(formData.price),
+        price_max: parseFloat(formData.price),
+        coverage_amount: formData.coverage?.length > 0 ? formData.coverage.reduce((sum: number, item: any) => sum + (item.amount || 0), 0) : null,
+        deductible: 0,
+        is_active: formData.status === 'active',
+        features: formData.features || [],
+        contract_type: 'Tiers Simple' // Default value
+      };
+
       if (offer) {
-        await offerService.updateOffer(offer.id, formData);
+        await offerService.updateOffer(offer.id, transformedData);
         toast.success('Offre mise à jour avec succès');
       } else {
-        await offerService.createOffer(formData);
+        await offerService.createOffer(transformedData);
         toast.success('Offre créée avec succès');
       }
       
@@ -978,14 +1026,14 @@ const OfferForm: React.FC<{ offer?: any; insurers: any[]; categories: any[] }> =
           />
         </div>
         <div>
-          <Label htmlFor="category">Catégorie *</Label>
+          <Label htmlFor="category">Catégorie</Label>
           <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
             <SelectTrigger>
-              <SelectValue placeholder="Sélectionner une catégorie" />
+              <SelectValue placeholder="Sélectionner une catégorie (optionnel)" />
             </SelectTrigger>
             <SelectContent>
-              {categories.map(category => (
-                <SelectItem key={category.value} value={category.value}>
+              {categories.map((category, index) => (
+                <SelectItem key={`form-category-${category.value || `fallback-${index}`}`} value={category.value || ''}>
                   {category.label}
                 </SelectItem>
               ))}
@@ -1002,6 +1050,7 @@ const OfferForm: React.FC<{ offer?: any; insurers: any[]; categories: any[] }> =
           onChange={(e) => setFormData({ ...formData, description: e.target.value })}
           rows={3}
           required
+          placeholder="Décrivez les détails de cette offre d'assurance..."
         />
       </div>
 
@@ -1013,13 +1062,24 @@ const OfferForm: React.FC<{ offer?: any; insurers: any[]; categories: any[] }> =
               <SelectValue placeholder="Sélectionner un assureur" />
             </SelectTrigger>
             <SelectContent>
-              {insurers.map(insurer => (
-                <SelectItem key={insurer.id} value={insurer.id}>
-                  {insurer.name}
+              {insurers.length === 0 ? (
+                <SelectItem value="" disabled>
+                  Aucun assureur disponible
                 </SelectItem>
-              ))}
+              ) : (
+                insurers.map(insurer => (
+                  <SelectItem key={`form-insurer-${insurer.id}`} value={insurer.id}>
+                    {insurer.name}
+                  </SelectItem>
+                ))
+              )}
             </SelectContent>
           </Select>
+          {insurers.length === 0 && (
+            <p className="text-sm text-red-500 mt-1">
+              Les assureurs ne sont pas encore chargés. Veuillez réessayer.
+            </p>
+          )}
         </div>
         <div>
           <Label htmlFor="price">Prix *</Label>
@@ -1133,10 +1193,10 @@ const OfferForm: React.FC<{ offer?: any; insurers: any[]; categories: any[] }> =
               </SelectTrigger>
               <SelectContent>
                 {packages.filter(p => p.isActive).map(pkg => (
-                  <SelectItem key={pkg.id} value={pkg.id}>
+                  <SelectItem key={`package-${pkg.id}`} value={pkg.id}>
                     <div>
                       <div className="font-medium">{pkg.name}</div>
-                      <div className="text-xs text-muted-foreground">{pkg.description} - {pkg.basePrice.toLocaleString()} FCFA</div>
+                      <div className="text-xs text-muted-foreground">{pkg.description} - {pkg.basePrice?.toLocaleString() || '0'} FCFA</div>
                     </div>
                   </SelectItem>
                 ))}
@@ -1157,7 +1217,7 @@ const OfferForm: React.FC<{ offer?: any; insurers: any[]; categories: any[] }> =
               const checked = selectedGuaranteeIds.includes(g.id);
               const disabled = offerType === 'PACK';
               return (
-                <label key={g.id} className={`flex items-center justify-between p-2 rounded border ${
+                <label key={`guarantee-${g.id}`} className={`flex items-center justify-between p-2 rounded border ${
                   checked ? 'bg-blue-50 border-blue-200' :
                   disabled ? 'bg-gray-50 border-gray-200' : 'bg-white'
                 } ${disabled ? 'opacity-60' : ''}`}>
@@ -1303,15 +1363,17 @@ const OfferDetails: React.FC<{ offer: any }> = ({ offer }) => {
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Clics:</span>
-              <span className="font-medium">{offer.clicks.toLocaleString()}</span>
+              <span className="font-medium">{offer.clicks ? offer.clicks.toLocaleString() : '0'}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Conversions:</span>
-              <span className="font-medium">{offer.conversions}</span>
+              <span className="font-medium">{offer.conversions || '0'}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Taux conversion:</span>
-              <span className="font-medium text-green-600 dark:text-green-400">{offer.conversionRate.toFixed(1)}%</span>
+              <span className="font-medium text-green-600 dark:text-green-400">
+                {offer.conversionRate !== undefined ? `${offer.conversionRate.toFixed(1)}%` : 'N/A'}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Note moyenne:</span>
@@ -1319,17 +1381,23 @@ const OfferDetails: React.FC<{ offer: any }> = ({ offer }) => {
                 <div className="flex">
                   {Array.from({ length: 5 }, (_, i) => (
                     <Star
-                      key={i}
-                      className={`h-4 w-4 ${i < Math.floor(offer.averageRating) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
+                      key={`detail-star-${i}`}
+                      className={`h-4 w-4 ${
+                        offer.averageRating && i < Math.floor(offer.averageRating)
+                          ? 'text-yellow-400 fill-current'
+                          : 'text-gray-300'
+                      }`}
                     />
                   ))}
                 </div>
-                <span className="font-medium">{offer.averageRating.toFixed(1)}</span>
+                <span className="font-medium">
+                  {offer.averageRating !== undefined ? offer.averageRating.toFixed(1) : 'N/A'}
+                </span>
               </div>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Avis:</span>
-              <span className="font-medium">{offer.reviewCount}</span>
+              <span className="font-medium">{offer.reviewCount || '0'}</span>
             </div>
           </div>
         </div>
@@ -1338,8 +1406,8 @@ const OfferDetails: React.FC<{ offer: any }> = ({ offer }) => {
       <div>
         <h4 className="font-semibold mb-2">Couvertures</h4>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {offer.coverage.map((coverage: string, index: number) => (
-            <div key={index} className="flex items-center space-x-2 p-2 bg-gray-50 dark:bg-gray-800/50 rounded">
+          {(offer.coverage || []).map((coverage: string, index: number) => (
+            <div key={`coverage-${index}`} className="flex items-center space-x-2 p-2 bg-gray-50 dark:bg-gray-800/50 rounded">
               <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
               <span className="text-sm">{coverage}</span>
             </div>
@@ -1350,8 +1418,8 @@ const OfferDetails: React.FC<{ offer: any }> = ({ offer }) => {
       <div>
         <h4 className="font-semibold mb-2">Fonctionnalités</h4>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {offer.features.map((feature: string, index: number) => (
-            <div key={index} className="flex items-center space-x-2 p-2 bg-blue-50 dark:bg-blue-950/30 rounded">
+          {(offer.features || []).map((feature: string, index: number) => (
+            <div key={`feature-${index}`} className="flex items-center space-x-2 p-2 bg-blue-50 dark:bg-blue-950/30 rounded">
               <Zap className="h-4 w-4 text-blue-600 dark:text-blue-400" />
               <span className="text-sm">{feature}</span>
             </div>
@@ -1359,12 +1427,12 @@ const OfferDetails: React.FC<{ offer: any }> = ({ offer }) => {
         </div>
       </div>
 
-      {offer.tags.length > 0 && (
+      {offer.tags && offer.tags.length > 0 && (
         <div>
           <h4 className="font-semibold mb-2">Tags</h4>
           <div className="flex flex-wrap gap-2">
             {offer.tags.map((tag: string, index: number) => (
-              <Badge key={index} className="bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400">
+              <Badge key={`tag-${index}`} className="bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400">
                 {tag}
               </Badge>
             ))}

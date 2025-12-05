@@ -162,6 +162,9 @@ const App = () => (
 
                   {/* 404 Route */}
                   <Route path='*' element={<Suspense fallback={<PageLoader />}><NotFound /></Suspense>} />
+
+                  {/* Fallback route pour éviter l'erreur "no Route matched" */}
+                  <Route path='/error/no-route' element={<div><h1>Route non trouvée</h1><p>La route que vous recherchez n'existe pas.</p></div>} />
                 </Routes>
               </AuthProvider>
             </ThemeProvider>

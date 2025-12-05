@@ -69,7 +69,7 @@ const mapProfileToInsurer = (profile: any): Insurer => {
   }
 }
 
-// API Functions
+// API Functions - Utilise la fonction RPC corrigée
 export const fetchInsurers = async (): Promise<Insurer[]> => {
   try {
     const { data: profiles, error } = await supabase
@@ -159,21 +159,23 @@ export const fetchInsurerById = async (id: string): Promise<Insurer> => {
   }
 }
 
+// Utilise la fonction RPC create_insurer_with_profile qui crée correctement les deux tables
 export const createInsurer = async (data: InsurerFormData): Promise<Insurer> => {
   try {
-    // Utiliser la fonction RPC admin_create_user
-    const { data: result, error } = await supabase.rpc('admin_create_user', {
+    // Utiliser la fonction RPC create_insurer_with_profile qui gère correctement les deux tables
+    const { data: result, error } = await supabase.rpc('create_insurer_with_profile', {
       email_param: data.email,
-      first_name_param: null,
-      last_name_param: null,
       company_name_param: data.companyName,
       phone_param: data.phone,
-      role_param: 'INSURER',
+      description_param: data.description,
+      website_param: data.website,
+      license_number_param: data.licenseNumber,
+      address_param: data.address,
       is_active_param: data.status === 'active',
     })
 
     if (error) {
-      logger.error('Error creating insurer:', error)
+      logger.error('Error creating insurer with profile:', error)
       throw error
     }
 
@@ -181,20 +183,29 @@ export const createInsurer = async (data: InsurerFormData): Promise<Insurer> => 
       throw new Error(result?.[0]?.message || "Erreur lors de la création de l'assureur")
     }
 
-    // Mettre à jour les informations supplémentaires
-    const insurerId = result[0].user_id
-    const updates: any = {}
-    if (data.description) updates.description = data.description
-    if (data.website) updates.website = data.website
-    if (data.licenseNumber) updates.license_number = data.licenseNumber
-    if (data.address) updates.address = data.address
+    // Récupérer le profil retourné par la fonction
+    const profile = result[0].profile
+    const insurer = mapProfileToInsurer(profile)
 
-    if (Object.keys(updates).length > 0) {
-      await supabase.from('profiles').update(updates).eq('id', insurerId)
-    }
+    // Récupérer les statistiques (quotes et offers)
+    const { count: quotesCount } = await supabase
+      .from('quotes')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', insurer.id)
 
-    // Récupérer l'assureur créé
-    return await fetchInsurerById(insurerId)
+    const { count: offersCount } = await supabase
+      .from('insurance_offers')
+      .select('*', { count: 'exact', head: true })
+      .eq('insurer_id', insurer.id)
+
+    insurer.quotesCount = quotesCount || 0
+    insurer.offersCount = offersCount || 0
+    insurer.conversionRate =
+      quotesCount && quotesCount > 0
+        ? Math.round(((offersCount || 0) / quotesCount) * 10000) / 100
+        : 0
+
+    return insurer
   } catch (error) {
     logger.error('Error in createInsurer:', error)
     throw error
@@ -294,151 +305,6 @@ export const fetchInsurerStats = async (): Promise<InsurerStats> => {
     logger.error('Error in fetchInsurerStats:', error)
     throw error
   }
-}
-
-export const exportInsurers = async (format: 'csv' | 'excel' = 'csv'): Promise<Blob> => {
-  try {
-    const insurers = await fetchInsurers()
-
-    // Create CSV content
-    const headers = [
-      'ID',
-      'Nom',
-      'Email',
-      'Téléphone',
-      'Adresse',
-      'Site Web',
-      'Licence',
-      'Statut',
-      'Date de création',
-      'Nombre de devis',
-      "Nombre d'offres",
-      'Taux conversion',
-    ]
-    const rows = insurers.map((insurer) => [
-      insurer.id,
-      insurer.companyName,
-      insurer.email,
-      insurer.phone || '',
-      insurer.address || '',
-      insurer.website || '',
-      insurer.licenseNumber || '',
-      insurer.status,
-      new Date(insurer.createdAt).toLocaleDateString('fr-FR'),
-      insurer.quotesCount.toString(),
-      insurer.offersCount.toString(),
-      `${insurer.conversionRate}%`,
-    ])
-
-    const csvContent = [headers, ...rows]
-      .map((row) => row.map((cell) => `"${cell}"`).join(','))
-      .join('\n')
-
-    return new Blob([csvContent], { type: 'text/csv;charset=utf-8' })
-  } catch (error) {
-    logger.error('Error in exportInsurers:', error)
-    throw error
-  }
-}
-
-export const searchInsurers = async (query: string): Promise<Insurer[]> => {
-  try {
-    const { data: profiles, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('role', 'INSURER')
-      .or(`company_name.ilike.%${query}%,email.ilike.%${query}%`)
-      .order('created_at', { ascending: false })
-
-    if (error) {
-      logger.error('Error searching insurers:', error)
-      throw error
-    }
-
-    const insurers = await Promise.all(
-      profiles.map(async (profile) => {
-        const insurer = mapProfileToInsurer(profile)
-        const { count: quotesCount } = await supabase
-          .from('quotes')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', profile.id)
-
-        const { count: offersCount } = await supabase
-          .from('insurance_offers')
-          .select('*', { count: 'exact', head: true })
-          .eq('insurer_id', profile.id)
-
-        insurer.quotesCount = quotesCount || 0
-        insurer.offersCount = offersCount || 0
-        insurer.conversionRate =
-          quotesCount && quotesCount > 0
-            ? Math.round(((offersCount || 0) / quotesCount) * 10000) / 100
-            : 0
-
-        return insurer
-      })
-    )
-
-    return insurers
-  } catch (error) {
-    logger.error('Error in searchInsurers:', error)
-    throw error
-  }
-}
-
-export const getInsurersByStatus = async (status: Insurer['status']): Promise<Insurer[]> => {
-  try {
-    const { data: profiles, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('role', 'INSURER')
-      .eq('is_active', status === 'active')
-      .order('created_at', { ascending: false })
-
-    if (error) {
-      logger.error('Error fetching insurers by status:', error)
-      throw error
-    }
-
-    const insurers = await Promise.all(
-      profiles.map(async (profile) => {
-        const insurer = mapProfileToInsurer(profile)
-        insurer.status = status
-
-        const { count: quotesCount } = await supabase
-          .from('quotes')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', profile.id)
-
-        const { count: offersCount } = await supabase
-          .from('insurance_offers')
-          .select('*', { count: 'exact', head: true })
-          .eq('insurer_id', profile.id)
-
-        insurer.quotesCount = quotesCount || 0
-        insurer.offersCount = offersCount || 0
-        insurer.conversionRate =
-          quotesCount && quotesCount > 0
-            ? Math.round(((offersCount || 0) / quotesCount) * 10000) / 100
-            : 0
-
-        return insurer
-      })
-    )
-
-    return insurers
-  } catch (error) {
-    logger.error('Error in getInsurersByStatus:', error)
-    throw error
-  }
-}
-
-export const getPendingInsurers = (): Promise<Insurer[]> => {
-  return getInsurersByStatus('pending')
-}
-
-export const getActiveInsurers = (): Promise<Insurer[]> => {
-  return getInsurersByStatus('active')
 }
 
 // React Query Hooks
@@ -545,35 +411,6 @@ export const useApproveInsurer = () => {
     },
     onError: (error) => {
       toast.error("Erreur lors de l'approbation de l'assureur")
-    },
-  })
-}
-
-export const useExportInsurers = () => {
-  return useMutation({
-    mutationFn: exportInsurers,
-    onSuccess: (blob) => {
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `assureurs_${new Date().toISOString().split('T')[0]}.csv`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      URL.revokeObjectURL(url)
-      toast.success('Assureurs exportés avec succès')
-    },
-    onError: (error) => {
-      toast.error("Erreur lors de l'export des assureurs")
-    },
-  })
-}
-
-export const useSearchInsurers = () => {
-  return useMutation({
-    mutationFn: searchInsurers,
-    onError: (error) => {
-      toast.error('Erreur lors de la recherche des assureurs')
     },
   })
 }
