@@ -419,3 +419,133 @@ VITE_MOCK_DATA=true
 - Use React DevTools for component state
 - Network tab shows Supabase requests clearly
 - Storybook helps isolate component issues
+
+## Advanced Architectural Patterns
+
+### Sophisticated Authentication System
+
+The authentication system implements several advanced patterns critical for production:
+
+**Role Preservation Cache**: Essential caching mechanism that preserves user roles (especially ADMIN) across page refreshes, preventing regression to USER role when Supabase RPC calls fail. This prevents privilege escalation bugs during network issues.
+
+**Secure Storage Migration**: Gradual migration from localStorage to secure cookies with comprehensive cleanup strategies. The system handles both legacy and new storage methods during transition.
+
+**Multi-layered Auth Initialization**: Retry logic with exponential backoff for session validation. Authentication state is preserved during temporary network failures with automatic recovery.
+
+**Permission Cache System**: Dedicated `usePermissionCache` hook with background refresh and optimistic updates for role-based access control.
+
+### Advanced Performance Architecture
+
+**Manual Code Splitting Strategy**: Explicit chunk configuration in vite.config.ts for optimal loading:
+- `vendor`: React & React DOM
+- `ui`: All Radix UI components (17 different packages)
+- `charts`: Recharts
+- `forms`: Form-related libraries
+- `pdf`: PDF generation utilities
+- `supabase`: Supabase client
+- `query`: TanStack Query
+
+**Smart Proxy Configuration**: Special handling for admin routes to avoid 404s on refresh. The Vite proxy ensures proper routing for Single Page Application architecture.
+
+### Domain-Specific Business Logic
+
+**Multi-Step Form Context**: `ComparisonContext` manages complex 3-step wizard form state with independent section updates. Each step maintains its own validation state while allowing data flow between steps.
+
+**Coverage-Based Tarification Engine**: Sophisticated pricing system with:
+- Fixed amount tariffs for basic coverage
+- Formula-based calculations for complex pricing
+- Free coverage options for promotional periods
+- Vehicle category-specific rates (MTPL, TCM/TCL) following French insurance standards
+
+**French Market Integration**: Specialized for French insurance regulations with contract types (Tiers Simple, Tiers+, Tous Risques) and French-specific validation patterns for phone numbers, dates, and postal codes.
+
+### Error Resilience Patterns
+
+**Supabase Fallback Strategy**: Automatic retry with direct REST API calls when Supabase client fails. This ensures application remains functional during client library issues.
+
+**Graceful Degradation**: UI remains functional even when certain services are unavailable. Components display appropriate fallbacks and retry mechanisms.
+
+**Network Timeout Management**: Proper timeout configuration for critical operations with user feedback for long-running operations.
+
+### Real-time Architecture
+
+**Supabase Realtime Integration**: Built-in real-time subscriptions for live updates across quotes, offers, and notifications. The system handles connection drops and automatic reconnection.
+
+**Chat System Architecture**: Dedicated real-time chat for insurer-client communication with message persistence and typing indicators.
+
+### Security Implementation Details
+
+**Comprehensive Logout Cleanup**: Multi-stage cleanup process including localStorage, sessionStorage, cookies, and Supabase tokens. Ensures no residual authentication data remains on logout.
+
+**CSP with Cryptographic Nonces**: Content Security Policy implemented with per-request nonce generation for maximum XSS protection.
+
+**Audit Trail System**: Structured logging for all user actions with context preservation for security investigations and compliance.
+
+### Testing Architecture
+
+**Multi-Environment Testing**: Development, production, and security-specific test configurations. Tests validate both functional and non-functional requirements.
+
+**Performance Budget Monitoring**: Automated checks for bundle size, loading times, and Web Vitals. CI enforces performance standards.
+
+**Accessibility Integration**: Automated accessibility testing with Lighthouse CI and manual testing protocols for WCAG compliance.
+
+### State Management Patterns
+
+**Context Composition Strategy**: Multiple specialized contexts (Auth, User, Theme, Comparison) with clear separation of concerns and optimized re-renders.
+
+**Optimistic Updates with Rollback**: UI updates immediately with server synchronization and automatic rollback on errors for better user experience.
+
+**Cache Invalidation Strategies**: Smart cache management with background refresh and stale-while-revalidate patterns.
+
+### Key Development Commands
+
+**Single Test Execution**:
+```bash
+# Run specific test file
+npm run test:run path/to/test.test.ts
+
+# Run tests in watch mode for specific file
+npm run test path/to/test.test.ts
+
+# Run tests with coverage for specific directory
+npm run test:coverage src/features/auth/__tests__/
+```
+
+**Database Operations**:
+```bash
+# Start local Supabase (required for development)
+supabase start
+
+# Reset local database
+supabase db reset
+
+# Generate database types
+supabase gen types typescript --local > types/database.ts
+
+# Apply migrations
+supabase db push
+```
+
+**Performance Analysis**:
+```bash
+# Analyze bundle size changes
+npm run performance:bundle
+
+# Check against performance budgets
+npm run performance:budget
+
+# Detailed performance audit
+npm run lighthouse:local
+```
+
+### Critical Development Notes
+
+**Always Start Supabase**: The local development environment requires `supabase start` before running `npm run dev`. The application will fail without the local Supabase instance running.
+
+**Role Cache Debugging**: When debugging authentication issues, check the role preservation cache in browser dev tools. Admin role may be cached even after database changes.
+
+**Zod Schema Conflicts**: When modifying validation schemas, never use `required_error` and `errorMap` together in the same Zod schema definition. Use only `errorMap` with proper error code handling.
+
+**Feature Flag Dependencies**: Some features depend on multiple feature flags. Check related flags when debugging missing functionality.
+
+**Environment-Specific Behavior**: The application behaves differently with `VITE_MOCK_DATA=true` vs real Supabase connection. Ensure consistent environment configuration across development team.
