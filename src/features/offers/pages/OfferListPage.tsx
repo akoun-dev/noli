@@ -19,6 +19,7 @@ import {
   Info,
   TrendingDown,
   Award,
+  Info as InfoIcon,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
@@ -46,6 +47,7 @@ import offerService from '@/data/api/offerService'
 import { Offer } from '@/data/api/offerService'
 import { logger } from '@/lib/logger'
 import { coverageTarificationService } from '@/services/coverageTarificationService'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
 const FORMULA_PRESETS = [
   {
@@ -131,6 +133,7 @@ const Results = () => {
   const [saveSearchModalOpen, setSaveSearchModalOpen] = useState(false)
   const [searchName, setSearchName] = useState('')
   const [selectedGuarantees, setSelectedGuarantees] = useState<string[]>([])
+  const [expandedOffers, setExpandedOffers] = useState<string[]>([])
 
   // Favorites (persisted)
   const [favorites, setFavorites] = useState<string[]>([])
@@ -327,6 +330,11 @@ const Results = () => {
   )
   const [openCompare, setOpenCompare] = useState(false)
   const [useEnhancedCompare, setUseEnhancedCompare] = useState(true)
+  const toggleExpandedOffer = (id: string) => {
+    setExpandedOffers((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    )
+  }
 
   // Quote options modal state
   const [quoteModalOpen, setQuoteModalOpen] = useState(false)
@@ -526,7 +534,7 @@ const Results = () => {
             <div className='flex items-center gap-2'>
               <ThemeToggle />
               <Button variant='outline' asChild>
-                <Link to='/comparer'>
+                <Link to='/comparer' state={{ resumeFromResults: true }}>
                   <ArrowLeft className='mr-2 w-4 h-4' />
                   Modifier
                 </Link>
@@ -1008,6 +1016,134 @@ const Results = () => {
                     </div>
                   </div>
                 </div>
+
+                <div className='mt-4 flex justify-end'>
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    onClick={() => toggleExpandedOffer(offer.id)}
+                  >
+                    {expandedOffers.includes(offer.id) ? 'Moins d\'infos' : 'En savoir plus sur cette offre'}
+                  </Button>
+                </div>
+
+                {expandedOffers.includes(offer.id) && (
+                  <div className='mt-4 space-y-5 rounded-2xl border border-primary/20 bg-primary/5 p-4 shadow-inner'>
+                    {/* Onglets garanties */}
+                    <div className='flex flex-wrap gap-2'>
+                      {(selectedGuarantees.length ? selectedGuarantees : offer.features || []).map((g) => (
+                        <Badge
+                          key={`${offer.id}-pill-${g}`}
+                          variant='secondary'
+                          className='text-xs rounded-full px-3 py-2 bg-white border-primary/30 text-foreground shadow-sm'
+                        >
+                          {g}
+                        </Badge>
+                      ))}
+                    </div>
+
+                    {/* Tableaux */}
+                    <div className='grid md:grid-cols-2 gap-4'>
+                      <Card className='p-4 space-y-3 shadow-sm bg-white'>
+                        <div className='font-semibold text-sm uppercase tracking-wide text-muted-foreground'>Tableau des garanties</div>
+                        <div className='space-y-2'>
+                          {[
+                            'Bris de glace',
+                            'Vol',
+                            'Incendie',
+                            'Vandalisme',
+                            'Dommages tous accidents',
+                            'Prêt du volant à novice',
+                            'Indemnisation majorée',
+                          ].map((label) => {
+                            const has = (offer.features || []).some((f) => f.toLowerCase().includes(label.toLowerCase()))
+                            return (
+                              <div
+                                key={`${offer.id}-gar-${label}`}
+                                className='flex items-center justify-between gap-3 rounded-xl bg-[#eef4ff] px-3 py-2 text-sm'
+                              >
+                                <div className='flex items-center gap-2 text-foreground'>
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <InfoIcon className='w-4 h-4 text-primary cursor-pointer' />
+                                      </TooltipTrigger>
+                                      <TooltipContent className='max-w-xs'>
+                                        {`Garantie ${label}. Vérifiez plafonds et exclusions dans le devis.`}
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                  <span>{label}</span>
+                                </div>
+                                {has ? (
+                                  <Check className='w-5 h-5 text-green-600' />
+                                ) : (
+                                  <X className='w-5 h-5 text-destructive' />
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </Card>
+
+                      <Card className='p-4 space-y-3 shadow-sm bg-white'>
+                        <div className='font-semibold text-sm uppercase tracking-wide text-muted-foreground'>Franchises et plafonds</div>
+                        <div className='space-y-2 text-sm'>
+                          {[
+                            { label: 'Responsabilité civile' },
+                            { label: 'Protection conducteur' },
+                            { label: 'Protection juridique', cross: true },
+                            { label: 'Assistance aux personnes' },
+                            { label: 'Assistance au véhicule' },
+                            { label: 'Véhicule de prêt' },
+                          ].map((item) => (
+                            <div
+                              key={`${offer.id}-fr-${item.label}`}
+                              className='flex items-center justify-between rounded-xl bg-[#eef4ff] px-3 py-2'
+                            >
+                              <div className='flex items-center gap-2 text-foreground'>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <InfoIcon className='w-4 h-4 text-primary cursor-pointer' />
+                                    </TooltipTrigger>
+                                    <TooltipContent className='max-w-xs'>
+                                      {`Détail : ${item.label}. Voir conditions de l'assureur.`}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                                <span>{item.label}</span>
+                              </div>
+                              {item.cross ? (
+                                <X className='w-5 h-5 text-destructive' />
+                              ) : (
+                                <Check className='w-5 h-5 text-green-600' />
+                              )}
+                            </div>
+                          ))}
+                          <div className='flex items-center justify-between rounded-xl bg-white px-3 py-2 border border-dashed border-primary/30'>
+                            <span className='flex items-center gap-2'>
+                              Franchise
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <InfoIcon className='w-4 h-4 text-primary cursor-pointer' />
+                                  </TooltipTrigger>
+                                  <TooltipContent className='max-w-xs'>
+                                    Montant restant à votre charge en cas de sinistre. Peut varier selon la garantie activée.
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </span>
+                            <span className='font-semibold text-primary'>
+                              {offer.deductible ? `${offer.deductible.toLocaleString()} FCFA` : 'N/A'}
+                            </span>
+                          </div>
+                        </div>
+                      </Card>
+                    </div>
+                  </div>
+                )}
               </Card>
             ))}
 
@@ -1115,12 +1251,13 @@ const Results = () => {
 
       {/* Original Compare Modal */}
       {!useEnhancedCompare && (
-        <OfferCompareModal
+       <OfferCompareModal
           open={openCompare}
           onOpenChange={setOpenCompare}
           offers={selectedOffers.map((o) => ({
             ...o,
             franchise: o.deductible.toString(),
+            features: o.features && o.features.length > 0 ? o.features : selectedGuarantees,
           }))}
         />
       )}

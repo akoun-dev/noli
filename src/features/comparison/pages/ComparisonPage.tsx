@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Shield } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { ComparisonBreadcrumb } from "@/components/common/BreadcrumbRenderer";
 import { CompareProvider, useCompare } from "../services/ComparisonContext";
@@ -16,9 +16,36 @@ const steps = [
 ];
 
 const CompareForm = () => {
-  const { formData, setCurrentStep } = useCompare();
+  const { formData, setCurrentStep, updatePersonalInfo, updateVehicleInfo, updateInsuranceNeeds } = useCompare();
   const [direction, setDirection] = useState<'next' | 'prev'>('next');
   const currentStep = formData.currentStep;
+  const location = useLocation();
+
+  useEffect(() => {
+    const state = (location.state || {}) as { resumeFromResults?: boolean };
+    if (!state.resumeFromResults) return;
+
+    try {
+      const raw = localStorage.getItem('noli:comparison:last');
+      if (raw) {
+        const saved = JSON.parse(raw);
+        if (saved.personalInfo) updatePersonalInfo(saved.personalInfo);
+        if (saved.vehicleInfo) updateVehicleInfo(saved.vehicleInfo);
+        if (saved.insuranceNeeds) {
+          const needs = saved.insuranceNeeds;
+          updateInsuranceNeeds({
+            coverageType: needs.coverageType || needs.coverageData?.coverageType,
+            effectiveDate: needs.effectiveDate || needs.coverageData?.effectiveDate,
+            contractDuration: needs.contractDuration || needs.coverageData?.contractDuration,
+            options: needs.options || needs.coverageData?.options || [],
+          });
+        }
+      }
+      setCurrentStep(3);
+    } catch (err) {
+      console.warn('Impossible de restaurer la comparaison précédente', err);
+    }
+  }, [location.state, setCurrentStep, updateInsuranceNeeds, updatePersonalInfo, updateVehicleInfo]);
 
   const handleNext = () => {
     if (currentStep < 3) {
