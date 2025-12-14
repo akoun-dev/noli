@@ -214,12 +214,53 @@ export const vehicleInfoSchema = z.object({
         message: 'L\'année doit être comprise entre ' + (new Date().getFullYear() - 50) + ' et ' + new Date().getFullYear(),
       }
     ),
-  newValue: z.string().min(1, 'La valeur neuve est requise'),
-  currentValue: z.string().min(1, 'La valeur actuelle est requise'),
+  newValue: z
+    .string()
+    .trim()
+    .regex(/^\d[\d\s]*$/, 'La valeur neuve doit contenir uniquement des chiffres')
+    .min(1, 'La valeur neuve est requise'),
+  currentValue: z
+    .string()
+    .trim()
+    .regex(/^\d[\d\s]*$/, 'La valeur actuelle doit contenir uniquement des chiffres')
+    .min(1, 'La valeur actuelle est requise'),
   vehicleUsage: z.enum(['personnel', 'professionnel', 'taxi', 'autre'], {
     required_error: "L'usage du véhicule est requis",
   }),
-})
+}).superRefine((data, ctx) => {
+  const toNumber = (value: string) => {
+    const cleaned = value.replace(/\s+/g, '');
+    const parsed = Number.parseInt(cleaned, 10);
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+
+  const newVal = toNumber(data.newValue);
+  const currentVal = toNumber(data.currentValue);
+
+  if (!newVal) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['newValue'],
+      message: 'La valeur neuve est requise',
+    });
+  }
+
+  if (!currentVal) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['currentValue'],
+      message: 'La valeur actuelle est requise',
+    });
+  }
+
+  if (newVal > currentVal) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['newValue'],
+      message: 'La valeur neuve ne peut pas dépasser la valeur actuelle',
+    });
+  }
+});
 
 // Standardized contract types for consistency
 export const CONTRACT_TYPES = {

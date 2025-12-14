@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,7 +38,7 @@ const Step1Personal: React.FC<Step1PersonalProps> = ({ onNext }: Step1PersonalPr
   );
 
   // Initialize form without zodResolver to isolate the issue
-  const { register, handleSubmit, formState: { errors }, setValue, watch, reset } = useForm<PersonalInfoFormData>({
+  const { register, handleSubmit, formState: { errors }, setValue, watch, reset, control, trigger } = useForm<PersonalInfoFormData>({
     defaultValues,
   });
 
@@ -118,19 +118,37 @@ const Step1Personal: React.FC<Step1PersonalProps> = ({ onNext }: Step1PersonalPr
 
         <div className="space-y-2">
           <Label htmlFor="phone">Numéro de téléphone *</Label>
-          <PhoneInput
-            value={watch("phone") || ""}
-            onChange={(value, country) => {
-              setValue("phone", value);
-              console.log("Phone changed:", { value, country });
+          <Controller
+            name="phone"
+            control={control}
+            rules={{
+              required: "Le numéro de téléphone est requis",
+              validate: (value) => {
+                const cleaned = (value || "").replace(/\s+/g, "");
+                if (!cleaned.startsWith("+")) {
+                  return "Incluez l'indicatif (ex : +225...)";
+                }
+                const digits = cleaned.replace(/\D/g, "");
+                if (digits.length < 11 || digits.length > 15) {
+                  return "Numéro invalide (format : +225 XX XX XX XX XX)";
+                }
+                return true;
+              }
             }}
-            placeholder="XX XX XX XX XX"
-            defaultCountry="CI"
-            className={cn(errors.phone && "border-destructive")}
+            render={({ field: { value, onChange } }) => (
+              <PhoneInput
+                value={value || ""}
+                onChange={(newValue) => {
+                  onChange(newValue);
+                  trigger("phone");
+                }}
+                placeholder="XX XX XX XX XX"
+                defaultCountry="CI"
+                className={cn(errors.phone && "border-destructive")}
+                error={errors.phone?.message}
+              />
+            )}
           />
-          {errors.phone && (
-            <p className="text-sm text-destructive">{errors.phone.message}</p>
-          )}
         </div>
       </div>
 
@@ -142,6 +160,17 @@ const Step1Personal: React.FC<Step1PersonalProps> = ({ onNext }: Step1PersonalPr
           onCheckedChange={(v) => setValue("isWhatsapp", Boolean(v))}
         />
         <Label htmlFor="isWhatsapp">Numéro WhatsApp</Label>
+      </div>
+
+      <div className="space-y-2 rounded-xl border border-border/60 bg-muted/20 p-4 text-sm leading-relaxed">
+        <p>Faire un devis d’assurance auto en ligne avec NOLI, c’est un peu comme choisir le bon trajet pour éviter les embouteillages : simple, rapide, efficace… et ça vous fait gagner du temps et de l’argent.</p>
+        <p>Chez NOLI, on vous aide à comparer les assurances auto disponibles en Côte d’Ivoire pour trouver la formule qui protège vraiment votre véhicule, sans exploser votre budget. Que vous rouliez dans une petite citadine, un SUV familial, un taxi ou un véhicule de société, vous pouvez enfin voir clair dans les offres du marché.</p>
+        <p>Et comme NOLI fonctionne en toute transparence :</p>
+        <ul className="list-disc space-y-1 pl-5 marker:text-primary">
+          <li>➡️ NOLI est gratuit pour ses utilisateurs il n’y a aucun coup cachés.</li>
+          <li>➡️ Si vous sélectionnez un devis, c’est l’assureur qui vous rappellera directement pour finaliser le contrat.</li>
+        </ul>
+        <p className="font-semibold">NOLI simplifie, vous décidez.</p>
       </div>
 
       {/* Submit Button */}

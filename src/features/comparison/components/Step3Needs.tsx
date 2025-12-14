@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { insuranceNeedsSchema, InsuranceNeedsFormData } from '@/lib/zod-schemas'
@@ -61,6 +61,7 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
   const navigate = useNavigate()
   const { user } = useAuth()
   const isMobile = useIsMobile()
+  const isMountedRef = useRef(true)
 
   // Coverage-based tarification state (always enabled)
   const [selectedCoverages, setSelectedCoverages] = useState<Record<string, boolean>>({})
@@ -73,6 +74,12 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
   const [allGuarantees, setAllGuarantees] = useState<any[]>([])
   const [isQuoteModalOpen, setIsQuoteModalOpen] = useState(false)
   const [isGeneratingQuote, setIsGeneratingQuote] = useState(false)
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
 
   // Fonction pour générer et télécharger le PDF
   const handleDownloadPDF = async () => {
@@ -137,7 +144,8 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
     const parseNumber = (value: string | number | undefined, fallback: number) => {
       if (typeof value === 'number') return value
       if (typeof value === 'string' && value.trim().length > 0) {
-        const parsed = parseInt(value, 10)
+        const cleaned = value.replace(/[^\d]/g, '')
+        const parsed = parseInt(cleaned, 10)
         return Number.isNaN(parsed) ? fallback : parsed
       }
       return fallback
@@ -157,10 +165,20 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
     vehicleInfo.newValue,
   ])
 
+  // Convert legacy coverageType values to new enum values
+  const normalizeCoverageType = (value: any): string => {
+    const mapping: Record<string, string> = {
+      'tiers': 'tiers_simple',
+      'vol_incendie': 'tiers_plus',
+      'tous_risques': 'tous_risques'
+    }
+    return mapping[value] || value || 'tiers_simple'
+  }
+
   const { handleSubmit, formState: { errors }, setValue, watch } = useForm<InsuranceNeedsFormData>({
     resolver: zodResolver(insuranceNeedsSchema),
     defaultValues: {
-      coverageType: (formData.insuranceNeeds.coverageType as any) || 'tiers',
+      coverageType: normalizeCoverageType(formData.insuranceNeeds.coverageType) as any,
       effectiveDate: formData.insuranceNeeds.effectiveDate as any,
       contractDuration: formData.insuranceNeeds.contractDuration as any,
       options: formData.insuranceNeeds.options || [],
@@ -243,8 +261,15 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
 
   // Create temporary quote for coverage calculation
   useEffect(() => {
+    // Always create temp quote or initialize coverages, even without user
     if (user) {
       createTempQuote()
+    } else {
+      // Initialize with default coverages even without user
+      console.log('🔧 No user logged in, skipping temp quote creation (local mode)')
+      setTempQuoteId(null)
+      setCoverageLoading(false)
+      setCoverageErrors([])
     }
   }, [user])
 
@@ -254,6 +279,15 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
     console.log('🔧 Step3Needs: Creating temporary quote...')
     console.log('🔧 User:', user?.id)
     console.log('🔧 Vehicle data:', vehicleData)
+
+    const timeoutId = window.setTimeout(() => {
+      if (!isMountedRef.current) return
+      console.warn('⏱️ Quote creation timeout, showing coverages without persisted quote')
+      setCoverageLoading(false)
+      setCoverageErrors((prev) =>
+        prev.length > 0 ? prev : ['Connexion lente, affichage des garanties en mode local']
+      )
+    }, 5000)
 
     try {
       setCoverageLoading(true)
@@ -319,7 +353,9 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
       }
 
       console.log('🔧 Quote created successfully with ID:', data.id)
-      setTempQuoteId(data.id)
+      if (isMountedRef.current) {
+        setTempQuoteId(data.id)
+      }
     } catch (error) {
       console.error('🔧 ERROR creating temporary quote:', error)
       console.error('🔧 Quote error details:', {
@@ -328,10 +364,16 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
         name: (error as any)?.name,
         error
       })
-      setCoverageErrors(['Erreur lors de la création du devis temporaire'])
+      if (isMountedRef.current) {
+        setCoverageErrors(['Erreur lors de la création du devis temporaire'])
+        setTempQuoteId(null)
+      }
     } finally {
       console.log('🔧 Quote creation process finished')
-      setCoverageLoading(false)
+      clearTimeout(timeoutId)
+      if (isMountedRef.current) {
+        setCoverageLoading(false)
+      }
     }
   }
 
@@ -386,7 +428,7 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
     const localTotal = Object.values(updatedBreakdown).reduce((sum, value) => sum + value, 0)
     setTotalPremium(localTotal)
 
-    if (!tempQuoteId) {
+    if (!tempQuoteId || tempQuoteId === 'temp-quote-id') {
       return
     }
 
@@ -407,19 +449,17 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
           serverBreakdown[p.coverage_id] = p.premium_amount
         })
 
-      let mergedBreakdown: Record<string, number> = updatedBreakdown
-      setPremiumBreakdown((prev) => {
-        const merged = { ...prev, ...serverBreakdown }
-        Object.keys(merged).forEach((key) => {
+      setPremiumBreakdown(() => {
+        const cleaned = { ...serverBreakdown }
+        Object.keys(cleaned).forEach((key) => {
           if (!nextSelectedCoverages[key]) {
-            delete merged[key]
+            delete cleaned[key]
           }
         })
-        mergedBreakdown = merged
-        return merged
+        return cleaned
       })
 
-      const fallbackServerTotal = Object.values(mergedBreakdown).reduce((sum, value) => sum + value, 0)
+      const fallbackServerTotal = Object.values(serverBreakdown).reduce((sum, value) => sum + value, 0)
       setTotalPremium(newTotal > 0 ? newTotal : fallbackServerTotal)
     } catch (error) {
       console.error('Error updating coverage:', error)
@@ -430,20 +470,26 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
   }
 
   const onSubmit = async (data: InsuranceNeedsFormData) => {
-    // Merge coverage selections with form
-    const enhancedData = {
-      ...data,
-      coverageData: {
-        selectedCoverages,
-        totalPremium,
-        adjustedPremium,
-        durationConfig,
-        premiumBreakdown,
-        vehicleData,
-      },
-    }
+    try {
+      console.log('🚀 onSubmit called with data:', data)
+      console.log('🚀 Current form data from context:', formData)
 
-    updateInsuranceNeeds(enhancedData)
+      // Merge coverage selections with form
+      const enhancedData = {
+        ...data,
+        coverageData: {
+          selectedCoverages,
+          totalPremium,
+          adjustedPremium,
+          durationConfig,
+          premiumBreakdown,
+          vehicleData,
+        },
+      }
+
+      console.log('🚀 Enhanced data prepared:', enhancedData)
+      updateInsuranceNeeds(enhancedData)
+      console.log('🚀 updateInsuranceNeeds called')
 
     // Persist estimated price and finalize quote status if a temporary quote exists
     if (tempQuoteId) {
@@ -484,13 +530,62 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
         },
         timestamp: new Date().toISOString(),
       }
+      console.log('💾 Saving comparison data:', summaryPayload)
       localStorage.setItem('noli:comparison:last', JSON.stringify(summaryPayload))
+      console.log('✅ Data saved successfully')
     } catch (err) {
       console.warn('Unable to persist comparison summary', err)
     }
 
     // Navigate to next step
+    console.log('🚀 Navigating to comparison results...')
     navigate('/comparison/results')
+    } catch (error) {
+      console.error('❌ ERROR in onSubmit:', error)
+      console.error('❌ Error details:', {
+        message: (error as any)?.message,
+        stack: (error as any)?.stack,
+        name: (error as any)?.name,
+      })
+      // Afficher une erreur à l'utilisateur
+      setCoverageErrors(['Une erreur est survenue lors de la soumission du formulaire'])
+    }
+  }
+
+  // Test function for debugging navigation
+  const testNavigation = () => {
+    console.log('🧪 TEST: Manual navigation triggered')
+    const testData = {
+      personalInfo: {
+        firstName: 'Test',
+        lastName: 'User',
+        email: 'test@example.com',
+        phone: '+22500000000'
+      },
+      vehicleInfo: {
+        brand: 'Toyota',
+        model: 'Yaris',
+        year: '2020'
+      },
+      insuranceNeeds: {
+        coverageType: 'tiers_simple',
+        contractDuration: '12_mois'
+      },
+      estimated: {
+        total: 100000,
+        monthly: 8333
+      },
+      timestamp: new Date().toISOString()
+    }
+
+    try {
+      console.log('🧪 TEST: Saving test data:', testData)
+      localStorage.setItem('noli:comparison:last', JSON.stringify(testData))
+      console.log('🧪 TEST: Data saved, navigating...')
+      navigate('/comparison/results')
+    } catch (error) {
+      console.error('🧪 TEST: Error during test navigation:', error)
+    }
   }
 
   return (
@@ -598,6 +693,17 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
         </div>
       </Card>
 
+      <div className='space-y-2 rounded-xl border border-border/60 bg-muted/20 p-4 text-sm leading-relaxed'>
+        <p>Faire un devis d’assurance auto en ligne avec NOLI, c’est un peu comme choisir le bon trajet pour éviter les embouteillages : simple, rapide, efficace… et ça vous fait gagner du temps et de l’argent.</p>
+        <p>Chez NOLI, on vous aide à comparer les assurances auto disponibles en Côte d’Ivoire pour trouver la formule qui protège vraiment votre véhicule, sans exploser votre budget. Que vous rouliez dans une petite citadine, un SUV familial, un taxi ou un véhicule de société, vous pouvez enfin voir clair dans les offres du marché.</p>
+        <p>Et comme NOLI fonctionne en toute transparence :</p>
+        <ul className='list-disc space-y-1 pl-5 marker:text-primary'>
+          <li>➡️ NOLI est gratuit pour ses utilisateurs il n’y a aucun coup cachés.</li>
+          <li>➡️ Si vous sélectionnez un devis, c’est l’assureur qui vous rappellera directement pour finaliser le contrat.</li>
+        </ul>
+        <p className='font-semibold'>NOLI simplifie, vous décidez.</p>
+      </div>
+
       {/* Floating Action Buttons - Mobile optimized */}
       <div className={cn(
         "sticky bottom-0 bg-background/95 backdrop-blur-sm border-t p-4 -mx-4",
@@ -638,103 +744,9 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
             isMobile ? "w-4 h-4" : "w-5 h-5 group-hover:translate-x-1"
           )} />
         </Button>
+
       </div>
 
-      {/* Quote Modal */}
-      <Dialog open={isQuoteModalOpen} onOpenChange={setIsQuoteModalOpen}>
-        <DialogTrigger asChild>
-          <Button
-            type='button'
-            variant='ghost'
-            size="sm"
-            className="text-muted-foreground"
-          >
-            Voir le devis
-          </Button>
-        </DialogTrigger>
-        <DialogContent className={cn(
-          isMobile ? "w-11/12 max-w-md" : "max-w-lg"
-        )}>
-          <DialogHeader>
-            <DialogTitle className="text-xl">Votre devis personnalisé</DialogTitle>
-            <DialogDescription>
-              Récapitulatif de votre protection automobile
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-6 py-4">
-            {/* Section Prix */}
-            <div className="text-center space-y-3 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-100">
-              <div className="text-4xl font-bold text-primary">
-                {adjustedPremium.toLocaleString('fr-FR')} FCFA
-              </div>
-              <div className="text-sm text-muted-foreground font-medium">
-                {monthlyPremium.toLocaleString('fr-FR')} FCFA par mois
-              </div>
-              <div className="text-xs text-muted-foreground">
-                {Object.entries(selectedCoverages).filter(([_, isSelected]) => isSelected).length} garantie(s) sélectionnée(s)
-              </div>
-            </div>
-
-            {/* Section Véhicule */}
-            <div className="space-y-2">
-              <h4 className="text-sm font-semibold text-gray-700">Véhicule assuré</h4>
-              <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded">
-                {formData.vehicleInfo?.brand || ''} {formData.vehicleInfo?.model || ''} ({formData.vehicleInfo?.year || ''})
-              </div>
-            </div>
-
-            {/* Section Garanties */}
-            <div className="space-y-2">
-              <h4 className="text-sm font-semibold text-gray-700">Garanties incluses</h4>
-              <div className="space-y-2 max-h-48 overflow-y-auto">
-                {Object.entries(selectedCoverages)
-                  .filter(([_, isSelected]) => isSelected)
-                  .map(([coverageId]) => (
-                    <div key={coverageId} className="flex items-center justify-between text-sm">
-                      <span>{getCoverageName(coverageId)}</span>
-                      <span className="text-muted-foreground">
-                        {premiumBreakdown[coverageId]?.toLocaleString('fr-FR')} FCFA
-                      </span>
-                    </div>
-                  ))}
-              </div>
-            </div>
-
-            {/* Section Actions */}
-            <div className="space-y-3">
-              <h4 className="text-sm font-semibold text-gray-700">Recevoir votre devis</h4>
-              <div className="grid grid-cols-1 gap-3">
-                <Button
-                  variant="outline"
-                  className="flex items-center gap-2 h-12 text-sm"
-                  onClick={handleShareWhatsApp}
-                >
-                  <MessageCircle className="w-4 h-4 text-green-600" />
-                  Recevoir par WhatsApp
-                </Button>
-                <Button
-                  variant="outline"
-                  className="flex items-center gap-2 h-12 text-sm"
-                  onClick={handleDownloadPDF}
-                  disabled={isGeneratingQuote}
-                >
-                  <Download className="w-4 h-4 text-blue-600" />
-                  {isGeneratingQuote ? 'Génération...' : 'Télécharger le PDF'}
-                </Button>
-                <Button
-                  variant="outline"
-                  className="flex items-center gap-2 h-12 text-sm"
-                  onClick={handleShareEmail}
-                >
-                  <Mail className="w-4 h-4 text-red-600" />
-                  Recevoir par email
-                </Button>
-              </div>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </form>
   )
 }

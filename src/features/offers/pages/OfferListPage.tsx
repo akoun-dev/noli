@@ -45,6 +45,7 @@ import { ThemeToggle } from '@/components/ui/theme-toggle'
 import offerService from '@/data/api/offerService'
 import { Offer } from '@/data/api/offerService'
 import { logger } from '@/lib/logger'
+import { coverageTarificationService } from '@/services/coverageTarificationService'
 
 const FORMULA_PRESETS = [
   {
@@ -129,6 +130,7 @@ const Results = () => {
   const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([])
   const [saveSearchModalOpen, setSaveSearchModalOpen] = useState(false)
   const [searchName, setSearchName] = useState('')
+  const [selectedGuarantees, setSelectedGuarantees] = useState<string[]>([])
 
   // Favorites (persisted)
   const [favorites, setFavorites] = useState<string[]>([])
@@ -152,14 +154,78 @@ const Results = () => {
   // Last comparison context (from the quotation workflow)
   useEffect(() => {
     try {
+      console.log('🔍 Reading comparison data from localStorage...')
       const raw = localStorage.getItem('noli:comparison:last')
+      console.log('📄 Raw data from localStorage:', raw)
       if (raw) {
-        setComparisonSummary(JSON.parse(raw))
+        const parsed = JSON.parse(raw)
+        console.log('✅ Parsed comparison data:', parsed)
+        setComparisonSummary(parsed)
+      } else {
+        console.log('❌ No comparison data found in localStorage')
       }
     } catch (err) {
+      console.error('❌ Error reading comparison data:', err)
       logger.warn('Cannot read saved comparison summary', err)
     }
   }, [])
+
+  // Load selected guarantees names based on last comparison context
+  useEffect(() => {
+    const selected = comparisonSummary?.insuranceNeeds?.coverageData?.selectedCoverages
+    if (!selected) {
+      setSelectedGuarantees([])
+      return
+    }
+
+    const selectedIds = Object.entries(selected)
+      .filter(([, isOn]) => Boolean(isOn))
+      .map(([id]) => id)
+
+    if (selectedIds.length === 0) {
+      setSelectedGuarantees([])
+      return
+    }
+
+    const toNumber = (value: any, fallback?: number) => {
+      if (typeof value === 'number' && Number.isFinite(value)) return value
+      if (typeof value === 'string') {
+        const cleaned = value.replace(/[^\d]/g, '')
+        const parsed = parseInt(cleaned, 10)
+        if (Number.isFinite(parsed)) return parsed
+      }
+      return fallback
+    }
+
+    const vehicle = comparisonSummary?.vehicleInfo || {}
+
+    const loadGuarantees = async () => {
+      try {
+        const coverages = await coverageTarificationService.getAvailableCoverages({
+          category: vehicle.category || '401',
+          vehicle_value: toNumber(vehicle.currentValue, toNumber(vehicle.newValue, 0)) || 0,
+          fiscal_power: toNumber(vehicle.fiscalPower, undefined),
+          fuel_type: vehicle.fuel || undefined,
+        })
+
+        const names = selectedIds
+          .map((id) => {
+            const match = coverages.find(
+              (c) => c.coverage_id === id || (c as any).id === id || (c as any).code === id
+            )
+            return match?.name || (match as any)?.label || match?.coverage_type || id
+          })
+          .filter(Boolean)
+
+        setSelectedGuarantees(names)
+      } catch (err) {
+        logger.warn('Impossible de charger les garanties sélectionnées', err)
+        setSelectedGuarantees(selectedIds)
+      }
+    }
+
+    loadGuarantees()
+  }, [comparisonSummary?.insuranceNeeds?.coverageData])
 
   // Load offers from database
   useEffect(() => {
@@ -301,7 +367,7 @@ const Results = () => {
     )
   }
 
-  const formatCurrency = (value: number) => `€${Math.round(value || 0).toLocaleString('fr-FR')}`
+  const formatCurrency = (value: number) => `${Math.round(value || 0).toLocaleString('fr-FR')} FCFA`
 
   const matchesCoverageFormula = (offer: Offer, formulas: string[]) => {
     if (formulas.length === 0) return true
@@ -891,7 +957,7 @@ const Results = () => {
                       <p className='text-sm text-muted-foreground'>
                         Franchise:{' '}
                         <span className='font-medium text-foreground'>
-                          €{offer.deductible.toLocaleString()}
+                          {offer.deductible.toLocaleString()} FCFA
                         </span>
                       </p>
                     </div>
@@ -1022,10 +1088,29 @@ const Results = () => {
                 <Button size='sm' onClick={() => setOpenCompare(true)}>
                   Comparer
                 </Button>
+                </div>
               </div>
-            </div>
-          </Card>
-        </div>
+            </Card>
+
+            {selectedGuarantees.length > 0 && (
+              <Card className='p-4 border-primary/20 shadow-sm'>
+                <div className='flex items-center justify-between mb-3'>
+                  <div className='flex items-center gap-2'>
+                    <Shield className='w-4 h-4 text-primary' />
+                    <span className='font-semibold'>Garanties sélectionnées</span>
+                  </div>
+                  <Badge variant='outline'>{selectedGuarantees.length}</Badge>
+                </div>
+                <div className='flex flex-wrap gap-2'>
+                  {selectedGuarantees.map((g) => (
+                    <Badge key={g} variant='secondary' className='text-xs'>
+                      {g}
+                    </Badge>
+                  ))}
+                </div>
+              </Card>
+            )}
+          </div>
       )}
 
       {/* Original Compare Modal */}

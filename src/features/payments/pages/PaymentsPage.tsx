@@ -179,7 +179,7 @@ export const PaymentsPage: React.FC = () => {
                   Total à payer
                 </p>
                 <p className='text-2xl font-bold text-gray-900 dark:text-gray-100'>
-                  €{pendingQuotes.reduce((sum, q) => sum + q.price.annual, 0).toLocaleString()}
+                  {pendingQuotes.reduce((sum, q) => sum + q.price.annual, 0).toLocaleString()} FCFA
                 </p>
               </div>
               <CreditCard className='h-8 w-8 text-blue-600' />
@@ -260,10 +260,10 @@ export const PaymentsPage: React.FC = () => {
                       </div>
                       <div className='text-right'>
                         <p className='text-2xl font-bold text-gray-900 dark:text-gray-100'>
-                          €{quote.price.annual.toLocaleString()}
+                          {quote.price.annual.toLocaleString()} FCFA
                         </p>
                         <p className='text-sm text-gray-600 dark:text-gray-400'>
-                          €{(quote.price.annual / 12).toLocaleString()}/mois
+                          {(quote.price.annual / 12).toLocaleString()} FCFA/mois
                         </p>
                         <PaymentProcessor
                           amount={quote.price.annual}

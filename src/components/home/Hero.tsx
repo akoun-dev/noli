@@ -1,9 +1,7 @@
-import { useState } from "react";
-import { ArrowRight, BadgeCheck, Bike, Car, CheckCircle2, HeartPulse, Home, ShieldCheck, Sparkles, Zap } from "lucide-react";
+import { ArrowRight, BadgeCheck, Bike, Car, HeartPulse, Home, ShieldCheck, Sparkles, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Link } from "react-router-dom";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Link, useNavigate } from "react-router-dom";
 
 const assuranceOptions = [
   {
@@ -142,26 +140,13 @@ const assuranceOptions = [
   },
 ];
 
-const fallbackDetail = {
-  badge: "Information",
-  heroTitle: "Assurance",
-  heroSubtitle: "Détails non disponibles pour le moment.",
-  guarantee: "",
-  features: [],
-  stats: [],
-  ctaLabel: "Fermer",
-};
-
 const Hero = () => {
-  const [selectedOption, setSelectedOption] = useState(assuranceOptions[0]);
-  const [openDetail, setOpenDetail] = useState(false);
-  const SelectedIcon = selectedOption?.icon;
-  const detail = selectedOption?.detail ?? fallbackDetail;
-  const isAvailable = selectedOption?.available;
+  const navigate = useNavigate();
 
-  const openOption = (option: (typeof assuranceOptions)[number]) => {
-    setSelectedOption(option);
-    setOpenDetail(true);
+  const handleCardClick = (option: (typeof assuranceOptions)[number]) => {
+    if (option.available && option.href) {
+      navigate(option.href);
+    }
   };
 
   return (
@@ -182,39 +167,19 @@ const Hero = () => {
               Nouveau parcours
             </div>
 
-            <div className="space-y-4">
-              <p className="text-sm font-semibold uppercase tracking-[0.25em] text-primary/80 dark:text-primary-foreground/80">
-                Assurance et comparatif
-              </p>
-              <h1 className="text-4xl md:text-5xl font-display leading-tight text-foreground">
-                Avec NOLI, comparer c'est gagner.
-              </h1>
-              <p className="text-lg md:text-xl text-muted-foreground max-w-2xl">
-                L'assurance auto est prête, les autres arrivent. Survolez les cartes pour voir ce qui se prépare et restez informé des prochains lancements.
-              </p>
+            <div className="relative mx-auto max-w-2xl">
+              <div className="absolute -left-10 -top-8 h-24 w-24 rounded-full bg-primary/15 blur-2xl" />
+              <div className="absolute right-[-6%] bottom-[-6%] h-20 w-20 rounded-full bg-accent/25 blur-2xl" />
+              <div className="relative overflow-hidden bg-transparent p-0 shadow-none backdrop-blur-none rounded-none">
+                <img
+                  src="/img/zebre_plein_sans_fond.png"
+                  alt="Mascotte NOLI"
+                  className="mx-auto block h-[23rem] w-[23rem] md:h-[29rem] md:w-[29rem] object-contain"
+                />
+              </div>
             </div>
 
-            <div className="flex flex-wrap gap-4">
-              <Button
-                size="lg"
-                className="h-14 px-8 text-lg font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_15px_45px_rgba(27,70,77,0.35)]"
-                asChild
-              >
-                <Link to="/comparer">
-                  Comparer mon assurance auto
-                  <ArrowRight className="ml-2 w-5 h-5" />
-                </Link>
-              </Button>
-              <Button
-                variant="secondary"
-                size="lg"
-                className="h-14 px-8 text-lg font-semibold bg-white/60 text-foreground hover:bg-white/80 border border-border/60 dark:bg-white/10 dark:text-foreground"
-              >
-                Produits à venir
-              </Button>
-            </div>
-
-            <div className="grid sm:grid-cols-2 gap-4">
+            <div className="grid sm:grid-cols-2 gap-4 max-w-2xl mx-auto">
               <div className="flex items-center gap-3 rounded-2xl bg-white/80 px-4 py-3 shadow-sm backdrop-blur dark:bg-white/5">
                 <BadgeCheck className="w-5 h-5 text-primary" />
                 <div>
@@ -248,12 +213,12 @@ const Hero = () => {
                   <button
                     key={option.title}
                     type="button"
-                    onClick={() => openOption(option)}
-                    className="group relative block text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-2xl"
-                  >
-                    <Card
-                      className={`relative overflow-hidden rounded-2xl border border-border/60 bg-white/90 p-5 shadow-lg transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-xl dark:bg-card/80 ${
-                        option.available ? "ring-1 ring-primary/20" : ""
+                  onClick={() => handleCardClick(option)}
+                  className="group relative block text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-2xl"
+                >
+                  <Card
+                    className={`relative overflow-hidden rounded-2xl border border-border/60 bg-white/90 p-5 shadow-lg transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-xl dark:bg-card/80 ${
+                      option.available ? "ring-1 ring-primary/20" : ""
                       }`}
                     >
                       <div className="flex items-start justify-between gap-3">
@@ -285,7 +250,7 @@ const Hero = () => {
                             <ArrowRight className="h-4 w-4" />
                           </div>
                         ) : (
-                          <div className="text-xs text-muted-foreground">Cliquez pour en savoir plus</div>
+                          <div className="text-xs text-muted-foreground">Arrive bientôt</div>
                         )}
                       </div>
 
@@ -314,120 +279,6 @@ const Hero = () => {
           </div>
         </div>
       </div>
-      <Dialog open={openDetail} onOpenChange={setOpenDetail}>
-        <DialogContent className="max-w-6xl overflow-hidden border-0 bg-background p-0 shadow-2xl sm:rounded-3xl">
-          {selectedOption && (
-            <div className="grid lg:grid-cols-[1.05fr_0.95fr]">
-              <div className="relative overflow-hidden bg-gradient-to-br from-sky-50 via-white to-primary/10 p-8 md:p-10 dark:from-[#0b1518] dark:via-[#0f1a1e] dark:to-[#0c181c]">
-                <div className="absolute -left-20 -top-16 h-64 w-64 rounded-full bg-primary/15 blur-3xl" />
-                <div className="absolute bottom-0 right-[-10%] h-56 w-56 rounded-full bg-accent/25 blur-3xl" />
-                <div className="relative space-y-6">
-                  <span className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-semibold text-primary shadow-sm dark:bg-primary/20">
-                    <Sparkles className="h-4 w-4" />
-                    {detail.badge}
-                  </span>
-                  {detail.stepsCount ? (
-                    <div className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1 text-xs font-semibold text-foreground shadow-sm ring-1 ring-border/60 dark:bg-white/5">
-                      Parcours en {detail.stepsCount} étapes
-                    </div>
-                  ) : null}
-                  <div className="space-y-3">
-                    <h3 className="text-3xl md:text-4xl font-display leading-tight text-foreground">
-                      {detail.heroTitle}
-                    </h3>
-                    <p className="text-lg text-muted-foreground max-w-2xl">
-                      {detail.heroSubtitle}
-                    </p>
-                  </div>
-                  {detail.stats?.length ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4">
-                      {detail.stats.map((stat) => (
-                        <div key={stat.label} className="rounded-2xl bg-white/70 px-4 py-3 shadow-sm backdrop-blur dark:bg-white/5">
-                          <p className="text-2xl font-bold text-foreground">{stat.value}</p>
-                          <p className="text-xs text-muted-foreground">{stat.label}</p>
-                        </div>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-
-              <div className="bg-background p-6 md:p-8">
-                <div className="rounded-3xl border border-border/60 bg-card/80 p-6 shadow-lg dark:bg-card/70">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="text-sm text-muted-foreground">{selectedOption.title}</p>
-                      <p className="text-xl font-semibold text-foreground">{detail.guarantee || selectedOption.highlight}</p>
-                    </div>
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md">
-                      {SelectedIcon ? <SelectedIcon className="h-6 w-6" /> : null}
-                    </div>
-                  </div>
-
-                  <div className="my-6 border-t border-border/60" />
-
-                  {detail.price ? (
-                    <div className="flex items-end gap-3">
-                      <p className="text-4xl font-bold text-foreground">{detail.price}</p>
-                      <div className="text-muted-foreground">
-                        <p className="text-lg font-semibold text-primary">{detail.currency}</p>
-                        <p className="text-sm">{detail.frequency}</p>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="rounded-2xl bg-primary/10 px-4 py-3 text-sm font-semibold text-primary">
-                      Pas encore disponible – ouverture prochaine
-                    </div>
-                  )}
-
-                  <div className="mt-6 space-y-3">
-                    {detail.features?.map((feature) => (
-                      <div key={feature} className="flex items-center gap-3 text-sm text-foreground">
-                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-primary">
-                          <CheckCircle2 className="h-4 w-4" />
-                        </span>
-                        {feature}
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="mt-8 flex flex-col gap-3">
-                    {isAvailable && detail.ctaHref ? (
-                      <Button
-                        size="lg"
-                        className="h-12 w-full bg-primary text-primary-foreground font-semibold hover:bg-primary/90"
-                        asChild
-                      >
-                        <Link to={detail.ctaHref}>
-                          {detail.ctaLabel}
-                          <ArrowRight className="ml-2 h-4 w-4" />
-                        </Link>
-                      </Button>
-                    ) : (
-                      <Button
-                        size="lg"
-                        className="h-12 w-full bg-muted text-foreground font-semibold hover:bg-muted/90"
-                        disabled
-                      >
-                        {detail.ctaLabel}
-                      </Button>
-                    )}
-                    {detail.subCta?.length ? (
-                      <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                        {detail.subCta.map((item) => (
-                          <span key={item} className="inline-flex items-center gap-1 rounded-full bg-muted/40 px-3 py-1">
-                            {item}
-                          </span>
-                        ))}
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </section>
   );
 };

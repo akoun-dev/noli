@@ -108,7 +108,7 @@ export const UserDashboardPage: React.FC = () => {
     },
     {
       label: 'Économies réalisées',
-      value: `€${Math.round(quotes.reduce((sum, q) => sum + q.price.annual, 0) * 0.1).toLocaleString()}`,
+      value: `${Math.round(quotes.reduce((sum, q) => sum + q.price.annual, 0) * 0.1).toLocaleString()} FCFA`,
       icon: TrendingUp,
       color: 'text-purple-600',
     },
@@ -261,7 +261,7 @@ export const UserDashboardPage: React.FC = () => {
                     </div>
                     <div className='flex items-center gap-2'>
                       <span className='text-sm font-semibold text-gray-900 dark:text-gray-100'>
-                        €{quote.price.annual.toLocaleString()}
+                        {quote.price.annual.toLocaleString()} FCFA
                       </span>
                       {getStatusBadge(quote.status)}
                     </div>
@@ -309,7 +309,7 @@ export const UserDashboardPage: React.FC = () => {
                     </div>
                     <div className='flex items-center gap-2'>
                       <span className='text-sm font-semibold text-gray-900 dark:text-gray-100'>
-                        €{policy.price.toLocaleString()}/an
+                        {policy.price.toLocaleString()} FCFA/an
                       </span>
                       {getStatusBadge(policy.status)}
                     </div>
