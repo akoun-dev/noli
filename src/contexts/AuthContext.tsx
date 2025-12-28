@@ -56,15 +56,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       logger.auth('Permissions loaded:', permissions.length)
       setState((prev) => ({ ...prev, permissions }))
 
-      // Sauvegarder les permissions pour la persistance
-      try {
-        localStorage.setItem('noli_permissions', JSON.stringify({
-          permissions,
-          timestamp: Date.now()
-        }))
-      } catch (storageError) {
-        logger.warn('Could not save permissions to localStorage:', storageError)
-      }
+      // 🔒 SÉCURITÉ : Plus de stockage des permissions dans localStorage
+      // Les permissions sont basées sur le rôle et sont rechargées depuis les métadonnées
     } catch (error) {
       logger.warn('Could not load permissions:', error)
     }
@@ -122,39 +115,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         })
 
         if (session?.user) {
-          // Priorité 1: Lire le cache local pour préserver le rôle admin lors du refresh
-          let cachedRole: string | undefined
-          let cachedUserData: any = null
-          try {
-            const cachedUserRaw = localStorage.getItem('noli_user')
-            if (cachedUserRaw) {
-              cachedUserData = JSON.parse(cachedUserRaw)
-              if (cachedUserData?.id === session.user.id && typeof cachedUserData?.role === 'string') {
-                cachedRole = cachedUserData.role
-                logger.auth('Found cached role for user:', cachedRole)
-              }
-            }
-          } catch (_) {
-            // Ignorer les erreurs de lecture du cache
-          }
-
-          // Priorité 2: Construire l'utilisateur directement depuis les métadonnées de session
-          // Éviter les appels RPC qui peuvent échouer et causer la perte de rôle
+          // 🔒 SÉCURITÉ : Plus de cache localStorage pour le rôle
+          // Le rôle est récupéré uniquement depuis les métadonnées Supabase (auth.users.user_metadata)
+          // Cela empêche la manipulation du rôle via XSS
           const user: User = {
             id: session.user.id,
             email: session.user.email || '',
-            firstName: session.user.user_metadata?.first_name || cachedUserData?.firstName || '',
-            lastName: session.user.user_metadata?.last_name || cachedUserData?.lastName || '',
-            companyName: session.user.user_metadata?.company || cachedUserData?.companyName || '',
-            // Important: préserver le rôle du cache pour éviter la régression vers USER
-            role: session.user.user_metadata?.role || (cachedRole as any) || cachedUserData?.role || 'USER',
-            phone: session.user.phone || cachedUserData?.phone || '',
-            avatar: session.user.user_metadata?.avatar_url || cachedUserData?.avatar || '',
+            firstName: session.user.user_metadata?.first_name || '',
+            lastName: session.user.user_metadata?.last_name || '',
+            companyName: session.user.user_metadata?.company || '',
+            // Rôle depuis les métadonnées uniquement - fallback à 'USER' si non défini
+            role: session.user.user_metadata?.role || 'USER',
+            phone: session.user.phone || '',
+            avatar: session.user.user_metadata?.avatar_url || '',
             createdAt: new Date(session.user.created_at),
             updatedAt: new Date(),
           }
 
-          logger.auth('User created from session, role preserved:', user.role)
+          logger.auth('User created from session metadata, role:', user.role)
 
           logger.auth('Setting authenticated state for:', user.email)
           setState({
@@ -164,107 +142,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             permissions: [], // Sera chargé en arrière-plan
           })
 
-          // Sauvegarder dans le localStorage pour la persistance (priorité haute pour le rôle)
-          try {
-            const cacheData = {
-              id: user.id,
-              email: user.email,
-              firstName: user.firstName,
-              lastName: user.lastName,
-              role: user.role, // Critique: préserver le rôle exact
-              companyName: user.companyName,
-              phone: user.phone,
-              avatar: user.avatar,
-              timestamp: Date.now()
-            }
-            localStorage.setItem('noli_user', JSON.stringify(cacheData))
-            logger.auth('User cached with role:', user.role)
-          } catch (storageError) {
-            logger.warn('Could not save user to localStorage:', storageError)
-          }
-
-          // Essayer de charger les permissions en arrière-plan avec cache
-          // La fonction de chargement des permissions est déplacée en dehors du bloc pour la réutiliser
+          // Charger les permissions en arrière-plan
           loadPermissions(user.id)
 
         } else {
-          // Essayer de restaurer depuis le cache si disponible
+          // 🔒 SÉCURITÉ : Nettoyer tout cache résiduel du localStorage
+          // Plus de restauration depuis le cache pour éviter les attaques
           try {
-            const cachedUser = localStorage.getItem('noli_user')
-            const cachedPermissions = localStorage.getItem('noli_permissions')
-
-            if (cachedUser) {
-              const userData = JSON.parse(cachedUser)
-              const now = Date.now()
-              const cacheAge = now - userData.timestamp
-
-              // Le cache est valide pendant 5 minutes
-              if (cacheAge < 5 * 60 * 1000) {
-                const user: User = {
-                  id: userData.id,
-                  email: userData.email,
-                  firstName: userData.firstName,
-                  lastName: userData.lastName,
-                  companyName: '',
-                  role: userData.role,
-                  phone: '',
-                  avatar: '',
-                  createdAt: new Date(),
-                  updatedAt: new Date(),
-                }
-
-                let permissions: string[] = []
-                if (cachedPermissions) {
-                  const permData = JSON.parse(cachedPermissions)
-                  if (now - permData.timestamp < 5 * 60 * 1000) {
-                    permissions = permData.permissions
-                  }
-                }
-
-                logger.auth('Restoring user from cache (preview only, not authenticated):', user.email)
-                // Important: ne pas marquer l\'utilisateur comme authentifié à partir du cache
-                // Cela évite que le Header affiche un état connecté sans session valide
-                setState({
-                  user,
-                  isAuthenticated: false,
-                  isLoading: false, // <-- Correction: On met isLoading à false ici
-                  permissions: [],
-                })
-
-                // Continuer en arrière-plan pour vérifier la session réelle
-                setTimeout(() => {
-                  if (!session) {
-                    logger.auth('Cache expired, clearing state')
-                    setState((prev) => ({
-                      ...prev,
-                      user: null,
-                      isAuthenticated: false,
-                      isLoading: false,
-                      permissions: [],
-                    }))
-                    localStorage.removeItem('noli_user')
-                    localStorage.removeItem('noli_permissions')
-                  }
-                }, 1000)
-
-                return
-              }
-            }
-          } catch (cacheError) {
-            logger.warn('Error reading from cache:', cacheError)
+            localStorage.removeItem('noli_user')
+            localStorage.removeItem('noli_permissions')
+          } catch (e) {
+            // Ignorer les erreurs de nettoyage
           }
 
-          logger.auth('No session or valid cache found, setting unauthenticated state')
+          logger.auth('No session found, setting unauthenticated state')
           setState((prev) => ({
             user: null,
             isAuthenticated: false,
-            isLoading: false, // <-- Correction: On met isLoading à false ici
+            isLoading: false,
             permissions: []
           }))
-
-          // Nettoyer le cache
-          localStorage.removeItem('noli_user')
-          localStorage.removeItem('noli_permissions')
         }
       } catch (error) {
         logger.error('Auth initialization error:', error)
@@ -293,36 +190,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (event === 'SIGNED_IN' && session?.user) {
         logger.auth('Processing SIGNED_IN event for:', session.user.email)
 
-        // Utiliser directement les données de la session pour éviter les problèmes RPC
-        // lors de l'actualisation de page
-        // Tenter d'utiliser le cache local pour préserver le rôle exact
-        let cachedRole: string | undefined
-        try {
-          const cachedUserRaw = localStorage.getItem('noli_user')
-          if (cachedUserRaw) {
-            const cachedUser = JSON.parse(cachedUserRaw)
-            if (cachedUser?.id === session.user.id && typeof cachedUser?.role === 'string') {
-              cachedRole = cachedUser.role
-            }
-          }
-        } catch (_) {
-          // Ignorer
-        }
-
+        // 🔒 SÉCURITÉ : Utiliser uniquement les métadonnées de session
+        // Plus de cache localStorage pour le rôle
         const user: User = {
           id: session.user.id,
           email: session.user.email || '',
           firstName: session.user.user_metadata?.first_name || '',
           lastName: session.user.user_metadata?.last_name || '',
           companyName: session.user.user_metadata?.company || '',
-          role: session.user.user_metadata?.role || (cachedRole as any) || 'USER',
+          // Rôle depuis les métadonnées uniquement
+          role: session.user.user_metadata?.role || 'USER',
           phone: session.user.phone || '',
           avatar: session.user.user_metadata?.avatar_url || '',
           createdAt: new Date(session.user.created_at),
           updatedAt: new Date(),
         }
 
-        logger.auth('Setting state from session data (no RPC calls)')
+        logger.auth('Setting state from session metadata, role:', user.role)
         setState({
           user,
           isAuthenticated: true,
@@ -330,26 +214,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           permissions: [], // Sera chargé en arrière-plan
         })
 
-        // Sauvegarder dans le cache avec toutes les données nécessaires
+        // Nettoyer tout ancien cache résiduel
         try {
-          const cacheData = {
-            id: user.id,
-            email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            role: user.role, // Critique: préserver le rôle exact
-            companyName: user.companyName,
-            phone: user.phone,
-            avatar: user.avatar,
-            timestamp: Date.now()
-          }
-          localStorage.setItem('noli_user', JSON.stringify(cacheData))
-          logger.auth('User cached on sign in with role:', user.role)
-        } catch (storageError) {
-          logger.warn('Could not save user to localStorage on sign in:', storageError)
-              // Essayer de charger les permissions en arrière-plan avec cache
-          loadPermissions(user.id)
+          localStorage.removeItem('noli_user')
+        } catch (e) {
+          // Ignorer
         }
+
+        // Charger les permissions en arrière-plan
+        loadPermissions(user.id)
       } else if (event === 'SIGNED_OUT') {
         logger.auth('🚪 Processing SIGNED_OUT event - NETTOYAGE SÉCURISÉ')
         setState({

@@ -20,42 +20,12 @@ export const supabase: SupabaseClient<Database> = createClient<Database>(
       autoRefreshToken: true,
       persistSession: true,
       detectSessionInUrl: true,
-      // Configuration sécurisée pour forcer l'utilisation de cookies httpOnly
-      flowType: 'pkce', // Recommended for web apps
+      // PKCE flow pour la sécurité - utilise automatiquement les cookies httpOnly
+      flowType: 'pkce',
       debug: false,
-      // Configuration spécifique pour la persistance de session
-      storageKey: 'noli-auth-token',
-      // S'assurer que la session est persistée correctement
-      storage: {
-        // Utiliser le storage par défaut (localStorage) mais avec une clé spécifique
-        // pour éviter les conflits avec d'autres applications Supabase
-        getItem: (key: string) => {
-          try {
-            const item = localStorage.getItem(key);
-            logger.auth(`Storage getItem: ${key}`, item ? 'found' : 'not found');
-            return item;
-          } catch (error) {
-            logger.error('Storage getItem error:', error);
-            return null;
-          }
-        },
-        setItem: (key: string, value: string) => {
-          try {
-            logger.auth(`Storage setItem: ${key}`, 'saving');
-            localStorage.setItem(key, value);
-          } catch (error) {
-            logger.error('Storage setItem error:', error);
-          }
-        },
-        removeItem: (key: string) => {
-          try {
-            logger.auth(`Storage removeItem: ${key}`, 'removing');
-            localStorage.removeItem(key);
-          } catch (error) {
-            logger.error('Storage removeItem error:', error);
-          }
-        }
-      }
+      // 🔒 SÉCURITÉ : Plus de storageKey personnalisé
+      // Supabase utilise maintenant son storage par défaut avec cookies httpOnly
+      // Cela empêche les attaques XSS de voler les tokens d'accès
     },
     db: {
       schema: 'public',
@@ -228,23 +198,16 @@ export const supabaseHelpers = {
         logger.auth('📧 Email utilisateur (auth):', profileEmail)
         logger.auth('📧 Email métadonnées:', metadataEmail)
         logger.auth('📧 Email final utilisé:', email)
-        
-        // Logs détaillés pour le débogage du rôle
-        logger.auth('🔍 Métadonnées utilisateur complètes:', user.user_metadata)
-        logger.auth('👤 Rôle depuis métadonnées:', user.user_metadata?.role)
-        logger.auth('🎯 Rôle qui sera utilisé:', user.user_metadata?.role || 'USER')
 
-        // 🔒 SÉCURITÉ : Ne plus utiliser localStorage pour les données sensibles
-        // Le rôle doit uniquement provenir des métadonnées utilisateur ou de la BDD
-        let cachedRole: string | undefined
-        // Note: Migration vers cookies sécurisés - plus d'accès au localStorage ici
+        // 🔒 SÉCURITÉ : Rôle depuis les métadonnées uniquement
+        const role = user.user_metadata?.role || 'USER'
 
         const fallbackProfile = {
           id: user.id,
           email: email,
           first_name: user.user_metadata?.first_name || '',
           last_name: user.user_metadata?.last_name || '',
-          role: user.user_metadata?.role || (cachedRole as any) || 'USER',
+          role: role,
           is_active: true,
           created_at: user.created_at,
           updated_at: user.updated_at || user.created_at,
@@ -254,7 +217,6 @@ export const supabaseHelpers = {
         }
 
         logger.auth('✅ Profil construit à partir des métadonnées (fallback):', fallbackProfile)
-        logger.auth('🚨 Rôle final dans le profil fallback:', fallbackProfile.role)
         return fallbackProfile
       }
 
@@ -331,27 +293,11 @@ export const supabaseHelpers = {
         return []
       }
 
-      // Déterminer les permissions basées sur le rôle
-      // Utiliser un rôle de secours depuis le cache si les métadonnées ne sont pas définies
-      let cachedRoleForPerms: string | undefined
-      try {
-        const cachedUserRaw = localStorage.getItem('noli_user')
-        if (cachedUserRaw) {
-          const cachedUser = JSON.parse(cachedUserRaw)
-          if (cachedUser?.id === user.id && typeof cachedUser?.role === 'string') {
-            cachedRoleForPerms = cachedUser.role
-          }
-        }
-      } catch (_) {
-        // Ignorer
-      }
+      // 🔒 SÉCURITÉ : Rôle depuis les métadonnées uniquement
+      // Plus de fallback localStorage pour éviter les manipulations XSS
+      const role = user.user_metadata?.role || 'USER'
 
-      const role = user.user_metadata?.role || (cachedRoleForPerms as any) || 'USER'
-      
-      // Logs détaillés pour le débogage du rôle dans les permissions
-      logger.auth('🔍 Métadonnées utilisateur dans getUserPermissions:', user.user_metadata)
-      logger.auth('👤 Rôle extrait pour les permissions:', role)
-      logger.auth('🎯 Type de rôle:', typeof role)
+      logger.auth('Permissions for role:', role)
 
       let permissions = []
       switch (role) {
