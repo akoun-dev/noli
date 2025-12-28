@@ -227,6 +227,17 @@ export const vehicleInfoSchema = z.object({
   vehicleUsage: z.enum(['personnel', 'professionnel', 'taxi', 'autre'], {
     required_error: "L'usage du véhicule est requis",
   }),
+}).superRefine((data, ctx) => {
+  const newValue = Number(data.newValue.replace(/[^\d]/g, ''));
+  const currentValue = Number(data.currentValue.replace(/[^\d]/g, ''));
+
+  if (Number.isFinite(newValue) && Number.isFinite(currentValue) && newValue < currentValue) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'La valeur neuve doit être supérieure ou égale à la valeur actuelle',
+      path: ['newValue'],
+    });
+  }
 });
 
 // Standardized contract types for consistency

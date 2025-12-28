@@ -25,6 +25,16 @@ interface Step2VehicleProps {
 const Step2Vehicle: React.FC<Step2VehicleProps> = ({ onNext, onBack }: Step2VehicleProps) => {
   const { formData, updateVehicleInfo } = useCompare()
 
+  const defaultValues: VehicleInfoFormData = {
+    fuel: formData.vehicleInfo.fuel || 'essence',
+    fiscalPower: formData.vehicleInfo.fiscalPower || '1',
+    seats: formData.vehicleInfo.seats || '4',
+    circulationYear: formData.vehicleInfo.circulationYear || '2025',
+    newValue: formData.vehicleInfo.newValue || '',
+    currentValue: formData.vehicleInfo.currentValue || '',
+    vehicleUsage: (formData.vehicleInfo.vehicleUsage || 'personnel') as VehicleInfoFormData['vehicleUsage'],
+  }
+
   const {
     register,
     handleSubmit,
@@ -33,7 +43,7 @@ const Step2Vehicle: React.FC<Step2VehicleProps> = ({ onNext, onBack }: Step2Vehi
     watch,
   } = useForm<VehicleInfoFormData>({
     resolver: zodResolver(vehicleInfoSchema),
-    defaultValues: formData.vehicleInfo,
+    defaultValues,
   })
 
   const onSubmit = (data: VehicleInfoFormData) => {
