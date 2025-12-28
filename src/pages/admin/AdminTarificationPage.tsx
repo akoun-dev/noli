@@ -2185,7 +2185,7 @@ export const AdminTarificationPage: React.FC = () => {
                       {isCreatingGuarantee ? 'Création…' : 'Nouvelle Garantie'}
                       </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-[95vw] sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+                  <DialogContent className="max-w-[98vw] sm:max-w-5xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                       <DialogTitle className="text-xl">Créer une nouvelle garantie</DialogTitle>
                       <DialogDescription className="text-base">
@@ -2654,7 +2654,7 @@ export const AdminTarificationPage: React.FC = () => {
                     <Plus className="w-4 h-4 mr-2" /> Nouveau tarif
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-[95vw] sm:max-w-md">
+                <DialogContent className="max-w-[98vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>Nouveau tarif fixe</DialogTitle>
                     <DialogDescription>Ajouter un tarif fixe de garantie</DialogDescription>
@@ -2802,7 +2802,7 @@ export const AdminTarificationPage: React.FC = () => {
               setSelectedFormulaName('')
             }
           }}>
-            <DialogContent className="max-w-[95vw] sm:max-w-md">
+            <DialogContent className="max-w-[98vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Modifier le tarif fixe</DialogTitle>
                 <DialogDescription>Mettre à jour les informations</DialogDescription>
@@ -2956,7 +2956,7 @@ export const AdminTarificationPage: React.FC = () => {
 
       {/* Dialog pour modifier une garantie */}
       <Dialog open={isEditGuaranteeDialogOpen} onOpenChange={setIsEditGuaranteeDialogOpen}>
-        <DialogContent className="max-w-[95vw] sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-[98vw] sm:max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-xl">Modifier la garantie</DialogTitle>
             <DialogDescription className="text-base">Mettez à jour les informations de la garantie</DialogDescription>

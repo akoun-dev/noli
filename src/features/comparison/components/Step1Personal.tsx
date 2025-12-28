@@ -59,7 +59,7 @@ const Step1Personal: React.FC<Step1PersonalProps> = ({ onNext }: Step1PersonalPr
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 max-w-3xl mx-auto">
       <div className="text-center space-y-2">
-        <h2 className="text-2xl md:text-3xl font-bold">Profil de l'assuré</h2>
+        <h2 className="text-2xl md:text-3xl font-bold">Profil assuré</h2>
         <p className="text-muted-foreground">
           Ces informations nous permettent de vous identifier et d'éditer votre police d'assurance
         </p>
@@ -161,6 +161,15 @@ const Step1Personal: React.FC<Step1PersonalProps> = ({ onNext }: Step1PersonalPr
         />
         <Label htmlFor="isWhatsapp">Numéro WhatsApp</Label>
       </div>
+            {/* Submit Button */}
+      <Button
+        type="submit"
+        size="lg"
+        className="w-full bg-accent hover:bg-accent/90 text-accent-foreground group"
+      >
+        Étape suivante
+        <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+      </Button>
 
       <div className="space-y-2 rounded-xl border border-border/60 bg-muted/20 p-4 text-sm leading-relaxed">
         <p>Faire un devis d’assurance auto en ligne avec NOLI, c’est un peu comme choisir le bon trajet pour éviter les embouteillages : simple, rapide, efficace… et ça vous fait gagner du temps et de l’argent.</p>
@@ -173,15 +182,7 @@ const Step1Personal: React.FC<Step1PersonalProps> = ({ onNext }: Step1PersonalPr
         <p className="font-semibold">NOLI simplifie, vous décidez.</p>
       </div>
 
-      {/* Submit Button */}
-      <Button
-        type="submit"
-        size="lg"
-        className="w-full bg-accent hover:bg-accent/90 text-accent-foreground group"
-      >
-        Étape suivante
-        <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
-      </Button>
+
     </form>
   );
 };

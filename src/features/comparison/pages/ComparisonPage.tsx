@@ -10,8 +10,8 @@ import Step2Vehicle from "../components/Step2Vehicle";
 import Step3Needs from "../components/Step3Needs";
 
 const steps = [
-  { number: 1, title: "Profil de l'assuré", description: "Vos informations" },
-  { number: 2, title: "Informations véhicule", description: "Caractéristiques" },
+  { number: 1, title: "Profil assuré", description: "Vos informations" },
+  { number: 2, title: "Infos véhicule", description: "Caractéristiques" },
   { number: 3, title: "Options", description: "Couverture et options" },
 ];
 
