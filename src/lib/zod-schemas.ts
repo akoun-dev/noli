@@ -227,39 +227,6 @@ export const vehicleInfoSchema = z.object({
   vehicleUsage: z.enum(['personnel', 'professionnel', 'taxi', 'autre'], {
     required_error: "L'usage du véhicule est requis",
   }),
-}).superRefine((data, ctx) => {
-  const toNumber = (value: string) => {
-    const cleaned = value.replace(/\s+/g, '');
-    const parsed = Number.parseInt(cleaned, 10);
-    return Number.isFinite(parsed) ? parsed : 0;
-  };
-
-  const newVal = toNumber(data.newValue);
-  const currentVal = toNumber(data.currentValue);
-
-  if (!newVal) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['newValue'],
-      message: 'La valeur neuve est requise',
-    });
-  }
-
-  if (!currentVal) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['currentValue'],
-      message: 'La valeur actuelle est requise',
-    });
-  }
-
-  if (newVal > currentVal) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['newValue'],
-      message: 'La valeur neuve ne peut pas dépasser la valeur actuelle',
-    });
-  }
 });
 
 // Standardized contract types for consistency
