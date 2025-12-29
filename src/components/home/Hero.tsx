@@ -160,8 +160,8 @@ const Hero = () => {
       </div>
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 py-16 lg:py-24">
-        <div className="grid lg:grid-cols-[1.05fr_1.1fr] gap-12 items-start">
-          <div className="space-y-6">
+        <div className="grid lg:grid-cols-[1.1fr_1.05fr] gap-12 items-start">
+          <div className="space-y-6 lg:order-2">
             <div className="inline-flex items-center gap-2 rounded-full bg-white/70 px-4 py-2 text-sm font-semibold uppercase tracking-wide text-primary shadow-sm backdrop-blur dark:bg-white/10 dark:text-primary-foreground">
               <Sparkles className="w-4 h-4" />
               Nouveau parcours
@@ -197,7 +197,7 @@ const Hero = () => {
             </div>
           </div>
 
-          <div className="relative">
+          <div className="relative lg:order-1">
             <div className="mb-6 flex items-center justify-between">
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">Choisissez votre assurance</p>
               <span className="rounded-full bg-white/70 px-3 py-1 text-xs font-semibold text-foreground shadow-sm backdrop-blur dark:bg-white/10">

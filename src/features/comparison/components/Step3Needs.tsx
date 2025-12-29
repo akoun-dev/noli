@@ -157,12 +157,16 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
       fuel_type: vehicleInfo.fuel || 'essence',
       sum_insured: parseNumber(vehicleInfo.currentValue, 5_000_000),
       new_value: parseNumber(vehicleInfo.newValue, 8_000_000),
+      seats: parseNumber(vehicleInfo.seats, 5),
+      passenger_seats: parseNumber(vehicleInfo.seats, 5),
+      nb_places: parseNumber(vehicleInfo.seats, 5),
     }
   }, [
     vehicleInfo.fiscalPower,
     vehicleInfo.fuel,
     vehicleInfo.currentValue,
     vehicleInfo.newValue,
+    vehicleInfo.seats,
   ])
 
   // Convert legacy coverageType values to new enum values
@@ -323,6 +327,9 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
         value: vehicleData.sum_insured || vehicleData.new_value || 0,
         sum_insured: vehicleData.sum_insured,
         new_value: vehicleData.new_value,
+        seats: vehicleData.seats,
+        passenger_seats: vehicleData.passenger_seats,
+        nb_places: vehicleData.nb_places,
       }
 
       const coverageReq = {
@@ -440,7 +447,6 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
         isIncluded
       )
 
-      const newTotal = await coverageTarificationService.calculateQuoteTotalPremium(tempQuoteId)
       const premiums = await coverageTarificationService.getQuoteCoveragePremiums(tempQuoteId)
       const serverBreakdown: Record<string, number> = {}
       premiums
@@ -449,18 +455,13 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
           serverBreakdown[p.coverage_id] = p.premium_amount
         })
 
-      setPremiumBreakdown(() => {
-        const cleaned = { ...serverBreakdown }
-        Object.keys(cleaned).forEach((key) => {
-          if (!nextSelectedCoverages[key]) {
-            delete cleaned[key]
-          }
-        })
-        return cleaned
-      })
-
-      const fallbackServerTotal = Object.values(serverBreakdown).reduce((sum, value) => sum + value, 0)
-      setTotalPremium(newTotal > 0 ? newTotal : fallbackServerTotal)
+      const cleanedServerBreakdown = Object.fromEntries(
+        Object.entries(serverBreakdown).filter(([key]) => nextSelectedCoverages[key])
+      )
+      const mergedBreakdown = { ...updatedBreakdown, ...cleanedServerBreakdown }
+      setPremiumBreakdown(mergedBreakdown)
+      const mergedTotal = Object.values(mergedBreakdown).reduce((sum, value) => sum + value, 0)
+      setTotalPremium(mergedTotal)
     } catch (error) {
       console.error('Error updating coverage:', error)
       setCoverageErrors(['Erreur lors de la mise à jour des garanties'])
@@ -496,8 +497,10 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
       try {
         await coverageTarificationService.updateQuoteCoveragePremiums(tempQuoteId)
         const total = await coverageTarificationService.calculateQuoteTotalPremium(tempQuoteId)
+        const fallbackTotal = Object.values(premiumBreakdown).reduce((sum, value) => sum + value, 0)
+        const resolvedTotal = total > 0 ? Math.max(total, fallbackTotal) : fallbackTotal
         const durationPricing = getDurationConfig(data.contractDuration)
-        const adjustedTotal = Math.round((total || 0) * durationPricing.percentage)
+        const adjustedTotal = Math.round((resolvedTotal || 0) * durationPricing.percentage)
         const periodMonths = durationPricing.months > 0 ? durationPricing.months : 12
         const monthly = periodMonths > 0 ? Math.round(adjustedTotal / periodMonths) : adjustedTotal
 

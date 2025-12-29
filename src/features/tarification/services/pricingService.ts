@@ -617,16 +617,59 @@ export class PricingService {
       ? iptConfig.formulas
       : defaultFormulas;
 
+    const normalizeFormulaNumber = (value: any, fallback: number) => {
+      if (typeof value === 'number' && Number.isFinite(value)) {
+        return value;
+      }
+      if (typeof value === 'string') {
+        const match = value.match(/\d+/);
+        if (match) {
+          const parsed = parseInt(match[0], 10);
+          if (Number.isFinite(parsed)) {
+            return parsed;
+          }
+        }
+      }
+      return fallback;
+    };
+
+    const parseTariffNumber = (value: any) => {
+      if (typeof value === 'number' && Number.isFinite(value)) {
+        return value;
+      }
+      if (typeof value === 'string') {
+        const cleaned = value.replace(/[^\d.-]/g, '');
+        const parsed = parseFloat(cleaned);
+        return Number.isFinite(parsed) ? parsed : 0;
+      }
+      return 0;
+    };
+
+    const normalizePlacesTariffs = (tariffs: any[]) =>
+      tariffs
+        .map((tariff) => ({
+          ...tariff,
+          places: parseTariffNumber(tariff?.places),
+          prime: parseTariffNumber(tariff?.prime),
+        }))
+        .filter((tariff) => tariff.places > 0 && tariff.prime >= 0)
+        .sort((a, b) => a.places - b.places);
+
     // Obtenir le nombre de places du véhicule
-    const vehiclePlaces = vehicle?.seats ?? parameters?.seats ?? vehicle?.passengerSeats ?? 5;
+    const vehiclePlaces = parseTariffNumber(vehicle?.seats ?? parameters?.seats ?? vehicle?.passengerSeats ?? 5) || 5;
 
     // Obtenir la formule sélectionnée (depuis les parameters ou la formule par défaut)
     const selectedFormula = parameters?.formula_name
-      ? parseInt(parameters.formula_name.replace('formula_', ''))
+      ? normalizeFormulaNumber(parameters.formula_name, iptConfig.defaultFormula ?? 1)
       : iptConfig.defaultFormula ?? 1;
 
     // Trouver la formule correspondante
-    const formula = formulas.find(f => f.formula === selectedFormula) || formulas[0];
+    const normalizedFormulas = formulas.map((formula) => ({
+      ...formula,
+      formula: normalizeFormulaNumber((formula as any).formula, selectedFormula),
+      placesTariffs: Array.isArray((formula as any).placesTariffs) ? (formula as any).placesTariffs : [],
+    }));
+    const formula = normalizedFormulas.find(f => f.formula === selectedFormula) || normalizedFormulas[0];
 
     if (!formula) {
       return {
@@ -641,7 +684,11 @@ export class PricingService {
     }
 
     // Utiliser les tarifs personnalisés ou les défauts
-    const placesTariffs = formula.placesTariffs ?? defaultFormulas[selectedFormula - 1].placesTariffs;
+    const defaultTariffs = defaultFormulas.find(f => f.formula === selectedFormula)?.placesTariffs ?? [];
+    const rawPlacesTariffs = (formula as IPTFormulaConfig).placesTariffs?.length
+      ? (formula as IPTFormulaConfig).placesTariffs
+      : defaultTariffs;
+    const placesTariffs = normalizePlacesTariffs(rawPlacesTariffs);
 
     // Trouver le tarif correspondant au nombre de places
     const applicableTariff = placesTariffs.find(tariff => tariff.places >= vehiclePlaces)

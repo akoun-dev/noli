@@ -446,11 +446,55 @@ class CoverageTarificationService {
     const formulas =
       resolvedConfig.formulas && resolvedConfig.formulas.length > 0 ? resolvedConfig.formulas : defaultFormulas;
 
+    const normalizeFormulaNumber = (value: any, fallback: number) => {
+      if (typeof value === 'number' && Number.isFinite(value)) {
+        return value;
+      }
+      if (typeof value === 'string') {
+        const match = value.match(/\d+/);
+        if (match) {
+          const parsed = parseInt(match[0], 10);
+          if (Number.isFinite(parsed)) {
+            return parsed;
+          }
+        }
+      }
+      return fallback;
+    };
+
+    const parseTariffNumber = (value: any) => {
+      if (typeof value === 'number' && Number.isFinite(value)) {
+        return value;
+      }
+      if (typeof value === 'string') {
+        const cleaned = value.replace(/[^\d.-]/g, '');
+        const parsed = parseFloat(cleaned);
+        return Number.isFinite(parsed) ? parsed : 0;
+      }
+      return 0;
+    };
+
+    const normalizePlacesTariffs = (tariffs: any[]) =>
+      tariffs
+        .map((tariff) => ({
+          ...tariff,
+          places: parseTariffNumber(tariff?.places),
+          prime: parseTariffNumber(tariff?.prime),
+        }))
+        .filter((tariff) => tariff.places > 0 && tariff.prime >= 0)
+        .sort((a, b) => a.places - b.places);
+
     const selectedFormula = this.parseFormulaSelection(
       vehicleData.formula_name,
       resolvedConfig.defaultFormula ?? 1
     );
-    const formula = formulas.find(f => f.formula === selectedFormula) ?? formulas[0];
+    const normalizedFormulas = formulas.map((formula) => ({
+      ...formula,
+      formula: normalizeFormulaNumber((formula as any).formula, selectedFormula),
+      placesTariffs: Array.isArray((formula as any).placesTariffs) ? (formula as any).placesTariffs : [],
+    }));
+
+    const formula = normalizedFormulas.find(f => f.formula === selectedFormula) ?? normalizedFormulas[0];
     if (!formula) {
       return 0;
     }
@@ -461,19 +505,20 @@ class CoverageTarificationService {
       this.parseNumber(vehicleData.nb_places) ??
       5;
 
-    const defaultTariffs = defaultFormulas.find(f => f.formula === formula.formula)?.placesTariffs ?? [];
-    const placesTariffs =
+    const defaultTariffs = defaultFormulas.find(f => f.formula === selectedFormula)?.placesTariffs ?? [];
+    const rawPlacesTariffs =
       (formula as IPTFormulaConfig).placesTariffs && (formula as IPTFormulaConfig).placesTariffs!.length > 0
         ? (formula as IPTFormulaConfig).placesTariffs!
         : defaultTariffs;
+    const placesTariffs = normalizePlacesTariffs(rawPlacesTariffs);
 
     if (!placesTariffs.length) {
-      return formula.prime ?? 0;
+      return 0;
     }
 
     const applicable =
       placesTariffs.find(tariff => seats <= tariff.places) ?? placesTariffs[placesTariffs.length - 1];
-    return applicable?.prime ?? formula.prime ?? 0;
+    return applicable?.prime ?? 0;
   }
 
   private parseFormulaSelection(formulaName?: string | number | null, defaultFormula = 1): number {
@@ -483,7 +528,15 @@ class CoverageTarificationService {
 
     if (typeof formulaName === 'string' && formulaName.trim().length > 0) {
       const raw = formulaName.trim();
-      const numeric = /^-?\d+$/.test(raw) ? parseInt(raw, 10) : parseInt(raw.replace('formula_', ''), 10);
+      const numeric = /^-?\d+$/.test(raw)
+        ? parseInt(raw, 10)
+        : (() => {
+            const match = raw.match(/\d+/);
+            if (match) {
+              return parseInt(match[0], 10);
+            }
+            return parseInt(raw.replace('formula_', ''), 10);
+          })();
       if (!Number.isNaN(numeric)) {
         return numeric;
       }
