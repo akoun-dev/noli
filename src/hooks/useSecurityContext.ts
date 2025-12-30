@@ -53,22 +53,47 @@ export const useSecurityContext = () => {
     generateDeviceFingerprint()
   }, [])
 
-  // Récupérer les informations IP
+  // Récupérer les informations IP avec timeout et fallback
   const fetchIPInfo = useCallback(async () => {
     try {
-      const response = await fetch('https://ipapi.co/json/')
+      // Add timeout to prevent hanging
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 5000) // 5 second timeout
+
+      const response = await fetch('https://ipapi.co/json/', {
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/json',
+        }
+      })
+      clearTimeout(timeoutId)
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`)
+      }
+
       const data = await response.json()
 
       setSecurityContext(prev => ({
         ...prev,
         ipInfo: {
           ip: data.ip,
-          country: data.country_name,
+          country: data.country_name || data.country,
           city: data.city
         }
       }))
     } catch (error) {
-      console.warn('Could not fetch IP info:', error)
+      // Silently fail - IP info is optional for security
+      if ((error as Error).name === 'AbortError') {
+        console.warn('IP API request timeout - using default security context')
+      } else {
+        console.warn('Could not fetch IP info:', error)
+      }
+      // Set empty IP info as fallback
+      setSecurityContext(prev => ({
+        ...prev,
+        ipInfo: {}
+      }))
     }
   }, [])
 

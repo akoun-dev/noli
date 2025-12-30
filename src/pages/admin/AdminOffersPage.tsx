@@ -625,19 +625,31 @@ export const AdminOffersPage: React.FC = () => {
                               <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto">
                                 <DialogHeader>
                                   <DialogTitle>Détails de l'offre</DialogTitle>
+                                  <DialogDescription>
+                                    Consultez toutes les informations détaillées de cette offre d'assurance.
+                                  </DialogDescription>
                                 </DialogHeader>
                                 <OfferDetails offer={offer} />
                               </DialogContent>
                             </Dialog>
                             <Dialog open={isEditDialogOpen && selectedOffer === offer} onOpenChange={(open) => { setIsEditDialogOpen(open); if (!open) setSelectedOffer(null); }}>
-                              <DialogTrigger asChild>
-                                <Button variant="outline" size="sm" onClick={() => setSelectedOffer(offer)} className="h-8 w-8 p-0 sm:h-auto sm:w-auto sm:p-2">
-                                  <Edit className="h-3 w-3" />
-                                </Button>
-                              </DialogTrigger>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedOffer(offer);
+                                  setIsEditDialogOpen(true);
+                                }}
+                                className="h-8 w-8 p-0 sm:h-auto sm:w-auto sm:p-2"
+                              >
+                                <Edit className="h-3 w-3" />
+                              </Button>
                               <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto">
                                 <DialogHeader>
                                   <DialogTitle>Modifier l'offre</DialogTitle>
+                                  <DialogDescription>
+                                    Modifiez les informations de l'offre d'assurance.
+                                  </DialogDescription>
                                 </DialogHeader>
                                 <OfferForm
                                   offer={selectedOffer}
@@ -823,6 +835,9 @@ export const AdminOffersPage: React.FC = () => {
         <DialogContent className="max-w-[95vw] sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Confirmer la suppression</DialogTitle>
+            <DialogDescription>
+              Cette action est irréversible et supprimera définitivement l'offre.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <p>Êtes-vous sûr de vouloir supprimer l'offre "{selectedOffer?.title}"?</p>
@@ -852,6 +867,9 @@ export const AdminOffersPage: React.FC = () => {
         <DialogContent className="max-w-[95vw] sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Dupliquer l'offre</DialogTitle>
+            <DialogDescription>
+              Créez une copie de cette offre avec les mêmes caractéristiques.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <p>Voulez-vous créer une copie de l'offre "{selectedOffer?.title}"?</p>
