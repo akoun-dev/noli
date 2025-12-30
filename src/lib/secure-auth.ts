@@ -56,7 +56,9 @@ export class SecureAuthService {
       'supabase.auth.refreshToken',
       'supabase.auth.accessToken',
       'sb-access-token',
-      'sb-refresh-token'
+      'sb-refresh-token',
+      'auth_token',  // Ancien apiClient
+      'user_data'    // Ancien apiClient
     ];
 
     let cleanedCount = 0;
@@ -79,7 +81,14 @@ export class SecureAuthService {
   validateSecureStorage(): boolean {
     try {
       // Vérifier que nous n'utilisons plus localStorage pour les tokens
-      const hasLegacyTokens = localStorage.getItem('supabase.auth.token') !== null;
+      const legacyKeys = [
+        'supabase.auth.token',
+        'supabase.auth.refreshToken',
+        'supabase.auth.accessToken',
+        'auth_token',
+        'user_data'
+      ];
+      const hasLegacyTokens = legacyKeys.some(key => localStorage.getItem(key) !== null);
 
       if (hasLegacyTokens) {
         logger.warn('Legacy tokens still found in localStorage - security risk');

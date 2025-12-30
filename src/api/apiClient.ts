@@ -1,5 +1,6 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 import { logger } from '@/lib/logger';
+import { supabase } from '@/lib/supabase';
 
 // Types
 export interface ApiResponse<T = any> {
@@ -58,11 +59,15 @@ class ApiClient {
   private setupInterceptors() {
     // Request interceptor
     this.instance.interceptors.request.use(
-      (config) => {
-        // Add auth token if available
-        const token = localStorage.getItem('auth_token');
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
+      async (config) => {
+        // 🔒 SÉCURITÉ : Get auth token from Supabase session (not localStorage)
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.access_token) {
+            config.headers.Authorization = `Bearer ${session.access_token}`;
+          }
+        } catch (e) {
+          logger.warn('Failed to get Supabase session for API request:', e);
         }
 
         // Add request ID for tracking
@@ -176,9 +181,10 @@ class ApiClient {
   }
 
   private handleUnauthorized() {
-    // Clear auth token and redirect to login
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('user_data');
+    // 🔒 SÉCURITÉ : Use Supabase signOut instead of clearing localStorage
+    supabase.auth.signOut().catch((e) => {
+      logger.error('Error signing out:', e);
+    });
 
     // Redirect to login page if not already there
     if (!window.location.pathname.includes('/auth/connexion')) {

@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 
 export type InsurerOfferInput = {
   name: string;
-  type: 'Tiers Simple' | 'Tiers +' | 'Tous Risques';
+  type: 'tiers_simple' | 'tiers_plus' | 'tous_risques';
   price: number; // monthly price baseline
   coverage: string;
   description: string;
@@ -17,9 +17,15 @@ export type InsurerOfferInput = {
 };
 
 const typeToContract: Record<string, string> = {
-  'Tiers Simple': 'basic',
-  'Tiers +': 'third_party_plus',
-  'Tous Risques': 'all_risks',
+  'tiers_simple': 'basic',
+  'tiers_plus': 'third_party_plus',
+  'tous_risques': 'all_risks',
+};
+
+const contractToType: Record<string, string> = {
+  'basic': 'tiers_simple',
+  'third_party_plus': 'tiers_plus',
+  'all_risks': 'tous_risques',
 };
 
 async function getCurrentInsurerId(): Promise<string | null> {

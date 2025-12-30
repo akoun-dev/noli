@@ -57,14 +57,18 @@ export const AdminOffersPage: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
-  
+
+  // Dialog states
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+
   // Data states
   const [offers, setOffers] = useState<Offer[]>([]);
   const [insurers, setInsurers] = useState<Insurer[]>([]);
   const [offerAnalytics, setOfferAnalytics] = useState<OfferAnalytics[]>([]);
   const [offerStats, setOfferStats] = useState<OfferStats | null>(null);
   const [apiCategories, setApiCategories] = useState<Array<{ value: string; label: string }>>([]);
-  
+
   // UI states
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -293,7 +297,7 @@ export const AdminOffersPage: React.FC = () => {
               className="hidden"
             />
           </label>
-          <Dialog>
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
               <Button className="w-full sm:w-auto">
                 <Plus className="h-4 w-4 mr-2" />
@@ -307,7 +311,14 @@ export const AdminOffersPage: React.FC = () => {
                   Remplissez les informations ci-dessous pour créer une nouvelle offre d'assurance.
                 </DialogDescription>
               </DialogHeader>
-              <OfferForm insurers={insurers} categories={categories} />
+              <OfferForm
+                insurers={insurers}
+                categories={categories}
+                onSuccess={() => {
+                  setIsCreateDialogOpen(false);
+                  loadData();
+                }}
+              />
             </DialogContent>
           </Dialog>
         </div>
@@ -618,7 +629,7 @@ export const AdminOffersPage: React.FC = () => {
                                 <OfferDetails offer={offer} />
                               </DialogContent>
                             </Dialog>
-                            <Dialog>
+                            <Dialog open={isEditDialogOpen && selectedOffer === offer} onOpenChange={(open) => { setIsEditDialogOpen(open); if (!open) setSelectedOffer(null); }}>
                               <DialogTrigger asChild>
                                 <Button variant="outline" size="sm" onClick={() => setSelectedOffer(offer)} className="h-8 w-8 p-0 sm:h-auto sm:w-auto sm:p-2">
                                   <Edit className="h-3 w-3" />
@@ -628,7 +639,16 @@ export const AdminOffersPage: React.FC = () => {
                                 <DialogHeader>
                                   <DialogTitle>Modifier l'offre</DialogTitle>
                                 </DialogHeader>
-                                <OfferForm offer={selectedOffer} insurers={insurers} categories={categories} />
+                                <OfferForm
+                                  offer={selectedOffer}
+                                  insurers={insurers}
+                                  categories={categories}
+                                  onSuccess={() => {
+                                    setIsEditDialogOpen(false);
+                                    setSelectedOffer(null);
+                                    loadData();
+                                  }}
+                                />
                               </DialogContent>
                             </Dialog>
                             <Button
@@ -858,7 +878,7 @@ export const AdminOffersPage: React.FC = () => {
 };
 
 // Offer Form Component
-const OfferForm: React.FC<{ offer?: any; insurers: any[]; categories: any[] }> = ({ offer, insurers, categories }) => {
+const OfferForm: React.FC<{ offer?: any; insurers: any[]; categories: any[]; onSuccess?: () => void }> = ({ offer, insurers, categories, onSuccess }) => {
   const [formData, setFormData] = useState({
     title: offer?.title || '',
     description: offer?.description || '',
@@ -927,8 +947,6 @@ const OfferForm: React.FC<{ offer?: any; insurers: any[]; categories: any[] }> =
   };
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [selectedOffer, setSelectedOffer] = useState<any>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -987,10 +1005,9 @@ const OfferForm: React.FC<{ offer?: any; insurers: any[]; categories: any[] }> =
         await offerService.createOffer(transformedData);
         toast.success('Offre créée avec succès');
       }
-      
-      setIsCreateDialogOpen(false);
-      setSelectedOffer(null);
-      // The parent component will handle data refresh
+
+      // Call onSuccess callback to close dialog and refresh data
+      onSuccess?.();
     } catch (err) {
       logger.error('Error saving offer:', err);
       toast.error(offer ? 'Erreur lors de la mise à jour de l\'offre' : 'Erreur lors de la création de l\'offre');

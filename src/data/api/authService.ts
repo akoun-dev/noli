@@ -466,6 +466,8 @@ export class AuthService {
         'supabase.auth.refreshToken',
         'noli_user',  // Cache utilisateur sensible
         'noli_token',  // Token d'authentification
+        'auth_token',  // Token d'authentification (ancien apiClient)
+        'user_data',  // Données utilisateur (ancien apiClient)
         'user_preferences',  // Préférences sensibles
         'auth_cache',  // Cache d'authentification
         'role_cache',  // Cache de rôles

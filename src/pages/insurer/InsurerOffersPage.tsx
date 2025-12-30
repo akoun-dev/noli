@@ -57,6 +57,9 @@ export const InsurerOffersPage: React.FC = () => {
   const updateMutation = useUpdateInsurerOffer();
   const deleteMutation = useDeleteInsurerOffer();
 
+  // Computed isSubmitting state based on mutations
+  const isSubmitting = createMutation.isPending || updateMutation.isPending;
+
   const filteredOffers = serverOffers.map((o: any) => ({
     id: o.id,
     name: o.name,
@@ -85,7 +88,7 @@ export const InsurerOffersPage: React.FC = () => {
   const handleCreateOffer = async (data: any) => {
     await createMutation.mutateAsync({
       name: data.name,
-      type: data.type,
+      type: data.contract_type,
       price: data.price,
       coverage: data.coverage,
       description: data.description,
@@ -96,6 +99,7 @@ export const InsurerOffersPage: React.FC = () => {
       conditions: data.conditions || '',
       isActive: true,
     });
+    // Modal will be closed by the OfferFormModal after successful submission
   };
 
   const handleEditOffer = async (data: any) => {
@@ -104,7 +108,7 @@ export const InsurerOffersPage: React.FC = () => {
       id: editingOffer.id,
       input: {
         name: data.name,
-        type: data.type,
+        type: data.contract_type,
         price: data.price,
         description: data.description,
         deductible: data.deductible,
@@ -112,6 +116,7 @@ export const InsurerOffersPage: React.FC = () => {
         features: data.features || [],
       } as any,
     });
+    // Modal will be closed by the OfferFormModal after successful submission
     setEditingOffer(null);
   };
 
@@ -135,7 +140,7 @@ export const InsurerOffersPage: React.FC = () => {
   const exportOffers = () => {
     const csvContent = [
       ['Nom', 'Type', 'Prix (FCFA)', 'Couverture', 'Statut', 'Clients', 'Conversion', 'Description'],
-      ...offers.map(offer => [
+      ...filteredOffers.map(offer => [
         offer.name,
         offer.type,
         offer.price.toString(),
@@ -236,7 +241,7 @@ export const InsurerOffersPage: React.FC = () => {
               <div>
                 <p className="text-sm font-medium text-gray-600">Clients totaux</p>
                 <p className="text-2xl font-bold">
-                  {offers.reduce((sum, offer) => sum + offer.customers, 0)}
+                  {filteredOffers.reduce((sum, offer) => sum + offer.customers, 0)}
                 </p>
               </div>
               <div className="bg-purple-100 p-2 rounded-lg">
@@ -254,7 +259,9 @@ export const InsurerOffersPage: React.FC = () => {
               <div>
                 <p className="text-sm font-medium text-gray-600">Taux conversion moyen</p>
                 <p className="text-2xl font-bold">
-                  {Math.round(offers.reduce((sum, offer) => sum + offer.conversion, 0) / offers.length)}%
+                  {filteredOffers.length > 0
+                    ? Math.round(filteredOffers.reduce((sum, offer) => sum + offer.conversion, 0) / filteredOffers.length)
+                    : 0}%
                 </p>
               </div>
               <div className="bg-orange-100 p-2 rounded-lg">
@@ -394,15 +401,17 @@ export const InsurerOffersPage: React.FC = () => {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onSubmit={handleCreateOffer}
+        isSubmitting={isSubmitting}
       />
 
       <OfferFormModal
         isOpen={!!editingOffer}
         onClose={() => setEditingOffer(null)}
         onSubmit={handleEditOffer}
+        isSubmitting={isSubmitting}
         initialData={editingOffer ? {
           name: editingOffer.name,
-          type: editingOffer.type,
+          contract_type: editingOffer.type === 'Tiers Simple' ? 'tiers_simple' : editingOffer.type === 'Tiers +' ? 'tiers_plus' : 'tous_risques',
           price: editingOffer.price,
           coverage: editingOffer.coverage,
           description: editingOffer.description,

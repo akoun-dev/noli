@@ -49,8 +49,9 @@ type OfferFormData = z.infer<typeof offerSchema>;
 interface OfferFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: OfferFormData) => void;
+  onSubmit: (data: OfferFormData) => Promise<void>;
   initialData?: Partial<OfferFormData>;
+  isSubmitting?: boolean;
 }
 
 const INSURANCE_TYPES = [
@@ -89,6 +90,7 @@ export const OfferFormModal: React.FC<OfferFormModalProps> = ({
   onClose,
   onSubmit,
   initialData,
+  isSubmitting = false,
 }) => {
   const [newFeature, setNewFeature] = useState('');
   const [features, setFeatures] = useState<string[]>(initialData?.features || []);
@@ -124,8 +126,8 @@ export const OfferFormModal: React.FC<OfferFormModalProps> = ({
     form.setValue('features', updatedFeatures);
   };
 
-  const handleSubmit = (data: OfferFormData) => {
-    onSubmit({ ...data, features });
+  const handleSubmit = async (data: OfferFormData) => {
+    await onSubmit({ ...data, features });
     onClose();
     form.reset();
   };
@@ -391,11 +393,11 @@ export const OfferFormModal: React.FC<OfferFormModalProps> = ({
             </div>
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={onClose}>
+              <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
                 Annuler
               </Button>
-              <Button type="submit">
-                {initialData ? 'Mettre à jour' : 'Créer l\'offre'}
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? 'Enregistrement...' : initialData ? 'Mettre à jour' : 'Créer l\'offre'}
               </Button>
             </DialogFooter>
           </form>
