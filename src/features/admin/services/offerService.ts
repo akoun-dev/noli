@@ -443,6 +443,146 @@ class OfferService {
       throw error;
     }
   }
+
+  async getAllOffersAnalytics(): Promise<OfferAnalytics[]> {
+    try {
+      // Get all offers
+      const { data: offers, error: offersError } = await supabase
+        .from('insurance_offers')
+        .select('id, name')
+        .eq('is_active', true);
+
+      if (offersError) {
+        logger.error('Error fetching offers for analytics:', offersError);
+        throw new Error(`Erreur lors du chargement des analytics: ${offersError.message}`);
+      }
+
+      // Return mock analytics data for each offer
+      // In production, this would come from an analytics table
+      const analytics: OfferAnalytics[] = (offers || []).map(offer => ({
+        offerId: offer.id,
+        period: '30d',
+        views: 0,
+        clicks: 0,
+        conversions: 0,
+        revenue: 0,
+        ctr: 0,
+        conversionRate: 0,
+        averagePosition: 0
+      }));
+
+      return analytics;
+    } catch (error) {
+      logger.error('Unexpected error in getAllOffersAnalytics:', error);
+      throw error;
+    }
+  }
+
+  async exportOffers(format: 'csv' | 'xlsx' | 'json' = 'csv'): Promise<Blob> {
+    try {
+      const offers = await this.getOffers();
+
+      if (format === 'csv') {
+        const headers = ['ID', 'Nom', 'Assureur', 'Catégorie', 'Prix Min', 'Prix Max', 'Statut', 'Date de création'];
+        const rows = offers.map(offer => [
+          offer.id,
+          offer.name,
+          offer.insurer?.name || 'N/A',
+          offer.category?.name || 'N/A',
+          offer.price_min?.toString() || 'N/A',
+          offer.price_max?.toString() || 'N/A',
+          offer.is_active ? 'Actif' : 'Inactif',
+          new Date(offer.created_at).toLocaleDateString('fr-FR')
+        ]);
+
+        const csvContent = [headers, ...rows]
+          .map(row => row.map(cell => `"${cell}"`).join(','))
+          .join('\n');
+
+        return new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      }
+
+      if (format === 'json') {
+        const jsonContent = JSON.stringify(offers, null, 2);
+        return new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
+      }
+
+      // For xlsx, we would need a library like xlsx - return CSV as fallback
+      const headers = ['ID', 'Nom', 'Assureur', 'Catégorie', 'Prix Min', 'Prix Max', 'Statut'];
+      const rows = offers.map(offer => [
+        offer.id,
+        offer.name,
+        offer.insurer?.name || 'N/A',
+        offer.category?.name || 'N/A',
+        offer.price_min?.toString() || 'N/A',
+        offer.price_max?.toString() || 'N/A',
+        offer.is_active ? 'Actif' : 'Inactif'
+      ]);
+
+      const csvContent = [headers, ...rows]
+        .map(row => row.map(cell => `"${cell}"`).join(','))
+        .join('\n');
+
+      return new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    } catch (error) {
+      logger.error('Unexpected error in exportOffers:', error);
+      throw error;
+    }
+  }
+
+  async importOffers(file: File): Promise<{ success: number; errors: string[] }> {
+    try {
+      const text = await file.text();
+      const lines = text.split('\n').filter(line => line.trim());
+
+      if (lines.length < 2) {
+        throw new Error('Fichier vide ou invalide');
+      }
+
+      // Skip header row
+      const dataLines = lines.slice(1);
+      let success = 0;
+      const errors: string[] = [];
+
+      for (let i = 0; i < dataLines.length; i++) {
+        try {
+          const values = dataLines[i].split(',').map(v => v.replace(/^"|"$/g, '').trim());
+
+          if (values.length < 4) {
+            errors.push(`Ligne ${i + 2}: Données insuffisantes`);
+            continue;
+          }
+
+          const [name, insurerId, categoryId, priceMin, priceMax] = values;
+
+          if (!name || !insurerId) {
+            errors.push(`Ligne ${i + 2}: Nom ou assureur manquant`);
+            continue;
+          }
+
+          await this.createOffer({
+            insurer_id: insurerId,
+            category_id: categoryId || undefined,
+            name,
+            price_min: priceMin ? parseFloat(priceMin) : undefined,
+            price_max: priceMax ? parseFloat(priceMax) : undefined,
+            deductible: 0,
+            is_active: true,
+            features: []
+          });
+
+          success++;
+        } catch (err) {
+          errors.push(`Ligne ${i + 2}: ${err instanceof Error ? err.message : 'Erreur inconnue'}`);
+        }
+      }
+
+      return { success, errors };
+    } catch (error) {
+      logger.error('Unexpected error in importOffers:', error);
+      throw error;
+    }
+  }
 }
 
 export const offerService = new OfferService();
