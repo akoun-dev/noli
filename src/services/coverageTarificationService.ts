@@ -434,7 +434,7 @@ class CoverageTarificationService {
         placesTariffs: [
           { places: 3, prime: 18000, label: '3 places' },
           { places: 4, prime: 16000, label: '4 places' },
-          { places: 5, prime: 30800, label: '5 places' },
+          { places: 5, prime: 30600, label: '5 places' },
           { places: 6, prime: 32000, label: '6 places' },
           { places: 7, prime: 33000, label: '7 places' },
           { places: 8, prime: 35000, label: '8 places' },
@@ -513,6 +513,11 @@ class CoverageTarificationService {
     const placesTariffs = normalizePlacesTariffs(rawPlacesTariffs);
 
     if (!placesTariffs.length) {
+      return 0;
+    }
+
+    const maxPlaces = placesTariffs[placesTariffs.length - 1]?.places ?? 0;
+    if (maxPlaces > 0 && seats > maxPlaces) {
       return 0;
     }
 
@@ -894,18 +899,48 @@ class CoverageTarificationService {
   ): Promise<number> {
     let fallbackPremium = 0;
     let coverageDetails: { metadata?: Record<string, any> } | null = null;
+    let calculationMethod: CalculationMethodType | undefined;
     try {
       coverageDetails = await this.getCoverageDetailsWithMetadata(coverageId);
+      calculationMethod = coverageDetails?.metadata?.calculationMethod as CalculationMethodType | undefined;
       fallbackPremium = this.calculatePremiumFromMetadata(coverageDetails?.metadata, vehicleData);
+
+      // Debug logging for fallback calculation
+      console.log('[calculateCoveragePremium] Coverage:', coverageId, {
+        hasDetails: !!coverageDetails,
+        hasMetadata: !!coverageDetails?.metadata,
+        calculationMethod,
+        fallbackPremium,
+        vehicleData
+      });
     } catch (metaError) {
       logger.warn('calculateCoveragePremium: unable to load coverage metadata', metaError);
+      console.warn('[calculateCoveragePremium] Metadata error:', metaError);
     }
 
     try {
+      // If we have a valid fallback from metadata and it's not a simple fixed/free type, use it
+      if (
+        calculationMethod &&
+        calculationMethod !== 'FIXED_AMOUNT' &&
+        calculationMethod !== 'FREE' &&
+        fallbackPremium > 0
+      ) {
+        console.log('[calculateCoveragePremium] Using metadata fallback:', fallbackPremium);
+        return fallbackPremium;
+      }
+
       const canCallRpc = await this.canInvokeProtectedRpc();
       if (!canCallRpc) {
+        console.log('[calculateCoveragePremium] Cannot call RPC, using fallback:', fallbackPremium);
         return fallbackPremium || 0;
       }
+
+      console.log('[calculateCoveragePremium] Calling RPC with:', {
+        coverageId,
+        vehicleData,
+        quoteData
+      });
 
       const { data, error } = await (supabase.rpc as any)('calculate_coverage_premium', {
         p_coverage_id: coverageId,
@@ -913,14 +948,30 @@ class CoverageTarificationService {
         p_quote_data: quoteData
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('[calculateCoveragePremium] RPC error:', {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint
+        });
+        throw error;
+      }
+
+      console.log('[calculateCoveragePremium] RPC result:', {
+        data,
+        dataType: typeof data,
+        fallbackPremium
+      });
+
       if (typeof data === 'number' && data > 0) {
         return data;
       }
       return fallbackPremium || 0;
     } catch (error) {
-      console.error('Error calculating coverage premium:', error);
+      console.error('[calculateCoveragePremium] Error:', error);
       if (fallbackPremium > 0) {
+        console.log('[calculateCoveragePremium] Falling back to metadata premium:', fallbackPremium);
         return fallbackPremium;
       }
       throw error;

@@ -598,7 +598,7 @@ export class PricingService {
         placesTariffs: [
           { places: 3, prime: 18000, label: '3 places' },
           { places: 4, prime: 16000, label: '4 places' },
-          { places: 5, prime: 30800, label: '5 places' },
+          { places: 5, prime: 30600, label: '5 places' },
           { places: 6, prime: 32000, label: '6 places' },
           { places: 7, prime: 33000, label: '7 places' },
           { places: 8, prime: 35000, label: '8 places' }
@@ -691,6 +691,20 @@ export class PricingService {
     const placesTariffs = normalizePlacesTariffs(rawPlacesTariffs);
 
     // Trouver le tarif correspondant au nombre de places
+    const maxPlaces = placesTariffs[placesTariffs.length - 1]?.places ?? 0;
+    if (maxPlaces > 0 && vehiclePlaces > maxPlaces) {
+      return {
+        amount: 0,
+        details: {
+          error: 'Vehicle places above supported range',
+          selectedFormula,
+          vehiclePlaces,
+          availableTariffs: placesTariffs.length,
+          maxPlaces
+        }
+      };
+    }
+
     const applicableTariff = placesTariffs.find(tariff => tariff.places >= vehiclePlaces)
       || placesTariffs[placesTariffs.length - 1]; // Utiliser le tarif le plus élevé si aucune correspondance exacte
 

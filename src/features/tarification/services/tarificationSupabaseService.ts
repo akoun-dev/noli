@@ -343,7 +343,7 @@ class TarificationSupabaseService {
               encodeURIComponent(
                 'id,coverage_id,fixed_amount,formula_name,conditions,coverage:coverages(id,name,calculation_type)'
               ),
-            'not.fixed_amount=is.null',
+            'fixed_amount=not.is.null',
             'is_active=eq.true',
           ].join('&')
         const resp = await fetch(url, { headers })

@@ -397,6 +397,13 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
       ...(formulaName && { formula_name: formulaName }),
     }
 
+    console.log('[handleCoverageChange] Processing:', {
+      coverageId,
+      isIncluded,
+      formulaName,
+      calculationPayload
+    })
+
     let localPremium = 0
     if (isIncluded) {
       try {
@@ -407,19 +414,24 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
 
         if (premium && premium > 0) {
           localPremium = premium
-          console.log(`Calculated premium for ${coverageId}:`, premium)
+          console.log(`[handleCoverageChange] Calculated premium for ${coverageId}:`, premium)
+        } else {
+          console.warn(`[handleCoverageChange] Premium is zero or null for ${coverageId}`)
         }
       } catch (premiumError) {
-        console.error('Error calculating individual premium:', premiumError)
+        console.error('[handleCoverageChange] Error calculating individual premium:', premiumError)
+        // Don't set coverageErrors for calculation issues - just use fallback
       }
     }
 
     if (!localPremium || localPremium <= 0) {
       localPremium = getEstimatedPremium(coverageId)
       if (localPremium > 0) {
-        console.log(`Using estimated premium for ${coverageId}:`, localPremium)
+        console.log(`[handleCoverageChange] Using estimated premium for ${coverageId}:`, localPremium)
       } else {
-        console.warn(`No premium found for coverage ${coverageId}`)
+        console.warn(`[handleCoverageChange] No premium found for coverage ${coverageId}`)
+        // Use 0 as fallback - don't block the UI
+        localPremium = 0
       }
     }
 
@@ -436,10 +448,12 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
     setTotalPremium(localTotal)
 
     if (!tempQuoteId || tempQuoteId === 'temp-quote-id') {
+      console.log('[handleCoverageChange] No temp quote, skipping server update')
       return
     }
 
     try {
+      console.log('[handleCoverageChange] Adding coverage to quote:', tempQuoteId)
       await coverageTarificationService.addCoverageToQuote(
         tempQuoteId,
         coverageId,
@@ -463,10 +477,9 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
       const mergedTotal = Object.values(mergedBreakdown).reduce((sum, value) => sum + value, 0)
       setTotalPremium(mergedTotal)
     } catch (error) {
-      console.error('Error updating coverage:', error)
-      setCoverageErrors(['Erreur lors de la mise à jour des garanties'])
-      // Revert state change on error
-      setSelectedCoverages((prev) => ({ ...prev, [coverageId]: !isIncluded }))
+      console.error('[handleCoverageChange] Error updating coverage:', error)
+      // Don't show error to user or revert state - local calculation succeeded
+      console.log('[handleCoverageChange] Using local calculation only')
     }
   }
 

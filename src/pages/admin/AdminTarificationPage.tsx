@@ -136,6 +136,106 @@ const getTierceCapDefault = () => ({
   options: TIERCE_CAP_DEFAULT_CONFIG.options.map(option => ({ ...option })),
 });
 
+// Helper pour IC_IPT_FORMULA (Individuelle Conducteur)
+const getICIPTDefault = () => ({
+  defaultFormula: 1,
+  formulas: [
+    {
+      formula: 1,
+      capitalDeces: 1000000,
+      capitalInvalidite: 2000000,
+      fraisMedicaux: 100000,
+      prime: 5500,
+      label: 'Formule 1'
+    },
+    {
+      formula: 2,
+      capitalDeces: 3000000,
+      capitalInvalidite: 6000000,
+      fraisMedicaux: 400000,
+      prime: 8400,
+      label: 'Formule 2'
+    },
+    {
+      formula: 3,
+      capitalDeces: 5000000,
+      capitalInvalidite: 10000000,
+      fraisMedicaux: 500000,
+      prime: 15900,
+      label: 'Formule 3'
+    }
+  ]
+});
+
+// Helper pour IPT_PLACES_FORMULA (Individuelle Personnes Transportées)
+const getIPTPlacesDefault = () => ({
+  defaultFormula: 1,
+  formulas: [
+    {
+      formula: 1,
+      capitalDeces: 1000000,
+      capitalInvalidite: 2000000,
+      fraisMedicaux: 100000,
+      prime: 0,
+      label: 'Formule 1',
+      placesTariffs: [
+        { places: 3, prime: 8400, label: '3 places' },
+        { places: 4, prime: 10200, label: '4 places' },
+        { places: 5, prime: 16000, label: '5 places' },
+        { places: 6, prime: 17800, label: '6 places' },
+        { places: 7, prime: 19600, label: '7 places' },
+        { places: 8, prime: 25400, label: '8 places' }
+      ]
+    },
+    {
+      formula: 2,
+      capitalDeces: 3000000,
+      capitalInvalidite: 6000000,
+      fraisMedicaux: 400000,
+      prime: 0,
+      label: 'Formule 2',
+      placesTariffs: [
+        { places: 3, prime: 10000, label: '3 places' },
+        { places: 4, prime: 11000, label: '4 places' },
+        { places: 5, prime: 17000, label: '5 places' },
+        { places: 6, prime: 18000, label: '6 places' },
+        { places: 7, prime: 27000, label: '7 places' },
+        { places: 8, prime: 32000, label: '8 places' }
+      ]
+    },
+    {
+      formula: 3,
+      capitalDeces: 5000000,
+      capitalInvalidite: 10000000,
+      fraisMedicaux: 500000,
+      prime: 0,
+      label: 'Formule 3',
+      placesTariffs: [
+        { places: 3, prime: 18000, label: '3 places' },
+        { places: 4, prime: 16000, label: '4 places' },
+        { places: 5, prime: 30600, label: '5 places' },
+        { places: 6, prime: 32000, label: '6 places' },
+        { places: 7, prime: 33000, label: '7 places' },
+        { places: 8, prime: 35000, label: '8 places' }
+      ]
+    }
+  ]
+});
+
+// Helper pour MTPL_TARIFF (Responsabilité Civile)
+const getMTPLDefault = () => ({
+  essence_1_2: 68675,
+  essence_3_6: 87885,
+  essence_7_9: 102345,
+  essence_10_11: 124693,
+  essence_12_plus: 137058,
+  diesel_1: 68675,
+  diesel_2_4: 87885,
+  diesel_5_6: 102345,
+  diesel_7_8: 124693,
+  diesel_9_plus: 137058,
+});
+
 const getDynamicCoverageDefault = (method: CalculationMethodType): FireTheftConfig => {
   if (method === 'THEFT_ARMED') {
     return { ...THEFT_ARMED_DEFAULT_CONFIG };
@@ -587,6 +687,33 @@ export const AdminTarificationPage: React.FC = () => {
           ...(payload.parameters ?? {}),
           glassRoofConfig: payload.parameters?.glassRoofConfig ?? getGlassRoofDefault(),
         }
+      } else if (method === 'IC_IPT_FORMULA') {
+        payload.rate = undefined
+        payload.minValue = undefined
+        payload.maxValue = undefined
+        payload.fixedAmount = undefined
+        payload.parameters = {
+          ...(payload.parameters ?? {}),
+          icIptConfig: payload.parameters?.icIptConfig ?? getICIPTDefault(),
+        }
+      } else if (method === 'IPT_PLACES_FORMULA') {
+        payload.rate = undefined
+        payload.minValue = undefined
+        payload.maxValue = undefined
+        payload.fixedAmount = undefined
+        payload.parameters = {
+          ...(payload.parameters ?? {}),
+          iptConfig: payload.parameters?.iptConfig ?? getIPTPlacesDefault(),
+        }
+      } else if (method === 'MTPL_TARIFF') {
+        payload.rate = undefined
+        payload.minValue = undefined
+        payload.maxValue = undefined
+        payload.fixedAmount = undefined
+        payload.parameters = {
+          ...(payload.parameters ?? {}),
+          mtplTariffConfig: payload.parameters?.mtplTariffConfig ?? getMTPLDefault(),
+        }
       } else if (['RATE_ON_SI', 'RATE_ON_NEW_VALUE', 'CONDITIONAL_RATE'].includes(method as string)) {
         payload.fixedAmount = undefined
       }
@@ -715,6 +842,33 @@ export const AdminTarificationPage: React.FC = () => {
         payload.parameters = {
           ...(payload.parameters ?? {}),
           glassRoofConfig: payload.parameters?.glassRoofConfig ?? getGlassRoofDefault(),
+        }
+      } else if (method === 'IC_IPT_FORMULA') {
+        payload.rate = undefined
+        payload.minValue = undefined
+        payload.maxValue = undefined
+        payload.fixedAmount = undefined
+        payload.parameters = {
+          ...(payload.parameters ?? {}),
+          icIptConfig: payload.parameters?.icIptConfig ?? getICIPTDefault(),
+        }
+      } else if (method === 'IPT_PLACES_FORMULA') {
+        payload.rate = undefined
+        payload.minValue = undefined
+        payload.maxValue = undefined
+        payload.fixedAmount = undefined
+        payload.parameters = {
+          ...(payload.parameters ?? {}),
+          iptConfig: payload.parameters?.iptConfig ?? getIPTPlacesDefault(),
+        }
+      } else if (method === 'MTPL_TARIFF') {
+        payload.rate = undefined
+        payload.minValue = undefined
+        payload.maxValue = undefined
+        payload.fixedAmount = undefined
+        payload.parameters = {
+          ...(payload.parameters ?? {}),
+          mtplTariffConfig: payload.parameters?.mtplTariffConfig ?? getMTPLDefault(),
         }
       } else if (['RATE_ON_SI', 'RATE_ON_NEW_VALUE', 'CONDITIONAL_RATE'].includes(method as string)) {
         payload.fixedAmount = undefined
@@ -1160,6 +1314,33 @@ export const AdminTarificationPage: React.FC = () => {
         nextParams = removeFireTheftConfig(nextParams);
         nextParams = removeGlassRoofConfig(nextParams);
         nextParams = removeGlassStandardConfig(nextParams);
+      } else if (value === 'IC_IPT_FORMULA') {
+        nextParams = {
+          ...(nextParams ?? {}),
+          icIptConfig: nextParams?.icIptConfig ?? getICIPTDefault(),
+        };
+        nextParams = removeFireTheftConfig(nextParams);
+        nextParams = removeGlassRoofConfig(nextParams);
+        nextParams = removeGlassStandardConfig(nextParams);
+        nextParams = removeTierceCapConfig(nextParams);
+      } else if (value === 'IPT_PLACES_FORMULA') {
+        nextParams = {
+          ...(nextParams ?? {}),
+          iptConfig: nextParams?.iptConfig ?? getIPTPlacesDefault(),
+        };
+        nextParams = removeFireTheftConfig(nextParams);
+        nextParams = removeGlassRoofConfig(nextParams);
+        nextParams = removeGlassStandardConfig(nextParams);
+        nextParams = removeTierceCapConfig(nextParams);
+      } else if (value === 'MTPL_TARIFF') {
+        nextParams = {
+          ...(nextParams ?? {}),
+          mtplTariffConfig: nextParams?.mtplTariffConfig ?? getMTPLDefault(),
+        };
+        nextParams = removeFireTheftConfig(nextParams);
+        nextParams = removeGlassRoofConfig(nextParams);
+        nextParams = removeGlassStandardConfig(nextParams);
+        nextParams = removeTierceCapConfig(nextParams);
       } else {
         nextParams = removeFireTheftConfig(nextParams);
         nextParams = removeGlassRoofConfig(nextParams);
@@ -1957,7 +2138,7 @@ export const AdminTarificationPage: React.FC = () => {
         placesTariffs: [
           { places: 3, prime: 18000, label: '3 places' },
           { places: 4, prime: 16000, label: '4 places' },
-          { places: 5, prime: 30800, label: '5 places' },
+          { places: 5, prime: 30600, label: '5 places' },
           { places: 6, prime: 32000, label: '6 places' },
           { places: 7, prime: 33000, label: '7 places' },
           { places: 8, prime: 35000, label: '8 places' }

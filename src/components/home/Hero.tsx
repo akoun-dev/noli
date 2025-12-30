@@ -174,7 +174,7 @@ const Hero = () => {
                 <img
                   src="/img/zebre_plein_sans_fond.png"
                   alt="Mascotte NOLI"
-                  className="mx-auto block h-[23rem] w-[23rem] md:h-[29rem] md:w-[29rem] object-contain"
+                  className="mx-auto block h-[23rem] w-[23rem] md:h-[29rem] md:w-[29rem] object-contain -scale-x-100"
                 />
               </div>
             </div>
