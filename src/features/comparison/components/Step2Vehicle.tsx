@@ -208,15 +208,43 @@ const Step2Vehicle: React.FC<Step2VehicleProps> = ({ onNext, onBack }: Step2Vehi
         </Button>
       </div>
 
-      <div className='space-y-2 rounded-xl border border-border/60 bg-muted/20 p-4 text-sm leading-relaxed'>
-        <p>Faire un devis d’assurance auto en ligne avec NOLI, c’est un peu comme choisir le bon trajet pour éviter les embouteillages : simple, rapide, efficace… et ça vous fait gagner du temps et de l’argent.</p>
-        <p>Chez NOLI, on vous aide à comparer les assurances auto disponibles en Côte d’Ivoire pour trouver la formule qui protège vraiment votre véhicule, sans exploser votre budget. Que vous rouliez dans une petite citadine, un SUV familial, un taxi ou un véhicule de société, vous pouvez enfin voir clair dans les offres du marché.</p>
-        <p>Et comme NOLI fonctionne en toute transparence :</p>
-        <ul className='list-disc space-y-1 pl-5 marker:text-primary'>
-          <li>➡️ NOLI est gratuit pour ses utilisateurs il n’y a aucun coup cachés.</li>
-          <li>➡️ Si vous sélectionnez un devis, c’est l’assureur qui vous rappellera directement pour finaliser le contrat.</li>
-        </ul>
-        <p className='font-semibold'>NOLI simplifie, vous décidez.</p>
+      {/* Info text en bas */}
+      <div className='space-y-3 rounded-xl border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950/30 p-5 text-sm leading-relaxed'>
+        <p className='font-semibold text-green-900 dark:text-green-100'>⚙️ Comment fonctionne une simulation de devis auto NOLI ?</p>
+        <p className='text-green-800 dark:text-green-200'>
+          Très simple. La simulation se fait en deux étapes :
+        </p>
+
+        <div className='space-y-2'>
+          <p className='font-medium text-green-900 dark:text-green-100'>1️⃣ Les informations sur votre véhicule</p>
+          <ul className='list-disc space-y-1 pl-5 marker:text-green-600 dark:marker:text-green-400'>
+            <li className='text-green-800 dark:text-green-200'>Nombre de places</li>
+            <li className='text-green-800 dark:text-green-200'>Année de mise en circulation</li>
+            <li className='text-green-800 dark:text-green-200'>Type de carburant</li>
+            <li className='text-green-800 dark:text-green-200'>Valeur estimée du véhicule</li>
+          </ul>
+        </div>
+
+        <div className='space-y-2'>
+          <p className='font-medium text-green-900 dark:text-green-100'>2️⃣ Vos informations de conducteur</p>
+          <ul className='list-disc space-y-1 pl-5 marker:text-green-600 dark:marker:text-green-400'>
+            <li className='text-green-800 dark:text-green-200'>Bonus / malus éventuel</li>
+            <li className='text-green-800 dark:text-green-200'>Usage du véhicule (perso, pro, mixte)</li>
+          </ul>
+        </div>
+
+        <p className='text-green-800 dark:text-green-200 mt-2'>
+          Le simulateur analyse ces éléments et vous propose des offres adaptées.
+        </p>
+        <p className='text-green-800 dark:text-green-200'>
+          En quelques clics, vous évaluez ce qui correspond vraiment à votre usage : trajets quotidiens, longues distances, transport professionnel, ou simple véhicule secondaire.
+        </p>
+
+        <div className='border-t border-green-200 dark:border-green-800 pt-3 mt-3'>
+          <p className='font-semibold text-green-900 dark:text-green-100'>🗂️ Quels documents prévoir pour finaliser un devis ?</p>
+          <p className='text-green-800 dark:text-green-200 mt-1'>Pas besoin de RIB sur NOLI :</p>
+          <p className='text-green-800 dark:text-green-200'>👉 Le paiement se fait directement avec la compagnie d'assurance après leur appel.</p>
+        </div>
       </div>
 
 
