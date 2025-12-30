@@ -169,18 +169,10 @@ class TarificationSupabaseService {
     code?: string
     description?: string
   }): Promise<string> {
-    // Generate a stable, URL-safe id from name or provided code
-    const baseCode = (input.code && input.code.trim().length > 0 ? input.code : input.name)
-      .trim()
-      .toUpperCase()
-      .replace(/[^A-Z0-9]/g, '')
-      .slice(0, 32)
-    const randomSuffix = Math.random().toString(36).slice(2, 6).toUpperCase()
-    const id = (baseCode || 'GAR') + '_' + randomSuffix
-    logger.api('createCoverage: input', { input: { ...input, code: baseCode }, generatedId: id })
+    logger.api('createCoverage: input', { input })
 
+    // Don't specify id - let the database generate it automatically
     const base = {
-      id,
       // type is nullable since migration 015; we omit it for dynamic coverages
       name: input.name,
       calculation_type: this.mapCalcMethodToDb(input.calculationMethod),
