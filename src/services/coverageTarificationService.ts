@@ -150,8 +150,12 @@ class CoverageTarificationService {
       return this.coverageMetadataCache.get(coverageId)!;
     }
 
-    const buildEntry = (metadata: Record<string, any> | undefined) => {
-      const entry = { metadata: metadata ?? undefined };
+    const buildEntry = (metadata: Record<string, any> | undefined, calculationType?: string | null) => {
+      const normalized = metadata ? { ...metadata } : {};
+      if (calculationType && !normalized.calculationMethod) {
+        normalized.calculationMethod = calculationType;
+      }
+      const entry = { metadata: Object.keys(normalized).length > 0 ? normalized : undefined };
       this.coverageMetadataCache.set(coverageId, entry);
       return entry;
     };
@@ -159,7 +163,7 @@ class CoverageTarificationService {
     const fetchWithSupabase = async () => {
       const { data, error } = await supabase
         .from('coverages')
-        .select('id, metadata')
+        .select('id, metadata, calculation_type')
         .eq('id', coverageId)
         .single();
 
@@ -167,13 +171,16 @@ class CoverageTarificationService {
         throw error;
       }
 
-      return buildEntry((data?.metadata as Record<string, any> | undefined) ?? undefined);
+      return buildEntry(
+        (data?.metadata as Record<string, any> | undefined) ?? undefined,
+        (data as any)?.calculation_type
+      );
     };
 
     const fetchWithPublicClient = async () => {
       const { data, error } = await supabasePublicFetch
-        .from<{ id: string; metadata?: Record<string, any> }>('coverages')
-        .select('id, metadata')
+        .from<{ id: string; metadata?: Record<string, any>; calculation_type?: string | null }>('coverages')
+        .select('id, metadata, calculation_type')
         .eq('id', coverageId)
         .single();
 
@@ -181,7 +188,7 @@ class CoverageTarificationService {
         throw error || new Error('Coverage not found');
       }
 
-      return buildEntry(data.metadata);
+      return buildEntry(data.metadata, data.calculation_type ?? null);
     };
 
     const canUseAuthClient = await this.canInvokeProtectedRpc();

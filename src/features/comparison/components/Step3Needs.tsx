@@ -635,7 +635,6 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
               setTotalPremium(total)
               setPremiumBreakdown(breakdown)
             }}
-            canCalculate={!!user}
             onCoveragesLoaded={setAvailableCoverages}
           />
         )}
