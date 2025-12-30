@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useCallback, useMemo } from 'react';
 
 export interface PersonalInfo {
   firstName: string;
@@ -53,46 +53,50 @@ const initialFormData: CompareFormData = {
 export const CompareProvider = ({ children }: { children: ReactNode }) => {
   const [formData, setFormData] = useState<CompareFormData>(initialFormData);
 
-  const updatePersonalInfo = (data: Partial<PersonalInfo>) => {
+  const updatePersonalInfo = useCallback((data: Partial<PersonalInfo>) => {
     setFormData(prev => ({
       ...prev,
       personalInfo: { ...prev.personalInfo, ...data }
     }));
-  };
+  }, []);
 
-  const updateVehicleInfo = (data: Partial<VehicleInfo>) => {
+  const updateVehicleInfo = useCallback((data: Partial<VehicleInfo>) => {
     setFormData(prev => ({
       ...prev,
       vehicleInfo: { ...prev.vehicleInfo, ...data }
     }));
-  };
+  }, []);
 
-  const updateInsuranceNeeds = (data: Partial<InsuranceNeeds>) => {
+  const updateInsuranceNeeds = useCallback((data: Partial<InsuranceNeeds>) => {
     setFormData(prev => ({
       ...prev,
       insuranceNeeds: { ...prev.insuranceNeeds, ...data }
     }));
-  };
+  }, []);
 
-  const setCurrentStep = (step: number) => {
-    setFormData(prev => ({ ...prev, currentStep: step }));
-  };
+  const setCurrentStep = useCallback((step: number) => {
+    console.log('setCurrentStep called with:', step);
+    setFormData(prev => {
+      console.log('setCurrentStep updating from', prev.currentStep, 'to', step);
+      return { ...prev, currentStep: step };
+    });
+  }, []);
 
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setFormData(initialFormData);
-  };
+  }, []);
+
+  const contextValue = useMemo(() => ({
+    formData,
+    updatePersonalInfo,
+    updateVehicleInfo,
+    updateInsuranceNeeds,
+    setCurrentStep,
+    resetForm,
+  }), [formData, updatePersonalInfo, updateVehicleInfo, updateInsuranceNeeds, setCurrentStep, resetForm]);
 
   return (
-    <CompareContext.Provider
-      value={{
-        formData,
-        updatePersonalInfo,
-        updateVehicleInfo,
-        updateInsuranceNeeds,
-        setCurrentStep,
-        resetForm,
-      }}
-    >
+    <CompareContext.Provider value={contextValue}>
       {children}
     </CompareContext.Provider>
   );

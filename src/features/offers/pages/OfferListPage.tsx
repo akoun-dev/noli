@@ -37,7 +37,6 @@ import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Slider } from '@/components/ui/slider'
 import OfferCompareModal from '@/features/offers/components/OfferCompareModal'
-import EnhancedCompareModal from '@/features/offers/components/EnhancedCompareModal'
 import QuoteOptionsModal from '@/features/offers/components/QuoteOptionsModal'
 import SaveSearchModal from '@/features/offers/components/SaveSearchModal'
 import CustomerReviews from '@/features/offers/components/CustomerReviews'
@@ -329,7 +328,6 @@ const Results = () => {
     [compareIds, offers]
   )
   const [openCompare, setOpenCompare] = useState(false)
-  const [useEnhancedCompare, setUseEnhancedCompare] = useState(true)
   const toggleExpandedOffer = (id: string) => {
     setExpandedOffers((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
@@ -1205,27 +1203,11 @@ const Results = () => {
                   <Trash2 className='w-4 h-4 mr-2' />
                   Vider
                 </Button>
-                <div className='flex items-center gap-2'>
-                  <Button
-                    variant={useEnhancedCompare ? 'default' : 'outline'}
-                    size='sm'
-                    onClick={() => setUseEnhancedCompare(true)}
-                  >
-                    Comparaison avancée
-                  </Button>
-                  <Button
-                    variant={!useEnhancedCompare ? 'default' : 'outline'}
-                    size='sm'
-                    onClick={() => setUseEnhancedCompare(false)}
-                  >
-                    Tableau
-                  </Button>
-                </div>
                 <Button size='sm' onClick={() => setOpenCompare(true)}>
                   Comparer
                 </Button>
-                </div>
               </div>
+            </div>
             </Card>
 
             {selectedGuarantees.length > 0 && (
@@ -1249,27 +1231,16 @@ const Results = () => {
           </div>
       )}
 
-      {/* Original Compare Modal */}
-      {!useEnhancedCompare && (
-       <OfferCompareModal
-          open={openCompare}
-          onOpenChange={setOpenCompare}
-          offers={selectedOffers.map((o) => ({
-            ...o,
-            franchise: o.deductible.toString(),
-            features: o.features && o.features.length > 0 ? o.features : selectedGuarantees,
-          }))}
-        />
-      )}
-
-      {/* Enhanced Compare Modal */}
-      {useEnhancedCompare && (
-        <EnhancedCompareModal
-          open={openCompare}
-          onOpenChange={setOpenCompare}
-          offers={selectedOffers}
-        />
-      )}
+      {/* Compare Modal */}
+      <OfferCompareModal
+        open={openCompare}
+        onOpenChange={setOpenCompare}
+        offers={selectedOffers.map((o) => ({
+          ...o,
+          franchise: o.deductible.toString(),
+          features: o.features && o.features.length > 0 ? o.features : selectedGuarantees,
+        }))}
+      />
 
       {/* Quote Options Modal */}
       {selectedOfferForQuote && (

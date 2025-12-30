@@ -56,10 +56,13 @@ const CompareForm = () => {
   };
 
   const handleBack = () => {
+    console.log('handleBack called, currentStep:', currentStep);
     if (currentStep > 1) {
       setDirection('prev');
       setCurrentStep(currentStep - 1);
       window.scrollTo({ top: 0, behavior: "smooth" });
+    } else {
+      console.warn('Cannot go back from step', currentStep);
     }
   };
 

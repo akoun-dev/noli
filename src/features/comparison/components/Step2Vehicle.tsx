@@ -51,7 +51,7 @@ const Step2Vehicle: React.FC<Step2VehicleProps> = ({ onNext, onBack }: Step2Vehi
     onNext()
   }
 
-  const seatOptions = ['2', '4', '5', '7', '9+']
+  const seatOptions = ['3', '4', '5', '6', '7', '8', '+8']
 
   const formatAmount = (value: string) => {
     const digits = value.replace(/[^\d]/g, '')

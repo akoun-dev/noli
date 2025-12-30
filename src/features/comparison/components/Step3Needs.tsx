@@ -710,14 +710,19 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
 
       {/* Floating Action Buttons - Mobile optimized */}
       <div className={cn(
-        "sticky bottom-0 bg-background/95 backdrop-blur-sm border-t p-4 -mx-4",
-        isMobile ? "gap-2 flex-col" : "flex gap-4 max-w-5xl mx-auto"
+        "flex gap-4 pt-4 mt-2",
+        isMobile ? "gap-2 flex-col" : ""
       )}>
         <Button
           type='button'
           variant='outline'
           size={isMobile ? "default" : "lg"}
-          onClick={onBack}
+          onClick={(e) => {
+            console.log('Back button clicked directly')
+            e.preventDefault()
+            e.stopPropagation()
+            onBack()
+          }}
           className={cn(
             "flex items-center justify-center gap-2",
             isMobile ? "w-full" : "flex-1"
