@@ -446,10 +446,10 @@ class OfferService {
 
   async getAllOffersAnalytics(): Promise<OfferAnalytics[]> {
     try {
-      // Get all offers
+      // Get all offers with actual statistics
       const { data: offers, error: offersError } = await supabase
         .from('insurance_offers')
-        .select('id, name')
+        .select('id, name, is_active')
         .eq('is_active', true);
 
       if (offersError) {
@@ -457,19 +457,39 @@ class OfferService {
         throw new Error(`Erreur lors du chargement des analytics: ${offersError.message}`);
       }
 
-      // Return mock analytics data for each offer
-      // In production, this would come from an analytics table
-      const analytics: OfferAnalytics[] = (offers || []).map(offer => ({
-        offerId: offer.id,
-        period: '30d',
-        views: 0,
-        clicks: 0,
-        conversions: 0,
-        revenue: 0,
-        ctr: 0,
-        conversionRate: 0,
-        averagePosition: 0
-      }));
+      // Calculate actual statistics from quote_offers table
+      const analytics: OfferAnalytics[] = await Promise.all(
+        (offers || []).map(async (offer) => {
+          // Get quote offers for this offer
+          const { data: quoteOffers, error: quoteError } = await supabase
+            .from('quote_offers')
+            .select('status, created_at')
+            .eq('offer_id', offer.id);
+
+          if (quoteError) {
+            logger.warn(`Error fetching quote offers for ${offer.id}:`, quoteError);
+          }
+
+          const views = quoteOffers?.length || 0;
+          const clicks = views; // Treat views as clicks for now
+          const conversions = quoteOffers?.filter(qo => qo.status === 'APPROVED').length || 0;
+          const revenue = 0; // Revenue would need to be calculated from policies
+          const ctr = views > 0 ? (clicks / views) * 100 : 0;
+          const conversionRate = views > 0 ? (conversions / views) * 100 : 0;
+
+          return {
+            offerId: offer.id,
+            period: '30d',
+            views,
+            clicks,
+            conversions,
+            revenue,
+            ctr,
+            conversionRate,
+            averagePosition: 0, // Not tracked in current schema
+          };
+        })
+      );
 
       return analytics;
     } catch (error) {

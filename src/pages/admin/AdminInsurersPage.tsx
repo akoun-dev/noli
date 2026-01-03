@@ -75,6 +75,7 @@ const AdminInsurersPage = () => {
   const [editingInsurer, setEditingInsurer] = useState<Insurer | null>(null)
   const [viewingInsurer, setViewingInsurer] = useState<Insurer | null>(null)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [mutationError, setMutationError] = useState<string | null>(null)
 
   // React Query hooks
   const { data: insurers = [], isLoading, error, refetch } = useInsurers()
@@ -130,20 +131,30 @@ const AdminInsurersPage = () => {
   }
 
   const handleCreateInsurer = (data: InsurerFormData) => {
+    setMutationError(null)
     createInsurer.mutate(data, {
       onSuccess: () => {
         setIsCreateDialogOpen(false)
+        setMutationError(null)
+      },
+      onError: (error) => {
+        setMutationError(error?.message || 'Erreur lors de la création de l\'assureur')
       },
     })
   }
 
   const handleUpdateInsurer = (data: InsurerFormData) => {
     if (editingInsurer) {
+      setMutationError(null)
       updateInsurer.mutate(
         { id: editingInsurer.id, data },
         {
           onSuccess: () => {
             setEditingInsurer(null)
+            setMutationError(null)
+          },
+          onError: (error) => {
+            setMutationError(error?.message || 'Erreur lors de la mise à jour de l\'assureur')
           },
         }
       )
@@ -225,7 +236,13 @@ const AdminInsurersPage = () => {
             )}
             Exporter
           </Button>
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          <Dialog
+            open={isCreateDialogOpen}
+            onOpenChange={(open) => {
+              setIsCreateDialogOpen(open)
+              if (!open) setMutationError(null)
+            }}
+          >
             <DialogTrigger asChild>
               <Button>
                 <Plus className='h-4 w-4 mr-2' />
@@ -236,7 +253,11 @@ const AdminInsurersPage = () => {
               <DialogHeader>
                 <DialogTitle>Ajouter un nouvel assureur</DialogTitle>
               </DialogHeader>
-              <InsurerForm onSubmit={handleCreateInsurer} isLoading={createInsurer.isPending} />
+              <InsurerForm
+                onSubmit={handleCreateInsurer}
+                isLoading={createInsurer.isPending}
+                error={mutationError}
+              />
             </DialogContent>
           </Dialog>
         </div>
@@ -520,7 +541,12 @@ const AdminInsurersPage = () => {
       {/* Edit Insurer Dialog */}
       <Dialog
         open={!!editingInsurer && !showDeleteDialog}
-        onOpenChange={() => setEditingInsurer(null)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditingInsurer(null)
+            setMutationError(null)
+          }
+        }}
       >
         <DialogContent className='responsive-modal-lg'>
           <DialogHeader>
@@ -532,6 +558,7 @@ const AdminInsurersPage = () => {
               onSubmit={handleUpdateInsurer}
               isLoading={updateInsurer.isPending}
               onCancel={() => setEditingInsurer(null)}
+              error={mutationError}
             />
           )}
         </DialogContent>
@@ -581,7 +608,8 @@ const InsurerForm: React.FC<{
   onSubmit: (data: InsurerFormData) => void
   isLoading?: boolean
   onCancel?: () => void
-}> = ({ insurer, onSubmit, isLoading, onCancel }) => {
+  error?: string | null
+}> = ({ insurer, onSubmit, isLoading, onCancel, error }) => {
   const [formData, setFormData] = useState<InsurerFormData>({
     companyName: insurer?.companyName || '',
     email: insurer?.email || '',
@@ -600,6 +628,12 @@ const InsurerForm: React.FC<{
 
   return (
     <form onSubmit={handleSubmit} className='space-y-4'>
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className='h-4 w-4' />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
       <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
         <div>
           <Label htmlFor='companyName'>Nom de l'entreprise *</Label>

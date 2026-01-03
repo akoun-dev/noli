@@ -1,4 +1,5 @@
-import { apiClient } from '@/api/apiClient';
+import { supabase } from '@/lib/supabase';
+import { logger } from '@/lib/logger';
 
 export interface Review {
   id: string;
@@ -74,25 +75,27 @@ export interface ModerationAction {
   note?: string;
 }
 
-class ModerationService {
-  private baseURL = '/admin/moderation';
+// NOTE: Moderation features (reviews, reports, content moderation) are not fully implemented yet
+// This service provides basic functionality using Supabase
+// For advanced features, create reviews, reports, and content_moderation tables
 
+const NOT_IMPLEMENTED_ERROR = new Error(
+  'Moderation feature is not implemented yet. Please create the necessary database tables first.'
+);
+
+class ModerationService {
   // Reviews
   async getReviews(status?: Review['status']): Promise<Review[]> {
-    const response = await apiClient.get(`${this.baseURL}/reviews`, {
-      params: { status }
-    });
-    return response.data;
+    logger.warn('Reviews feature not implemented - returning empty list');
+    return [];
   }
 
   async getReviewById(id: string): Promise<Review> {
-    const response = await apiClient.get(`${this.baseURL}/reviews/${id}`);
-    return response.data;
+    throw NOT_IMPLEMENTED_ERROR;
   }
 
   async moderateReview(id: string, action: ModerationAction): Promise<Review> {
-    const response = await apiClient.post(`${this.baseURL}/reviews/${id}/moderate`, action);
-    return response.data;
+    throw NOT_IMPLEMENTED_ERROR;
   }
 
   async approveReview(id: string, note?: string): Promise<Review> {
@@ -112,7 +115,7 @@ class ModerationService {
   }
 
   async deleteReview(id: string): Promise<void> {
-    await apiClient.delete(`${this.baseURL}/reviews/${id}`);
+    throw NOT_IMPLEMENTED_ERROR;
   }
 
   async searchReviews(query: string, filters?: {
@@ -120,28 +123,22 @@ class ModerationService {
     flagged?: boolean;
     rating?: number;
   }): Promise<Review[]> {
-    const response = await apiClient.get(`${this.baseURL}/reviews/search`, {
-      params: { q: query, ...filters }
-    });
-    return response.data;
+    logger.warn('Reviews feature not implemented - returning empty list');
+    return [];
   }
 
   // Reports
   async getReports(status?: Report['status'], priority?: Report['priority']): Promise<Report[]> {
-    const response = await apiClient.get(`${this.baseURL}/reports`, {
-      params: { status, priority }
-    });
-    return response.data;
+    logger.warn('Reports feature not implemented - returning empty list');
+    return [];
   }
 
   async getReportById(id: string): Promise<Report> {
-    const response = await apiClient.get(`${this.baseURL}/reports/${id}`);
-    return response.data;
+    throw NOT_IMPLEMENTED_ERROR;
   }
 
   async handleReport(id: string, action: ModerationAction): Promise<Report> {
-    const response = await apiClient.post(`${this.baseURL}/reports/${id}/handle`, action);
-    return response.data;
+    throw NOT_IMPLEMENTED_ERROR;
   }
 
   async investigateReport(id: string, assignedTo?: string): Promise<Report> {
@@ -157,10 +154,7 @@ class ModerationService {
   }
 
   async assignReport(id: string, assignedTo: string): Promise<Report> {
-    const response = await apiClient.patch(`${this.baseURL}/reports/${id}/assign`, {
-      assignedTo
-    });
-    return response.data;
+    throw NOT_IMPLEMENTED_ERROR;
   }
 
   async searchReports(query: string, filters?: {
@@ -168,83 +162,157 @@ class ModerationService {
     status?: Report['status'];
     priority?: Report['priority'];
   }): Promise<Report[]> {
-    const response = await apiClient.get(`${this.baseURL}/reports/search`, {
-      params: { q: query, ...filters }
-    });
-    return response.data;
+    logger.warn('Reports feature not implemented - returning empty list');
+    return [];
   }
 
   // Content moderation
   async getContent(status?: ContentItem['status']): Promise<ContentItem[]> {
-    const response = await apiClient.get(`${this.baseURL}/content`, {
-      params: { status }
-    });
-    return response.data;
+    logger.warn('Content moderation feature not implemented - returning empty list');
+    return [];
   }
 
   async getContentById(id: string): Promise<ContentItem> {
-    const response = await apiClient.get(`${this.baseURL}/content/${id}`);
-    return response.data;
+    throw NOT_IMPLEMENTED_ERROR;
   }
 
   async approveContent(id: string): Promise<ContentItem> {
-    const response = await apiClient.post(`${this.baseURL}/content/${id}/approve`);
-    return response.data;
+    throw NOT_IMPLEMENTED_ERROR;
   }
 
   async rejectContent(id: string, reason: string): Promise<ContentItem> {
-    const response = await apiClient.post(`${this.baseURL}/content/${id}/reject`, {
-      reason
-    });
-    return response.data;
+    throw NOT_IMPLEMENTED_ERROR;
   }
 
   async requestContentReview(id: string): Promise<ContentItem> {
-    const response = await apiClient.post(`${this.baseURL}/content/${id}/request-review`);
-    return response.data;
+    throw NOT_IMPLEMENTED_ERROR;
   }
 
   async updateContent(id: string, content: string): Promise<ContentItem> {
-    const response = await apiClient.put(`${this.baseURL}/content/${id}`, {
-      content
-    });
-    return response.data;
+    throw NOT_IMPLEMENTED_ERROR;
   }
 
   async validateContent(id: string): Promise<{ issues: string[]; isValid: boolean }> {
-    const response = await apiClient.post(`${this.baseURL}/content/${id}/validate`);
-    return response.data;
+    throw NOT_IMPLEMENTED_ERROR;
   }
 
-  // Audit logs
-  async getAuditLogs(severity?: AuditLog['severity'], limit?: number): Promise<AuditLog[]> {
-    const response = await apiClient.get(`${this.baseURL}/audit`, {
-      params: { severity, limit }
-    });
-    return response.data;
+  // Audit logs - use admin_audit_log table
+  async getAuditLogs(severity?: AuditLog['severity'], limit: number = 50): Promise<AuditLog[]> {
+    try {
+      let query = supabase
+        .from('admin_audit_log')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(limit);
+
+      if (severity) {
+        query = query.eq('severity', severity);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        throw error;
+      }
+
+      return (
+        data?.map((log) => ({
+          id: log.id,
+          action: log.action,
+          target: log.entity_type || 'unknown',
+          user: log.performed_by || 'system',
+          timestamp: log.created_at,
+          details: log.changes?.toString() || '',
+          ipAddress: log.ip_address || '',
+          severity: (log.severity as AuditLog['severity']) || 'info',
+        })) || []
+      );
+    } catch (error) {
+      logger.error('Error getting audit logs:', error);
+      throw error;
+    }
   }
 
   async getAuditLogsByUser(userId: string): Promise<AuditLog[]> {
-    const response = await apiClient.get(`${this.baseURL}/audit/user/${userId}`);
-    return response.data;
+    try {
+      const { data, error } = await supabase
+        .from('admin_audit_log')
+        .select('*')
+        .eq('performed_by', userId)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (error) {
+        throw error;
+      }
+
+      return (
+        data?.map((log) => ({
+          id: log.id,
+          action: log.action,
+          target: log.entity_type || 'unknown',
+          user: log.performed_by || 'system',
+          timestamp: log.created_at,
+          details: log.changes?.toString() || '',
+          ipAddress: log.ip_address || '',
+          severity: (log.severity as AuditLog['severity']) || 'info',
+        })) || []
+      );
+    } catch (error) {
+      logger.error('Error getting audit logs by user:', error);
+      throw error;
+    }
   }
 
   async getAuditLogsByAction(action: string): Promise<AuditLog[]> {
-    const response = await apiClient.get(`${this.baseURL}/audit/action`, {
-      params: { action }
-    });
-    return response.data;
+    try {
+      const { data, error } = await supabase
+        .from('admin_audit_log')
+        .select('*')
+        .eq('action', action)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (error) {
+        throw error;
+      }
+
+      return (
+        data?.map((log) => ({
+          id: log.id,
+          action: log.action,
+          target: log.entity_type || 'unknown',
+          user: log.performed_by || 'system',
+          timestamp: log.created_at,
+          details: log.changes?.toString() || '',
+          ipAddress: log.ip_address || '',
+          severity: (log.severity as AuditLog['severity']) || 'info',
+        })) || []
+      );
+    } catch (error) {
+      logger.error('Error getting audit logs by action:', error);
+      throw error;
+    }
   }
 
   async createAuditLog(entry: Omit<AuditLog, 'id' | 'timestamp'>): Promise<AuditLog> {
-    const response = await apiClient.post(`${this.baseURL}/audit`, entry);
-    return response.data;
+    throw NOT_IMPLEMENTED_ERROR;
   }
 
   // Statistics
   async getModerationStats(): Promise<ModerationStats> {
-    const response = await apiClient.get(`${this.baseURL}/stats`);
-    return response.data;
+    return {
+      pendingReviews: 0,
+      pendingReports: 0,
+      pendingContent: 0,
+      actionsToday: 0,
+      totalReviews: 0,
+      approvedReviews: 0,
+      rejectedReviews: 0,
+      totalReports: 0,
+      resolvedReports: 0,
+      dismissedReports: 0,
+    };
   }
 
   // Export functionality
@@ -253,11 +321,38 @@ class ModerationService {
     format: 'csv' | 'excel' = 'csv',
     filters?: Record<string, unknown>
   ): Promise<Blob> {
-    const response = await apiClient.get(`${this.baseURL}/export/${type}`, {
-      params: { format, ...filters },
-      responseType: 'blob'
-    });
-    return response.data;
+    try {
+      let data: any[] = [];
+
+      switch (type) {
+        case 'audit':
+          const logs = await this.getAuditLogs();
+          data = logs;
+          break;
+        default:
+          throw new Error(`Export type ${type} not implemented`);
+      }
+
+      // Convert to CSV
+      const headers = ['id', 'action', 'target', 'user', 'timestamp', 'details', 'severity'];
+      const csvContent = [
+        headers.join(','),
+        ...data.map((row) =>
+          headers
+            .map((header) => {
+              const value = row[header];
+              const stringValue = value === null || value === undefined ? '' : String(value);
+              return `"${stringValue.replace(/"/g, '""')}"`;
+            })
+            .join(',')
+        ),
+      ].join('\n');
+
+      return new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    } catch (error) {
+      logger.error('Error exporting moderation data:', error);
+      throw error;
+    }
   }
 
   // Bulk actions
@@ -265,22 +360,14 @@ class ModerationService {
     ids: string[],
     action: ModerationAction
   ): Promise<{ success: string[]; failed: string[] }> {
-    const response = await apiClient.post(`${this.baseURL}/reviews/bulk`, {
-      ids,
-      action
-    });
-    return response.data;
+    throw NOT_IMPLEMENTED_ERROR;
   }
 
   async bulkHandleReports(
     ids: string[],
     action: ModerationAction
   ): Promise<{ success: string[]; failed: string[] }> {
-    const response = await apiClient.post(`${this.baseURL}/reports/bulk`, {
-      ids,
-      action
-    });
-    return response.data;
+    throw NOT_IMPLEMENTED_ERROR;
   }
 
   // Auto-moderation settings
@@ -290,8 +377,12 @@ class ModerationService {
     autoRejectThreshold: number;
     autoApproveThreshold: number;
   }> {
-    const response = await apiClient.get(`${this.baseURL}/auto-settings`);
-    return response.data;
+    return {
+      enabled: false,
+      autoFlagKeywords: [],
+      autoRejectThreshold: 5,
+      autoApproveThreshold: 5,
+    };
   }
 
   async updateAutoModerationSettings(settings: {
@@ -300,7 +391,7 @@ class ModerationService {
     autoRejectThreshold: number;
     autoApproveThreshold: number;
   }): Promise<void> {
-    await apiClient.put(`${this.baseURL}/auto-settings`, settings);
+    throw NOT_IMPLEMENTED_ERROR;
   }
 }
 

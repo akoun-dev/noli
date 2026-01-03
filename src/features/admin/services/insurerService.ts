@@ -124,12 +124,16 @@ export const fetchInsurerById = async (id: string): Promise<Insurer> => {
       .from('profiles')
       .select('*')
       .eq('id', id)
-      .eq('role', 'INSURER')
       .single()
 
     if (error) {
       logger.error('Error fetching insurer:', error)
       throw error
+    }
+
+    // Verify the profile has INSURER role
+    if (profile.role !== 'INSURER') {
+      throw new Error(`Profile ${id} is not an insurer (role: ${profile.role})`)
     }
 
     const insurer = mapProfileToInsurer(profile)
