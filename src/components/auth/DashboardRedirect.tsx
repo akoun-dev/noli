@@ -4,7 +4,7 @@ import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import { useEffect, useState } from 'react'
 
 export const DashboardRedirect: React.FC = () => {
-  const { user, isAuthenticated, isLoading } = useAuth()
+  const { user, isAuthenticated, isLoading, isInitializing } = useAuth()
   const [fallbackRoute, setFallbackRoute] = useState<string | null>(null)
 
   useEffect(() => {
@@ -20,7 +20,8 @@ export const DashboardRedirect: React.FC = () => {
     }
   }, [isAuthenticated, user])
 
-  if (isLoading) {
+  // Afficher le loader pendant le chargement OU l'initialisation (récupération du rôle depuis la BD)
+  if (isLoading || isInitializing) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <LoadingSpinner size="lg" />

@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { AdminBreadcrumb } from '@/components/common/BreadcrumbRenderer';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   Users,
   Plus,
@@ -43,6 +44,12 @@ import {
 } from '@/features/admin/services/userService';
 
 export const AdminUsersPage: React.FC = () => {
+  // Récupérer l'état d'authentification pour conditionner les requêtes
+  const { isLoading: authLoading, isInitializing, isAuthenticated, user } = useAuth()
+
+  // Condition pour activer les requêtes : auth terminé PAS en initialisation + utilisateur authentifié + rôle ADMIN
+  const shouldFetch = !authLoading && !isInitializing && isAuthenticated && user?.role === 'ADMIN'
+
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [roleFilter, setRoleFilter] = useState('all');
@@ -56,9 +63,9 @@ export const AdminUsersPage: React.FC = () => {
     search: searchTerm,
     status: statusFilter === 'all' ? undefined : statusFilter,
     role: roleFilter === 'all' ? undefined : roleFilter
-  });
+  }, shouldFetch);
 
-  const { data: stats } = useUserStats();
+  const { data: stats } = useUserStats(shouldFetch);
   const createUser = useCreateUser();
   const updateUser = useUpdateUser();
   const deleteUser = useDeleteUser();

@@ -13,7 +13,16 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
   requiredPermissions,
   redirectTo = '/',
 }) => {
-  const { user, hasPermission } = useAuth();
+  const { user, hasPermission, isLoading, isInitializing } = useAuth();
+
+  // Show loading spinner during initialization or loading
+  if (isLoading || isInitializing) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   // Check if user exists and has allowed role
   if (!user || !allowedRoles.includes(user.role)) {
@@ -22,10 +31,10 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
 
   // Check if user has required permissions
   if (requiredPermissions) {
-    const hasAllPermissions = requiredPermissions.every(permission => 
+    const hasAllPermissions = requiredPermissions.every(permission =>
       hasPermission(permission)
     );
-    
+
     if (!hasAllPermissions) {
       return <Navigate to="/unauthorized" replace />;
     }

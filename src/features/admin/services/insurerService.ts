@@ -72,6 +72,7 @@ const mapProfileToInsurer = (profile: any): Insurer => {
 // API Functions
 export const fetchInsurers = async (): Promise<Insurer[]> => {
   try {
+    logger.auth('🔍 [fetchInsurers] Starting fetch...')
     const { data: profiles, error } = await supabase
       .from('profiles')
       .select('*')
@@ -79,41 +80,60 @@ export const fetchInsurers = async (): Promise<Insurer[]> => {
       .order('created_at', { ascending: false })
 
     if (error) {
-      logger.error('Error fetching insurers:', error)
+      logger.error('🔍 [fetchInsurers] Error fetching profiles:', error)
       throw error
     }
+
+    logger.auth('🔍 [fetchInsurers] Profiles fetched:', profiles?.length || 0)
 
     // Convertir les profils en assureurs et ajouter les statistiques
     const insurers = await Promise.all(
       profiles.map(async (profile) => {
+        logger.auth('🔍 [fetchInsurers] Processing insurer:', profile.company_name || profile.id)
+
         const insurer = mapProfileToInsurer(profile)
 
         // Récupérer le nombre de quotes pour cet assureur
-        const { count: quotesCount } = await supabase
-          .from('quotes')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', profile.id)
+        try {
+          const { count: quotesCount } = await supabase
+            .from('quotes')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', profile.id)
+
+          insurer.quotesCount = quotesCount || 0
+          logger.auth('🔍 [fetchInsurers] Quotes count for', profile.company_name, ':', quotesCount)
+        } catch (err) {
+          logger.warn('🔍 [fetchInsurers] Error fetching quotes for', profile.company_name, ':', err)
+          insurer.quotesCount = 0
+        }
 
         // Récupérer le nombre d'offres
-        const { count: offersCount } = await supabase
-          .from('insurance_offers')
-          .select('*', { count: 'exact', head: true })
-          .eq('insurer_id', profile.id)
+        try {
+          const { count: offersCount } = await supabase
+            .from('insurance_offers')
+            .select('*', { count: 'exact', head: true })
+            .eq('insurer_id', profile.id)
 
-        insurer.quotesCount = quotesCount || 0
-        insurer.offersCount = offersCount || 0
+          insurer.offersCount = offersCount || 0
+          logger.auth('🔍 [fetchInsurers] Offers count for', profile.company_name, ':', offersCount)
+        } catch (err) {
+          logger.warn('🔍 [fetchInsurers] Error fetching offers for', profile.company_name, ':', err)
+          insurer.offersCount = 0
+        }
+
         insurer.conversionRate =
-          quotesCount && quotesCount > 0
-            ? Math.round(((offersCount || 0) / quotesCount) * 10000) / 100
+          insurer.quotesCount && insurer.quotesCount > 0
+            ? Math.round((insurer.offersCount / insurer.quotesCount) * 10000) / 100
             : 0
 
         return insurer
       })
     )
 
+    logger.auth('🔍 [fetchInsurers] Completed, returning', insurers.length, 'insurers')
     return insurers
   } catch (error) {
-    logger.error('Error in fetchInsurers:', error)
+    logger.error('🔍 [fetchInsurers] Error in fetchInsurers:', error)
     throw error
   }
 }
@@ -446,28 +466,36 @@ export const getActiveInsurers = (): Promise<Insurer[]> => {
 }
 
 // React Query Hooks
-export const useInsurers = () => {
+export const useInsurers = (shouldFetch: boolean = true) => {
+  logger.auth('🔍 [useInsurers] Hook called with shouldFetch:', shouldFetch)
   return useQuery({
     queryKey: ['admin-insurers'],
-    queryFn: fetchInsurers,
+    queryFn: async () => {
+      logger.auth('🔍 [useInsurers] Fetching insurers...')
+      const result = await fetchInsurers()
+      logger.auth('🔍 [useInsurers] Fetch result:', { count: result?.length || 0 })
+      return result
+    },
     staleTime: 5 * 60 * 1000, // 5 minutes
+    enabled: shouldFetch,
   })
 }
 
-export const useInsurer = (id: string) => {
+export const useInsurer = (id: string, shouldFetch: boolean = true) => {
   return useQuery({
     queryKey: ['admin-insurer', id],
     queryFn: () => fetchInsurerById(id),
     staleTime: 5 * 60 * 1000,
-    enabled: !!id,
+    enabled: !!id && shouldFetch,
   })
 }
 
-export const useInsurerStats = () => {
+export const useInsurerStats = (shouldFetch: boolean = true) => {
   return useQuery({
     queryKey: ['admin-insurer-stats'],
     queryFn: fetchInsurerStats,
     staleTime: 5 * 60 * 1000,
+    enabled: shouldFetch,
   })
 }
 

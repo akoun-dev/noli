@@ -364,19 +364,21 @@ export const exportUsers = async (filters?: UserFilters): Promise<Blob> => {
 };
 
 // React Query Hooks
-export const useUsers = (filters?: UserFilters) => {
+export const useUsers = (filters?: UserFilters, shouldFetch: boolean = true) => {
   return useQuery({
     queryKey: ['admin-users', filters],
     queryFn: () => fetchUsers(filters),
     staleTime: 5 * 60 * 1000, // 5 minutes
+    enabled: shouldFetch,
   });
 };
 
-export const useUserStats = () => {
+export const useUserStats = (shouldFetch: boolean = true) => {
   return useQuery({
     queryKey: ['admin-user-stats'],
     queryFn: fetchUserStats,
     staleTime: 5 * 60 * 1000, // 5 minutes
+    enabled: shouldFetch,
   });
 };
 

@@ -245,7 +245,7 @@ const getDynamicCoverageDefault = (method: CalculationMethodType): FireTheftConf
 
 export const AdminTarificationPage: React.FC = () => {
   // Important: wait for real authentication before loading data
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, isInitializing } = useAuth();
   const [guarantees, setGuarantees] = useState<Guarantee[]>([]);
   const [tarifFixes, setTarifFixes] = useState<FixedTariffItem[]>([]);
   const [fixedCoverageOptions, setFixedCoverageOptions] = useState<FixedCoverageOption[]>([])
@@ -385,12 +385,13 @@ export const AdminTarificationPage: React.FC = () => {
   });
 
   useEffect(() => {
-    // Load data only when the session is confirmed
+    // Load data only when the session is confirmed AND initialization is complete
     // Avoid triggering when we only have a cached preview user (not authenticated yet)
-    if (!isLoading && isAuthenticated) {
+    // OR when we're still fetching the role from the database
+    if (!isLoading && !isInitializing && isAuthenticated) {
       loadData();
     }
-  }, [isAuthenticated, isLoading]);
+  }, [isAuthenticated, isLoading, isInitializing]);
 
   // Petit utilitaire pour éviter qu'un appel réseau bloque l'écran de chargement
   const withTimeout = async <T,>(promise: Promise<T>, ms = 1500, fallback: T): Promise<T> => {

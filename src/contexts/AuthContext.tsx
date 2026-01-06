@@ -13,6 +13,7 @@ export interface AuthState {
   user: User | null
   isAuthenticated: boolean
   isLoading: boolean
+  isInitializing: boolean  // Nouveau : pour savoir si l'auth est en cours d'init
   permissions: string[]
 }
 
@@ -43,6 +44,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     user: null,
     isAuthenticated: false,
     isLoading: true,
+    isInitializing: true,  // Commence à true, passe à false après l'init
     permissions: [],
   })
 
@@ -60,6 +62,89 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Les permissions sont basées sur le rôle et sont rechargées depuis les métadonnées
     } catch (error) {
       logger.warn('Could not load permissions:', error)
+    }
+  }
+
+  // Fonction pour récupérer le rôle depuis la table profiles
+  // @param userId - L'ID de l'utilisateur
+  // @param fallbackRole - Le rôle à utiliser en cas d'erreur/timeout (généralement depuis user_metadata)
+  const fetchRoleFromProfile = async (userId: string, fallbackRole: string = 'USER'): Promise<string> => {
+    try {
+      // Timeout augmenté à 15 secondes pour éviter les faux positifs
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Timeout fetching role')), 15000)
+      })
+
+      const { data, error } = await Promise.race([
+        supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', userId)
+          .single(),
+        timeoutPromise
+      ]) as any
+
+      if (error) {
+        logger.warn('Could not fetch role from profiles:', error)
+        // 🔒 SÉCURITÉ : Utiliser le rôle du user_metadata comme fallback pour éviter la régression de privilèges
+        logger.auth('Using fallback role from metadata:', fallbackRole)
+        return fallbackRole
+      }
+
+      const dbRole = data?.role || fallbackRole
+      logger.auth('Role fetched from profiles table:', dbRole)
+      return dbRole
+    } catch (error) {
+      logger.warn('Error fetching role from profiles:', error)
+      // 🔒 SÉCURITÉ : En cas d'erreur ou timeout, utiliser le rôle du user_metadata comme fallback
+      logger.auth('Using fallback role from metadata after error:', fallbackRole)
+      return fallbackRole
+    }
+  }
+
+  // Fonction pour synchroniser le rôle avec user_metadata
+  const syncRoleToMetadata = async (userId: string, dbRole: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user && user.user_metadata?.role !== dbRole) {
+        logger.auth('Syncing role to metadata:', { metadataRole: user.user_metadata?.role, dbRole })
+        await supabase.auth.updateUser({
+          data: { role: dbRole }
+        })
+      }
+    } catch (error) {
+      logger.warn('Could not sync role to metadata:', error)
+    }
+  }
+
+  // Fonction pour mettre à jour le rôle depuis la BD et mettre à jour l'état
+  const updateRoleFromDatabase = async (userId: string, currentUser: User) => {
+    try {
+      const dbRole = await fetchRoleFromProfile(userId, currentUser.role)
+
+      // Si le rôle est différent, mettre à jour l'état et synchroniser
+      if (currentUser.role !== dbRole) {
+        logger.auth('Role mismatch detected, updating:', {
+          currentRole: currentUser.role,
+          dbRole
+        })
+
+        // Mettre à jour l'état avec le bon rôle
+        setState((prev) => ({
+          ...prev,
+          user: { ...prev.user!, role: dbRole as 'USER' | 'INSURER' | 'ADMIN' }
+        }))
+
+        // Synchroniser avec user_metadata
+        await syncRoleToMetadata(userId, dbRole)
+
+        return dbRole
+      }
+
+      return currentUser.role
+    } catch (error) {
+      logger.warn('Could not update role from database:', error)
+      return currentUser.role
     }
   }
 
@@ -115,17 +200,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         })
 
         if (session?.user) {
-          // 🔒 SÉCURITÉ : Plus de cache localStorage pour le rôle
-          // Le rôle est récupéré uniquement depuis les métadonnées Supabase (auth.users.user_metadata)
-          // Cela empêche la manipulation du rôle via XSS
+          // 🔒 SÉCURITÉ : Créer l'utilisateur d'abord avec user_metadata
+          // pour éviter le blocage, puis mettre à jour le rôle depuis la BD
+          const metadataRole = session.user.user_metadata?.role || 'USER'
+
           const user: User = {
             id: session.user.id,
             email: session.user.email || '',
             firstName: session.user.user_metadata?.first_name || '',
             lastName: session.user.user_metadata?.last_name || '',
             companyName: session.user.user_metadata?.company || '',
-            // Rôle depuis les métadonnées uniquement - fallback à 'USER' si non défini
-            role: session.user.user_metadata?.role || 'USER',
+            // Rôle depuis les métadonnées temporairement
+            role: metadataRole as 'USER' | 'INSURER' | 'ADMIN',
             phone: session.user.phone || '',
             avatar: session.user.user_metadata?.avatar_url || '',
             createdAt: new Date(session.user.created_at),
@@ -134,16 +220,50 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
           logger.auth('User created from session metadata, role:', user.role)
 
-          logger.auth('Setting authenticated state for:', user.email)
+          // D'abord définir l'état pour éviter le blocage (mais isInitializing reste true)
           setState({
             user,
             isAuthenticated: true,
             isLoading: false,
-            permissions: [], // Sera chargé en arrière-plan
+            isInitializing: true,  // Reste true jusqu'à la récupération du rôle
+            permissions: [],
+          })
+
+          // Puis mettre à jour le rôle depuis la BD
+          fetchRoleFromProfile(session.user.id, metadataRole).then((dbRole) => {
+            logger.auth('🔍 [DEBUG] Role comparison:', { metadataRole, dbRole })
+
+            if (user.role !== dbRole) {
+              logger.auth('🔍 [DEBUG] Updating role from DB:', { from: user.role, to: dbRole })
+
+              // Synchroniser avec user_metadata
+              syncRoleToMetadata(session.user.id, dbRole)
+
+              // Mettre à jour l'état avec le bon rôle
+              setState((prev) => {
+                logger.auth('🔍 [DEBUG] State update - changing role from', prev.user?.role, 'to', dbRole)
+                return {
+                  ...prev,
+                  user: { ...prev.user!, role: dbRole as 'USER' | 'INSURER' | 'ADMIN' }
+                }
+              })
+            }
+
+            // Une fois le rôle récupéré, marquer l'init comme terminée
+            logger.auth('🔍 [DEBUG] Setting isInitializing to FALSE')
+            setState((prev) => {
+              logger.auth('🔍 [DEBUG] State before isInitializing=false:', { isLoading: prev.isLoading, isInitializing: prev.isInitializing, userRole: prev.user?.role })
+              return { ...prev, isInitializing: false }
+            })
+          }).catch((err) => {
+            logger.warn('🔍 [DEBUG] Failed to fetch role from DB:', err)
+            // Même en cas d'erreur, marquer l'init comme terminée pour éviter le blocage
+            logger.auth('🔍 [DEBUG] Setting isInitializing to FALSE (error case)')
+            setState((prev) => ({ ...prev, isInitializing: false }))
           })
 
           // Charger les permissions en arrière-plan
-          loadPermissions(user.id)
+          loadPermissions(session.user.id)
 
         } else {
           // 🔒 SÉCURITÉ : Nettoyer tout cache résiduel du localStorage
@@ -160,6 +280,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             user: null,
             isAuthenticated: false,
             isLoading: false,
+            isInitializing: false,
             permissions: []
           }))
         }
@@ -168,7 +289,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setState((prev) => ({
           user: null,
           isAuthenticated: false,
-          isLoading: false, // <-- Correction: On met isLoading à false ici
+          isLoading: false,
+          isInitializing: false,
           permissions: []
         }))
       }
@@ -190,16 +312,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (event === 'SIGNED_IN' && session?.user) {
         logger.auth('Processing SIGNED_IN event for:', session.user.email)
 
-        // 🔒 SÉCURITÉ : Utiliser uniquement les métadonnées de session
-        // Plus de cache localStorage pour le rôle
+        // 🔒 SÉCURITÉ : Créer l'utilisateur d'abord avec user_metadata
+        // pour éviter le blocage, puis mettre à jour le rôle depuis la BD
+        const metadataRole = session.user.user_metadata?.role || 'USER'
+
         const user: User = {
           id: session.user.id,
           email: session.user.email || '',
           firstName: session.user.user_metadata?.first_name || '',
           lastName: session.user.user_metadata?.last_name || '',
           companyName: session.user.user_metadata?.company || '',
-          // Rôle depuis les métadonnées uniquement
-          role: session.user.user_metadata?.role || 'USER',
+          role: metadataRole as 'USER' | 'INSURER' | 'ADMIN',
           phone: session.user.phone || '',
           avatar: session.user.user_metadata?.avatar_url || '',
           createdAt: new Date(session.user.created_at),
@@ -207,11 +330,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
 
         logger.auth('Setting state from session metadata, role:', user.role)
+
+        // D'abord définir l'état pour éviter le blocage (mais isInitializing reste true)
         setState({
           user,
           isAuthenticated: true,
           isLoading: false,
-          permissions: [], // Sera chargé en arrière-plan
+          isInitializing: true,  // Reste true jusqu'à la récupération du rôle
+          permissions: [],
+        })
+
+        // Puis mettre à jour le rôle depuis la BD en arrière-plan (non bloquant)
+        fetchRoleFromProfile(session.user.id, metadataRole).then((dbRole) => {
+          logger.auth('SIGNED_IN - Role comparison:', { metadataRole, dbRole })
+
+          if (user.role !== dbRole) {
+            logger.auth('Updating role from DB:', { from: user.role, to: dbRole })
+
+            // Synchroniser avec user_metadata
+            syncRoleToMetadata(session.user.id, dbRole)
+
+            // Mettre à jour l'état avec le bon rôle
+            setState((prev) => ({
+              ...prev,
+              user: { ...prev.user!, role: dbRole as 'USER' | 'INSURER' | 'ADMIN' }
+            }))
+          }
+
+          // Une fois le rôle récupéré, marquer l'init comme terminée
+          setState((prev) => ({ ...prev, isInitializing: false }))
+        }).catch((err) => {
+          logger.warn('Failed to fetch role from DB:', err)
+          // Même en cas d'erreur, marquer l'init comme terminée
+          setState((prev) => ({ ...prev, isInitializing: false }))
         })
 
         // Nettoyer tout ancien cache résiduel
@@ -229,6 +380,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           user: null,
           isAuthenticated: false,
           isLoading: false,
+          isInitializing: false,
           permissions: [],
         })
 
@@ -327,6 +479,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         user: response.user,
         isAuthenticated: true,
         isLoading: false,
+        isInitializing: false,
         permissions: [],
       })
 
@@ -344,7 +497,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (error) {
       logger.error('❌ Erreur dans AuthContext.login:', error)
-      setState((prev) => ({ ...prev, isLoading: false }))
+      setState((prev) => ({ ...prev, isLoading: false, isInitializing: false }))
       throw error
     }
   }
@@ -371,12 +524,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         user: response.user,
         isAuthenticated: true,
         isLoading: false,
+        isInitializing: false,
         permissions,
       })
 
       return response.user
     } catch (error) {
-      setState((prev) => ({ ...prev, isLoading: false }))
+      setState((prev) => ({ ...prev, isLoading: false, isInitializing: false }))
       throw error
     }
   }
@@ -398,7 +552,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     // 1) Réinitialiser immédiatement l'état pour refléter la déconnexion dans l'UI (Header, etc.)
-    setState({ user: null, isAuthenticated: false, isLoading: false, permissions: [] })
+    setState({ user: null, isAuthenticated: false, isLoading: false, isInitializing: false, permissions: [] })
 
     // 2) NETTOYAGE SÉCURISÉ mais moins verbeux du stockage
     try {
@@ -587,6 +741,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         user: response.user,
         isAuthenticated: true,
         isLoading: false,
+        isInitializing: false,
         permissions,
       })
     } catch (error) {
@@ -595,6 +750,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         user: null,
         isAuthenticated: false,
         isLoading: false,
+        isInitializing: false,
         permissions: [],
       })
       throw error

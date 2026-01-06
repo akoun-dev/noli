@@ -13,12 +13,17 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({
   requiredPermission,
   redirectTo = '/auth/connexion',
 }) => {
-  const { isAuthenticated, user, isLoading, hasPermission } = useAuth();
+  const { isAuthenticated, user, isLoading, isInitializing, hasPermission } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
   // Handle automatic role-based redirects
   useEffect(() => {
+    // Ne pas faire de redirection pendant l'initialisation de l'auth
+    if (isInitializing) {
+      return
+    }
+
     if (isAuthenticated && user && !isLoading) {
       const currentPath = location.pathname;
 
@@ -79,11 +84,11 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({
         }
       }
     }
-  }, [isAuthenticated, user, isLoading, location, requiredRole, navigate]);
+  }, [isAuthenticated, user, isLoading, isInitializing, location, requiredRole, navigate]);
 
-  if (isLoading) {
+  if (isLoading || isInitializing) {
     // Afficher un loader pendant l'initialisation de l'authentification
-    // mais éviter une redirection trop rapide
+    // ou pendant la récupération du rôle depuis la BD
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>

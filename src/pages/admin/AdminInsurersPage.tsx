@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Plus,
   Search,
@@ -54,6 +54,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { AdminBreadcrumb } from '@/components/common/BreadcrumbRenderer'
+import { useAuth } from '@/contexts/AuthContext'
+import { logger } from '@/lib/logger'
 import {
   useInsurers,
   useInsurerStats,
@@ -68,6 +70,23 @@ import {
 } from '@/features/admin/services/insurerService'
 
 const AdminInsurersPage = () => {
+  // Récupérer l'état d'authentification pour conditionner les requêtes
+  const { isLoading: authLoading, isInitializing, isAuthenticated, user } = useAuth()
+
+  // Condition pour activer les requêtes : auth terminé PAS en initialisation + utilisateur authentifié + rôle ADMIN
+  const shouldFetch = !authLoading && !isInitializing && isAuthenticated && user?.role === 'ADMIN'
+
+  // 🔍 DEBUG: Log l'état de l'auth et shouldFetch
+  useEffect(() => {
+    logger.auth('🔍 [AdminInsurersPage] Auth state:', {
+      authLoading,
+      isInitializing,
+      isAuthenticated,
+      userRole: user?.role,
+      shouldFetch,
+    })
+  }, [authLoading, isInitializing, isAuthenticated, user?.role, shouldFetch])
+
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [selectedInsurers, setSelectedInsurers] = useState<string[]>([])
@@ -78,8 +97,8 @@ const AdminInsurersPage = () => {
   const [mutationError, setMutationError] = useState<string | null>(null)
 
   // React Query hooks
-  const { data: insurers = [], isLoading, error, refetch } = useInsurers()
-  const { data: stats } = useInsurerStats()
+  const { data: insurers = [], isLoading, error, refetch } = useInsurers(shouldFetch)
+  const { data: stats } = useInsurerStats(shouldFetch)
   const createInsurer = useCreateInsurer()
   const updateInsurer = useUpdateInsurer()
   const deleteInsurer = useDeleteInsurer()
