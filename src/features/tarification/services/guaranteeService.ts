@@ -1221,17 +1221,17 @@ class GuaranteeService {
       },
       {
         value: 'FIRE_THEFT',
-        label: 'Incendie & Vol',
+        label: 'Incendie / Vol',
         description: 'Pourcentage dynamique sur la valeur vénale'
       },
       {
         value: 'THEFT_ARMED',
-        label: 'Vol + Vol à mains armées',
+        label: 'Vol à mains armées',
         description: 'Double taux conditionnel sur la valeur vénale'
       },
       {
         value: 'GLASS_ROOF',
-        label: 'Bris de glaces toits ouvrants',
+        label: 'Bris de glaces',
         description: 'Pourcentage sur le prix d’achat (valeur neuve)'
       },
       {

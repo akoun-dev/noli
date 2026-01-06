@@ -2697,8 +2697,13 @@ export const AdminTarificationPage: React.FC = () => {
                       </TableCell>
                       {/* Cellule Catégorie retirée */}
                       <TableCell className="p-2 hidden md:table-cell">
-                        <div className="text-xs">
-                          {calculationMethods.find(m => m.value === guarantee.calculationMethod)?.label}
+                        <div className="flex flex-col">
+                          <span className="text-xs font-medium">
+                            {calculationMethods.find(m => m.value === guarantee.calculationMethod)?.label}
+                          </span>
+                          <span className="text-xs text-muted-foreground max-w-xs truncate" title={calculationMethods.find(m => m.value === guarantee.calculationMethod)?.description}>
+                            {calculationMethods.find(m => m.value === guarantee.calculationMethod)?.description}
+                          </span>
                         </div>
                       </TableCell>
                       <TableCell className="p-2">
