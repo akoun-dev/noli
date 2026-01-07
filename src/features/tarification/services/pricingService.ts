@@ -11,7 +11,11 @@ import {
   ICIPTConfig,
   IPTFormulaConfig,
   IPTConfig,
-  IPTPlacesTariff
+  IPTPlacesTariff,
+  VariableBasedConfig,
+  MatrixBasedConfig,
+  VariableSourceType,
+  MatrixTariff
 } from '@/types/tarification';
 import { guaranteeService } from './guaranteeService';
 import { logger } from '@/lib/logger';
@@ -109,6 +113,23 @@ export class PricingService {
         };
         break;
 
+      case 'VARIABLE_BASED': {
+        const { amount, details } = this.calculateVariableBasedAmount(guarantee, vehicle, parameters);
+        calculatedPrice = amount;
+        pricingMethod = details.pricingMethod || 'Basé sur une variable';
+        calculationDetails = details;
+        break;
+      }
+
+      case 'MATRIX_BASED': {
+        const { amount, details } = this.calculateMatrixBasedAmount(guarantee, vehicle, parameters);
+        calculatedPrice = amount;
+        pricingMethod = details.pricingMethod || 'Basé sur une matrice';
+        calculationDetails = details;
+        break;
+      }
+
+      // Cas de compatibilité avec les anciennes méthodes (seront migrés)
       case 'FIRE_THEFT':
       case 'THEFT_ARMED': {
         const { amount, details } = this.calculateFireTheftAmount(guarantee, vehicle);
@@ -735,6 +756,169 @@ export class PricingService {
         availableTariffs: placesTariffs.length
       }
     };
+  }
+
+  // Méthode 3: Basé sur une variable (VARIABLE_BASED)
+  private static calculateVariableBasedAmount(
+    guarantee: Guarantee,
+    vehicle: Vehicle,
+    parameters: any
+  ): { amount: number; details: Record<string, any> } {
+    // Utiliser soit le nouveau format, soit l'ancien pour compatibilité
+    const config = (guarantee.parameters?.variableBased ?? guarantee.parameters?.variableBasedConfig) as VariableBasedConfig | undefined;
+
+    if (!config) {
+      return {
+        amount: 0,
+        details: {
+          error: 'Missing variableBased config',
+          pricingMethod: 'Configuration manquante'
+        }
+      };
+    }
+
+    // Déterminer la valeur de la variable source
+    let variableValue = 0;
+    let variableLabel = '';
+
+    switch (config.variableSource) {
+      case 'VENAL_VALUE':
+        variableValue = vehicle?.values?.venale ?? 0;
+        variableLabel = 'Valeur vénale';
+        break;
+      case 'NEW_VALUE':
+        variableValue = vehicle?.values?.neuve ?? 0;
+        variableLabel = 'Valeur neuve';
+        break;
+      case 'FISCAL_POWER':
+        variableValue = vehicle?.fiscalPower ?? 0;
+        variableLabel = 'Puissance fiscale';
+        break;
+    }
+
+    if (variableValue <= 0) {
+      return {
+        amount: 0,
+        details: {
+          error: 'Invalid or missing variable value',
+          variableSource: config.variableSource,
+          variableValue,
+          pricingMethod: `Basé sur ${variableLabel}`
+        }
+      };
+    }
+
+    // Appliquer le seuil si défini (nouveau format simplifié)
+    let ratePercent = config.ratePercent;
+    if (config.threshold && variableValue >= config.threshold.value) {
+      ratePercent = config.threshold.ratePercent;
+    }
+
+    // Calculer le montant (pour taux %)
+    let amount = 0;
+    if (ratePercent !== undefined) {
+      amount = variableValue * (ratePercent / 100);
+    }
+
+    // Appliquer les min/max de la configuration
+    if (config.minAmount && amount < config.minAmount) {
+      amount = config.minAmount;
+    }
+    if (config.maxAmount && amount > config.maxAmount) {
+      amount = config.maxAmount;
+    }
+
+    // Construire les détails de calcul
+    const details: Record<string, any> = {
+      pricingMethod: ratePercent !== undefined
+        ? `Basé sur ${variableLabel} (${ratePercent}%)`
+        : `Basé sur ${variableLabel}`,
+      variableSource: config.variableSource,
+      variableLabel,
+      variableValue,
+      ratePercent,
+      amount
+    };
+
+    return { amount, details };
+  }
+
+  // Méthode 4: Basé sur une matrice (MATRIX_BASED)
+  private static calculateMatrixBasedAmount(
+    guarantee: Guarantee,
+    vehicle: Vehicle,
+    parameters: any
+  ): { amount: number; details: Record<string, any> } {
+    // Utiliser soit le nouveau format, soit l'ancien pour compatibilité
+    const config = (guarantee.parameters?.matrixBased ?? guarantee.parameters?.matrixBasedConfig) as MatrixBasedConfig | undefined;
+
+    if (!config || !config.tariffs || config.tariffs.length === 0) {
+      return {
+        amount: 0,
+        details: {
+          error: 'Missing or invalid matrixBased config',
+          pricingMethod: 'Configuration matrice manquante'
+        }
+      };
+    }
+
+    // Extraire les valeurs du véhicule
+    const fiscalPower = vehicle?.fiscalPower ?? 0;
+    const fuelType = (vehicle?.energy ?? '').toLowerCase();
+    const categoryCode = vehicle?.categoryCode ?? '401';
+    const seats = vehicle?.nbPlaces ?? 5;
+    const formula = parameters?.formula_name ?? parameters?.formula ?? 1;
+
+    // Rechercher le tarif applicable selon la dimension
+    let matchedTariff: MatrixTariff | null = null;
+
+    if (config.dimension === 'FISCAL_POWER') {
+      // Recherche par puissance fiscale seulement
+      matchedTariff = config.tariffs.find(tariff =>
+        fiscalPower >= (tariff.fiscalPowerMin ?? 0) &&
+        fiscalPower <= (tariff.fiscalPowerMax ?? 999)
+      ) ?? null;
+    } else if (config.dimension === 'FUEL_TYPE') {
+      // Recherche par type de carburant seulement
+      matchedTariff = config.tariffs.find(tariff =>
+        tariff.fuelType?.toLowerCase() === fuelType
+      ) ?? null;
+    } else if (config.dimension === 'VEHICLE_CATEGORY') {
+      // Recherche par catégorie de véhicule seulement
+      matchedTariff = config.tariffs.find(tariff =>
+        tariff.vehicleCategory === categoryCode
+      ) ?? null;
+    } else if (config.dimension === 'SEATS') {
+      // Recherche par nombre de places seulement
+      matchedTariff = config.tariffs.find(tariff =>
+        tariff.seats === seats
+      ) ?? null;
+    } else if (config.dimension === 'FORMULA') {
+      // Recherche par formule seulement
+      matchedTariff = config.tariffs.find(tariff =>
+        tariff.formula === formula
+      ) ?? null;
+    }
+
+    // Utiliser le tarif trouvé ou la valeur par défaut
+    const amount = matchedTariff?.prime ?? config.defaultPrime ?? 0;
+
+    // Construire les détails
+    const details: Record<string, any> = {
+      pricingMethod: matchedTariff
+        ? `Matrice de tarification (${matchedTariff.key})`
+        : 'Matrice de tarification (valeur par défaut)',
+      dimension: config.dimension,
+      matchedKey: matchedTariff?.key,
+      amount,
+      fiscalPower,
+      fuelType,
+      categoryCode,
+      seats,
+      formula
+    };
+
+    return { amount, details };
   }
 
   // Les méthodes complexes ont été supprimées avec la simplification

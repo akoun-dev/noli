@@ -1220,49 +1220,14 @@ class GuaranteeService {
         description: 'Prime fixe indépendante du véhicule'
       },
       {
-        value: 'FIRE_THEFT',
-        label: 'Incendie / Vol',
-        description: 'Pourcentage dynamique sur la valeur vénale'
+        value: 'VARIABLE_BASED',
+        label: 'Basé sur une variable',
+        description: 'Calcul en fonction d\'une variable du véhicule (ex: % de la valeur vénale/neuve)'
       },
       {
-        value: 'THEFT_ARMED',
-        label: 'Vol à mains armées',
-        description: 'Double taux conditionnel sur la valeur vénale'
-      },
-      {
-        value: 'GLASS_ROOF',
-        label: 'Bris de glaces',
-        description: 'Pourcentage sur le prix d’achat (valeur neuve)'
-      },
-      {
-        value: 'GLASS_STANDARD',
-        label: 'Bris de glaces',
-        description: 'Pourcentage sur le prix d’achat (valeur neuve)'
-      },
-      {
-        value: 'TIERCE_COMPLETE_CAP',
-        label: 'Tierce complète plafonnée',
-        description: 'Taux selon franchise sur valeur neuve'
-      },
-      {
-        value: 'TIERCE_COLLISION_CAP',
-        label: 'Tierce collision plafonnée',
-        description: 'Taux selon franchise sur valeur neuve'
-      },
-      {
-        value: 'MTPL_TARIFF',
-        label: 'Responsabilité Civile',
-        description: 'Grille de tarification selon puissance fiscale et type de moteur'
-      },
-      {
-        value: 'IC_IPT_FORMULA',
-        label: 'Individuelle Conducteur / Passagers',
-        description: 'Formules prédéfinies avec capitaux et primes fixes'
-      },
-      {
-        value: 'IPT_PLACES_FORMULA',
-        label: 'Individuelle Personnes Transportées',
-        description: 'Formules avec tarification par nombre de places du véhicule'
+        value: 'MATRIX_BASED',
+        label: 'Basé sur une matrice',
+        description: 'Calcul via une grille de tarification (ex: par puissance fiscale et carburant)'
       }
     ];
   }

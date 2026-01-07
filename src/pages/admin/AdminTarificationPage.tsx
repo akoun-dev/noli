@@ -39,7 +39,11 @@ import {
   FireTheftConfig,
   IPTFormulaConfig,
   IPTConfig,
-  IPTPlacesTariff
+  IPTPlacesTariff,
+  VariableBasedConfig,
+  VariableSourceType,
+  MatrixBasedConfig,
+  MatrixTariff
 } from '@/types/tarification';
 import {
   Plus,
@@ -60,7 +64,12 @@ import {
   Database,
   Car,
   Zap,
-  Fuel
+  Fuel,
+  DollarSign,
+  Percent,
+  Package,
+  Layers,
+  Sparkles,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -975,7 +984,7 @@ export const AdminTarificationPage: React.FC = () => {
 
   const calculationMethods = guaranteeService.getCalculationMethods();
   const selectableCalculationMethods = calculationMethods.filter(
-    (m) => ['FREE', 'FIXED_AMOUNT', 'FIRE_THEFT', 'THEFT_ARMED', 'GLASS_ROOF', 'MTPL_TARIFF', 'IC_IPT_FORMULA', 'IPT_PLACES_FORMULA'].includes(m.value)
+    (m) => ['FREE', 'FIXED_AMOUNT', 'VARIABLE_BASED', 'MATRIX_BASED'].includes(m.value)
   );
 
   const removeFireTheftConfig = (parameters?: Guarantee['parameters']) => {
@@ -2282,6 +2291,583 @@ export const AdminTarificationPage: React.FC = () => {
     );
   };
 
+  // Nouvelle fonction de rendu pour VARIABLE_BASED
+  const renderVariableBasedConfigSection = () => {
+    const method = newGuarantee.calculationMethod;
+    if (method !== 'VARIABLE_BASED') {
+      return null;
+    }
+
+    const config = (newGuarantee.parameters?.variableBased ?? newGuarantee.parameters?.variableBasedConfig) as VariableBasedConfig | undefined;
+    const variableSource = config?.variableSource ?? 'VENAL_VALUE';
+
+    return (
+      <Card className="border border-dashed">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Configuration Basée sur une Variable</CardTitle>
+          <CardDescription>
+            Définissez la variable du véhicule et les tarifs appliqués
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label>Variable source</Label>
+            <select
+              className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+              value={variableSource}
+              onChange={(e) => {
+                const variableSource = e.target.value as VariableSourceType;
+                setNewGuarantee(prev => ({
+                  ...prev,
+                  parameters: {
+                    ...prev.parameters,
+                    variableBased: {
+                      variableSource,
+                      ratePercent: 0
+                    }
+                  }
+                }));
+              }}
+            >
+              <option value="VENAL_VALUE">Valeur vénale (taux %)</option>
+              <option value="NEW_VALUE">Valeur neuve (taux %)</option>
+            </select>
+          </div>
+
+          {/* Formulaire standard pour toutes les sources (taux %) */}
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label>Taux (%)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={config?.ratePercent ?? ''}
+                  onChange={(e) => {
+                    const ratePercent = parseFloat(e.target.value);
+                    setNewGuarantee(prev => ({
+                      ...prev,
+                      parameters: {
+                        ...prev.parameters,
+                        variableBased: {
+                          ...prev.parameters?.variableBased,
+                          variableSource,
+                          ratePercent: Number.isFinite(ratePercent) ? ratePercent : 0
+                        }
+                      }
+                    }));
+                  }}
+                  placeholder="0.42"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label>Montant minimum (FCFA) - Optionnel</Label>
+                <Input
+                  type="number"
+                  value={config?.minAmount ?? ''}
+                  onChange={(e) => {
+                    const minAmount = parseInt(e.target.value, 10);
+                    setNewGuarantee(prev => ({
+                      ...prev,
+                      parameters: {
+                        ...prev.parameters,
+                        variableBased: {
+                          ...prev.parameters?.variableBased,
+                          variableSource,
+                          ratePercent: config?.ratePercent ?? 0,
+                          minAmount: Number.isFinite(minAmount) ? minAmount : undefined
+                        }
+                      }
+                    }));
+                  }}
+                  placeholder="50000"
+                />
+              </div>
+              <div>
+                <Label>Montant maximum (FCFA) - Optionnel</Label>
+                <Input
+                  type="number"
+                  value={config?.maxAmount ?? ''}
+                  onChange={(e) => {
+                    const maxAmount = parseInt(e.target.value, 10);
+                    setNewGuarantee(prev => ({
+                      ...prev,
+                      parameters: {
+                        ...prev.parameters,
+                        variableBased: {
+                          ...prev.parameters?.variableBased,
+                          variableSource,
+                          ratePercent: config?.ratePercent ?? 0,
+                          maxAmount: Number.isFinite(maxAmount) ? maxAmount : undefined
+                        }
+                      }
+                    }));
+                  }}
+                  placeholder="500000"
+                />
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  // Nouvelle fonction de rendu pour MATRIX_BASED
+  const renderMatrixBasedConfigSection = () => {
+    const method = newGuarantee.calculationMethod;
+    if (method !== 'MATRIX_BASED') {
+      return null;
+    }
+
+    const config = (newGuarantee.parameters?.matrixBased ?? newGuarantee.parameters?.matrixBasedConfig) as MatrixBasedConfig | undefined;
+    const dimension = config?.dimension ?? 'FISCAL_POWER';
+
+    return (
+      <Card className="border border-dashed">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Configuration Basée sur une Matrice</CardTitle>
+          <CardDescription>
+            Définissez la grille de tarification
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label>Dimension de la matrice</Label>
+            <select
+              className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+              value={dimension}
+              onChange={(e) => {
+                const dimension = e.target.value as MatrixBasedConfig['dimension'];
+                setNewGuarantee(prev => ({
+                  ...prev,
+                  parameters: {
+                    ...prev.parameters,
+                    matrixBased: {
+                      dimension,
+                      tariffs: [],
+                      defaultPrime: config?.defaultPrime
+                    }
+                  }
+                }));
+              }}
+            >
+              <option value="FISCAL_POWER">Puissance fiscale (CV)</option>
+              <option value="FUEL_TYPE">Type de carburant</option>
+              <option value="VEHICLE_CATEGORY">Catégorie de véhicule (401, 402, etc.)</option>
+              <option value="SEATS">Nombre de places</option>
+              <option value="FORMULA">Formule (1, 2, 3...)</option>
+            </select>
+            <p className="text-xs text-muted-foreground mt-1">
+              Choisissez la dimension unique pour la grille de tarification
+            </p>
+          </div>
+
+          {/* Formulaire dynamique pour FISCAL_POWER */}
+          {dimension === 'FISCAL_POWER' ? (
+            <div className="space-y-4">
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+                <p className="text-sm text-blue-900">
+                  <strong>Configuration :</strong> Définissez les tarifs selon le type de carburant et la puissance fiscale (CV).
+                </p>
+              </div>
+
+              {(!config?.tariffs || config.tariffs.length === 0) ? (
+                <div className="text-center p-6 border-2 border-dashed border-gray-300 rounded-lg">
+                  <Layers className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                  <p className="text-sm text-gray-500 mb-4">Aucun tarif configuré</p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setNewGuarantee(prev => ({
+                        ...prev,
+                        parameters: {
+                          ...prev.parameters,
+                          matrixBased: {
+                            dimension: 'FISCAL_POWER',
+                            tariffs: [
+                              // Tarifs par défaut pour Essence
+                              { key: `essence_1_2_${Date.now()}`, fuelType: 'Essence', fiscalPowerMin: 1, fiscalPowerMax: 2, prime: 68675 },
+                              { key: `essence_3_4_${Date.now()}`, fuelType: 'Essence', fiscalPowerMin: 3, fiscalPowerMax: 4, prime: 75000 },
+                              { key: `essence_5_7_${Date.now()}`, fuelType: 'Essence', fiscalPowerMin: 5, fiscalPowerMax: 7, prime: 85000 },
+                              { key: `essence_8_10_${Date.now()}`, fuelType: 'Essence', fiscalPowerMin: 8, fiscalPowerMax: 10, prime: 95000 },
+                              { key: `essence_11_plus_${Date.now()}`, fuelType: 'Essence', fiscalPowerMin: 11, fiscalPowerMax: 99, prime: 110000 },
+                              // Tarifs par défaut pour Diesel
+                              { key: `diesel_1_2_${Date.now()}`, fuelType: 'Diesel', fiscalPowerMin: 1, fiscalPowerMax: 2, prime: 68675 },
+                              { key: `diesel_3_4_${Date.now()}`, fuelType: 'Diesel', fiscalPowerMin: 3, fiscalPowerMax: 4, prime: 75000 },
+                              { key: `diesel_5_7_${Date.now()}`, fuelType: 'Diesel', fiscalPowerMin: 5, fiscalPowerMax: 7, prime: 85000 },
+                              { key: `diesel_8_10_${Date.now()}`, fuelType: 'Diesel', fiscalPowerMin: 8, fiscalPowerMax: 10, prime: 95000 },
+                              { key: `diesel_11_plus_${Date.now()}`, fuelType: 'Diesel', fiscalPowerMin: 11, fiscalPowerMax: 99, prime: 110000 },
+                            ]
+                          }
+                        }
+                      }));
+                    }}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Initialiser avec tarifs par défaut
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Essence */}
+                    <div className="border rounded-lg p-3">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="font-medium text-sm flex items-center gap-2">
+                          <Fuel className="h-4 w-4 text-blue-600" />
+                          Essence
+                        </h4>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const newTariffs = [...(config.tariffs || [])];
+                            newTariffs.push({
+                              key: `essence_custom_${Date.now()}`,
+                              fuelType: 'Essence',
+                              fiscalPowerMin: 1,
+                              fiscalPowerMax: 99,
+                              prime: 0
+                            });
+                            setNewGuarantee(prev => ({
+                              ...prev,
+                              parameters: {
+                                ...prev.parameters,
+                                matrixBased: {
+                                  dimension: 'FISCAL_POWER',
+                                  tariffs: newTariffs
+                                }
+                              }
+                            }));
+                          }}
+                        >
+                          <Plus className="h-3 w-3 mr-1" />
+                          Ajouter
+                        </Button>
+                      </div>
+                      <div className="space-y-2">
+                        {config.tariffs.filter(t => t.fuelType === 'Essence').map((tariff) => (
+                          <div key={tariff.key} className="flex items-center gap-2">
+                            <Input
+                              type="number"
+                              placeholder="Min CV"
+                              value={tariff.fiscalPowerMin}
+                              onChange={(e) => {
+                                const newMin = parseInt(e.target.value, 10);
+                                const newTariffs = [...(config.tariffs || [])];
+                                const tariffIdx = newTariffs.findIndex(t => t.key === tariff.key);
+                                if (tariffIdx >= 0) {
+                                  newTariffs[tariffIdx] = { ...tariff, fiscalPowerMin: Number.isFinite(newMin) ? newMin : 1 };
+                                  setNewGuarantee(prev => ({
+                                    ...prev,
+                                    parameters: {
+                                      ...prev.parameters,
+                                      matrixBased: {
+                                        dimension: 'FISCAL_POWER',
+                                        tariffs: newTariffs
+                                      }
+                                    }
+                                  }));
+                                }
+                              }}
+                              className="h-8 w-16 text-sm"
+                            />
+                            <span className="text-xs text-gray-500">-</span>
+                            <Input
+                              type="number"
+                              placeholder="Max CV"
+                              value={tariff.fiscalPowerMax === 99 ? '11+' : tariff.fiscalPowerMax}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                const newMax = val === '11+' ? 99 : parseInt(val, 10);
+                                const newTariffs = [...(config.tariffs || [])];
+                                const tariffIdx = newTariffs.findIndex(t => t.key === tariff.key);
+                                if (tariffIdx >= 0) {
+                                  newTariffs[tariffIdx] = { ...tariff, fiscalPowerMax: Number.isFinite(newMax) ? newMax : 99 };
+                                  setNewGuarantee(prev => ({
+                                    ...prev,
+                                    parameters: {
+                                      ...prev.parameters,
+                                      matrixBased: {
+                                        dimension: 'FISCAL_POWER',
+                                        tariffs: newTariffs
+                                      }
+                                    }
+                                  }));
+                                }
+                              }}
+                              className="h-8 w-16 text-sm"
+                            />
+                            <span className="text-xs bg-gray-100 px-2 py-1 rounded">CV</span>
+                            <Input
+                              type="number"
+                              placeholder="Tarif"
+                              value={tariff.prime}
+                              onChange={(e) => {
+                                const newPrime = parseInt(e.target.value, 10);
+                                const newTariffs = [...(config.tariffs || [])];
+                                const tariffIdx = newTariffs.findIndex(t => t.key === tariff.key);
+                                if (tariffIdx >= 0) {
+                                  newTariffs[tariffIdx] = { ...tariff, prime: Number.isFinite(newPrime) ? newPrime : 0 };
+                                  setNewGuarantee(prev => ({
+                                    ...prev,
+                                    parameters: {
+                                      ...prev.parameters,
+                                      matrixBased: {
+                                        dimension: 'FISCAL_POWER',
+                                        tariffs: newTariffs
+                                      }
+                                    }
+                                  }));
+                                }
+                              }}
+                              className="h-8 w-24 text-sm"
+                            />
+                            <span className="text-xs text-gray-500">FCFA</span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                              onClick={() => {
+                                const newTariffs = config.tariffs?.filter(t => t.key !== tariff.key) ?? [];
+                                setNewGuarantee(prev => ({
+                                  ...prev,
+                                  parameters: {
+                                    ...prev.parameters,
+                                    matrixBased: {
+                                      dimension: 'FISCAL_POWER',
+                                      tariffs: newTariffs
+                                    }
+                                  }
+                                }));
+                              }}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Diesel */}
+                    <div className="border rounded-lg p-3">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="font-medium text-sm flex items-center gap-2">
+                          <Fuel className="h-4 w-4 text-gray-600" />
+                          Diesel
+                        </h4>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const newTariffs = [...(config.tariffs || [])];
+                            newTariffs.push({
+                              key: `diesel_custom_${Date.now()}`,
+                              fuelType: 'Diesel',
+                              fiscalPowerMin: 1,
+                              fiscalPowerMax: 99,
+                              prime: 0
+                            });
+                            setNewGuarantee(prev => ({
+                              ...prev,
+                              parameters: {
+                                ...prev.parameters,
+                                matrixBased: {
+                                  dimension: 'FISCAL_POWER',
+                                  tariffs: newTariffs
+                                }
+                              }
+                            }));
+                          }}
+                        >
+                          <Plus className="h-3 w-3 mr-1" />
+                          Ajouter
+                        </Button>
+                      </div>
+                      <div className="space-y-2">
+                        {config.tariffs?.filter(t => t.fuelType === 'Diesel').map((tariff) => (
+                          <div key={tariff.key} className="flex items-center gap-2">
+                            <Input
+                              type="number"
+                              placeholder="Min CV"
+                              value={tariff.fiscalPowerMin}
+                              onChange={(e) => {
+                                const newMin = parseInt(e.target.value, 10);
+                                const newTariffs = [...(config.tariffs || [])];
+                                const tariffIdx = newTariffs.findIndex(t => t.key === tariff.key);
+                                if (tariffIdx >= 0) {
+                                  newTariffs[tariffIdx] = { ...tariff, fiscalPowerMin: Number.isFinite(newMin) ? newMin : 1 };
+                                  setNewGuarantee(prev => ({
+                                    ...prev,
+                                    parameters: {
+                                      ...prev.parameters,
+                                      matrixBased: {
+                                        dimension: 'FISCAL_POWER',
+                                        tariffs: newTariffs
+                                      }
+                                    }
+                                  }));
+                                }
+                              }}
+                              className="h-8 w-16 text-sm"
+                            />
+                            <span className="text-xs text-gray-500">-</span>
+                            <Input
+                              type="number"
+                              placeholder="Max CV"
+                              value={tariff.fiscalPowerMax === 99 ? '11+' : tariff.fiscalPowerMax}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                const newMax = val === '11+' ? 99 : parseInt(val, 10);
+                                const newTariffs = [...(config.tariffs || [])];
+                                const tariffIdx = newTariffs.findIndex(t => t.key === tariff.key);
+                                if (tariffIdx >= 0) {
+                                  newTariffs[tariffIdx] = { ...tariff, fiscalPowerMax: Number.isFinite(newMax) ? newMax : 99 };
+                                  setNewGuarantee(prev => ({
+                                    ...prev,
+                                    parameters: {
+                                      ...prev.parameters,
+                                      matrixBased: {
+                                        dimension: 'FISCAL_POWER',
+                                        tariffs: newTariffs
+                                      }
+                                    }
+                                  }));
+                                }
+                              }}
+                              className="h-8 w-16 text-sm"
+                            />
+                            <span className="text-xs bg-gray-100 px-2 py-1 rounded">CV</span>
+                            <Input
+                              type="number"
+                              placeholder="Tarif"
+                              value={tariff.prime}
+                              onChange={(e) => {
+                                const newPrime = parseInt(e.target.value, 10);
+                                const newTariffs = [...(config.tariffs || [])];
+                                const tariffIdx = newTariffs.findIndex(t => t.key === tariff.key);
+                                if (tariffIdx >= 0) {
+                                  newTariffs[tariffIdx] = { ...tariff, prime: Number.isFinite(newPrime) ? newPrime : 0 };
+                                  setNewGuarantee(prev => ({
+                                    ...prev,
+                                    parameters: {
+                                      ...prev.parameters,
+                                      matrixBased: {
+                                        dimension: 'FISCAL_POWER',
+                                        tariffs: newTariffs
+                                      }
+                                    }
+                                  }));
+                                }
+                              }}
+                              className="h-8 w-24 text-sm"
+                            />
+                            <span className="text-xs text-gray-500">FCFA</span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                              onClick={() => {
+                                const newTariffs = config.tariffs?.filter(t => t.key !== tariff.key) ?? [];
+                                setNewGuarantee(prev => ({
+                                  ...prev,
+                                  parameters: {
+                                    ...prev.parameters,
+                                    matrixBased: {
+                                      dimension: 'FISCAL_POWER',
+                                      tariffs: newTariffs
+                                    }
+                                  }
+                                }));
+                              }}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-4">
+                <Label>Prime par défaut (FCFA) - Optionnel</Label>
+                <Input
+                  type="number"
+                  value={config?.defaultPrime ?? ''}
+                  onChange={(e) => {
+                    const defaultPrime = parseInt(e.target.value, 10);
+                    setNewGuarantee(prev => ({
+                      ...prev,
+                      parameters: {
+                        ...prev.parameters,
+                        matrixBased: {
+                          dimension,
+                          tariffs: config?.tariffs ?? [],
+                          defaultPrime: Number.isFinite(defaultPrime) ? defaultPrime : undefined
+                        }
+                      }
+                    }));
+                  }}
+                  placeholder="0"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Utilisée si aucune correspondance n'est trouvée dans la matrice
+                </p>
+              </div>
+            </div>
+          ) : (
+            // Formulaire simple pour les autres dimensions
+            <>
+              <div>
+                <Label>Prime par défaut (FCFA) - Optionnel</Label>
+                <Input
+                  type="number"
+                  value={config?.defaultPrime ?? ''}
+                  onChange={(e) => {
+                    const defaultPrime = parseInt(e.target.value, 10);
+                    setNewGuarantee(prev => ({
+                      ...prev,
+                      parameters: {
+                        ...prev.parameters,
+                        matrixBased: {
+                          dimension,
+                          tariffs: config?.tariffs ?? [],
+                          defaultPrime: Number.isFinite(defaultPrime) ? defaultPrime : undefined
+                        }
+                      }
+                    }));
+                  }}
+                  placeholder="0"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Utilisée si aucune correspondance n'est trouvée dans la matrice
+                </p>
+              </div>
+
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-md">
+                <p className="text-sm text-amber-900">
+                  <strong>Attention :</strong> Pour cette dimension, les tarifs doivent être configurés via l'onglet "Grilles" ou en utilisant les méthodes de calcul basées sur une variable.
+                </p>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -2434,28 +3020,149 @@ export const AdminTarificationPage: React.FC = () => {
                           </CardDescription>
                         </CardHeader>
                         <CardContent className="pt-4 space-y-4">
-                          <div className="space-y-2">
-                            <Label className="flex items-center gap-1">
+                          <div className="space-y-3">
+                            <Label className="flex items-center gap-1 text-sm font-medium">
                               Méthode de calcul <span className="text-red-500">*</span>
                             </Label>
-                            <Select
-                              value={newGuarantee.calculationMethod}
-                              onValueChange={handleCalculationMethodChange}
-                            >
-                              <SelectTrigger className="transition-colors focus:border-blue-500">
-                                <SelectValue placeholder="Sélectionnez une méthode de calcul" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {selectableCalculationMethods.map(method => (
-                                  <SelectItem key={method.value} value={method.value}>
-                                    <div className="flex flex-col items-start">
-                                      <span className="font-medium">{method.label}</span>
-                                      <span className="text-xs text-muted-foreground mt-1">{method.description}</span>
-                                    </div>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+
+                            {/* Cartes de sélection de méthode */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              {/* Méthode FREE */}
+                              <button
+                                type="button"
+                                onClick={() => setNewGuarantee(prev => ({ ...prev, calculationMethod: 'FREE' }))}
+                                className={`relative p-4 rounded-lg border-2 text-left transition-all ${
+                                  newGuarantee.calculationMethod === 'FREE'
+                                    ? 'border-green-500 bg-green-50 shadow-md'
+                                    : 'border-gray-200 bg-white hover:border-green-300 hover:bg-green-50/30'
+                                }`}
+                              >
+                                <div className="flex items-start gap-3">
+                                  <div className={`p-2 rounded-lg ${
+                                    newGuarantee.calculationMethod === 'FREE'
+                                      ? 'bg-green-500 text-white'
+                                      : 'bg-green-100 text-green-600'
+                                  }`}>
+                                    <Sparkles className="h-5 w-5" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="font-semibold text-sm mb-1">Gratuit</div>
+                                    <p className="text-xs text-muted-foreground leading-relaxed">
+                                      Prime nulle (gratuite) - Aucun frais pour cette garantie
+                                    </p>
+                                  </div>
+                                  {newGuarantee.calculationMethod === 'FREE' && (
+                                    <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
+                                  )}
+                                </div>
+                              </button>
+
+                              {/* Méthode FIXED_AMOUNT */}
+                              <button
+                                type="button"
+                                onClick={() => setNewGuarantee(prev => ({ ...prev, calculationMethod: 'FIXED_AMOUNT' }))}
+                                className={`relative p-4 rounded-lg border-2 text-left transition-all ${
+                                  newGuarantee.calculationMethod === 'FIXED_AMOUNT'
+                                    ? 'border-blue-500 bg-blue-50 shadow-md'
+                                    : 'border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/30'
+                                }`}
+                              >
+                                <div className="flex items-start gap-3">
+                                  <div className={`p-2 rounded-lg ${
+                                    newGuarantee.calculationMethod === 'FIXED_AMOUNT'
+                                      ? 'bg-blue-500 text-white'
+                                      : 'bg-blue-100 text-blue-600'
+                                  }`}>
+                                    <DollarSign className="h-5 w-5" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="font-semibold text-sm mb-1">Montant Fixe</div>
+                                    <p className="text-xs text-muted-foreground leading-relaxed">
+                                      Prime fixe indépendante du véhicule - Ex: 15 000 FCFA
+                                    </p>
+                                  </div>
+                                  {newGuarantee.calculationMethod === 'FIXED_AMOUNT' && (
+                                    <CheckCircle className="h-5 w-5 text-blue-500 flex-shrink-0" />
+                                  )}
+                                </div>
+                              </button>
+
+                              {/* Méthode VARIABLE_BASED */}
+                              <button
+                                type="button"
+                                onClick={() => setNewGuarantee(prev => ({ ...prev, calculationMethod: 'VARIABLE_BASED' }))}
+                                className={`relative p-4 rounded-lg border-2 text-left transition-all ${
+                                  newGuarantee.calculationMethod === 'VARIABLE_BASED'
+                                    ? 'border-purple-500 bg-purple-50 shadow-md'
+                                    : 'border-gray-200 bg-white hover:border-purple-300 hover:bg-purple-50/30'
+                                }`}
+                              >
+                                <div className="flex items-start gap-3">
+                                  <div className={`p-2 rounded-lg ${
+                                    newGuarantee.calculationMethod === 'VARIABLE_BASED'
+                                      ? 'bg-purple-500 text-white'
+                                      : 'bg-purple-100 text-purple-600'
+                                  }`}>
+                                    <Percent className="h-5 w-5" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="font-semibold text-sm mb-1">Basé sur une variable</div>
+                                    <p className="text-xs text-muted-foreground leading-relaxed">
+                                      Pourcentage sur une valeur du véhicule - Ex: 0.42% de la valeur vénale
+                                    </p>
+                                  </div>
+                                  {newGuarantee.calculationMethod === 'VARIABLE_BASED' && (
+                                    <CheckCircle className="h-5 w-5 text-purple-500 flex-shrink-0" />
+                                  )}
+                                </div>
+                              </button>
+
+                              {/* Méthode MATRIX_BASED */}
+                              <button
+                                type="button"
+                                onClick={() => setNewGuarantee(prev => ({ ...prev, calculationMethod: 'MATRIX_BASED' }))}
+                                className={`relative p-4 rounded-lg border-2 text-left transition-all ${
+                                  newGuarantee.calculationMethod === 'MATRIX_BASED'
+                                    ? 'border-orange-500 bg-orange-50 shadow-md'
+                                    : 'border-gray-200 bg-white hover:border-orange-300 hover:bg-orange-50/30'
+                                }`}
+                              >
+                                <div className="flex items-start gap-3">
+                                  <div className={`p-2 rounded-lg ${
+                                    newGuarantee.calculationMethod === 'MATRIX_BASED'
+                                      ? 'bg-orange-500 text-white'
+                                      : 'bg-orange-100 text-orange-600'
+                                  }`}>
+                                    <Layers className="h-5 w-5" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="font-semibold text-sm mb-1">Basé sur une matrice</div>
+                                    <p className="text-xs text-muted-foreground leading-relaxed">
+                                      Grille de tarification - Ex: par puissance fiscale ou type de carburant
+                                    </p>
+                                  </div>
+                                  {newGuarantee.calculationMethod === 'MATRIX_BASED' && (
+                                    <CheckCircle className="h-5 w-5 text-orange-500 flex-shrink-0" />
+                                  )}
+                                </div>
+                              </button>
+                            </div>
+
+                            {/* Description détaillée de la méthode sélectionnée */}
+                            {newGuarantee.calculationMethod && (
+                              <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                                <div className="flex items-start gap-2">
+                                  <FileText className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                                  <div className="text-sm text-blue-800">
+                                    <span className="font-medium">
+                                      {selectableCalculationMethods.find(m => m.value === newGuarantee.calculationMethod)?.label}:
+                                    </span>
+                                    {' '}
+                                    {selectableCalculationMethods.find(m => m.value === newGuarantee.calculationMethod)?.description}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                           </div>
 
                           {/* Champs dynamiques selon la méthode de calcul */}
@@ -2559,7 +3266,9 @@ export const AdminTarificationPage: React.FC = () => {
                       </Card>
 
                       {/* Section Configuration avancée */}
-                      {(newGuarantee.calculationMethod === 'FIRE_THEFT' ||
+                      {(newGuarantee.calculationMethod === 'VARIABLE_BASED' ||
+                        newGuarantee.calculationMethod === 'MATRIX_BASED' ||
+                        newGuarantee.calculationMethod === 'FIRE_THEFT' ||
                         newGuarantee.calculationMethod === 'THEFT_ARMED' ||
                         newGuarantee.calculationMethod === 'GLASS_ROOF' ||
                         newGuarantee.calculationMethod === 'MTPL_TARIFF' ||
@@ -2578,6 +3287,8 @@ export const AdminTarificationPage: React.FC = () => {
                             </CardDescription>
                           </CardHeader>
                           <CardContent className="pt-4 space-y-4">
+                            {renderVariableBasedConfigSection()}
+                            {renderMatrixBasedConfigSection()}
                             {renderFireTheftConfigSection()}
                             {renderGlassRoofConfigSection()}
                             {renderGlassStandardConfigSection()}
@@ -3221,28 +3932,149 @@ export const AdminTarificationPage: React.FC = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-4 space-y-4">
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-1">
+                <div className="space-y-3">
+                  <Label className="flex items-center gap-1 text-sm font-medium">
                     Méthode de calcul <span className="text-red-500">*</span>
                   </Label>
-                  <Select
-                    value={newGuarantee.calculationMethod}
-                    onValueChange={handleCalculationMethodChange}
-                  >
-                    <SelectTrigger className="transition-colors focus:border-blue-500">
-                      <SelectValue placeholder="Sélectionnez une méthode de calcul" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {selectableCalculationMethods.map((method) => (
-                        <SelectItem key={method.value} value={method.value}>
-                          <div className="flex flex-col items-start">
-                            <span className="font-medium">{method.label}</span>
-                            <span className="text-xs text-muted-foreground mt-1">{method.description}</span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+
+                  {/* Cartes de sélection de méthode (même design que création) */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* Méthode FREE */}
+                    <button
+                      type="button"
+                      onClick={() => setNewGuarantee(prev => ({ ...prev, calculationMethod: 'FREE' }))}
+                      className={`relative p-4 rounded-lg border-2 text-left transition-all ${
+                        newGuarantee.calculationMethod === 'FREE'
+                          ? 'border-green-500 bg-green-50 shadow-md'
+                          : 'border-gray-200 bg-white hover:border-green-300 hover:bg-green-50/30'
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className={`p-2 rounded-lg ${
+                          newGuarantee.calculationMethod === 'FREE'
+                            ? 'bg-green-500 text-white'
+                            : 'bg-green-100 text-green-600'
+                        }`}>
+                          <Sparkles className="h-5 w-5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-sm mb-1">Gratuit</div>
+                          <p className="text-xs text-muted-foreground leading-relaxed">
+                            Prime nulle (gratuite) - Aucun frais pour cette garantie
+                          </p>
+                        </div>
+                        {newGuarantee.calculationMethod === 'FREE' && (
+                          <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
+                        )}
+                      </div>
+                    </button>
+
+                    {/* Méthode FIXED_AMOUNT */}
+                    <button
+                      type="button"
+                      onClick={() => setNewGuarantee(prev => ({ ...prev, calculationMethod: 'FIXED_AMOUNT' }))}
+                      className={`relative p-4 rounded-lg border-2 text-left transition-all ${
+                        newGuarantee.calculationMethod === 'FIXED_AMOUNT'
+                          ? 'border-blue-500 bg-blue-50 shadow-md'
+                          : 'border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/30'
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className={`p-2 rounded-lg ${
+                          newGuarantee.calculationMethod === 'FIXED_AMOUNT'
+                            ? 'bg-blue-500 text-white'
+                            : 'bg-blue-100 text-blue-600'
+                        }`}>
+                          <DollarSign className="h-5 w-5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-sm mb-1">Montant Fixe</div>
+                          <p className="text-xs text-muted-foreground leading-relaxed">
+                            Prime fixe indépendante du véhicule - Ex: 15 000 FCFA
+                          </p>
+                        </div>
+                        {newGuarantee.calculationMethod === 'FIXED_AMOUNT' && (
+                          <CheckCircle className="h-5 w-5 text-blue-500 flex-shrink-0" />
+                        )}
+                      </div>
+                    </button>
+
+                    {/* Méthode VARIABLE_BASED */}
+                    <button
+                      type="button"
+                      onClick={() => setNewGuarantee(prev => ({ ...prev, calculationMethod: 'VARIABLE_BASED' }))}
+                      className={`relative p-4 rounded-lg border-2 text-left transition-all ${
+                        newGuarantee.calculationMethod === 'VARIABLE_BASED'
+                          ? 'border-purple-500 bg-purple-50 shadow-md'
+                          : 'border-gray-200 bg-white hover:border-purple-300 hover:bg-purple-50/30'
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className={`p-2 rounded-lg ${
+                          newGuarantee.calculationMethod === 'VARIABLE_BASED'
+                            ? 'bg-purple-500 text-white'
+                            : 'bg-purple-100 text-purple-600'
+                        }`}>
+                          <Percent className="h-5 w-5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-sm mb-1">Basé sur une variable</div>
+                          <p className="text-xs text-muted-foreground leading-relaxed">
+                            Pourcentage sur une valeur du véhicule - Ex: 0.42% de la valeur vénale
+                          </p>
+                        </div>
+                        {newGuarantee.calculationMethod === 'VARIABLE_BASED' && (
+                          <CheckCircle className="h-5 w-5 text-purple-500 flex-shrink-0" />
+                        )}
+                      </div>
+                    </button>
+
+                    {/* Méthode MATRIX_BASED */}
+                    <button
+                      type="button"
+                      onClick={() => setNewGuarantee(prev => ({ ...prev, calculationMethod: 'MATRIX_BASED' }))}
+                      className={`relative p-4 rounded-lg border-2 text-left transition-all ${
+                        newGuarantee.calculationMethod === 'MATRIX_BASED'
+                          ? 'border-orange-500 bg-orange-50 shadow-md'
+                          : 'border-gray-200 bg-white hover:border-orange-300 hover:bg-orange-50/30'
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className={`p-2 rounded-lg ${
+                          newGuarantee.calculationMethod === 'MATRIX_BASED'
+                            ? 'bg-orange-500 text-white'
+                            : 'bg-orange-100 text-orange-600'
+                        }`}>
+                          <Layers className="h-5 w-5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-sm mb-1">Basé sur une matrice</div>
+                          <p className="text-xs text-muted-foreground leading-relaxed">
+                            Grille de tarification - Ex: par puissance fiscale et carburant
+                          </p>
+                        </div>
+                        {newGuarantee.calculationMethod === 'MATRIX_BASED' && (
+                          <CheckCircle className="h-5 w-5 text-orange-500 flex-shrink-0" />
+                        )}
+                      </div>
+                    </button>
+                  </div>
+
+                  {/* Description détaillée de la méthode sélectionnée */}
+                  {newGuarantee.calculationMethod && (
+                    <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                      <div className="flex items-start gap-2">
+                        <FileText className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                        <div className="text-sm text-blue-800">
+                          <span className="font-medium">
+                            {selectableCalculationMethods.find(m => m.value === newGuarantee.calculationMethod)?.label}:
+                          </span>
+                          {' '}
+                          {selectableCalculationMethods.find(m => m.value === newGuarantee.calculationMethod)?.description}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Champs dynamiques selon la méthode de calcul (édition) */}
@@ -3345,7 +4177,9 @@ export const AdminTarificationPage: React.FC = () => {
             </Card>
 
             {/* Section Configuration avancée */}
-            {(newGuarantee.calculationMethod === 'FIRE_THEFT' ||
+            {(newGuarantee.calculationMethod === 'VARIABLE_BASED' ||
+              newGuarantee.calculationMethod === 'MATRIX_BASED' ||
+              newGuarantee.calculationMethod === 'FIRE_THEFT' ||
               newGuarantee.calculationMethod === 'THEFT_ARMED' ||
               newGuarantee.calculationMethod === 'GLASS_ROOF' ||
               newGuarantee.calculationMethod === 'MTPL_TARIFF' ||
@@ -3364,6 +4198,8 @@ export const AdminTarificationPage: React.FC = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="pt-4 space-y-4">
+                  {renderVariableBasedConfigSection()}
+                  {renderMatrixBasedConfigSection()}
                   {renderFireTheftConfigSection()}
                   {renderGlassRoofConfigSection()}
                   {renderGlassStandardConfigSection()}

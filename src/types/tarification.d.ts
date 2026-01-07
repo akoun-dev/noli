@@ -114,13 +114,74 @@ export interface IPTConfig {
   formulas?: IPTFormulaConfig[];
 }
 
+// Configuration pour VARIABLE_BASED
+export type VariableSourceType =
+  | 'VENAL_VALUE'        // Valeur vénale du véhicule
+  | 'NEW_VALUE'          // Valeur neuve du véhicule
+  | 'FISCAL_POWER';      // Puissance fiscale
+
+export interface VariableBasedConfig {
+  // Source de la variable du véhicule
+  variableSource: VariableSourceType;
+
+  // Taux unique à appliquer (en pourcentage) - pour les sources standards
+  ratePercent?: number;
+
+  // Tarifs pour FISCAL_POWER (grille par carburant et CV)
+  tariffs?: MatrixTariff[];
+
+  // Seuil optionnel pour appliquer un taux différent
+  threshold?: {
+    value: number;        // Seuil de la variable
+    ratePercent: number;  // Taux au-delà du seuil
+  };
+
+  // Min/Max facultatifs
+  minAmount?: number;
+  maxAmount?: number;
+}
+
+// Configuration pour MATRIX_BASED (grille de tarification simple)
+export interface MatrixTariff {
+  // Clé d'identification (ex: "essence_5_7", "diesel_1")
+  key: string;
+
+  // Valeurs des dimensions
+  fiscalPowerMin?: number;
+  fiscalPowerMax?: number;
+  fuelType?: string;          // 'Essence' | 'Diesel' | 'Électrique' | 'Hybride'
+  vehicleCategory?: string;   // '401' | '402' | etc.
+  seats?: number;
+  formula?: number;           // 1, 2, 3...
+
+  // Prime associée
+  prime: number;
+}
+
+export interface MatrixBasedConfig {
+  // Grille de tarification (liste des tarifs)
+  tariffs: MatrixTariff[];
+
+  // Dimension unique de la matrice (pas de combinaison)
+  dimension: 'FISCAL_POWER' | 'FUEL_TYPE' | 'VEHICLE_CATEGORY' | 'SEATS' | 'FORMULA';
+
+  // Valeur par défaut si aucune correspondance
+  defaultPrime?: number;
+}
+
+// Configuration unifiée pour les paramètres de garantie (simplifiée)
 export interface GuaranteeParameters {
-  fireTheftConfig?: FireTheftConfig;
-  glassRoofConfig?: GlassRoofConfig;
-  glassStandardConfig?: GlassStandardConfig;
-  tierceCapConfig?: TierceCapConfig;
-  icIptConfig?: ICIPTConfig;
-  iptConfig?: IPTConfig;
+  // Configuration pour méthode VARIABLE_BASED
+  variableBased?: VariableBasedConfig;
+
+  // Configuration pour méthode MATRIX_BASED
+  matrixBased?: MatrixBasedConfig;
+
+  // Configuration pour méthode FIXED_AMOUNT
+  fixedAmount?: number;
+  packPriceReduced?: number;  // Prix réduit en pack
+
+  // Autres paramètres génériques
   [key: string]: any;
 }
 
@@ -131,18 +192,12 @@ export interface CalculationMethod {
   type: CalculationMethodType;
 }
 
+// Les 4 méthodes de calcul génériques
 export type CalculationMethodType =
-  | 'FIXED_AMOUNT'
-  | 'FREE'
-  | 'FIRE_THEFT'
-  | 'THEFT_ARMED'
-  | 'GLASS_ROOF'
-  | 'GLASS_STANDARD'
-  | 'TIERCE_COMPLETE_CAP'
-  | 'TIERCE_COLLISION_CAP'
-  | 'MTPL_TARIFF'
-  | 'IC_IPT_FORMULA'
-  | 'IPT_PLACES_FORMULA';
+  | 'FREE'              // Gratuit (0 FCFA)
+  | 'FIXED_AMOUNT'      // Montant fixe
+  | 'VARIABLE_BASED'    // Basé sur une variable (ex: % de la valeur du véhicule)
+  | 'MATRIX_BASED';     // Basé sur une matrice/grille de tarification
 
 export interface Guarantee {
   id: string;
@@ -156,8 +211,8 @@ export interface Guarantee {
   conditions?: string;
   minValue?: number;
   maxValue?: number;
-  rate?: number;
-  fixedAmount?: number;
+  rate?: number;           // Compatible avec ancien système
+  fixedAmount?: number;    // Compatible avec ancien système
   franchiseOptions?: number[];
   parameters?: GuaranteeParameters;
   createdAt: Date;
