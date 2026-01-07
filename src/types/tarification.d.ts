@@ -158,6 +158,34 @@ export interface MatrixTariff {
   prime: number
 }
 
+// Configuration pour les grilles par catégorie de véhicule (TCM/TCL)
+export interface VehicleCategoryTariff {
+  // Clé unique
+  key: string
+
+  // Catégorie de véhicule
+  categoryCode: string // '401', '402', '412', etc.
+  categoryName: string // 'Tourisme', 'Utilitaire', etc.
+
+  // Type de garantie
+  guaranteeType: 'TIERCE_COMPLETE' | 'TIERCE_COLLISION'
+
+  // Tranche de valeur à neuf
+  valueNeufMin: number
+  valueNeufMax: number
+  valueLabel: string // ex: "≤ 12 000 000", "12M < VN ≤ 25M"
+
+  // Montant de franchise
+  franchise: number
+  franchiseLabel: string // ex: "Sans franchise", "500 000 FCFA"
+
+  // Taux applicable (%)
+  rate: number
+
+  // Optionnel : montant fixe au lieu du taux
+  prime?: number
+}
+
 // Configuration pour les tarifs par nombre de places
 export interface PlacesTariff {
   places: number
@@ -200,6 +228,9 @@ export interface MatrixBasedConfig {
 
   // Configuration pour dimension FORMULA (formules avec plafonds)
   formulas?: FormulaConfig[]
+
+  // Configuration pour dimension VEHICLE_CATEGORY (grilles TCM/TCL)
+  categoryTariffs?: VehicleCategoryTariff[]
 }
 
 // Configuration unifiée pour les paramètres de garantie (simplifiée)

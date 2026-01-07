@@ -64,6 +64,7 @@ import {
   MatrixTariff,
   FormulaConfig,
   PlacesTariff,
+  VehicleCategoryTariff,
 } from '@/types/tarification'
 import {
   Plus,
@@ -3607,6 +3608,384 @@ export const AdminTarificationPage: React.FC = () => {
                   >
                     <Plus className='h-4 w-4 mr-2' />
                     Ajouter une formule
+                  </Button>
+                </div>
+              )}
+            </div>
+          ) : dimension === 'VEHICLE_CATEGORY' ? (
+            // Configuration pour VEHICLE_CATEGORY (grilles TCM/TCL)
+            <div className='space-y-4'>
+              <div className='p-3 bg-green-50 border border-green-200 rounded-md'>
+                <p className='text-sm text-green-900'>
+                  <strong>Configuration :</strong> Définissez les grilles de tarification par catégorie de véhicule (Tierce Complète / Tierce Collision).
+                </p>
+                <p className='text-xs text-green-700 mt-1'>
+                  Les tarifs sont calculés en fonction de la valeur à neuf (VN), de la franchise et du type de garantie.
+                </p>
+              </div>
+
+              {!config?.categoryTariffs || config.categoryTariffs.length === 0 ? (
+                <div className='text-center p-6 border-2 border-dashed border-gray-300 rounded-lg'>
+                  <Database className='h-8 w-8 text-gray-400 mx-auto mb-2' />
+                  <p className='text-sm text-gray-500 mb-4'>Aucune grille configurée</p>
+                  <Button
+                    type='button'
+                    variant='outline'
+                    size='sm'
+                    onClick={() => {
+                      setNewGuarantee((prev) => ({
+                        ...prev,
+                        parameters: {
+                          ...prev.parameters,
+                          matrixBased: {
+                            dimension: 'VEHICLE_CATEGORY',
+                            categoryTariffs: [
+                              // Catégorie 401 & 412 - Tierce Complète
+                              { key: `tc_401_dta_0_12m_${Date.now()}`, categoryCode: '401', categoryName: 'Tourisme (401/412)', guaranteeType: 'TIERCE_COMPLETE', valueNeufMin: 0, valueNeufMax: 12000000, valueLabel: '≤ 12M', franchise: 0, franchiseLabel: 'Sans franchise', rate: 4.680 },
+                              { key: `tc_401_dta_12m_25m_500k_${Date.now()}`, categoryCode: '401', categoryName: 'Tourisme (401/412)', guaranteeType: 'TIERCE_COMPLETE', valueNeufMin: 12000001, valueNeufMax: 25000000, valueLabel: '12M < VN ≤ 25M', franchise: 500000, franchiseLabel: '500K', rate: 3.256 },
+                              { key: `tc_401_dta_12m_25m_1m_${Date.now()}`, categoryCode: '401', categoryName: 'Tourisme (401/412)', guaranteeType: 'TIERCE_COMPLETE', valueNeufMin: 12000001, valueNeufMax: 25000000, valueLabel: '12M < VN ≤ 25M', franchise: 1000000, franchiseLabel: '1M', rate: 2.968 },
+                              { key: `tc_401_dta_12m_25m_2m_${Date.now()}`, categoryCode: '401', categoryName: 'Tourisme (401/412)', guaranteeType: 'TIERCE_COMPLETE', valueNeufMin: 12000001, valueNeufMax: 25000000, valueLabel: '12M < VN ≤ 25M', franchise: 2000000, franchiseLabel: '2M', rate: 2.744 },
+                              { key: `tc_401_dta_12m_25m_2.5m_${Date.now()}`, categoryCode: '401', categoryName: 'Tourisme (401/412)', guaranteeType: 'TIERCE_COMPLETE', valueNeufMin: 12000001, valueNeufMax: 25000000, valueLabel: '12M < VN ≤ 25M', franchise: 2500000, franchiseLabel: '2.5M', rate: 2.628 },
+                              { key: `tc_401_dta_25m_40m_1m_${Date.now()}`, categoryCode: '401', categoryName: 'Tourisme (401/412)', guaranteeType: 'TIERCE_COMPLETE', valueNeufMin: 25000001, valueNeufMax: 40000000, valueLabel: '25M < VN ≤ 40M', franchise: 1000000, franchiseLabel: '1M', rate: 2.128 },
+                              { key: `tc_401_dta_25m_40m_2m_${Date.now()}`, categoryCode: '401', categoryName: 'Tourisme (401/412)', guaranteeType: 'TIERCE_COMPLETE', valueNeufMin: 25000001, valueNeufMax: 40000000, valueLabel: '25M < VN ≤ 40M', franchise: 2000000, franchiseLabel: '2M', rate: 1.956 },
+                              { key: `tc_401_dta_40m_110m_2.5m_${Date.now()}`, categoryCode: '401', categoryName: 'Tourisme (401/412)', guaranteeType: 'TIERCE_COMPLETE', valueNeufMin: 40000001, valueNeufMax: 110000000, valueLabel: '40M < VN ≤ 110M', franchise: 2500000, franchiseLabel: '2.5M', rate: 1.648 },
+                              { key: `tc_401_dta_110m_2.5m_${Date.now()}`, categoryCode: '401', categoryName: 'Tourisme (401/412)', guaranteeType: 'TIERCE_COMPLETE', valueNeufMin: 110000001, valueNeufMax: 999999999, valueLabel: '> 110M', franchise: 2500000, franchiseLabel: '2.5M', rate: 1.248 },
+                              // Catégorie 401 & 412 - Tierce Collision
+                              { key: `tc_401_dc_0_40m_500k_${Date.now()}`, categoryCode: '401', categoryName: 'Tourisme (401/412)', guaranteeType: 'TIERCE_COLLISION', valueNeufMin: 0, valueNeufMax: 40000000, valueLabel: '≤ 40M', franchise: 500000, franchiseLabel: '500K', rate: 2.232 },
+                              { key: `tc_401_dc_0_40m_1m_${Date.now()}`, categoryCode: '401', categoryName: 'Tourisme (401/412)', guaranteeType: 'TIERCE_COLLISION', valueNeufMin: 0, valueNeufMax: 40000000, valueLabel: '≤ 40M', franchise: 1000000, franchiseLabel: '1M', rate: 2.052 },
+                              { key: `tc_401_dc_0_40m_2m_${Date.now()}`, categoryCode: '401', categoryName: 'Tourisme (401/412)', guaranteeType: 'TIERCE_COLLISION', valueNeufMin: 0, valueNeufMax: 40000000, valueLabel: '≤ 40M', franchise: 2000000, franchiseLabel: '2M', rate: 1.912 },
+                              { key: `tc_401_dc_0_40m_2.5m_${Date.now()}`, categoryCode: '401', categoryName: 'Tourisme (401/412)', guaranteeType: 'TIERCE_COLLISION', valueNeufMin: 0, valueNeufMax: 40000000, valueLabel: '≤ 40M', franchise: 2500000, franchiseLabel: '2.5M', rate: 1.836 },
+                              { key: `tc_401_dc_40m_500k_${Date.now()}`, categoryCode: '401', categoryName: 'Tourisme (401/412)', guaranteeType: 'TIERCE_COLLISION', valueNeufMin: 40000001, valueNeufMax: 999999999, valueLabel: '> 40M', franchise: 500000, franchiseLabel: '500K', rate: 1.764 },
+                              { key: `tc_401_dc_40m_1m_${Date.now()}`, categoryCode: '401', categoryName: 'Tourisme (401/412)', guaranteeType: 'TIERCE_COLLISION', valueNeufMin: 40000001, valueNeufMax: 999999999, valueLabel: '> 40M', franchise: 1000000, franchiseLabel: '1M', rate: 1.628 },
+                              { key: `tc_401_dc_40m_2m_${Date.now()}`, categoryCode: '401', categoryName: 'Tourisme (401/412)', guaranteeType: 'TIERCE_COLLISION', valueNeufMin: 40000001, valueNeufMax: 999999999, valueLabel: '> 40M', franchise: 2000000, franchiseLabel: '2M', rate: 1.516 },
+                              { key: `tc_401_dc_40m_2.5m_${Date.now()}`, categoryCode: '401', categoryName: 'Tourisme (401/412)', guaranteeType: 'TIERCE_COLLISION', valueNeufMin: 40000001, valueNeufMax: 999999999, valueLabel: '> 40M', franchise: 2500000, franchiseLabel: '2.5M', rate: 1.456 },
+                            ]
+                          }
+                        }
+                      }))
+                    }}
+                  >
+                    <Plus className='h-4 w-4 mr-2' />
+                    Initialiser avec grilles par défaut
+                  </Button>
+                </div>
+              ) : (
+                <div className='space-y-4'>
+                  {/* Grouper par catégorie et type de garantie */}
+                  {(() => {
+                    const groups = config.categoryTariffs?.reduce((acc, tariff) => {
+                      const key = `${tariff.categoryCode}_${tariff.guaranteeType}`
+                      if (!acc[key]) {
+                        acc[key] = []
+                      }
+                      acc[key].push(tariff)
+                      return acc
+                    }, {} as Record<string, VehicleCategoryTariff[]>) ?? {}
+
+                    const categoryLabels: Record<string, string> = {
+                      '401_TIERCE_COMPLETE': 'Catégorie 401/412 - Tierce Complète (DTA)',
+                      '401_TIERCE_COLLISION': 'Catégorie 401/412 - Tierce Collision (DC)',
+                      '402_TIERCE_COMPLETE': 'Catégorie 402 - Tierce Complète (DTA)',
+                      '402_TIERCE_COLLISION': 'Catégorie 402 - Tierce Collision (DC)',
+                    }
+
+                    return Object.entries(groups).map(([groupKey, tariffs]) => (
+                      <div key={groupKey} className='border rounded-lg p-4 bg-white'>
+                        <div className='flex items-center justify-between mb-3'>
+                          <h4 className='font-semibold text-sm text-green-800'>
+                            {categoryLabels[groupKey] || groupKey}
+                          </h4>
+                          <Button
+                            type='button'
+                            variant='outline'
+                            size='sm'
+                            onClick={() => {
+                              const newCategoryTariffs = [...(config.categoryTariffs || [])]
+                              const [categoryCode, guaranteeType] = groupKey.split('_')
+                              const existingValueRanges = tariffs
+                                .filter(t => t.categoryCode === categoryCode && t.guaranteeType === guaranteeType as any)
+                                .map(t => t.valueNeufMax)
+                              const maxValueRange = Math.max(...existingValueRanges, 0)
+
+                              // Nouvelle tranche de valeur
+                              const newValueMin = maxValueRange + 1
+                              const newValueMax = maxValueRange === 0 ? 12000000 : maxValueRange * 2
+                              newCategoryTariffs.push({
+                                key: `${categoryCode}_${guaranteeType}_${newValueMin}_${newValueMax}_500k_${Date.now()}`,
+                                categoryCode,
+                                categoryName: categoryCode === '401' ? 'Tourisme' : 'Utilitaire',
+                                guaranteeType: guaranteeType as any,
+                                valueNeufMin: newValueMin,
+                                valueNeufMax: newValueMax,
+                                valueLabel: `${(newValueMin/1000000).toFixed(0)}M < VN ≤ ${(newValueMax/1000000).toFixed(0)}M`,
+                                franchise: 500000,
+                                franchiseLabel: '500K',
+                                rate: 2.5
+                              })
+                              setNewGuarantee((prev) => ({
+                                ...prev,
+                                parameters: {
+                                  ...prev.parameters,
+                                  matrixBased: {
+                                    dimension: 'VEHICLE_CATEGORY',
+                                    categoryTariffs: newCategoryTariffs
+                                  }
+                                }
+                              }))
+                            }}
+                          >
+                            <Plus className='h-3 w-3 mr-1' />
+                            Ajouter une tranche
+                          </Button>
+                        </div>
+
+                        <div className='overflow-x-auto'>
+                          <table className='w-full text-xs'>
+                            <thead>
+                              <tr className='bg-green-50 border-b'>
+                                <th className='p-2 text-left'>Tranche VN</th>
+                                <th className='p-2 text-center'>Sans franchise</th>
+                                <th className='p-2 text-center'>500K</th>
+                                <th className='p-2 text-center'>1M</th>
+                                <th className='p-2 text-center'>2M</th>
+                                <th className='p-2 text-center'>2.5M</th>
+                                <th className='p-2 text-center w-8'></th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {tariffs.map((tariff) => (
+                                <tr key={tariff.key} className='border-b hover:bg-gray-50'>
+                                  <td className='p-2 font-medium'>{tariff.valueLabel}</td>
+                                  <td className='p-2 text-center'>
+                                    {tariff.franchise === 0 ? (
+                                      <span className='text-green-700 font-semibold'>{tariff.rate.toFixed(3)}%</span>
+                                    ) : (
+                                      <span className='text-gray-300'>-</span>
+                                    )}
+                                  </td>
+                                  <td className='p-2 text-center'>
+                                    {tariff.franchise === 500000 ? (
+                                      <span className='text-green-700 font-semibold'>{tariff.rate.toFixed(3)}%</span>
+                                    ) : (
+                                      <button
+                                        type='button'
+                                        className='text-green-600 hover:text-green-800 underline'
+                                        onClick={() => {
+                                          const newCategoryTariffs = [...(config.categoryTariffs || [])]
+                                          const idx = newCategoryTariffs.findIndex(t => t.key === tariff.key)
+                                          if (idx >= 0) {
+                                            newCategoryTariffs[idx] = { ...tariff, franchise: 500000, franchiseLabel: '500K' }
+                                            setNewGuarantee((prev) => ({
+                                              ...prev,
+                                              parameters: {
+                                                ...prev.parameters,
+                                                matrixBased: {
+                                                  dimension: 'VEHICLE_CATEGORY',
+                                                  categoryTariffs: newCategoryTariffs
+                                                }
+                                              }
+                                            }))
+                                          }
+                                        }}
+                                      >
+                                        +
+                                      </button>
+                                    )}
+                                  </td>
+                                  <td className='p-2 text-center'>
+                                    {tariff.franchise === 1000000 ? (
+                                      <span className='text-green-700 font-semibold'>{tariff.rate.toFixed(3)}%</span>
+                                    ) : (
+                                      <button
+                                        type='button'
+                                        className='text-green-600 hover:text-green-800 underline'
+                                        onClick={() => {
+                                          const newCategoryTariffs = [...(config.categoryTariffs || [])]
+                                          const idx = newCategoryTariffs.findIndex(t => t.key === tariff.key)
+                                          if (idx >= 0) {
+                                            newCategoryTariffs[idx] = { ...tariff, franchise: 1000000, franchiseLabel: '1M' }
+                                            setNewGuarantee((prev) => ({
+                                              ...prev,
+                                              parameters: {
+                                                ...prev.parameters,
+                                                matrixBased: {
+                                                  dimension: 'VEHICLE_CATEGORY',
+                                                  categoryTariffs: newCategoryTariffs
+                                                }
+                                              }
+                                            }))
+                                          }
+                                        }}
+                                      >
+                                        +
+                                      </button>
+                                    )}
+                                  </td>
+                                  <td className='p-2 text-center'>
+                                    {tariff.franchise === 2000000 ? (
+                                      <span className='text-green-700 font-semibold'>{tariff.rate.toFixed(3)}%</span>
+                                    ) : (
+                                      <button
+                                        type='button'
+                                        className='text-green-600 hover:text-green-800 underline'
+                                        onClick={() => {
+                                          const newCategoryTariffs = [...(config.categoryTariffs || [])]
+                                          const idx = newCategoryTariffs.findIndex(t => t.key === tariff.key)
+                                          if (idx >= 0) {
+                                            newCategoryTariffs[idx] = { ...tariff, franchise: 2000000, franchiseLabel: '2M' }
+                                            setNewGuarantee((prev) => ({
+                                              ...prev,
+                                              parameters: {
+                                                ...prev.parameters,
+                                                matrixBased: {
+                                                  dimension: 'VEHICLE_CATEGORY',
+                                                  categoryTariffs: newCategoryTariffs
+                                                }
+                                              }
+                                            }))
+                                          }
+                                        }}
+                                      >
+                                        +
+                                      </button>
+                                    )}
+                                  </td>
+                                  <td className='p-2 text-center'>
+                                    {tariff.franchise === 2500000 ? (
+                                      <span className='text-green-700 font-semibold'>{tariff.rate.toFixed(3)}%</span>
+                                    ) : (
+                                      <button
+                                        type='button'
+                                        className='text-green-600 hover:text-green-800 underline'
+                                        onClick={() => {
+                                          const newCategoryTariffs = [...(config.categoryTariffs || [])]
+                                          const idx = newCategoryTariffs.findIndex(t => t.key === tariff.key)
+                                          if (idx >= 0) {
+                                            newCategoryTariffs[idx] = { ...tariff, franchise: 2500000, franchiseLabel: '2.5M' }
+                                            setNewGuarantee((prev) => ({
+                                              ...prev,
+                                              parameters: {
+                                                ...prev.parameters,
+                                                matrixBased: {
+                                                  dimension: 'VEHICLE_CATEGORY',
+                                                  categoryTariffs: newCategoryTariffs
+                                                }
+                                              }
+                                            }))
+                                          }
+                                        }}
+                                      >
+                                        +
+                                      </button>
+                                    )}
+                                  </td>
+                                  <td className='p-2'>
+                                    <Button
+                                      type='button'
+                                      variant='ghost'
+                                      size='sm'
+                                      className='h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50'
+                                      onClick={() => {
+                                        const newCategoryTariffs = config.categoryTariffs?.filter(t => t.key !== tariff.key) ?? []
+                                        setNewGuarantee((prev) => ({
+                                          ...prev,
+                                          parameters: {
+                                            ...prev.parameters,
+                                            matrixBased: {
+                                              dimension: 'VEHICLE_CATEGORY',
+                                              categoryTariffs: newCategoryTariffs
+                                            }
+                                          }
+                                        }))
+                                      }}
+                                    >
+                                      <Trash2 className='h-3 w-3' />
+                                    </Button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+
+                        {/* Mode édition pour modifier les taux */}
+                        <div className='mt-3 p-3 bg-gray-50 rounded'>
+                          <details>
+                            <summary className='text-xs font-medium cursor-pointer text-gray-700'>
+                              Mode édition - Modifier les taux manuellement
+                            </summary>
+                            <div className='mt-2 space-y-2'>
+                              {tariffs.map((tariff) => (
+                                <div key={tariff.key} className='flex items-center gap-2 bg-white p-2 rounded border'>
+                                  <span className='text-xs w-24'>{tariff.valueLabel}</span>
+                                  <span className='text-xs w-20'>{tariff.franchiseLabel}</span>
+                                  <Input
+                                    type='number'
+                                    step='0.001'
+                                    value={tariff.rate}
+                                    onChange={(e) => {
+                                      const rate = parseFloat(e.target.value)
+                                      const newCategoryTariffs = [...(config.categoryTariffs || [])]
+                                      const idx = newCategoryTariffs.findIndex(t => t.key === tariff.key)
+                                      if (idx >= 0) {
+                                        newCategoryTariffs[idx] = { ...tariff, rate: Number.isFinite(rate) ? rate : 0 }
+                                        setNewGuarantee((prev) => ({
+                                          ...prev,
+                                          parameters: {
+                                            ...prev.parameters,
+                                            matrixBased: {
+                                              dimension: 'VEHICLE_CATEGORY',
+                                              categoryTariffs: newCategoryTariffs
+                                            }
+                                          }
+                                        }))
+                                      }
+                                    }}
+                                    className='h-7 w-20 text-xs'
+                                  />
+                                  <span className='text-xs text-gray-500'>%</span>
+                                </div>
+                              ))}
+                            </div>
+                          </details>
+                        </div>
+                      </div>
+                    ))
+                  })()}
+
+                  <Button
+                    type='button'
+                    variant='outline'
+                    size='sm'
+                    className='w-full'
+                    onClick={() => {
+                      const newCategoryTariffs = [...(config.categoryTariffs || [])]
+                      newCategoryTariffs.push({
+                        key: `custom_${Date.now()}`,
+                        categoryCode: '401',
+                        categoryName: 'Tourisme',
+                        guaranteeType: 'TIERCE_COMPLETE',
+                        valueNeufMin: 0,
+                        valueNeufMax: 12000000,
+                        valueLabel: 'Nouvelle tranche',
+                        franchise: 500000,
+                        franchiseLabel: '500K',
+                        rate: 2.5
+                      })
+                      setNewGuarantee((prev) => ({
+                        ...prev,
+                        parameters: {
+                          ...prev.parameters,
+                          matrixBased: {
+                            dimension: 'VEHICLE_CATEGORY',
+                            categoryTariffs: newCategoryTariffs
+                          }
+                        }
+                      }))
+                    }}
+                  >
+                    <Plus className='h-4 w-4 mr-2' />
+                    Ajouter un nouveau groupe
                   </Button>
                 </div>
               )}
