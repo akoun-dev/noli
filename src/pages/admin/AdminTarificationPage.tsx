@@ -33,7 +33,6 @@ import {
 } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { toast } from 'sonner'
 import { logger } from '@/lib/logger'
 import {
   guaranteeService,
@@ -298,12 +297,12 @@ export const AdminTarificationPage: React.FC = () => {
       setLoading(true)
       const newTarif = await guaranteeService.createTarifRC(tarif)
       setTarifRC((prev) => [...prev, newTarif])
-      toast.success('Tranche tarifaire créée avec succès')
+      showNotification('success', 'Tranche tarifaire créée avec succès')
       setShowRCEditForm(false)
       setEditingRC(null)
     } catch (error) {
       logger.error('Error creating RC tariff:', error)
-      toast.error('Erreur lors de la création de la tranche tarifaire')
+      showNotification('error', 'Erreur lors de la création de la tranche tarifaire')
     } finally {
       setLoading(false)
     }
@@ -314,33 +313,35 @@ export const AdminTarificationPage: React.FC = () => {
       setLoading(true)
       const updatedTarif = await guaranteeService.updateTarifRC(id, tarif)
       setTarifRC((prev) => prev.map((t) => (t.id === id ? updatedTarif : t)))
-      toast.success('Tranche tarifaire mise à jour avec succès')
+      showNotification('success', 'Tranche tarifaire mise à jour avec succès')
       setShowRCEditForm(false)
       setEditingRC(null)
     } catch (error) {
       logger.error('Error updating RC tariff:', error)
-      toast.error('Erreur lors de la mise à jour de la tranche tarifaire')
+      showNotification('error', 'Erreur lors de la mise à jour de la tranche tarifaire')
     } finally {
       setLoading(false)
     }
   }
 
   const handleDeleteRC = async (id: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cette tranche tarifaire ?')) {
-      return
-    }
-
-    try {
-      setLoading(true)
-      await guaranteeService.deleteTarifRC(id)
-      setTarifRC((prev) => prev.filter((t) => t.id !== id))
-      toast.success('Tranche tarifaire supprimée avec succès')
-    } catch (error) {
-      logger.error('Error deleting RC tariff:', error)
-      toast.error('Erreur lors de la suppression de la tranche tarifaire')
-    } finally {
-      setLoading(false)
-    }
+    showConfirmDialog(
+      'Supprimer la tranche tarifaire',
+      'Êtes-vous sûr de vouloir supprimer cette tranche tarifaire ?',
+      async () => {
+        try {
+          setLoading(true)
+          await guaranteeService.deleteTarifRC(id)
+          setTarifRC((prev) => prev.filter((t) => t.id !== id))
+          showNotification('success', 'Tranche tarifaire supprimée avec succès')
+        } catch (error) {
+          logger.error('Error deleting RC tariff:', error)
+          showNotification('error', 'Erreur lors de la suppression de la tranche tarifaire')
+        } finally {
+          setLoading(false)
+        }
+      }
+    )
   }
   const [statistics, setStatistics] = useState<{
     totalGuarantees: number
@@ -371,6 +372,36 @@ export const AdminTarificationPage: React.FC = () => {
     parameters: undefined,
   })
   const [existingGuaranteeCodes, setExistingGuaranteeCodes] = useState<string[]>([])
+
+  // États pour les notifications et confirmations
+  const [notification, setNotification] = useState<{
+    type: 'success' | 'error' | 'info' | 'warning'
+    message: string
+    description?: string
+  } | null>(null)
+
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean
+    title: string
+    message: string
+    onConfirm: () => void
+  }>({ isOpen: false, title: '', message: '', onConfirm: () => {} })
+
+  // Fonction pour afficher une notification
+  const showNotification = (
+    type: 'success' | 'error' | 'info' | 'warning',
+    message: string,
+    description?: string
+  ) => {
+    setNotification({ type, message, description })
+    // Auto-dismiss après 5 secondes
+    setTimeout(() => setNotification(null), 5000)
+  }
+
+  // Fonction pour afficher une confirmation
+  const showConfirmDialog = (title: string, message: string, onConfirm: () => void) => {
+    setConfirmDialog({ isOpen: true, title, message, onConfirm })
+  }
 
   // Générer automatiquement le code lorsque le nom change
   const generateCodeFromName = async (name: string) => {
@@ -483,7 +514,7 @@ export const AdminTarificationPage: React.FC = () => {
           })
           .catch((err) => {
             logger.error('Erreur de chargement des garanties (DB):', err)
-            toast.error('Impossible de charger les garanties depuis la base')
+            showNotification('error', 'Impossible de charger les garanties depuis la base')
             return [] as Guarantee[]
           }),
         10000, // Augmenté à 10 secondes
@@ -551,7 +582,7 @@ export const AdminTarificationPage: React.FC = () => {
       })
     } catch (error) {
       logger.error('Error loading data:', error)
-      toast.error('Erreur lors du chargement des données de tarification')
+      showNotification('error', 'Erreur lors du chargement des données de tarification')
     } finally {
       setLoading(false)
     }
@@ -561,7 +592,7 @@ export const AdminTarificationPage: React.FC = () => {
   const handleCreateTarifFixe = async () => {
     try {
       if (!selectedCoverageId || !newTarifFixe.prime) {
-        toast.error('Sélectionnez une garantie et saisissez une prime')
+        showNotification('error', 'Sélectionnez une garantie et saisissez une prime')
         return
       }
 
@@ -582,10 +613,10 @@ export const AdminTarificationPage: React.FC = () => {
       setNewTarifFixe({ guaranteeName: '', prime: 0, conditions: '', packPriceReduced: undefined })
       setSelectedCoverageId('')
       setSelectedFormulaName('')
-      toast.success('Tarif fixe créé')
+      showNotification('success', 'Tarif fixe créé')
     } catch (error) {
       logger.error('Error creating fixed tariff:', error)
-      toast.error('Erreur lors de la création du tarif')
+      showNotification('error', 'Erreur lors de la création du tarif')
     }
   }
 
@@ -606,7 +637,7 @@ export const AdminTarificationPage: React.FC = () => {
     if (!selectedTarifFixe) return
     try {
       if (!selectedCoverageId || !newTarifFixe.prime) {
-        toast.error('Sélectionnez une garantie et saisissez une prime')
+        showNotification('error', 'Sélectionnez une garantie et saisissez une prime')
         return
       }
 
@@ -628,24 +659,29 @@ export const AdminTarificationPage: React.FC = () => {
       setNewTarifFixe({ guaranteeName: '', prime: 0, conditions: '', packPriceReduced: undefined })
       setSelectedCoverageId('')
       setSelectedFormulaName('')
-      toast.success('Tarif fixe mis à jour')
+      showNotification('success', 'Tarif fixe mis à jour')
     } catch (error) {
       logger.error('Error updating fixed tariff:', error)
-      toast.error('Erreur lors de la mise à jour du tarif')
+      showNotification('error', 'Erreur lors de la mise à jour du tarif')
     }
   }
 
   const handleDeleteTarifFixe = async (id: string) => {
-    if (!confirm('Supprimer ce tarif fixe ?')) return
-    try {
-      await tarificationSupabaseService.deleteFixedTariff(id)
-      const refreshed = await tarificationSupabaseService.listFixedTariffs()
-      setTarifFixes(refreshed)
-      toast.success('Tarif fixe supprimé')
-    } catch (error) {
-      logger.error('Error deleting fixed tariff:', error)
-      toast.error('Erreur lors de la suppression')
-    }
+    showConfirmDialog(
+      'Supprimer le tarif fixe',
+      'Êtes-vous sûr de vouloir supprimer ce tarif fixe ?',
+      async () => {
+        try {
+          await tarificationSupabaseService.deleteFixedTariff(id)
+          const refreshed = await tarificationSupabaseService.listFixedTariffs()
+          setTarifFixes(refreshed)
+          showNotification('success', 'Tarif fixe supprimé')
+        } catch (error) {
+          logger.error('Error deleting fixed tariff:', error)
+          showNotification('error', 'Erreur lors de la suppression')
+        }
+      }
+    )
   }
 
   const handleCreateGuarantee = async () => {
@@ -687,10 +723,7 @@ export const AdminTarificationPage: React.FC = () => {
 
       if (missing.length > 0) {
         logger.warn('handleCreateGuarantee: missing fields', missing)
-        toast.error(`Champs obligatoires manquants: ${missing.join(', ')}`, {
-          description: 'Veuillez compléter les informations requises avant de continuer.',
-          duration: 5000,
-        })
+        showNotification('error', `Champs obligatoires manquants: ${missing.join(', ')}`, 'Veuillez compléter les informations requises avant de continuer.')
         return
       }
 
@@ -813,11 +846,11 @@ export const AdminTarificationPage: React.FC = () => {
         isOptional: true,
         parameters: undefined,
       })
-      toast.success('Garantie créée avec succès')
+      showNotification('success', 'Garantie créée avec succès')
       loadData()
     } catch (error) {
       logger.error('Error creating guarantee:', error)
-      toast.error('Erreur lors de la création de la garantie')
+      showNotification('error', 'Erreur lors de la création de la garantie')
     } finally {
       setIsCreatingGuarantee(false)
     }
@@ -862,10 +895,7 @@ export const AdminTarificationPage: React.FC = () => {
 
       if (missing.length > 0) {
         logger.warn('handleUpdateGuarantee: missing fields', missing)
-        toast.error(`Champs obligatoires manquants: ${missing.join(', ')}`, {
-          description: 'Veuillez compléter les informations requises avant de continuer.',
-          duration: 5000,
-        })
+        showNotification('error', `Champs obligatoires manquants: ${missing.join(', ')}`, 'Veuillez compléter les informations requises avant de continuer.')
         return
       }
 
@@ -978,46 +1008,60 @@ export const AdminTarificationPage: React.FC = () => {
         isOptional: true,
         parameters: undefined,
       })
+      showNotification('success', 'Garantie mise à jour avec succès')
       loadData()
     } catch (error) {
       logger.error('Error updating guarantee:', error)
+      showNotification('error', 'Erreur lors de la mise à jour de la garantie')
     }
   }
 
   const handleDeleteGuarantee = async (id: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cette garantie ?')) {
-      return
-    }
-
-    try {
-      try {
-        await tarificationSupabaseService.deleteCoverage(id)
-        logger.api('handleDeleteGuarantee: deleted coverage in Supabase', { id })
-      } catch (e) {
-        logger.warn('handleDeleteGuarantee: Supabase delete failed, fallback to local', e)
-        await guaranteeService.deleteGuarantee(id)
+    const guarantee = guarantees.find((g) => g.id === id)
+    showConfirmDialog(
+      'Supprimer la garantie',
+      `Êtes-vous sûr de vouloir supprimer la garantie "${guarantee?.name}" ? Cette action est irréversible.`,
+      async () => {
+        try {
+          try {
+            await tarificationSupabaseService.deleteCoverage(id)
+            logger.api('handleDeleteGuarantee: deleted coverage in Supabase', { id })
+          } catch (e) {
+            logger.warn('handleDeleteGuarantee: Supabase delete failed, fallback to local', e)
+            await guaranteeService.deleteGuarantee(id)
+          }
+          loadData()
+          showNotification('success', 'Garantie supprimée avec succès')
+        } catch (error) {
+          logger.error('Error deleting guarantee:', error)
+          showNotification('error', 'Erreur lors de la suppression de la garantie')
+        }
       }
-      loadData()
-    } catch (error) {
-      logger.error('Error deleting guarantee:', error)
-    }
+    )
   }
 
   const handleToggleGuarantee = async (id: string) => {
     try {
       const found = guarantees.find((g) => g.id === id)
       if (found) {
+        const newStatus = !found.isActive
         try {
-          await tarificationSupabaseService.updateCoverageDetails(id, { isActive: !found.isActive })
-          logger.api('handleToggleGuarantee: toggled in Supabase', { id, to: !found.isActive })
+          await tarificationSupabaseService.updateCoverageDetails(id, { isActive: newStatus })
+          logger.api('handleToggleGuarantee: toggled in Supabase', { id, to: newStatus })
         } catch (e) {
           logger.warn('handleToggleGuarantee: Supabase toggle failed, fallback to local', e)
           await guaranteeService.toggleGuarantee(id)
         }
+        showNotification(
+          'success',
+          `Garantie ${newStatus ? 'activée' : 'désactivée'}`,
+          `"${found.name}" est maintenant ${newStatus ? 'active' : 'inactive'}`
+        )
       }
       loadData()
     } catch (error) {
       logger.error('Error toggling guarantee:', error)
+      showNotification('error', 'Erreur lors du changement de statut')
     }
   }
 
@@ -5649,6 +5693,74 @@ export const AdminTarificationPage: React.FC = () => {
               Annuler
             </Button>
             <Button onClick={handleUpdateGuarantee}>Mettre à jour</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Notification Alert */}
+      {notification && (
+        <div className='fixed top-4 right-4 z-50 max-w-md'>
+          <Alert
+            variant={
+              notification.type === 'success'
+                ? 'default'
+                : notification.type === 'error'
+                  ? 'destructive'
+                  : notification.type === 'warning'
+                    ? 'default'
+                    : 'default'
+            }
+            className={
+              notification.type === 'success'
+                ? 'border-green-500 bg-green-50 text-green-900'
+                : notification.type === 'error'
+                  ? 'border-red-500 bg-red-50 text-red-900'
+                  : notification.type === 'warning'
+                    ? 'border-yellow-500 bg-yellow-50 text-yellow-900'
+                    : 'border-blue-500 bg-blue-50 text-blue-900'
+            }
+          >
+            <AlertDescription className='flex items-center justify-between'>
+              <div>
+                <div className='font-semibold'>{notification.message}</div>
+                {notification.description && (
+                  <div className='text-sm mt-1 opacity-90'>{notification.description}</div>
+                )}
+              </div>
+              <button
+                onClick={() => setNotification(null)}
+                className='ml-4 opacity-70 hover:opacity-100'
+              >
+                ✕
+              </button>
+            </AlertDescription>
+          </Alert>
+        </div>
+      )}
+
+      {/* Dialog de confirmation */}
+      <Dialog open={confirmDialog.isOpen} onOpenChange={(open) => setConfirmDialog({ ...confirmDialog, isOpen: open })}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{confirmDialog.title}</DialogTitle>
+            <DialogDescription>{confirmDialog.message}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant='outline'
+              onClick={() => setConfirmDialog({ isOpen: false, title: '', message: '', onConfirm: () => {} })}
+            >
+              Annuler
+            </Button>
+            <Button
+              onClick={async () => {
+                await confirmDialog.onConfirm()
+                setConfirmDialog({ isOpen: false, title: '', message: '', onConfirm: () => {} })
+              }}
+              variant='destructive'
+            >
+              Confirmer
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
