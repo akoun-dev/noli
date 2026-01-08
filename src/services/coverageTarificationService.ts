@@ -557,6 +557,126 @@ class CoverageTarificationService {
     return defaultFormula;
   }
 
+  private calculateVariableBasedPremium(variableBasedConfig: any, vehicleData: VehicleData): number {
+    if (!variableBasedConfig) return 0;
+
+    const config = (variableBasedConfig as Record<string, any>);
+    const variableSource = config.variableSource as string;
+
+    // Déterminer la valeur de la variable source
+    let variableValue = 0;
+
+    switch (variableSource) {
+      case 'VENAL_VALUE':
+        variableValue = this.parseNumber(vehicleData.sum_insured) ?? 0;
+        break;
+      case 'NEW_VALUE':
+        variableValue = this.parseNumber(vehicleData.new_value) ?? 0;
+        break;
+      case 'FISCAL_POWER':
+        variableValue = this.parseNumber(vehicleData.fiscal_power) ?? 0;
+        break;
+    }
+
+    if (variableValue <= 0) {
+      return 0;
+    }
+
+    // Gestion du seuil (conditionné par la valeur neuve)
+    let ratePercent = config.ratePercent;
+
+    if (config.conditionedByNewValue) {
+      const threshold = this.parseNumber(config.newValueThreshold) ?? 25_000_000;
+      const sumInsured = this.parseNumber(vehicleData.sum_insured) ?? vehicleData.new_value ?? 0;
+
+      if (sumInsured <= threshold) {
+        ratePercent = config.rateBelowThresholdPercent;
+      } else {
+        ratePercent = config.rateAboveThresholdPercent;
+      }
+    }
+
+    // Calculer le montant
+    let amount = 0;
+    if (typeof ratePercent === 'number' && ratePercent > 0) {
+      amount = variableValue * (ratePercent / 100);
+    }
+
+    // Appliquer les min/max
+    const minAmount = this.parseNumber(config.minAmount);
+    const maxAmount = this.parseNumber(config.maxAmount);
+
+    if (typeof minAmount === 'number' && amount < minAmount) {
+      amount = minAmount;
+    }
+    if (typeof maxAmount === 'number' && amount > maxAmount) {
+      amount = maxAmount;
+    }
+
+    return amount > 0 ? amount : 0;
+  }
+
+  private calculateMatrixBasedPremium(matrixBasedConfig: any, vehicleData: VehicleData): number {
+    if (!matrixBasedConfig) return 0;
+
+    const config = (matrixBasedConfig as Record<string, any>);
+    const dimension = config.dimension as string;
+    const tariffs = config.tariffs as any[];
+
+    if (!Array.isArray(tariffs) || tariffs.length === 0) {
+      return this.parseNumber(config.defaultPrime) ?? 0;
+    }
+
+    // Extraire les valeurs du véhicule
+    const fiscalPower = this.parseNumber(vehicleData.fiscal_power) ?? 0;
+    const fuelType = (vehicleData.fuel_type ?? '').toLowerCase();
+    const categoryCode = vehicleData.category ?? '401';
+    const seats = this.parseNumber(vehicleData.seats) ?? this.parseNumber(vehicleData.passenger_seats) ?? this.parseNumber(vehicleData.nb_places) ?? 5;
+    const formula = this.parseFormulaSelection(vehicleData.formula_name, 1);
+
+    // Rechercher le tarif applicable selon la dimension
+    let matchedPrime: number | null = null;
+
+    switch (dimension) {
+      case 'FISCAL_POWER':
+        matchedPrime = tariffs.find((tariff: any) => {
+          const min = this.parseNumber(tariff.fiscalPowerMin) ?? 0;
+          const max = this.parseNumber(tariff.fiscalPowerMax) ?? 999;
+          return fiscalPower >= min && fiscalPower <= max;
+        })?.prime ?? null;
+        break;
+
+      case 'FUEL_TYPE':
+        matchedPrime = tariffs.find((tariff: any) => {
+          const tariffFuel = tariff.fuelType?.toLowerCase() ?? '';
+          return tariffFuel === fuelType;
+        })?.prime ?? null;
+        break;
+
+      case 'VEHICLE_CATEGORY':
+        matchedPrime = tariffs.find((tariff: any) => {
+          return tariff.vehicleCategory === categoryCode;
+        })?.prime ?? null;
+        break;
+
+      case 'SEATS':
+        matchedPrime = tariffs.find((tariff: any) => {
+          const tariffSeats = this.parseNumber(tariff.seats);
+          return tariffSeats === seats;
+        })?.prime ?? null;
+        break;
+
+      case 'FORMULA':
+        matchedPrime = tariffs.find((tariff: any) => {
+          const tariffFormula = this.parseNumber(tariff.formula);
+          return tariffFormula === formula;
+        })?.prime ?? null;
+        break;
+    }
+
+    return matchedPrime ?? this.parseNumber(config.defaultPrime) ?? 0;
+  }
+
   private calculatePremiumFromMetadata(metadata: Record<string, any> | undefined, vehicleData: VehicleData): number {
     if (!metadata || typeof metadata !== 'object') {
       return 0;
@@ -575,6 +695,10 @@ class CoverageTarificationService {
       }
       case 'FREE':
         return 0;
+      case 'VARIABLE_BASED':
+        return this.calculateVariableBasedPremium(params.variableBased ?? metadata, vehicleData);
+      case 'MATRIX_BASED':
+        return this.calculateMatrixBasedPremium(params.matrixBased ?? metadata, vehicleData);
       case 'FIRE_THEFT':
       case 'THEFT_ARMED':
         return params.fireTheftConfig ? this.calculateFireTheftPremium(params.fireTheftConfig, vehicleData) : 0;
