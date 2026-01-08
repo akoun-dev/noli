@@ -73,65 +73,79 @@ const mapProfileToInsurer = (profile: any): Insurer => {
 export const fetchInsurers = async (): Promise<Insurer[]> => {
   try {
     logger.auth('🔍 [fetchInsurers] Starting fetch...')
-    const { data: profiles, error } = await supabase
-      .from('profiles')
+    const { data: insurers, error } = await supabase
+      .from('insurers')
       .select('*')
-      .eq('role', 'INSURER')
       .order('created_at', { ascending: false })
 
     if (error) {
-      logger.error('🔍 [fetchInsurers] Error fetching profiles:', error)
+      logger.error('🔍 [fetchInsurers] Error fetching insurers:', error)
       throw error
     }
 
-    logger.auth('🔍 [fetchInsurers] Profiles fetched:', profiles?.length || 0)
+    logger.auth('🔍 [fetchInsurers] Insurers fetched:', insurers?.length || 0)
 
-    // Convertir les profils en assureurs et ajouter les statistiques
-    const insurers = await Promise.all(
-      profiles.map(async (profile) => {
-        logger.auth('🔍 [fetchInsurers] Processing insurer:', profile.company_name || profile.id)
+    // Convertir les assureurs et ajouter les statistiques
+    const result = await Promise.all(
+      insurers.map(async (insurerData) => {
+        logger.auth('🔍 [fetchInsurers] Processing insurer:', insurerData.name || insurerData.id)
 
-        const insurer = mapProfileToInsurer(profile)
-
-        // Récupérer le nombre de quotes pour cet assureur
-        try {
-          const { count: quotesCount } = await supabase
-            .from('quotes')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', profile.id)
-
-          insurer.quotesCount = quotesCount || 0
-          logger.auth('🔍 [fetchInsurers] Quotes count for', profile.company_name, ':', quotesCount)
-        } catch (err) {
-          logger.warn('🔍 [fetchInsurers] Error fetching quotes for', profile.company_name, ':', err)
-          insurer.quotesCount = 0
+        const insurer: Insurer = {
+          id: insurerData.id,
+          companyName: insurerData.name || '',
+          email: insurerData.contact_email || '',
+          phone: insurerData.phone,
+          address: insurerData.address,
+          role: 'INSURER',
+          status: insurerData.is_active ? 'active' : 'inactive',
+          createdAt: insurerData.created_at,
+          lastLogin: insurerData.updated_at,
+          profileCompleted: !!(insurerData.name && insurerData.contact_email),
+          quotesCount: 0,
+          offersCount: 0,
+          conversionRate: 0,
+          description: insurerData.description,
+          website: insurerData.website,
+          licenseNumber: insurerData.license_number,
         }
 
-        // Récupérer le nombre d'offres
+        // Récupérer le nombre d'offres pour cet assureur
         try {
           const { count: offersCount } = await supabase
             .from('insurance_offers')
             .select('*', { count: 'exact', head: true })
-            .eq('insurer_id', profile.id)
+            .eq('insurer_id', insurerData.id)
 
           insurer.offersCount = offersCount || 0
-          logger.auth('🔍 [fetchInsurers] Offers count for', profile.company_name, ':', offersCount)
+          logger.auth('🔍 [fetchInsurers] Offers count for', insurerData.name, ':', offersCount)
         } catch (err) {
-          logger.warn('🔍 [fetchInsurers] Error fetching offers for', profile.company_name, ':', err)
+          logger.warn('🔍 [fetchInsurers] Error fetching offers for', insurerData.name, ':', err)
           insurer.offersCount = 0
         }
 
-        insurer.conversionRate =
-          insurer.quotesCount && insurer.quotesCount > 0
-            ? Math.round((insurer.offersCount / insurer.quotesCount) * 10000) / 100
-            : 0
+        // Récupérer le nombre de quotes associés aux offres de cet assureur
+        try {
+          const { data: offers } = await supabase
+            .from('insurance_offers')
+            .select('quote_id')
+            .eq('insurer_id', insurerData.id)
+
+          const uniqueQuoteIds = new Set(offers?.map(o => o.quote_id) || [])
+          insurer.quotesCount = uniqueQuoteIds.size
+          logger.auth('🔍 [fetchInsurers] Unique quotes for', insurerData.name, ':', uniqueQuoteIds.size)
+        } catch (err) {
+          logger.warn('🔍 [fetchInsurers] Error fetching quotes for', insurerData.name, ':', err)
+          insurer.quotesCount = 0
+        }
+
+        insurer.conversionRate = 0 // Pas de conversion rate applicable pour les compagnies
 
         return insurer
       })
     )
 
-    logger.auth('🔍 [fetchInsurers] Completed, returning', insurers.length, 'insurers')
-    return insurers
+    logger.auth('🔍 [fetchInsurers] Completed, returning', result.length, 'insurers')
+    return result
   } catch (error) {
     logger.error('🔍 [fetchInsurers] Error in fetchInsurers:', error)
     throw error
@@ -140,8 +154,8 @@ export const fetchInsurers = async (): Promise<Insurer[]> => {
 
 export const fetchInsurerById = async (id: string): Promise<Insurer> => {
   try {
-    const { data: profile, error } = await supabase
-      .from('profiles')
+    const { data: insurerData, error } = await supabase
+      .from('insurers')
       .select('*')
       .eq('id', id)
       .single()
@@ -151,30 +165,41 @@ export const fetchInsurerById = async (id: string): Promise<Insurer> => {
       throw error
     }
 
-    // Verify the profile has INSURER role
-    if (profile.role !== 'INSURER') {
-      throw new Error(`Profile ${id} is not an insurer (role: ${profile.role})`)
+    const insurer: Insurer = {
+      id: insurerData.id,
+      companyName: insurerData.name || '',
+      email: insurerData.contact_email || '',
+      phone: insurerData.phone,
+      address: insurerData.address,
+      role: 'INSURER',
+      status: insurerData.is_active ? 'active' : 'inactive',
+      createdAt: insurerData.created_at,
+      lastLogin: insurerData.updated_at,
+      profileCompleted: !!(insurerData.name && insurerData.contact_email),
+      quotesCount: 0,
+      offersCount: 0,
+      conversionRate: 0,
+      description: insurerData.description,
+      website: insurerData.website,
+      licenseNumber: insurerData.license_number,
     }
 
-    const insurer = mapProfileToInsurer(profile)
-
     // Récupérer les statistiques
-    const { count: quotesCount } = await supabase
-      .from('quotes')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', profile.id)
-
     const { count: offersCount } = await supabase
       .from('insurance_offers')
       .select('*', { count: 'exact', head: true })
-      .eq('insurer_id', profile.id)
+      .eq('insurer_id', insurerData.id)
 
-    insurer.quotesCount = quotesCount || 0
+    const { data: offers } = await supabase
+      .from('insurance_offers')
+      .select('quote_id')
+      .eq('insurer_id', insurerData.id)
+
+    const uniqueQuoteIds = new Set(offers?.map(o => o.quote_id) || [])
+
     insurer.offersCount = offersCount || 0
-    insurer.conversionRate =
-      quotesCount && quotesCount > 0
-        ? Math.round(((offersCount || 0) / quotesCount) * 10000) / 100
-        : 0
+    insurer.quotesCount = uniqueQuoteIds.size
+    insurer.conversionRate = 0
 
     return insurer
   } catch (error) {
@@ -185,40 +210,28 @@ export const fetchInsurerById = async (id: string): Promise<Insurer> => {
 
 export const createInsurer = async (data: InsurerFormData): Promise<Insurer> => {
   try {
-    // Utiliser la fonction RPC admin_create_user
-    const { data: result, error } = await supabase.rpc('admin_create_user', {
-      email_param: data.email,
-      first_name_param: null,
-      last_name_param: null,
-      company_name_param: data.companyName,
-      phone_param: data.phone,
-      role_param: 'INSURER',
-      is_active_param: data.status === 'active',
-    })
+    // Créer directement dans la table insurers
+    const { data: insurerData, error } = await supabase
+      .from('insurers')
+      .insert({
+        name: data.companyName,
+        contact_email: data.email,
+        phone: data.phone,
+        address: data.address,
+        description: data.description,
+        website: data.website,
+        license_number: data.licenseNumber,
+        is_active: data.status === 'active',
+      })
+      .select()
+      .single()
 
     if (error) {
       logger.error('Error creating insurer:', error)
       throw error
     }
 
-    if (!result || result.length === 0 || !result[0].success) {
-      throw new Error(result?.[0]?.message || "Erreur lors de la création de l'assureur")
-    }
-
-    // Mettre à jour les informations supplémentaires
-    const insurerId = result[0].user_id
-    const updates: any = {}
-    if (data.description) updates.description = data.description
-    if (data.website) updates.website = data.website
-    if (data.licenseNumber) updates.license_number = data.licenseNumber
-    if (data.address) updates.address = data.address
-
-    if (Object.keys(updates).length > 0) {
-      await supabase.from('profiles').update(updates).eq('id', insurerId)
-    }
-
-    // Récupérer l'assureur créé
-    return await fetchInsurerById(insurerId)
+    return await fetchInsurerById(insurerData.id)
   } catch (error) {
     logger.error('Error in createInsurer:', error)
     throw error
@@ -230,10 +243,10 @@ export const updateInsurer = async (
   data: Partial<InsurerFormData>
 ): Promise<Insurer> => {
   try {
-    // Utiliser la fonction RPC admin_update_user
+    // Préparer les mises à jour
     const updates: any = {}
 
-    if (data.companyName !== undefined) updates.company_name = data.companyName
+    if (data.companyName !== undefined) updates.name = data.companyName
     if (data.phone !== undefined) updates.phone = data.phone
     if (data.address !== undefined) updates.address = data.address
     if (data.description !== undefined) updates.description = data.description
@@ -241,18 +254,14 @@ export const updateInsurer = async (
     if (data.licenseNumber !== undefined) updates.license_number = data.licenseNumber
     if (data.status !== undefined) updates.is_active = data.status === 'active'
 
-    const { data: result, error } = await supabase.rpc('admin_update_user', {
-      user_id_param: id,
-      updates: updates,
-    })
+    const { error } = await supabase
+      .from('insurers')
+      .update(updates)
+      .eq('id', id)
 
     if (error) {
       logger.error('Error updating insurer:', error)
       throw error
-    }
-
-    if (!result || result.length === 0 || !result[0].success) {
-      throw new Error(result?.[0]?.message || "Erreur lors de la mise à jour de l'assureur")
     }
 
     // Récupérer l'assureur mis à jour
@@ -265,18 +274,14 @@ export const updateInsurer = async (
 
 export const deleteInsurer = async (id: string): Promise<void> => {
   try {
-    // Utiliser la fonction RPC admin_delete_user
-    const { data, error } = await supabase.rpc('admin_delete_user', {
-      user_id_param: id,
-    })
+    const { error } = await supabase
+      .from('insurers')
+      .delete()
+      .eq('id', id)
 
     if (error) {
       logger.error('Error deleting insurer:', error)
       throw error
-    }
-
-    if (!data || data.length === 0 || !data[0].success) {
-      throw new Error(data?.[0]?.message || "Erreur lors de la suppression de l'assureur")
     }
   } catch (error) {
     logger.error('Error in deleteInsurer:', error)
@@ -367,11 +372,10 @@ export const exportInsurers = async (format: 'csv' | 'excel' = 'csv'): Promise<B
 
 export const searchInsurers = async (query: string): Promise<Insurer[]> => {
   try {
-    const { data: profiles, error } = await supabase
-      .from('profiles')
+    const { data: insurersData, error } = await supabase
+      .from('insurers')
       .select('*')
-      .eq('role', 'INSURER')
-      .or(`company_name.ilike.%${query}%,email.ilike.%${query}%`)
+      .or(`name.ilike.%${query}%,contact_email.ilike.%${query}%`)
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -380,24 +384,41 @@ export const searchInsurers = async (query: string): Promise<Insurer[]> => {
     }
 
     const insurers = await Promise.all(
-      profiles.map(async (profile) => {
-        const insurer = mapProfileToInsurer(profile)
-        const { count: quotesCount } = await supabase
-          .from('quotes')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', profile.id)
+      insurersData.map(async (insurerData) => {
+        const insurer: Insurer = {
+          id: insurerData.id,
+          companyName: insurerData.name || '',
+          email: insurerData.contact_email || '',
+          phone: insurerData.phone,
+          address: insurerData.address,
+          role: 'INSURER',
+          status: insurerData.is_active ? 'active' : 'inactive',
+          createdAt: insurerData.created_at,
+          lastLogin: insurerData.updated_at,
+          profileCompleted: !!(insurerData.name && insurerData.contact_email),
+          quotesCount: 0,
+          offersCount: 0,
+          conversionRate: 0,
+          description: insurerData.description,
+          website: insurerData.website,
+          licenseNumber: insurerData.license_number,
+        }
+
+        const { data: offers } = await supabase
+          .from('insurance_offers')
+          .select('quote_id')
+          .eq('insurer_id', insurerData.id)
 
         const { count: offersCount } = await supabase
           .from('insurance_offers')
           .select('*', { count: 'exact', head: true })
-          .eq('insurer_id', profile.id)
+          .eq('insurer_id', insurerData.id)
 
-        insurer.quotesCount = quotesCount || 0
+        const uniqueQuoteIds = new Set(offers?.map(o => o.quote_id) || [])
+
+        insurer.quotesCount = uniqueQuoteIds.size
         insurer.offersCount = offersCount || 0
-        insurer.conversionRate =
-          quotesCount && quotesCount > 0
-            ? Math.round(((offersCount || 0) / quotesCount) * 10000) / 100
-            : 0
+        insurer.conversionRate = 0
 
         return insurer
       })
@@ -412,10 +433,9 @@ export const searchInsurers = async (query: string): Promise<Insurer[]> => {
 
 export const getInsurersByStatus = async (status: Insurer['status']): Promise<Insurer[]> => {
   try {
-    const { data: profiles, error } = await supabase
-      .from('profiles')
+    const { data: insurersData, error } = await supabase
+      .from('insurers')
       .select('*')
-      .eq('role', 'INSURER')
       .eq('is_active', status === 'active')
       .order('created_at', { ascending: false })
 
@@ -425,26 +445,41 @@ export const getInsurersByStatus = async (status: Insurer['status']): Promise<In
     }
 
     const insurers = await Promise.all(
-      profiles.map(async (profile) => {
-        const insurer = mapProfileToInsurer(profile)
-        insurer.status = status
+      insurersData.map(async (insurerData) => {
+        const insurer: Insurer = {
+          id: insurerData.id,
+          companyName: insurerData.name || '',
+          email: insurerData.contact_email || '',
+          phone: insurerData.phone,
+          address: insurerData.address,
+          role: 'INSURER',
+          status: status,
+          createdAt: insurerData.created_at,
+          lastLogin: insurerData.updated_at,
+          profileCompleted: !!(insurerData.name && insurerData.contact_email),
+          quotesCount: 0,
+          offersCount: 0,
+          conversionRate: 0,
+          description: insurerData.description,
+          website: insurerData.website,
+          licenseNumber: insurerData.license_number,
+        }
 
-        const { count: quotesCount } = await supabase
-          .from('quotes')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', profile.id)
+        const { data: offers } = await supabase
+          .from('insurance_offers')
+          .select('quote_id')
+          .eq('insurer_id', insurerData.id)
 
         const { count: offersCount } = await supabase
           .from('insurance_offers')
           .select('*', { count: 'exact', head: true })
-          .eq('insurer_id', profile.id)
+          .eq('insurer_id', insurerData.id)
 
-        insurer.quotesCount = quotesCount || 0
+        const uniqueQuoteIds = new Set(offers?.map(o => o.quote_id) || [])
+
+        insurer.quotesCount = uniqueQuoteIds.size
         insurer.offersCount = offersCount || 0
-        insurer.conversionRate =
-          quotesCount && quotesCount > 0
-            ? Math.round(((offersCount || 0) / quotesCount) * 10000) / 100
-            : 0
+        insurer.conversionRate = 0
 
         return insurer
       })

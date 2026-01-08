@@ -2467,6 +2467,10 @@ export const AdminTarificationPage: React.FC = () => {
     const config = (newGuarantee.parameters?.variableBased ??
       newGuarantee.parameters?.variableBasedConfig) as VariableBasedConfig | undefined
     const variableSource = config?.variableSource ?? 'VENAL_VALUE'
+    const conditionedByNewValue = config?.conditionedByNewValue ?? false
+    const newValueThreshold = config?.newValueThreshold ?? 25_000_000
+    const rateBelowThresholdPercent = config?.rateBelowThresholdPercent ?? 1.1
+    const rateAboveThresholdPercent = config?.rateAboveThresholdPercent ?? 2.1
 
     return (
       <Card className='border border-dashed'>
@@ -2489,8 +2493,11 @@ export const AdminTarificationPage: React.FC = () => {
                   parameters: {
                     ...prev.parameters,
                     variableBased: {
+                      ...prev.parameters?.variableBased,
                       variableSource,
                       ratePercent: 0,
+                      // Réinitialiser la condition si on change de source
+                      conditionedByNewValue: variableSource === 'NEW_VALUE' ? (prev.parameters?.variableBased?.conditionedByNewValue ?? false) : false,
                     },
                   },
                 }))
@@ -2501,83 +2508,158 @@ export const AdminTarificationPage: React.FC = () => {
             </select>
           </div>
 
-          {/* Formulaire standard pour toutes les sources (taux %) */}
-          <div className='space-y-4'>
-            <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
-              <div>
-                <Label>Taux (%)</Label>
-                <Input
-                  type='number'
-                  step='0.01'
-                  value={config?.ratePercent ?? ''}
-                  onChange={(e) => {
-                    const ratePercent = parseFloat(e.target.value)
-                    setNewGuarantee((prev) => ({
-                      ...prev,
-                      parameters: {
-                        ...prev.parameters,
-                        variableBased: {
-                          ...prev.parameters?.variableBased,
-                          variableSource,
-                          ratePercent: Number.isFinite(ratePercent) ? ratePercent : 0,
-                        },
+          {/* Case à cocher "Conditionné par la valeur neuve" - visible uniquement pour NEW_VALUE */}
+          {variableSource === 'NEW_VALUE' && (
+            <div className='flex items-start gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg'>
+              <Checkbox
+                id='conditioned-by-new-value'
+                checked={conditionedByNewValue}
+                onCheckedChange={(checked) => {
+                  const isChecked = Boolean(checked)
+                  setNewGuarantee((prev) => ({
+                    ...prev,
+                    parameters: {
+                      ...prev.parameters,
+                      variableBased: {
+                        ...prev.parameters?.variableBased,
+                        variableSource,
+                        conditionedByNewValue: isChecked,
+                        newValueThreshold: isChecked ? 25_000_000 : undefined,
+                        rateBelowThresholdPercent: isChecked ? 1.1 : undefined,
+                        rateAboveThresholdPercent: isChecked ? 2.1 : undefined,
                       },
-                    }))
-                  }}
-                  placeholder='0.42'
-                />
+                    },
+                  }))
+                }}
+              />
+              <div>
+                <Label htmlFor='conditioned-by-new-value' className='cursor-pointer text-sm font-medium'>
+                  Conditionné par la valeur neuve
+                </Label>
+                <p className='text-xs text-muted-foreground'>
+                  Applique un taux différent selon le seuil de 25 000 000 FCFA
+                </p>
+                <p className='text-xs text-blue-700 mt-1'>
+                  1,1% × Vehicle Sum Insured si SI ≤ 25 000 000<br />
+                  2,1% × Vehicle Sum Insured si SI {'>'} 25 000 000
+                </p>
               </div>
             </div>
+          )}
 
-            <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
-              <div>
-                <Label>Montant minimum (FCFA) - Optionnel</Label>
-                <Input
-                  type='number'
-                  value={config?.minAmount ?? ''}
-                  onChange={(e) => {
-                    const minAmount = parseInt(e.target.value, 10)
-                    setNewGuarantee((prev) => ({
-                      ...prev,
-                      parameters: {
-                        ...prev.parameters,
-                        variableBased: {
-                          ...prev.parameters?.variableBased,
-                          variableSource,
-                          ratePercent: config?.ratePercent ?? 0,
-                          minAmount: Number.isFinite(minAmount) ? minAmount : undefined,
+          {/* Formulaire standard pour toutes les sources (taux %) - masqué si condition activée */}
+          {!(variableSource === 'NEW_VALUE' && conditionedByNewValue) ? (
+            <div className='space-y-4'>
+              <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
+                <div>
+                  <Label>Taux (%)</Label>
+                  <Input
+                    type='number'
+                    step='0.01'
+                    value={config?.ratePercent ?? ''}
+                    onChange={(e) => {
+                      const ratePercent = parseFloat(e.target.value)
+                      setNewGuarantee((prev) => ({
+                        ...prev,
+                        parameters: {
+                          ...prev.parameters,
+                          variableBased: {
+                            ...prev.parameters?.variableBased,
+                            variableSource,
+                            ratePercent: Number.isFinite(ratePercent) ? ratePercent : 0,
+                          },
                         },
-                      },
-                    }))
-                  }}
-                  placeholder='50000'
-                />
-              </div>
-              <div>
-                <Label>Montant maximum (FCFA) - Optionnel</Label>
-                <Input
-                  type='number'
-                  value={config?.maxAmount ?? ''}
-                  onChange={(e) => {
-                    const maxAmount = parseInt(e.target.value, 10)
-                    setNewGuarantee((prev) => ({
-                      ...prev,
-                      parameters: {
-                        ...prev.parameters,
-                        variableBased: {
-                          ...prev.parameters?.variableBased,
-                          variableSource,
-                          ratePercent: config?.ratePercent ?? 0,
-                          maxAmount: Number.isFinite(maxAmount) ? maxAmount : undefined,
-                        },
-                      },
-                    }))
-                  }}
-                  placeholder='500000'
-                />
+                      }))
+                    }}
+                    placeholder='0.42'
+                  />
+                </div>
               </div>
             </div>
-          </div>
+          ) : (
+            /* Configuration spécifique pour la condition "Conditionné par la valeur neuve" */
+            <div className='space-y-4 p-3 bg-green-50 border border-green-200 rounded-lg'>
+              <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
+                <div>
+                  <Label>Seuil valeur neuve (FCFA)</Label>
+                  <Input
+                    type='number'
+                    value={newValueThreshold}
+                    onChange={(e) => {
+                      const threshold = parseInt(e.target.value, 10)
+                      setNewGuarantee((prev) => ({
+                        ...prev,
+                        parameters: {
+                          ...prev.parameters,
+                          variableBased: {
+                            ...prev.parameters?.variableBased,
+                            variableSource,
+                            conditionedByNewValue: true,
+                            newValueThreshold: Number.isFinite(threshold) ? threshold : 25_000_000,
+                          },
+                        },
+                      }))
+                    }}
+                    placeholder='25000000'
+                  />
+                  <p className='text-xs text-muted-foreground'>Seuil par défaut: 25 000 000 FCFA</p>
+                </div>
+              </div>
+
+              <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
+                <div>
+                  <Label>Taux si SI ≤ seuil (%)</Label>
+                  <Input
+                    type='number'
+                    step='0.01'
+                    value={rateBelowThresholdPercent}
+                    onChange={(e) => {
+                      const rate = parseFloat(e.target.value)
+                      setNewGuarantee((prev) => ({
+                        ...prev,
+                        parameters: {
+                          ...prev.parameters,
+                          variableBased: {
+                            ...prev.parameters?.variableBased,
+                            variableSource,
+                            conditionedByNewValue: true,
+                            rateBelowThresholdPercent: Number.isFinite(rate) ? rate : 1.1,
+                          },
+                        },
+                      }))
+                    }}
+                    placeholder='1.1'
+                  />
+                  <p className='text-xs text-muted-foreground'>Taux appliqué si SI ≤ seuil</p>
+                </div>
+                <div>
+                  <Label>Taux si SI {'>'} seuil (%)</Label>
+                  <Input
+                    type='number'
+                    step='0.01'
+                    value={rateAboveThresholdPercent}
+                    onChange={(e) => {
+                      const rate = parseFloat(e.target.value)
+                      setNewGuarantee((prev) => ({
+                        ...prev,
+                        parameters: {
+                          ...prev.parameters,
+                          variableBased: {
+                            ...prev.parameters?.variableBased,
+                            variableSource,
+                            conditionedByNewValue: true,
+                            rateAboveThresholdPercent: Number.isFinite(rate) ? rate : 2.1,
+                          },
+                        },
+                      }))
+                    }}
+                    placeholder='2.1'
+                  />
+                  <p className='text-xs text-muted-foreground'>Taux appliqué si SI {'>'} seuil</p>
+                </div>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     )

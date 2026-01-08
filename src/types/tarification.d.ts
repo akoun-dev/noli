@@ -136,6 +136,12 @@ export interface VariableBasedConfig {
     ratePercent: number // Taux au-delà du seuil
   }
 
+  // Condition spécifique pour la valeur neuve (seuil à 25 000 000 FCFA)
+  conditionedByNewValue?: boolean
+  newValueThreshold?: number // Seuil par défaut 25 000 000 FCFA
+  rateBelowThresholdPercent?: number // Taux si SI <= seuil (1,1%)
+  rateAboveThresholdPercent?: number // Taux si SI > seuil (2,1%)
+
   // Min/Max facultatifs
   minAmount?: number
   maxAmount?: number
