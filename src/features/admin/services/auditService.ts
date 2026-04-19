@@ -4,107 +4,6 @@ import { supabase } from '@/lib/supabase';
 import { logger } from '@/lib/logger';
 import { toast } from 'sonner';
 
-// Logs d'audit initiaux pour la démo
-const initialAuditLogs: AuditLog[] = [
-  {
-    id: '1',
-    userId: 'admin-1',
-    userEmail: 'admin@noli.ci',
-    action: 'LOGIN',
-    resource: 'AUTH',
-    details: { loginMethod: 'email', success: true },
-    ipAddress: '192.168.1.100',
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-    timestamp: new Date('2024-01-15T09:00:00Z'),
-    severity: 'LOW'
-  },
-  {
-    id: '2',
-    userId: 'admin-1',
-    userEmail: 'admin@noli.ci',
-    action: 'USER_CREATE',
-    resource: 'USER',
-    resourceId: 'user-123',
-    details: {
-      newUserEmail: 'jean.dupont@email.ci',
-      newUserName: 'Jean Dupont',
-      role: 'USER'
-    },
-    ipAddress: '192.168.1.100',
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-    timestamp: new Date('2024-01-15T09:30:00Z'),
-    severity: 'MEDIUM'
-  },
-  {
-    id: '3',
-    userId: 'user-456',
-    userEmail: 'assureur@saham.ci',
-    action: 'OFFER_CREATE',
-    resource: 'OFFER',
-    resourceId: 'offer-789',
-    details: {
-      offerName: 'Assurance Auto Premium',
-      insuranceType: 'auto',
-      price: 250000
-    },
-    ipAddress: '192.168.1.150',
-    userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
-    timestamp: new Date('2024-01-15T10:15:00Z'),
-    severity: 'MEDIUM'
-  },
-  {
-    id: '4',
-    userId: 'user-789',
-    userEmail: 'client@example.ci',
-    action: 'QUOTE_CREATE',
-    resource: 'QUOTE',
-    resourceId: 'quote-456',
-    details: {
-      vehicleType: 'voiture',
-      vehicleBrand: 'Toyota',
-      estimatedValue: 5000000,
-      coverageType: 'tous risques'
-    },
-    ipAddress: '192.168.1.200',
-    userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 15_0)',
-    timestamp: new Date('2024-01-15T11:00:00Z'),
-    severity: 'LOW'
-  },
-  {
-    id: '5',
-    userId: 'system',
-    userEmail: 'system@noli.ci',
-    action: 'BACKUP_CREATE',
-    resource: 'SYSTEM',
-    resourceId: 'backup-001',
-    details: {
-      backupType: 'FULL',
-      size: '2.5GB',
-      includes: ['USERS', 'OFFERS', 'QUOTES', 'POLICIES']
-    },
-    ipAddress: '127.0.0.1',
-    userAgent: 'NOLI System',
-    timestamp: new Date('2024-01-15T02:00:00Z'),
-    severity: 'LOW'
-  },
-  {
-    id: '6',
-    userId: 'user-123',
-    userEmail: 'admin@noli.ci',
-    action: 'SECURITY_BREACH',
-    resource: 'SECURITY',
-    details: {
-      reason: 'Multiple failed login attempts',
-      attempts: 5,
-      blockedIP: '196.25.1.50'
-    },
-    ipAddress: '192.168.1.100',
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-    timestamp: new Date('2024-01-15T12:30:00Z'),
-    severity: 'CRITICAL'
-  }
-];
-
 // Fonctions API pour l'audit avec Supabase
 const mapSeverityToUi = (severity?: string): AuditLog['severity'] => {
   switch ((severity || '').toLowerCase()) {
@@ -260,71 +159,17 @@ export const createAuditLog = async (log: Omit<AuditLog, 'id' | 'timestamp'>): P
 
   } catch (error) {
     logger.error('Error in createAuditLog:', error);
-    // Fallback: créer un log en mémoire
-    const newLog: AuditLog = {
-      ...log,
-      id: Math.random().toString(36).substr(2, 9),
-      timestamp: new Date()
-    };
-    initialAuditLogs.unshift(newLog);
-    return newLog;
+    throw error;
   }
 };
 
 export const auditService = {
-  // Fallback vers les logs en mémoire si la base n'est pas disponible
+  // Fallback : retourne des données vides si la base n'est pas disponible
   async getAuditLogsFallback(filters: AuditLogFilters = {}): Promise<{ logs: AuditLog[]; total: number }> {
-    await new Promise(resolve => setTimeout(resolve, 300));
-
-    let filteredLogs = [...initialAuditLogs];
-
-    if (filters.startDate) {
-      filteredLogs = filteredLogs.filter(log => log.timestamp >= filters.startDate!);
-    }
-
-    if (filters.endDate) {
-      filteredLogs = filteredLogs.filter(log => log.timestamp <= filters.endDate!);
-    }
-
-    if (filters.userId) {
-      filteredLogs = filteredLogs.filter(log => log.userId === filters.userId);
-    }
-
-    if (filters.userEmail) {
-      filteredLogs = filteredLogs.filter(log =>
-        log.userEmail.toLowerCase().includes(filters.userEmail!.toLowerCase())
-      );
-    }
-
-    if (filters.action) {
-      filteredLogs = filteredLogs.filter(log => log.action === filters.action);
-    }
-
-    if (filters.resource) {
-      filteredLogs = filteredLogs.filter(log =>
-        log.resource.toLowerCase().includes(filters.resource!.toLowerCase())
-      );
-    }
-
-    if (filters.severity) {
-      filteredLogs = filteredLogs.filter(log => log.severity === filters.severity);
-    }
-
-    if (filters.ipAddress) {
-      filteredLogs = filteredLogs.filter(log =>
-        log.ipAddress.includes(filters.ipAddress!)
-      );
-    }
-
-    const total = filteredLogs.length;
-    const offset = filters.offset || 0;
-    const limit = filters.limit || 50;
-
-    filteredLogs.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-
+    // Retourner des données vides - pas de mocks
     return {
-      logs: filteredLogs.slice(offset, offset + limit),
-      total
+      logs: [],
+      total: 0
     };
   },
 
@@ -446,47 +291,105 @@ export const auditService = {
     topUsers: { email: string; count: number }[];
     topActions: { action: string; count: number }[];
   }> {
-    await new Promise(resolve => setTimeout(resolve, 500));
+    try {
+      // Récupérer le nombre total de logs par sévérité
+      const { data: logsData, error } = await supabase
+        .from('audit_logs')
+        .select('severity, created_at, action, profiles!inner(email)');
 
-    const criticalLogs = initialAuditLogs.filter(log => log.severity === 'CRITICAL').length;
-    const highLogs = initialAuditLogs.filter(log => log.severity === 'HIGH').length;
-    const mediumLogs = initialAuditLogs.filter(log => log.severity === 'MEDIUM').length;
-    const lowLogs = initialAuditLogs.filter(log => log.severity === 'LOW').length;
+      if (error) {
+        logger.error('Error fetching audit statistics:', error);
+        // Retourner des statistiques vides si erreur
+        return {
+          totalLogs: 0,
+          criticalLogs: 0,
+          highLogs: 0,
+          mediumLogs: 0,
+          lowLogs: 0,
+          recentActivity: [],
+          topUsers: [],
+          topActions: []
+        };
+      }
 
-    const recentActivity = initialAuditLogs
-      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
-      .slice(0, 10);
+      const logs = logsData || [];
 
-    const userCounts = initialAuditLogs.reduce((acc, log) => {
-      acc[log.userEmail] = (acc[log.userEmail] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+      // Compter par sévérité
+      const criticalLogs = logs.filter(log => log.severity === 'critical').length;
+      const highLogs = logs.filter(log => log.severity === 'error').length;
+      const mediumLogs = logs.filter(log => log.severity === 'warning').length;
+      const lowLogs = logs.filter(log => log.severity === 'info' || log.severity === 'debug').length;
 
-    const topUsers = Object.entries(userCounts)
-      .sort(([, a], [, b]) => b - a)
-      .slice(0, 5)
-      .map(([email, count]) => ({ email, count }));
+      // Activité récente (dernières 24h)
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
 
-    const actionCounts = initialAuditLogs.reduce((acc, log) => {
-      acc[log.action] = (acc[log.action] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+      const recentActivity = logs
+        .filter(log => new Date(log.created_at) >= yesterday)
+        .map(log => ({
+          id: log.id || '',
+          userId: log.user_id || '',
+          userEmail: log.profiles?.email || '',
+          action: log.action as AuditAction,
+          resource: '',
+          resourceId: '',
+          details: {},
+          ipAddress: '',
+          userAgent: '',
+          timestamp: new Date(log.created_at),
+          severity: mapSeverityToUi(log.severity)
+        }))
+        .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+        .slice(0, 10);
 
-    const topActions = Object.entries(actionCounts)
-      .sort(([, a], [, b]) => b - a)
-      .slice(0, 5)
-      .map(([action, count]) => ({ action, count }));
+      // Top utilisateurs
+      const userCounts = logs.reduce((acc, log) => {
+        const email = log.profiles?.email || 'inconnu';
+        acc[email] = (acc[email] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
 
-    return {
-      totalLogs: initialAuditLogs.length,
-      criticalLogs,
-      highLogs,
-      mediumLogs,
-      lowLogs,
-      recentActivity,
-      topUsers,
-      topActions
-    };
+      const topUsers = Object.entries(userCounts)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 5)
+        .map(([email, count]) => ({ email, count }));
+
+      // Top actions
+      const actionCounts = logs.reduce((acc, log) => {
+        acc[log.action] = (acc[log.action] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+      const topActions = Object.entries(actionCounts)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 5)
+        .map(([action, count]) => ({ action, count }));
+
+      return {
+        totalLogs: logs.length,
+        criticalLogs,
+        highLogs,
+        mediumLogs,
+        lowLogs,
+        recentActivity,
+        topUsers,
+        topActions
+      };
+
+    } catch (error) {
+      logger.error('Error in getAuditStatistics:', error);
+      // Retourner des statistiques vides en cas d'erreur
+      return {
+        totalLogs: 0,
+        criticalLogs: 0,
+        highLogs: 0,
+        mediumLogs: 0,
+        lowLogs: 0,
+        recentActivity: [],
+        topUsers: [],
+        topActions: []
+      };
+    }
   }
 };
 
