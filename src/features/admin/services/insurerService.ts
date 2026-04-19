@@ -8,6 +8,8 @@ export interface Insurer {
   companyName: string
   email: string
   phone?: string
+  address?: string
+  logoUrl?: string | null
   role: 'INSURER'
   status: 'active' | 'inactive' | 'pending' | 'suspended'
   createdAt: string
@@ -18,14 +20,17 @@ export interface Insurer {
   conversionRate: number
   description?: string
   website?: string
+  licenseNumber?: string
 }
 
 export interface InsurerFormData {
   companyName: string
   email: string
   phone?: string
+  address?: string
   description?: string
   website?: string
+  licenseNumber?: string
   status: 'active' | 'inactive' | 'pending' | 'suspended'
 }
 
@@ -89,6 +94,8 @@ export const fetchInsurers = async (): Promise<Insurer[]> => {
           companyName: insurerData.name || '',
           email: insurerData.contact_email || '',
           phone: insurerData.phone,
+          address: insurerData.contact_address,
+          logoUrl: insurerData.logo_url,
           role: 'INSURER',
           status: insurerData.is_active ? 'active' : 'inactive',
           createdAt: insurerData.created_at,
@@ -99,6 +106,7 @@ export const fetchInsurers = async (): Promise<Insurer[]> => {
           conversionRate: 0,
           description: insurerData.description,
           website: insurerData.website,
+          licenseNumber: insurerData.license_number,
         }
 
         // Récupérer le nombre d'offres pour cet assureur
@@ -207,8 +215,10 @@ export const createInsurer = async (data: InsurerFormData): Promise<Insurer> => 
         name: data.companyName,
         contact_email: data.email,
         phone: data.phone,
+        contact_address: data.address,
         description: data.description,
         website: data.website,
+        license_number: data.licenseNumber,
         is_active: data.status === 'active',
       })
       .select()
@@ -236,8 +246,10 @@ export const updateInsurer = async (
 
     if (data.companyName !== undefined) updates.name = data.companyName
     if (data.phone !== undefined) updates.phone = data.phone
+    if (data.address !== undefined) updates.contact_address = data.address
     if (data.description !== undefined) updates.description = data.description
     if (data.website !== undefined) updates.website = data.website
+    if (data.licenseNumber !== undefined) updates.license_number = data.licenseNumber
     if (data.status !== undefined) updates.is_active = data.status === 'active'
 
     const { error } = await supabase
@@ -372,6 +384,8 @@ export const searchInsurers = async (query: string): Promise<Insurer[]> => {
           companyName: insurerData.name || '',
           email: insurerData.contact_email || '',
           phone: insurerData.phone,
+          address: insurerData.contact_address,
+          logoUrl: insurerData.logo_url,
           role: 'INSURER',
           status: insurerData.is_active ? 'active' : 'inactive',
           createdAt: insurerData.created_at,
@@ -382,6 +396,7 @@ export const searchInsurers = async (query: string): Promise<Insurer[]> => {
           conversionRate: 0,
           description: insurerData.description,
           website: insurerData.website,
+          licenseNumber: insurerData.license_number,
         }
 
         const { data: offers } = await supabase

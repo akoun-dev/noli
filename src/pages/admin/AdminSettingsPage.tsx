@@ -34,19 +34,14 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { adminSettingsApi } from "@/api/services/adminSettingsApi";
+import { adminSettingsService } from "@/features/admin/services/adminSettingsService";
 import type {
   SystemSettings,
+  SecuritySettings,
   EmailSettings,
   NotificationSettings,
-  UISettings,
-  SettingsExport,
-  SettingsImport,
-  TestEmailRequest,
-  TestSmsRequest,
-  BackupRequest,
-  Backup
-} from "@/api/services/adminSettingsApi";
+  UISettings
+} from "@/features/admin/services/adminSettingsService";
 import { logger } from '@/lib/logger';
 
 const AdminSettingsPage = () => {
@@ -66,7 +61,10 @@ const AdminSettingsPage = () => {
     maintenanceMode: false,
     debugMode: false,
     registrationEnabled: true,
-    emailVerification: true,
+    emailVerification: true
+  });
+
+  const [securitySettings, setSecuritySettings] = useState<SecuritySettings>({
     sessionTimeout: 3600,
     maxLoginAttempts: 5,
     passwordPolicy: {
@@ -82,7 +80,6 @@ const AdminSettingsPage = () => {
     smtpHost: 'smtp.gmail.com',
     smtpPort: 587,
     smtpUsername: '',
-    smtpPassword: '',
     senderName: 'NOLI Assurance',
     senderEmail: 'noreply@noli.ci',
     encryption: 'tls'
@@ -118,25 +115,19 @@ const AdminSettingsPage = () => {
   const loadSettings = async () => {
     try {
       setLoading(true);
-      const [systemResponse, emailResponse, notificationResponse, uiResponse] = await Promise.all([
-        adminSettingsApi.getSystemSettings(),
-        adminSettingsApi.getEmailSettings(),
-        adminSettingsApi.getNotificationSettings(),
-        adminSettingsApi.getUISettings()
+      const [system, security, email, notifications, ui] = await Promise.all([
+        adminSettingsService.getSystemSettings(),
+        adminSettingsService.getSecuritySettings(),
+        adminSettingsService.getEmailSettings(),
+        adminSettingsService.getNotificationSettings(),
+        adminSettingsService.getUISettings()
       ]);
 
-      if (systemResponse.success) {
-        setSystemSettings(systemResponse.data);
-      }
-      if (emailResponse.success) {
-        setEmailSettings(emailResponse.data);
-      }
-      if (notificationResponse.success) {
-        setNotificationSettings(notificationResponse.data);
-      }
-      if (uiResponse.success) {
-        setUISettings(uiResponse.data);
-      }
+      setSystemSettings(system);
+      setSecuritySettings(security);
+      setEmailSettings(email);
+      setNotificationSettings(notifications);
+      setUISettings(ui);
     } catch (error) {
       logger.error('Erreur lors du chargement des paramètres:', error);
       toast.error('Erreur lors du chargement des paramètres');
@@ -150,10 +141,11 @@ const AdminSettingsPage = () => {
     try {
       // Sauvegarder tous les paramètres
       await Promise.all([
-        adminSettingsApi.updateSystemSettings(systemSettings),
-        adminSettingsApi.updateEmailSettings(emailSettings),
-        adminSettingsApi.updateNotificationSettings(notificationSettings),
-        adminSettingsApi.updateUISettings(uiSettings)
+        adminSettingsService.updateSystemSettings(systemSettings),
+        adminSettingsService.updateSecuritySettings(securitySettings),
+        adminSettingsService.updateEmailSettings(emailSettings),
+        adminSettingsService.updateNotificationSettings(notificationSettings),
+        adminSettingsService.updateUISettings(uiSettings)
       ]);
       toast.success('Paramètres sauvegardés avec succès');
     } catch (error) {
@@ -167,7 +159,7 @@ const AdminSettingsPage = () => {
   const handleResetSettings = async () => {
     if (confirm('Êtes-vous sûr de vouloir réinitialiser tous les paramètres ?')) {
       try {
-        await adminSettingsApi.resetSettings();
+        await adminSettingsService.resetSettings();
         toast.info('Paramètres réinitialisés aux valeurs par défaut');
         loadSettings(); // Recharger les paramètres
       } catch (error) {
@@ -179,19 +171,17 @@ const AdminSettingsPage = () => {
 
   const handleExportSettings = async () => {
     try {
-      const response = await adminSettingsApi.exportSettings();
-      if (response.success && response.data) {
-        const blob = new Blob([JSON.stringify(response.data, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = 'noli-settings-backup.json';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-        toast.success('Paramètres exportés avec succès');
-      }
+      const exportData = await adminSettingsService.exportSettings();
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'noli-settings-backup.json';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast.success('Paramètres exportés avec succès');
     } catch (error) {
       logger.error('Erreur lors de l\'exportation:', error);
       toast.error('Erreur lors de l\'exportation des paramètres');
@@ -207,18 +197,19 @@ const AdminSettingsPage = () => {
       reader.onload = async (e) => {
         try {
           const settings = JSON.parse(e.target?.result as string);
-          const request: SettingsImport = {
+          const request = {
             settings,
             overwriteExisting: true,
             sections: ['system', 'email', 'notifications', 'ui']
           };
-          
-          const response = await adminSettingsApi.importSettings(request);
-          if (response.success) {
-            toast.success(`Paramètres importés avec succès: ${response.data.imported.join(', ')}`);
+
+          const result = await adminSettingsService.importSettings(request);
+          if (result.imported.length > 0) {
+            toast.success(`Paramètres importés avec succès: ${result.imported.join(', ')}`);
             loadSettings(); // Recharger les paramètres
-          } else {
-            toast.error(`Erreur lors de l'importation: ${response.data.errors.join(', ')}`);
+          }
+          if (result.errors.length > 0) {
+            toast.error(`Erreur lors de l'importation: ${result.errors.join(', ')}`);
           }
         } catch (error) {
           toast.error('Erreur lors de l\'importation des paramètres');
@@ -234,19 +225,8 @@ const AdminSettingsPage = () => {
   const handleTestEmail = async () => {
     setTestEmailLoading(true);
     try {
-      const request: TestEmailRequest = {
-        to: systemSettings.adminEmail,
-        subject: 'Test email configuration',
-        template: 'custom',
-        customContent: 'Ceci est un email de test pour vérifier la configuration SMTP.'
-      };
-      
-      const response = await adminSettingsApi.testEmailSettings(request);
-      if (response.success) {
-        toast.success(response.data.message);
-      } else {
-        toast.error(response.data.message);
-      }
+      // TODO: Implement email test functionality via backend service
+      toast.info('Fonctionnalité de test email non implémentée. Configurez le backend pour envoyer des emails.');
     } catch (error) {
       logger.error('Erreur lors du test email:', error);
       toast.error('Erreur lors du test email');
@@ -258,18 +238,8 @@ const AdminSettingsPage = () => {
   const handleTestSms = async () => {
     setTestSmsLoading(true);
     try {
-      const request: TestSmsRequest = {
-        to: systemSettings.contactPhone,
-        message: 'Ceci est un SMS de test pour vérifier la configuration SMS.',
-        template: 'custom'
-      };
-      
-      const response = await adminSettingsApi.testSmsProvider('twilio', request);
-      if (response.success) {
-        toast.success(response.data.message);
-      } else {
-        toast.error(response.data.message);
-      }
+      // TODO: Implement SMS test functionality via backend service
+      toast.info('Fonctionnalité de test SMS non implémentée. Configurez le backend pour envoyer des SMS.');
     } catch (error) {
       logger.error('Erreur lors du test SMS:', error);
       toast.error('Erreur lors du test SMS');
@@ -329,39 +299,39 @@ const AdminSettingsPage = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
-          <TabsTrigger value="general" className="flex items-center space-x-2">
-            <Settings className="w-4 h-4" />
-            <span className="hidden sm:inline">Général</span>
+        <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5 gap-1 sm:gap-2 h-auto">
+          <TabsTrigger value="general" className="flex items-center justify-center space-x-1 sm:space-x-2 text-xs py-2 sm:py-2.5">
+            <Settings className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline text-xs sm:text-sm">Général</span>
           </TabsTrigger>
-          <TabsTrigger value="users" className="flex items-center space-x-2">
-            <Users className="w-4 h-4" />
-            <span className="hidden sm:inline">Utilisateurs</span>
+          <TabsTrigger value="users" className="flex items-center justify-center space-x-1 sm:space-x-2 text-xs py-2 sm:py-2.5">
+            <Users className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline text-xs sm:text-sm">Utilisateurs</span>
           </TabsTrigger>
-          <TabsTrigger value="security" className="flex items-center space-x-2">
-            <Shield className="w-4 h-4" />
-            <span className="hidden sm:inline">Sécurité</span>
+          <TabsTrigger value="security" className="flex items-center justify-center space-x-1 sm:space-x-2 text-xs py-2 sm:py-2.5">
+            <Shield className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline text-xs sm:text-sm">Sécurité</span>
           </TabsTrigger>
-          <TabsTrigger value="notifications" className="flex items-center space-x-2">
-            <Bell className="w-4 h-4" />
-            <span className="hidden sm:inline">Notifications</span>
+          <TabsTrigger value="notifications" className="flex items-center justify-center space-x-1 sm:space-x-2 text-xs py-2 sm:py-2.5">
+            <Bell className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline text-xs sm:text-sm">Notif.</span>
           </TabsTrigger>
-          <TabsTrigger value="appearance" className="flex items-center space-x-2">
-            <Palette className="w-4 h-4" />
-            <span className="hidden sm:inline">Apparence</span>
+          <TabsTrigger value="appearance" className="flex items-center justify-center space-x-1 sm:space-x-2 text-xs py-2 sm:py-2.5">
+            <Palette className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline text-xs sm:text-sm">Apparence</span>
           </TabsTrigger>
         </TabsList>
 
         {/* General Settings */}
-        <TabsContent value="general" className="space-y-6">
+        <TabsContent value="general" className="space-y-4 sm:space-y-6">
           <Card>
-            <CardHeader>
-              <CardTitle>Informations du Site</CardTitle>
-              <CardDescription>
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="text-base sm:text-lg">Informations du Site</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">
                 Configurez les informations de base de votre site
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="p-3 sm:p-6 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="siteName">Nom du site</Label>
@@ -411,17 +381,17 @@ const AdminSettingsPage = () => {
           </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle>Configuration du Système</CardTitle>
-              <CardDescription>
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="text-base sm:text-lg">Configuration du Système</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">
                 Paramètres de fonctionnement du système
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
+            <CardContent className="p-3 sm:p-6 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
                 <div className="space-y-0.5">
-                  <Label>Mode maintenance</Label>
-                  <p className="text-sm text-muted-foreground">
+                  <Label className="text-sm">Mode maintenance</Label>
+                  <p className="text-xs text-muted-foreground">
                     Désactive le site pour les utilisateurs non-administrateurs
                   </p>
                 </div>
@@ -430,10 +400,10 @@ const AdminSettingsPage = () => {
                   onCheckedChange={(checked) => setSystemSettings({ ...systemSettings, maintenanceMode: checked })}
                 />
               </div>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
                 <div className="space-y-0.5">
-                  <Label>Mode débogage</Label>
-                  <p className="text-sm text-muted-foreground">
+                  <Label className="text-sm">Mode débogage</Label>
+                  <p className="text-xs text-muted-foreground">
                     Active les logs détaillés pour le développement
                   </p>
                 </div>
@@ -442,10 +412,10 @@ const AdminSettingsPage = () => {
                   onCheckedChange={(checked) => setSystemSettings({ ...systemSettings, debugMode: checked })}
                 />
               </div>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
                 <div className="space-y-0.5">
-                  <Label>Inscription des utilisateurs</Label>
-                  <p className="text-sm text-muted-foreground">
+                  <Label className="text-sm">Inscription des utilisateurs</Label>
+                  <p className="text-xs text-muted-foreground">
                     Permet aux nouveaux utilisateurs de s'inscrire
                   </p>
                 </div>
@@ -454,10 +424,10 @@ const AdminSettingsPage = () => {
                   onCheckedChange={(checked) => setSystemSettings({ ...systemSettings, registrationEnabled: checked })}
                 />
               </div>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
                 <div className="space-y-0.5">
-                  <Label>Vérification des emails</Label>
-                  <p className="text-sm text-muted-foreground">
+                  <Label className="text-sm">Vérification des emails</Label>
+                  <p className="text-xs text-muted-foreground">
                     Nécessite la vérification des adresses email
                   </p>
                 </div>
@@ -470,14 +440,14 @@ const AdminSettingsPage = () => {
           </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle>Configuration Email</CardTitle>
-              <CardDescription>
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="text-base sm:text-lg">Configuration Email</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">
                 Paramètres SMTP pour l'envoi d'emails
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+            <CardContent className="p-3 sm:p-6 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="smtpHost">Serveur SMTP</Label>
                   <Input
@@ -496,22 +466,13 @@ const AdminSettingsPage = () => {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="smtpUsername">Nom d'utilisateur SMTP</Label>
                   <Input
                     id="smtpUsername"
                     value={emailSettings.smtpUsername}
                     onChange={(e) => setEmailSettings({ ...emailSettings, smtpUsername: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="smtpPassword">Mot de passe SMTP</Label>
-                  <Input
-                    id="smtpPassword"
-                    type="password"
-                    value={emailSettings.smtpPassword}
-                    onChange={(e) => setEmailSettings({ ...emailSettings, smtpPassword: e.target.value })}
                   />
                 </div>
               </div>
@@ -552,22 +513,22 @@ const AdminSettingsPage = () => {
         </TabsContent>
 
         {/* User Settings */}
-        <TabsContent value="users" className="space-y-6">
+        <TabsContent value="users" className="space-y-4 sm:space-y-6">
           <Card>
-            <CardHeader>
-              <CardTitle>Paramètres des Utilisateurs</CardTitle>
-              <CardDescription>
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="text-base sm:text-lg">Paramètres des Utilisateurs</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">
                 Configurez les paramètres relatifs aux utilisateurs
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="p-3 sm:p-6 space-y-4">
               <div>
                 <Label htmlFor="sessionTimeout">Délai d'expiration de session (secondes)</Label>
                 <Input
                   id="sessionTimeout"
                   type="number"
-                  value={systemSettings.sessionTimeout}
-                  onChange={(e) => setSystemSettings({ ...systemSettings, sessionTimeout: parseInt(e.target.value) })}
+                  value={securitySettings.sessionTimeout}
+                  onChange={(e) => setSecuritySettings({ ...securitySettings, sessionTimeout: parseInt(e.target.value) })}
                 />
               </div>
               <div>
@@ -575,75 +536,75 @@ const AdminSettingsPage = () => {
                 <Input
                   id="maxLoginAttempts"
                   type="number"
-                  value={systemSettings.maxLoginAttempts}
-                  onChange={(e) => setSystemSettings({ ...systemSettings, maxLoginAttempts: parseInt(e.target.value) })}
+                  value={securitySettings.maxLoginAttempts}
+                  onChange={(e) => setSecuritySettings({ ...securitySettings, maxLoginAttempts: parseInt(e.target.value) })}
                 />
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle>Politique de Mot de Passe</CardTitle>
-              <CardDescription>
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="text-base sm:text-lg">Politique de Mot de Passe</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">
                 Définissez les exigences de sécurité pour les mots de passe
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="p-3 sm:p-6 space-y-4">
               <div>
                 <Label htmlFor="minLength">Longueur minimale</Label>
                 <Input
                   id="minLength"
                   type="number"
-                  value={systemSettings.passwordPolicy.minLength}
-                  onChange={(e) => setSystemSettings({
-                    ...systemSettings,
-                    passwordPolicy: { ...systemSettings.passwordPolicy, minLength: parseInt(e.target.value) }
+                  value={securitySettings.passwordPolicy.minLength}
+                  onChange={(e) => setSecuritySettings({
+                    ...securitySettings,
+                    passwordPolicy: { ...securitySettings.passwordPolicy, minLength: parseInt(e.target.value) }
                   })}
                 />
               </div>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
                 <div className="space-y-0.5">
-                  <Label>Nécessite des majuscules</Label>
-                  <p className="text-sm text-muted-foreground">
+                  <Label className="text-sm">Nécessite des majuscules</Label>
+                  <p className="text-xs text-muted-foreground">
                     Les mots de passe doivent contenir au moins une majuscule
                   </p>
                 </div>
                 <Switch
-                  checked={systemSettings.passwordPolicy.requireUppercase}
-                  onCheckedChange={(checked) => setSystemSettings({
-                    ...systemSettings,
-                    passwordPolicy: { ...systemSettings.passwordPolicy, requireUppercase: checked }
+                  checked={securitySettings.passwordPolicy.requireUppercase}
+                  onCheckedChange={(checked) => setSecuritySettings({
+                    ...securitySettings,
+                    passwordPolicy: { ...securitySettings.passwordPolicy, requireUppercase: checked }
                   })}
                 />
               </div>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
                 <div className="space-y-0.5">
-                  <Label>Nécessite des chiffres</Label>
-                  <p className="text-sm text-muted-foreground">
+                  <Label className="text-sm">Nécessite des chiffres</Label>
+                  <p className="text-xs text-muted-foreground">
                     Les mots de passe doivent contenir au moins un chiffre
                   </p>
                 </div>
                 <Switch
-                  checked={systemSettings.passwordPolicy.requireNumbers}
-                  onCheckedChange={(checked) => setSystemSettings({
-                    ...systemSettings,
-                    passwordPolicy: { ...systemSettings.passwordPolicy, requireNumbers: checked }
+                  checked={securitySettings.passwordPolicy.requireNumbers}
+                  onCheckedChange={(checked) => setSecuritySettings({
+                    ...securitySettings,
+                    passwordPolicy: { ...securitySettings.passwordPolicy, requireNumbers: checked }
                   })}
                 />
               </div>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
                 <div className="space-y-0.5">
-                  <Label>Nécessite des caractères spéciaux</Label>
-                  <p className="text-sm text-muted-foreground">
+                  <Label className="text-sm">Nécessite des caractères spéciaux</Label>
+                  <p className="text-xs text-muted-foreground">
                     Les mots de passe doivent contenir au moins un caractère spécial
                   </p>
                 </div>
                 <Switch
-                  checked={systemSettings.passwordPolicy.requireSpecialChars}
-                  onCheckedChange={(checked) => setSystemSettings({
-                    ...systemSettings,
-                    passwordPolicy: { ...systemSettings.passwordPolicy, requireSpecialChars: checked }
+                  checked={securitySettings.passwordPolicy.requireSpecialChars}
+                  onCheckedChange={(checked) => setSecuritySettings({
+                    ...securitySettings,
+                    passwordPolicy: { ...securitySettings.passwordPolicy, requireSpecialChars: checked }
                   })}
                 />
               </div>
@@ -652,10 +613,10 @@ const AdminSettingsPage = () => {
                 <Input
                   id="expireDays"
                   type="number"
-                  value={systemSettings.passwordPolicy.expireDays}
-                  onChange={(e) => setSystemSettings({
-                    ...systemSettings,
-                    passwordPolicy: { ...systemSettings.passwordPolicy, expireDays: parseInt(e.target.value) }
+                  value={securitySettings.passwordPolicy.expireDays}
+                  onChange={(e) => setSecuritySettings({
+                    ...securitySettings,
+                    passwordPolicy: { ...securitySettings.passwordPolicy, expireDays: parseInt(e.target.value) }
                   })}
                 />
               </div>
@@ -664,15 +625,15 @@ const AdminSettingsPage = () => {
         </TabsContent>
 
         {/* Security Settings */}
-        <TabsContent value="security" className="space-y-6">
+        <TabsContent value="security" className="space-y-4 sm:space-y-6">
           <Card>
-            <CardHeader>
-              <CardTitle>Sécurité du Système</CardTitle>
-              <CardDescription>
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="text-base sm:text-lg">Sécurité du Système</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">
                 Paramètres de sécurité et de protection des données
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="p-3 sm:p-6 space-y-4">
               <Alert>
                 <AlertTriangle className="h-4 w-4" />
                 <AlertDescription>
@@ -683,38 +644,38 @@ const AdminSettingsPage = () => {
 
               <div className="space-y-6">
                 <div>
-                  <h4 className="text-lg font-semibold mb-4">Politique de mots de passe</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="p-4 border rounded-lg">
+                  <h4 className="text-base sm:text-lg font-semibold mb-4">Politique de mots de passe</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                    <div className="p-3 sm:p-4 border rounded-lg">
                       <div className="flex items-center justify-between mb-2">
                         <span className="font-medium">Longueur minimale</span>
-                        <Badge variant="outline">{systemSettings.passwordPolicy.minLength} caractères</Badge>
+                        <Badge variant="outline">{securitySettings.passwordPolicy.minLength} caractères</Badge>
                       </div>
                       <div className="flex items-center justify-between mb-2">
                         <span className="font-medium">Majuscules requises</span>
-                        {systemSettings.passwordPolicy.requireUppercase ? <Check className="h-4 w-4 text-green-500 dark:text-green-400" /> : <X className="h-4 w-4 text-red-500 dark:text-red-400" />}
+                        {securitySettings.passwordPolicy.requireUppercase ? <Check className="h-4 w-4 text-green-500 dark:text-green-400" /> : <X className="h-4 w-4 text-red-500 dark:text-red-400" />}
                       </div>
                       <div className="flex items-center justify-between mb-2">
                         <span className="font-medium">Chiffres requis</span>
-                        {systemSettings.passwordPolicy.requireNumbers ? <Check className="h-4 w-4 text-green-500 dark:text-green-400" /> : <X className="h-4 w-4 text-red-500 dark:text-red-400" />}
+                        {securitySettings.passwordPolicy.requireNumbers ? <Check className="h-4 w-4 text-green-500 dark:text-green-400" /> : <X className="h-4 w-4 text-red-500 dark:text-red-400" />}
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="font-medium">Caractères spéciaux</span>
-                        {systemSettings.passwordPolicy.requireSpecialChars ? <Check className="h-4 w-4 text-green-500 dark:text-green-400" /> : <X className="h-4 w-4 text-red-500 dark:text-red-400" />}
+                        {securitySettings.passwordPolicy.requireSpecialChars ? <Check className="h-4 w-4 text-green-500 dark:text-green-400" /> : <X className="h-4 w-4 text-red-500 dark:text-red-400" />}
                       </div>
                     </div>
                     <div className="p-4 border rounded-lg">
                       <div className="flex items-center justify-between mb-2">
                         <span className="font-medium">Expiration</span>
-                        <Badge variant="outline">{systemSettings.passwordPolicy.expireDays} jours</Badge>
+                        <Badge variant="outline">{securitySettings.passwordPolicy.expireDays} jours</Badge>
                       </div>
                       <div className="flex items-center justify-between mb-2">
                         <span className="font-medium">Tentatives max</span>
-                        <Badge variant="outline">{systemSettings.maxLoginAttempts}</Badge>
+                        <Badge variant="outline">{securitySettings.maxLoginAttempts}</Badge>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="font-medium">Session timeout</span>
-                        <Badge variant="outline">{systemSettings.sessionTimeout}s</Badge>
+                        <Badge variant="outline">{securitySettings.sessionTimeout}s</Badge>
                       </div>
                     </div>
                   </div>
@@ -725,10 +686,10 @@ const AdminSettingsPage = () => {
                 <div>
                   <h4 className="text-lg font-semibold mb-4">Sécurité des accès</h4>
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
                       <div className="space-y-0.5">
-                        <Label>Vérification email</Label>
-                        <p className="text-sm text-muted-foreground">
+                        <Label className="text-sm">Vérification email</Label>
+                        <p className="text-xs text-muted-foreground">
                           Les utilisateurs doivent vérifier leur adresse email
                         </p>
                       </div>
@@ -737,10 +698,10 @@ const AdminSettingsPage = () => {
                         onCheckedChange={(checked) => setSystemSettings({ ...systemSettings, emailVerification: checked })}
                       />
                     </div>
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
                       <div className="space-y-0.5">
-                        <Label>Inscriptions ouvertes</Label>
-                        <p className="text-sm text-muted-foreground">
+                        <Label className="text-sm">Inscriptions ouvertes</Label>
+                        <p className="text-xs text-muted-foreground">
                           Permet aux nouveaux utilisateurs de s'inscrire
                         </p>
                       </div>
@@ -757,21 +718,21 @@ const AdminSettingsPage = () => {
         </TabsContent>
 
         {/* Notification Settings */}
-        <TabsContent value="notifications" className="space-y-6">
+        <TabsContent value="notifications" className="space-y-4 sm:space-y-6">
           <Card>
-            <CardHeader>
-              <CardTitle>Préférences de Notification</CardTitle>
-              <CardDescription>
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="text-base sm:text-lg">Préférences de Notification</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">
                 Configurez comment et quand envoyer les notifications
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="p-3 sm:p-6 space-y-4 sm:space-y-6">
               <div className="space-y-4">
                 <h4 className="text-lg font-semibold">Canaux de notification</h4>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
                   <div className="space-y-0.5">
-                    <Label>Notifications par email</Label>
-                    <p className="text-sm text-muted-foreground">
+                    <Label className="text-sm">Notifications par email</Label>
+                    <p className="text-xs text-muted-foreground">
                       Envoyer les notifications par email
                     </p>
                   </div>
@@ -780,10 +741,10 @@ const AdminSettingsPage = () => {
                     onCheckedChange={(checked) => setNotificationSettings({ ...notificationSettings, emailNotifications: checked })}
                   />
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
                   <div className="space-y-0.5">
-                    <Label>Notifications push</Label>
-                    <p className="text-sm text-muted-foreground">
+                    <Label className="text-sm">Notifications push</Label>
+                    <p className="text-xs text-muted-foreground">
                       Envoyer les notifications push dans le navigateur
                     </p>
                   </div>
@@ -792,10 +753,10 @@ const AdminSettingsPage = () => {
                     onCheckedChange={(checked) => setNotificationSettings({ ...notificationSettings, pushNotifications: checked })}
                   />
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
                   <div className="space-y-0.5">
-                    <Label>Notifications SMS</Label>
-                    <p className="text-sm text-muted-foreground">
+                    <Label className="text-sm">Notifications SMS</Label>
+                    <p className="text-xs text-muted-foreground">
                       Envoyer les notifications par SMS
                     </p>
                   </div>
@@ -810,10 +771,10 @@ const AdminSettingsPage = () => {
 
               <div className="space-y-4">
                 <h4 className="text-lg font-semibold">Types de notifications</h4>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
                   <div className="space-y-0.5">
-                    <Label>Nouveaux utilisateurs</Label>
-                    <p className="text-sm text-muted-foreground">
+                    <Label className="text-sm">Nouveaux utilisateurs</Label>
+                    <p className="text-xs text-muted-foreground">
                       Notification lors des nouvelles inscriptions
                     </p>
                   </div>
@@ -822,10 +783,10 @@ const AdminSettingsPage = () => {
                     onCheckedChange={(checked) => setNotificationSettings({ ...notificationSettings, newUserRegistration: checked })}
                   />
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
                   <div className="space-y-0.5">
-                    <Label>Approbation des assureurs</Label>
-                    <p className="text-sm text-muted-foreground">
+                    <Label className="text-sm">Approbation des assureurs</Label>
+                    <p className="text-xs text-muted-foreground">
                       Notification pour les assureurs en attente d'approbation
                     </p>
                   </div>
@@ -834,10 +795,10 @@ const AdminSettingsPage = () => {
                     onCheckedChange={(checked) => setNotificationSettings({ ...notificationSettings, insurerApproval: checked })}
                   />
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
                   <div className="space-y-0.5">
-                    <Label>Demandes de devis</Label>
-                    <p className="text-sm text-muted-foreground">
+                    <Label className="text-sm">Demandes de devis</Label>
+                    <p className="text-xs text-muted-foreground">
                       Notification pour les nouvelles demandes de devis
                     </p>
                   </div>
@@ -846,10 +807,10 @@ const AdminSettingsPage = () => {
                     onCheckedChange={(checked) => setNotificationSettings({ ...notificationSettings, quoteRequests: checked })}
                   />
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
                   <div className="space-y-0.5">
-                    <Label>Alertes système</Label>
-                    <p className="text-sm text-muted-foreground">
+                    <Label className="text-sm">Alertes système</Label>
+                    <p className="text-xs text-muted-foreground">
                       Notifications importantes du système
                     </p>
                   </div>
@@ -858,10 +819,10 @@ const AdminSettingsPage = () => {
                     onCheckedChange={(checked) => setNotificationSettings({ ...notificationSettings, systemAlerts: checked })}
                   />
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
                   <div className="space-y-0.5">
-                    <Label>Emails marketing</Label>
-                    <p className="text-sm text-muted-foreground">
+                    <Label className="text-sm">Emails marketing</Label>
+                    <p className="text-xs text-muted-foreground">
                     Email marketing et newsletters
                     </p>
                   </div>
@@ -876,15 +837,15 @@ const AdminSettingsPage = () => {
         </TabsContent>
 
         {/* Appearance Settings */}
-        <TabsContent value="appearance" className="space-y-6">
+        <TabsContent value="appearance" className="space-y-4 sm:space-y-6">
           <Card>
-            <CardHeader>
-              <CardTitle>Apparence de l'Interface</CardTitle>
-              <CardDescription>
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="text-base sm:text-lg">Apparence de l'Interface</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">
                 Personnalisez l'apparence de l'application
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="p-3 sm:p-6 space-y-4 sm:space-y-6">
               <div className="space-y-4">
                 <h4 className="text-lg font-semibold">Thème et langage</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -954,10 +915,10 @@ const AdminSettingsPage = () => {
 
               <div className="space-y-4">
                 <h4 className="text-lg font-semibold">Options d'affichage</h4>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
                   <div className="space-y-0.5">
-                    <Label>Barre latérale réduite</Label>
-                    <p className="text-sm text-muted-foreground">
+                    <Label className="text-sm">Barre latérale réduite</Label>
+                    <p className="text-xs text-muted-foreground">
                       Réduire la barre latérale par défaut
                     </p>
                   </div>
@@ -966,10 +927,10 @@ const AdminSettingsPage = () => {
                     onCheckedChange={(checked) => setUISettings({ ...uiSettings, sidebarCollapsed: checked })}
                   />
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
                   <div className="space-y-0.5">
-                    <Label>Infobulles</Label>
-                    <p className="text-sm text-muted-foreground">
+                    <Label className="text-sm">Infobulles</Label>
+                    <p className="text-xs text-muted-foreground">
                       Afficher les infobulles d'aide
                     </p>
                   </div>
@@ -978,10 +939,10 @@ const AdminSettingsPage = () => {
                     onCheckedChange={(checked) => setUISettings({ ...uiSettings, showTooltips: checked })}
                   />
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
                   <div className="space-y-0.5">
-                    <Label>Animations</Label>
-                    <p className="text-sm text-muted-foreground">
+                    <Label className="text-sm">Animations</Label>
+                    <p className="text-xs text-muted-foreground">
                       Activer les animations de l'interface
                     </p>
                   </div>

@@ -68,6 +68,8 @@ import {
   type Insurer,
   type InsurerFormData,
 } from '@/features/admin/services/insurerService'
+import { insurerLogoService } from '@/features/admin/services/insurerLogoService'
+import { LogoUploader } from '@/features/admin/components/LogoUploader'
 
 const AdminInsurersPage = () => {
   // Récupérer l'état d'authentification pour conditionner les requêtes
@@ -449,7 +451,7 @@ const AdminInsurersPage = () => {
                         <div className='flex items-center space-x-3'>
                           <Avatar>
                             <AvatarImage
-                              src={`https://api.dicebear.com/7.x/initials/svg?seed=${insurer.companyName}`}
+                              src={insurer.logoUrl || undefined}
                             />
                             <AvatarFallback>
                               {insurer.companyName.substring(0, 2).toUpperCase()}
@@ -653,6 +655,26 @@ const InsurerForm: React.FC<{
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
+
+      {/* Logo Uploader - affiché seulement lors de l'édition */}
+      {insurer && (
+        <LogoUploader
+          insurerId={insurer.id}
+          currentLogo={insurer.logoUrl}
+          insurerName={formData.companyName}
+          onLogoUploaded={(url) => {
+            // Le logo sera mis à jour via l'API
+            // Rafraîchir les données après l'upload
+            window.location.reload()
+          }}
+          onLogoDeleted={() => {
+            // Le logo sera supprimé via l'API
+            // Rafraîchir les données après la suppression
+            window.location.reload()
+          }}
+        />
+      )}
+
       <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
         <div>
           <Label htmlFor='companyName'>Nom de l'entreprise *</Label>
@@ -772,7 +794,7 @@ const InsurerDetails: React.FC<{ insurer: Insurer }> = ({ insurer }) => {
       <div className='flex items-center space-x-4'>
         <Avatar className='w-16 h-16'>
           <AvatarImage
-            src={`https://api.dicebear.com/7.x/initials/svg?seed=${insurer.companyName}`}
+            src={insurer.logoUrl || undefined}
           />
           <AvatarFallback className='text-lg'>
             {insurer.companyName.substring(0, 2).toUpperCase()}

@@ -320,7 +320,7 @@ export const AdminSupervisionPage: React.FC = () => {
 
       {/* Main Tabs */}
       <Tabs defaultValue="users" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3 sm:w-auto">
+        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 gap-2 sm:w-auto">
           <TabsTrigger value="users">Utilisateurs</TabsTrigger>
           <TabsTrigger value="insurers">Assureurs</TabsTrigger>
           <TabsTrigger value="offers">Offres</TabsTrigger>

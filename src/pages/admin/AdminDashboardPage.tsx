@@ -253,7 +253,7 @@ export const AdminDashboardPage: React.FC = () => {
 
       {/* Onglets principaux */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className='space-y-6'>
-        <TabsList className='grid w-full grid-cols-3'>
+        <TabsList className='grid w-full grid-cols-1 sm:grid-cols-3 gap-2'>
           <TabsTrigger value='overview'>Vue d'ensemble</TabsTrigger>
           <TabsTrigger value='analytics'>Analytics</TabsTrigger>
           <TabsTrigger value='realtime'>Temps réel</TabsTrigger>

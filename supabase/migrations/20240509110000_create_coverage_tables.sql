@@ -50,7 +50,7 @@ BEGIN
       'PERCENTAGE_SI',
       'PERCENTAGE_VN',
       'MTPL_TARIFF',
-      'FORMULA_BASED',
+      'MATRIX_BASED',
       'FREE',
       'RATE_ON_SI',
       'RATE_ON_NEW_VALUE',

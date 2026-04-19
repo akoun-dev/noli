@@ -345,6 +345,25 @@ export class PricingService {
 
   // Les méthodes complexes ont été supprimées avec la simplification
 
+  // Calculer le prix d'une garantie individuelle
+  static getGuaranteePrice(guarantee: Guarantee): number {
+    switch (guarantee.calculationMethod) {
+      case 'FIXED_AMOUNT':
+        return guarantee.fixedAmount || 0;
+      case 'FREE':
+        return 0;
+      case 'PERCENTAGE':
+        // Pourcentage de la prime de base RC (environ 68675 FCFA en moyenne)
+        const baseRC = 68675;
+        return (guarantee.rate || 0) * baseRC / 100;
+      case 'FORMULA':
+        // Pour les formules, on utilise une estimation basée sur fixedAmount si disponible
+        return guarantee.fixedAmount || 15000; // Valeur par défaut
+      default:
+        return 15000; // Valeur par défaut pour les méthodes inconnues
+    }
+  }
+
   // Simulation rapide pour l'affichage en temps réel
   static quickCalculate(basePrice: number, guarantees: { id: string; selected: boolean }[]): number {
     // Pour une simulation rapide, on applique un pourcentage forfaitaire

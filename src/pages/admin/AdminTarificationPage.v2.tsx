@@ -253,7 +253,7 @@ export const AdminTarificationPageV2 = () => {
 
       {/* Onglets */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className='w-full'>
-        <TabsList className='grid w-full max-w-md grid-cols-3 h-auto'>
+        <TabsList className='grid w-full max-w-md grid-cols-1 sm:grid-cols-3 gap-2 h-auto'>
           <TabsTrigger value='guarantees' className='text-xs sm:text-sm'>
             <Shield className='h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2' />
             <span className='hidden xs:inline'>Garanties</span>

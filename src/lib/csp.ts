@@ -47,6 +47,9 @@ export class CSPManager {
         'https:',
         'https://cdn.supabase.co',
         'https://images.unsplash.com',
+        // Storage local pour le développement
+        'http://127.0.0.1:54331',
+        'http://localhost:54331',
       ],
       'font-src': ["'self'", 'fonts.gstatic.com', 'data:'],
       'connect-src': [
@@ -62,10 +65,12 @@ export class CSPManager {
         // Ajout des URLs locales pour le développement
         'http://127.0.0.1:54321',
         'https://127.0.0.1:54321',
+        'http://127.0.0.1:54331', // Supabase local Storage
         'ws://127.0.0.1:54321',
         'wss://127.0.0.1:54321',
         'http://localhost:54321',
         'https://localhost:54321',
+        'http://localhost:54331', // Alternative localhost Storage
         'ws://localhost:54321',
         'wss://localhost:54321',
       ],
@@ -95,7 +100,16 @@ export class CSPManager {
         'https://cdn.supabase.co',
       ],
       'style-src': ["'self'", "'unsafe-inline'", 'fonts.googleapis.com', 'https://cdn.supabase.co'],
-      'img-src': ["'self'", 'data:', 'blob:', 'https:', 'https://cdn.supabase.co'],
+      'img-src': [
+        "'self'",
+        'data:',
+        'blob:',
+        'https:',
+        'https://cdn.supabase.co',
+        // Storage local pour les logos
+        'http://127.0.0.1:54331', // Supabase local Storage
+        'http://localhost:54331', // Alternative localhost Storage
+      ],
       'font-src': ["'self'", 'fonts.gstatic.com', 'data:'],
       'connect-src': [
         "'self'",
@@ -103,10 +117,12 @@ export class CSPManager {
         'wss:',
         'http://127.0.0.1:54321', // Supabase local REST API
         'https://127.0.0.1:54321', // Supabase local REST API (HTTPS)
+        'http://127.0.0.1:54331', // Supabase local Storage
         'ws://127.0.0.1:54321', // Supabase local WebSocket
         'wss://127.0.0.1:54321', // Supabase local WebSocket (HTTPS)
         'http://localhost:54321', // Alternative localhost
         'https://localhost:54321', // Alternative localhost (HTTPS)
+        'http://localhost:54331', // Alternative localhost Storage
         'ws://localhost:54321', // Alternative localhost WebSocket
         'wss://localhost:54321', // Alternative localhost WebSocket (HTTPS)
         'https://api.supabase.co',
@@ -192,6 +208,9 @@ export class CSPManager {
         'https:',
         'https://cdn.supabase.co',
         'https://images.unsplash.com',
+        // Storage local pour le développement
+        'http://127.0.0.1:54331',
+        'http://localhost:54331',
       ],
       'font-src': ["'self'", 'fonts.gstatic.com', 'data:'],
       'connect-src': [
@@ -206,10 +225,12 @@ export class CSPManager {
         // Ajout des URLs locales pour le développement
         'http://127.0.0.1:54321',
         'https://127.0.0.1:54321',
+        'http://127.0.0.1:54331', // Supabase local Storage
         'ws://127.0.0.1:54321',
         'wss://127.0.0.1:54321',
         'http://localhost:54321',
         'https://localhost:54321',
+        'http://localhost:54331', // Alternative localhost Storage
         'ws://localhost:54321',
         'wss://localhost:54321',
         'https://ipapi.co', // API pour la détection d'IP et de localisation

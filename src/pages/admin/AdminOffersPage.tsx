@@ -38,7 +38,8 @@ import {
   Target,
   Zap,
   AlertCircle,
-  RefreshCw
+  RefreshCw,
+  Calculator,
 } from 'lucide-react';
 import { guaranteeService } from '@/features/tarification/services/guaranteeService';
 import { pricingService } from '@/features/tarification/services/pricingService';
@@ -961,6 +962,26 @@ const OfferForm: React.FC<{ offer?: any; insurers: any[]; categories: any[]; onS
     }
   }, [selectedGuaranteeIds, guarantees, offerType]);
 
+  // Auto-calculate price based on selected guarantees
+  React.useEffect(() => {
+    if (offerType === 'TAILOR_MADE' && selectedGuaranteeIds.length > 0) {
+      // Calculate total price from selected guarantees
+      const totalPrice = guarantees
+        .filter(g => selectedGuaranteeIds.includes(g.id))
+        .reduce((sum, guarantee) => {
+          // Get the price based on calculation method
+          const guaranteePrice = pricingService.getGuaranteePrice(guarantee);
+          return sum + guaranteePrice;
+        }, 0);
+
+      // Update the price field automatically
+      setFormData(prev => ({ ...prev, price: totalPrice.toString() }));
+    } else if (offerType === 'TAILOR_MADE' && selectedGuaranteeIds.length === 0) {
+      // Reset price if no guarantees selected
+      setFormData(prev => ({ ...prev, price: '0' }));
+    }
+  }, [selectedGuaranteeIds, guarantees, offerType]);
+
   // Handle package selection
   const handlePackageChange = (packageId: string) => {
     setSelectedPackageId(packageId);
@@ -1128,14 +1149,35 @@ const OfferForm: React.FC<{ offer?: any; insurers: any[]; categories: any[]; onS
           )}
         </div>
         <div>
-          <Label htmlFor="price">Prix *</Label>
-          <Input
-            id="price"
-            type="number"
-            value={formData.price}
-            onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
-            required
-          />
+          <div className="flex items-center justify-between">
+            <Label htmlFor="price">Prix *</Label>
+            {offerType === 'TAILOR_MADE' && selectedGuaranteeIds.length > 0 && (
+              <span className="text-xs text-muted-foreground">
+                Calculé automatiquement
+              </span>
+            )}
+          </div>
+          <div className="relative">
+            <Input
+              id="price"
+              type="number"
+              value={formData.price}
+              onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
+              required
+              className={offerType === 'TAILOR_MADE' && selectedGuaranteeIds.length > 0 ? 'pr-16' : ''}
+            />
+            {offerType === 'TAILOR_MADE' && selectedGuaranteeIds.length > 0 && (
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-muted-foreground">
+                <Calculator className="h-4 w-4" />
+                <span className="text-xs">Auto</span>
+              </div>
+            )}
+          </div>
+          {offerType === 'TAILOR_MADE' && selectedGuaranteeIds.length > 0 && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Basé sur {selectedGuaranteeIds.length} garantie{selectedGuaranteeIds.length > 1 ? 's' : ''} sélectionnée{selectedGuaranteeIds.length > 1 ? 's' : ''}
+            </p>
+          )}
         </div>
         <div>
           <Label htmlFor="currency">Devise</Label>

@@ -40,17 +40,7 @@ export const InsurerLayout: React.FC = () => {
               onClick={() => setSidebarOpen(false)}
             />
             <div className="fixed inset-y-0 left-0 w-72 bg-background shadow-xl z-50 overflow-y-auto animate-in slide-in-from-left duration-200">
-              <div className="flex items-center justify-between p-4 border-b">
-                <span className="font-semibold text-lg">Menu Assureur</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSidebarOpen(false)}
-                >
-                  <X className="h-5 w-5" />
-                </Button>
-              </div>
-              <Sidebar userRole="INSURER" />
+              <Sidebar userRole="INSURER" onMobileClose={() => setSidebarOpen(false)} />
             </div>
           </div>
         )}

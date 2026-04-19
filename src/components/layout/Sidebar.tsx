@@ -35,9 +35,10 @@ interface SidebarItem {
 
 interface SidebarProps {
   userRole?: 'USER' | 'INSURER' | 'ADMIN'
+  onMobileClose?: () => void
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ userRole }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ userRole, onMobileClose }) => {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const location = useLocation()
   const navigate = useNavigate()
@@ -130,6 +131,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ userRole }) => {
               <Link
                 key={item.name}
                 to={item.href}
+                onClick={onMobileClose}
                 className={`flex items-center space-x-2 sm:space-x-3 px-2 sm:px-3 py-1.5 sm:py-2 rounded-md sm:rounded-lg transition-colors duration-200 text-xs sm:text-sm ${
                   isActive
                     ? 'bg-primary text-primary-foreground'

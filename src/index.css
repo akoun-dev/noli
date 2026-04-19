@@ -355,6 +355,17 @@ All colors MUST be HSL.
   .responsive-table-wrapper {
     @apply overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0;
   }
+
+  .responsive-table-wrapper table {
+    min-width: min(100%, 700px);
+  }
+
+  @media (max-width: 640px) {
+    .responsive-table-wrapper table,
+    .admin-table-responsive table {
+      min-width: 100%;
+    }
+  }
   
   /* Modales responsives */
   .responsive-modal {

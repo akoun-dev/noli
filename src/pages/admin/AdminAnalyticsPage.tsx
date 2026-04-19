@@ -316,7 +316,7 @@ export const AdminAnalyticsPage: React.FC = () => {
       </div>
 
       {/* KPI Overview */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
@@ -324,27 +324,27 @@ export const AdminAnalyticsPage: React.FC = () => {
               <Target className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
+          <CardContent className="p-3 sm:p-6">
+            <div className="space-y-3 sm:space-y-4">
               {kpis.map((kpi) => (
-                <div key={kpi.id} className="p-4 border rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
+                <div key={kpi.id} className="p-3 sm:p-4 border rounded-lg">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 gap-2">
                     <div>
-                      <h4 className="font-medium">{kpi.name}</h4>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">{kpi.description}</p>
+                      <h4 className="text-sm sm:font-medium">{kpi.name}</h4>
+                      <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">{kpi.description}</p>
                     </div>
                     {getStatusBadge(kpi.status)}
                   </div>
 
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 gap-2">
                     <div className="flex items-center space-x-2">
-                      <span className={`text-2xl font-bold ${getStatusColor(kpi.status)}`}>
+                      <span className={`text-xl sm:text-2xl font-bold ${getStatusColor(kpi.status)}`}>
                         {kpi.value}
                       </span>
                       {getTrendIcon(kpi.trend)}
-                      <span className="text-sm text-green-600 dark:text-green-400">{kpi.change}</span>
+                      <span className="text-xs sm:text-sm text-green-600 dark:text-green-400">{kpi.change}</span>
                     </div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                    <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                       Cible: {kpi.target}
                     </div>
                   </div>
@@ -368,47 +368,47 @@ export const AdminAnalyticsPage: React.FC = () => {
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Distribution des KPI</CardTitle>
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="text-base sm:text-lg">Distribution des KPI</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="p-4 border rounded-lg">
+          <CardContent className="p-3 sm:p-6">
+            <div className="space-y-3 sm:space-y-4">
+              <div className="p-3 sm:p-4 border rounded-lg">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="font-medium text-green-600 dark:text-green-400">Excellent</span>
-                  <span className="text-sm">{kpiDistribution.excellent.toFixed(0)}%</span>
+                  <span className="text-sm sm:font-medium text-green-600 dark:text-green-400">Excellent</span>
+                  <span className="text-xs sm:text-sm">{kpiDistribution.excellent.toFixed(0)}%</span>
                 </div>
-                <Progress value={kpiDistribution.excellent} className="h-3" />
+                <Progress value={kpiDistribution.excellent} className="h-2 sm:h-3" />
               </div>
 
-              <div className="p-4 border rounded-lg">
+              <div className="p-3 sm:p-4 border rounded-lg">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="font-medium text-blue-600 dark:text-blue-400">Bon</span>
-                  <span className="text-sm">{kpiDistribution.good.toFixed(0)}%</span>
+                  <span className="text-sm sm:font-medium text-blue-600 dark:text-blue-400">Bon</span>
+                  <span className="text-xs sm:text-sm">{kpiDistribution.good.toFixed(0)}%</span>
                 </div>
-                <Progress value={kpiDistribution.good} className="h-3" />
+                <Progress value={kpiDistribution.good} className="h-2 sm:h-3" />
               </div>
 
-              <div className="p-4 border rounded-lg">
+              <div className="p-3 sm:p-4 border rounded-lg">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="font-medium text-yellow-600 dark:text-yellow-400">Attention</span>
-                  <span className="text-sm">{kpiDistribution.warning.toFixed(0)}%</span>
+                  <span className="text-sm sm:font-medium text-yellow-600 dark:text-yellow-400">Attention</span>
+                  <span className="text-xs sm:text-sm">{kpiDistribution.warning.toFixed(0)}%</span>
                 </div>
-                <Progress value={kpiDistribution.warning} className="h-3" />
+                <Progress value={kpiDistribution.warning} className="h-2 sm:h-3" />
               </div>
 
-              <div className="p-4 border rounded-lg">
+              <div className="p-3 sm:p-4 border rounded-lg">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="font-medium text-red-600 dark:text-red-400">Critique</span>
-                  <span className="text-sm">{kpiDistribution.critical.toFixed(0)}%</span>
+                  <span className="text-sm sm:font-medium text-red-600 dark:text-red-400">Critique</span>
+                  <span className="text-xs sm:text-sm">{kpiDistribution.critical.toFixed(0)}%</span>
                 </div>
-                <Progress value={kpiDistribution.critical} className="h-3" />
+                <Progress value={kpiDistribution.critical} className="h-2 sm:h-3" />
               </div>
 
-              <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+              <div className="mt-4 p-3 sm:p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                 <div className="flex items-center space-x-2">
-                  <Award className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                  <span className="font-medium text-blue-800 dark:text-blue-200">
+                  <Award className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 dark:text-blue-400" />
+                  <span className="text-xs sm:text-sm font-medium text-blue-800 dark:text-blue-200">
                     {kpis.filter(k => k.status === 'excellent' || k.status === 'good').length}/{kpis.length} KPIs atteints
                   </span>
                 </div>
@@ -420,39 +420,39 @@ export const AdminAnalyticsPage: React.FC = () => {
 
       {/* Main Analytics Tabs */}
       <Tabs defaultValue="conversion" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
-          <TabsTrigger value="conversion">Entonnoir</TabsTrigger>
-          <TabsTrigger value="performance">Performance</TabsTrigger>
-          <TabsTrigger value="trends">Tendances</TabsTrigger>
-          <TabsTrigger value="realtime">Temps réel</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
+          <TabsTrigger value="conversion" className="text-xs sm:text-sm">Entonnoir</TabsTrigger>
+          <TabsTrigger value="performance" className="text-xs sm:text-sm">Performance</TabsTrigger>
+          <TabsTrigger value="trends" className="text-xs sm:text-sm">Tendances</TabsTrigger>
+          <TabsTrigger value="realtime" className="text-xs sm:text-sm">Temps réel</TabsTrigger>
         </TabsList>
 
         {/* Conversion Funnel Tab */}
         <TabsContent value="conversion" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <Card className="lg:col-span-2">
-              <CardHeader>
-                <CardTitle>Entonnoir de conversion</CardTitle>
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
+            <Card className="xl:col-span-2">
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="text-base sm:text-lg">Entonnoir de conversion</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
+              <CardContent className="p-3 sm:p-6">
+                <div className="space-y-3 sm:space-y-4">
                   {conversionFunnel.map((stage, index) => (
                     <div key={index} className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium">{stage.stage}</span>
-                        <div className="flex items-center space-x-4">
-                          <span className="text-sm text-gray-600 dark:text-gray-400">{stage.count.toLocaleString()}</span>
-                          <span className="text-sm font-medium">{stage.percentage.toFixed(1)}%</span>
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2">
+                        <span className="text-sm sm:font-medium">{stage.stage}</span>
+                        <div className="flex flex-wrap items-center gap-x-2 sm:gap-4 gap-y-1">
+                          <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">{stage.count.toLocaleString()}</span>
+                          <span className="text-xs sm:text-sm font-medium">{stage.percentage.toFixed(1)}%</span>
                           {stage.target > 0 && (
-                            <Badge className={stage.percentage >= stage.target ? 'bg-green-100 text-green-800 dark:bg-green-500/20 dark:text-green-400' : 'bg-red-100 text-red-800 dark:bg-red-500/20 dark:text-red-400'}>
+                            <Badge className={`text-xs ${stage.percentage >= stage.target ? 'bg-green-100 text-green-800 dark:bg-green-500/20 dark:text-green-400' : 'bg-red-100 text-red-800 dark:bg-red-500/20 dark:text-red-400'}`}>
                               Cible: {stage.target}%
                             </Badge>
                           )}
                         </div>
                       </div>
-                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4">
+                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 sm:h-4">
                         <div
-                          className="h-4 rounded-full bg-gradient-to-r from-blue-500 to-purple-600"
+                          className="h-3 sm:h-4 rounded-full bg-gradient-to-r from-blue-500 to-purple-600"
                           style={{ width: `${stage.percentage}%` }}
                         />
                       </div>
@@ -468,17 +468,17 @@ export const AdminAnalyticsPage: React.FC = () => {
             </Card>
 
             <Card>
-              <CardHeader>
-                <CardTitle>Points clés</CardTitle>
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="text-base sm:text-lg">Points clés</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
+              <CardContent className="p-3 sm:p-6">
+                <div className="space-y-3 sm:space-y-4">
                   <div className="p-3 bg-green-50 rounded-lg">
                     <div className="flex items-center space-x-2 mb-2">
                       <CheckCircle className="h-4 w-4 text-green-600" />
-                      <span className="font-medium text-green-800 dark:text-green-200">Points forts</span>
+                      <span className="text-sm font-medium text-green-800 dark:text-green-200">Points forts</span>
                     </div>
-                    <ul className="text-sm text-green-700 dark:text-green-300 space-y-1">
+                    <ul className="text-xs sm:text-sm text-green-700 dark:text-green-300 space-y-1">
                       <li>• Taux de complétion formulaire supérieur à la cible</li>
                       <li>• Excellent taux de conversion final</li>
                       <li>• Temps de réponse optimal</li>
@@ -488,9 +488,9 @@ export const AdminAnalyticsPage: React.FC = () => {
                   <div className="p-3 bg-yellow-50 rounded-lg">
                     <div className="flex items-center space-x-2 mb-2">
                       <AlertTriangle className="h-4 w-4 text-yellow-600" />
-                      <span className="font-medium text-yellow-800 dark:text-yellow-200">À améliorer</span>
+                      <span className="text-sm font-medium text-yellow-800 dark:text-yellow-200">À améliorer</span>
                     </div>
-                    <ul className="text-sm text-yellow-700 dark:text-yellow-300 space-y-1">
+                    <ul className="text-xs sm:text-sm text-yellow-700 dark:text-yellow-300 space-y-1">
                       <li>• 30% d'abandon au démarrage du formulaire</li>
                       <li>• Taux de clics pourrait être optimisé</li>
                     </ul>
@@ -499,9 +499,9 @@ export const AdminAnalyticsPage: React.FC = () => {
                   <div className="p-3 bg-blue-50 rounded-lg">
                     <div className="flex items-center space-x-2 mb-2">
                       <Target className="h-4 w-4 text-blue-600" />
-                      <span className="font-medium text-blue-800 dark:text-blue-200">Objectifs</span>
+                      <span className="text-sm font-medium text-blue-800 dark:text-blue-200">Objectifs</span>
                     </div>
-                    <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
+                    <ul className="text-xs sm:text-sm text-blue-700 dark:text-blue-300 space-y-1">
                       <li>• Réduire l'abandon initial à 25%</li>
                       <li>• Augmenter les clics à 30%</li>
                       <li>• Maintenir la conversion actuelle</li>
@@ -515,36 +515,36 @@ export const AdminAnalyticsPage: React.FC = () => {
 
         {/* Performance Tab */}
         <TabsContent value="performance" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
             <Card>
-              <CardHeader>
-                <CardTitle>Performance technique</CardTitle>
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="text-base sm:text-lg">Performance technique</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
+              <CardContent className="p-3 sm:p-6">
+                <div className="space-y-3 sm:space-y-4">
                   {performanceMetrics.map((metric, index) => (
-                    <div key={index} className="p-4 border rounded-lg">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-medium">{metric.name}</span>
+                    <div key={index} className="p-3 sm:p-4 border rounded-lg">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 gap-1">
+                        <span className="text-sm sm:font-medium">{metric.name}</span>
                         <div className="flex items-center space-x-2">
                           {getTrendIcon(metric.trend)}
-                          <Badge className={
+                          <Badge className={`text-xs ${
                             metric.status === 'good' ? 'bg-green-100 text-green-800 dark:bg-green-500/20 dark:text-green-400' :
                             metric.status === 'warning' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-500/20 dark:text-yellow-400' :
                             'bg-red-100 text-red-800 dark:bg-red-500/20 dark:text-red-400'
-                          }>
+                          }`}>
                             {metric.status === 'good' ? 'Bon' : metric.status === 'warning' ? 'Attention' : 'Critique'}
                           </Badge>
                         </div>
                       </div>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className={`text-xl font-bold ${
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 gap-1">
+                        <span className={`text-lg sm:text-xl font-bold ${
                           metric.status === 'good' ? 'text-green-600' :
                           metric.status === 'warning' ? 'text-yellow-600' : 'text-red-600'
                         }`}>
                           {metric.value}{metric.unit}
                         </span>
-                        <span className="text-sm text-gray-500 dark:text-gray-400">
+                        <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                           Cible: {metric.target}{metric.unit}
                         </span>
                       </div>
@@ -566,47 +566,47 @@ export const AdminAnalyticsPage: React.FC = () => {
             </Card>
 
             <Card>
-              <CardHeader>
-                <CardTitle>État système</CardTitle>
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="text-base sm:text-lg">État système</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="p-4 bg-green-50 rounded-lg">
+              <CardContent className="p-3 sm:p-6">
+                <div className="space-y-3 sm:space-y-4">
+                  <div className="p-3 sm:p-4 bg-green-50 rounded-lg">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium text-green-800 dark:text-green-200">Disponibilité</span>
-                      <span className="text-2xl font-bold text-green-600 dark:text-green-400">99.8%</span>
+                      <span className="text-sm sm:font-medium text-green-800 dark:text-green-200">Disponibilité</span>
+                      <span className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400">99.8%</span>
                     </div>
-                    <div className="text-sm text-green-700 dark:text-green-300">
+                    <div className="text-xs sm:text-sm text-green-700 dark:text-green-300">
                       Temps d'arrêt: 1h 45min ce mois-ci
                     </div>
                   </div>
 
-                  <div className="p-4 bg-blue-50 rounded-lg">
+                  <div className="p-3 sm:p-4 bg-blue-50 rounded-lg">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium text-blue-800 dark:text-blue-200">Temps de réponse moyen</span>
-                      <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">245ms</span>
+                      <span className="text-sm sm:font-medium text-blue-800 dark:text-blue-200">Temps de réponse moyen</span>
+                      <span className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400">245ms</span>
                     </div>
-                    <div className="text-sm text-blue-700 dark:text-blue-300">
+                    <div className="text-xs sm:text-sm text-blue-700 dark:text-blue-300">
                       Amélioration de 15% ce mois-ci
                     </div>
                   </div>
 
-                  <div className="p-4 bg-yellow-50 rounded-lg">
+                  <div className="p-3 sm:p-4 bg-yellow-50 rounded-lg">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium text-yellow-800 dark:text-yellow-200">Taux d'erreur</span>
-                      <span className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">0.5%</span>
+                      <span className="text-sm sm:font-medium text-yellow-800 dark:text-yellow-200">Taux d'erreur</span>
+                      <span className="text-xl sm:text-2xl font-bold text-yellow-600 dark:text-yellow-400">0.5%</span>
                     </div>
-                    <div className="text-sm text-yellow-700 dark:text-yellow-300">
+                    <div className="text-xs sm:text-sm text-yellow-700 dark:text-yellow-300">
                       Stable par rapport au mois dernier
                     </div>
                   </div>
 
-                  <div className="p-4 bg-purple-50 rounded-lg">
+                  <div className="p-3 sm:p-4 bg-purple-50 rounded-lg">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium text-purple-800 dark:text-purple-200">Utilisation ressources</span>
-                      <span className="text-2xl font-bold text-purple-600 dark:text-purple-400">56%</span>
+                      <span className="text-sm sm:font-medium text-purple-800 dark:text-purple-200">Utilisation ressources</span>
+                      <span className="text-xl sm:text-2xl font-bold text-purple-600 dark:text-purple-400">56%</span>
                     </div>
-                    <div className="text-sm text-purple-700 dark:text-purple-300">
+                    <div className="text-xs sm:text-sm text-purple-700 dark:text-purple-300">
                       CPU: 45%, Mémoire: 68%, Disque: 54%
                     </div>
                   </div>
@@ -619,57 +619,57 @@ export const AdminAnalyticsPage: React.FC = () => {
         {/* Trends Tab */}
         <TabsContent value="trends" className="space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle>Évolution sur 30 jours</CardTitle>
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="text-base sm:text-lg">Évolution sur 30 jours</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-3 sm:p-6">
               <div className="space-y-4">
                 {/* This would typically include a chart component */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="p-4 border rounded-lg">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  <div className="p-3 sm:p-4 border rounded-lg">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Utilisateurs actifs</span>
-                      <TrendingUp className="h-4 w-4 text-green-600 dark:text-green-400" />
+                      <span className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Utilisateurs actifs</span>
+                      <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-green-600 dark:text-green-400" />
                     </div>
-                    <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats?.users?.active?.toLocaleString() || '-'}</div>
-                    <div className="text-sm text-green-600 dark:text-green-400">
+                    <div className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400">{stats?.users?.active?.toLocaleString() || '-'}</div>
+                    <div className="text-xs sm:text-sm text-green-600 dark:text-green-400">
                       {stats?.users?.growth !== undefined ? `${stats.users.growth >= 0 ? '+' : ''}${stats.users.growth}% vs mois dernier` : '-'}
                     </div>
                   </div>
 
-                  <div className="p-4 border rounded-lg">
+                  <div className="p-3 sm:p-4 border rounded-lg">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Devis générés</span>
-                      <TrendingUp className="h-4 w-4 text-green-600 dark:text-green-400" />
+                      <span className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Devis générés</span>
+                      <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-green-600 dark:text-green-400" />
                     </div>
-                    <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">{stats?.quotes?.total?.toLocaleString() || '-'}</div>
-                    <div className="text-sm text-green-600 dark:text-green-400">
+                    <div className="text-xl sm:text-2xl font-bold text-purple-600 dark:text-purple-400">{stats?.quotes?.total?.toLocaleString() || '-'}</div>
+                    <div className="text-xs sm:text-sm text-green-600 dark:text-green-400">
                       {stats?.quotes?.growth !== undefined ? `${stats.quotes.growth >= 0 ? '+' : ''}${stats.quotes.growth}% vs mois dernier` : '-'}
                     </div>
                   </div>
 
-                  <div className="p-4 border rounded-lg">
+                  <div className="p-3 sm:p-4 border rounded-lg">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Conversions</span>
-                      <TrendingUp className="h-4 w-4 text-green-600 dark:text-green-400" />
+                      <span className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Conversions</span>
+                      <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-green-600 dark:text-green-400" />
                     </div>
-                    <div className="text-2xl font-bold text-green-600 dark:text-green-400">{stats?.policies?.total?.toLocaleString() || '-'}</div>
-                    <div className="text-sm text-green-600 dark:text-green-400">
+                    <div className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400">{stats?.policies?.total?.toLocaleString() || '-'}</div>
+                    <div className="text-xs sm:text-sm text-green-600 dark:text-green-400">
                       {stats?.policies?.growth !== undefined ? `${stats.policies.growth >= 0 ? '+' : ''}${stats.policies.growth}% vs mois dernier` : '-'}
                     </div>
                   </div>
 
-                  <div className="p-4 border rounded-lg">
+                  <div className="p-3 sm:p-4 border rounded-lg">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Revenus générés</span>
-                      <TrendingUp className="h-4 w-4 text-green-600 dark:text-green-400" />
+                      <span className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Revenus générés</span>
+                      <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-green-600 dark:text-green-400" />
                     </div>
-                    <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
+                    <div className="text-xl sm:text-2xl font-bold text-orange-600 dark:text-orange-400">
                       {estimatedRevenueInFCFA !== undefined
                         ? `${estimatedRevenueInFCFA.toLocaleString()} FCFA`
                         : '-'}
                     </div>
-                    <div className="text-sm text-green-600 dark:text-green-400">
+                    <div className="text-xs sm:text-sm text-green-600 dark:text-green-400">
                       {stats?.insurers?.growth !== undefined ? `${stats.insurers.growth >= 0 ? '+' : ''}${stats.insurers.growth}% vs mois dernier` : '-'}
                     </div>
                   </div>
@@ -681,77 +681,77 @@ export const AdminAnalyticsPage: React.FC = () => {
 
         {/* Real-time Tab */}
         <TabsContent value="realtime" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Zap className="h-5 w-5 text-yellow-500 dark:text-yellow-400" />
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="flex items-center space-x-2 text-base sm:text-lg">
+                  <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500 dark:text-yellow-400" />
                   <span>Activité en temps réel</span>
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
+              <CardContent className="p-3 sm:p-6">
+                <div className="space-y-3 sm:space-y-4">
                   <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
-                    <span className="font-medium">Utilisateurs en ligne</span>
-                    <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">342</span>
+                    <span className="text-xs sm:text-sm font-medium">Utilisateurs en ligne</span>
+                    <span className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400">342</span>
                   </div>
                   <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
-                    <span className="font-medium">Formulaires actifs</span>
-                    <span className="text-2xl font-bold text-green-600 dark:text-green-400">28</span>
+                    <span className="text-xs sm:text-sm font-medium">Formulaires actifs</span>
+                    <span className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400">28</span>
                   </div>
                   <div className="flex justify-between items-center p-3 bg-purple-50 rounded-lg">
-                    <span className="font-medium">Comparaisons en cours</span>
-                    <span className="text-2xl font-bold text-purple-600 dark:text-purple-400">15</span>
+                    <span className="text-xs sm:text-sm font-medium">Comparaisons en cours</span>
+                    <span className="text-xl sm:text-2xl font-bold text-purple-600 dark:text-purple-400">15</span>
                   </div>
                   <div className="flex justify-between items-center p-3 bg-orange-50 rounded-lg">
-                    <span className="font-medium">Clics cette heure</span>
-                    <span className="text-2xl font-bold text-orange-600 dark:text-orange-400">127</span>
+                    <span className="text-xs sm:text-sm font-medium">Clics cette heure</span>
+                    <span className="text-xl sm:text-2xl font-bold text-orange-600 dark:text-orange-400">127</span>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="lg:col-span-2">
-              <CardHeader>
-                <CardTitle>Alertes et notifications</CardTitle>
+            <Card className="xl:col-span-2">
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="text-base sm:text-lg">Alertes et notifications</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-3 sm:p-6">
                 <div className="space-y-3">
                   <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                    <div className="flex items-center space-x-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-2 gap-1">
                       <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
-                      <span className="font-medium text-green-800 dark:text-green-200">Système opérationnel</span>
-                      <span className="text-xs text-green-600 dark:text-green-400 ml-auto">
+                      <span className="text-xs sm:text-sm font-medium text-green-800 dark:text-green-200">Système opérationnel</span>
+                      <span className="text-xs text-green-600 dark:text-green-400 sm:ml-auto">
                         {systemHealth?.uptime !== undefined ? `${systemHealth.uptime.toFixed(1)}% disponibilité` : '-'}
                       </span>
                     </div>
-                    <div className="text-sm text-green-700 dark:text-green-300 mt-1">
+                    <div className="text-xs sm:text-sm text-green-700 dark:text-green-300 mt-1">
                       {systemHealth?.uptime !== undefined && systemHealth.uptime >= 99 ? 'Tous les services fonctionnent normalement' : 'Attention requise'}
                     </div>
                   </div>
 
                   <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <div className="flex items-center space-x-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-2 gap-1">
                       <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
-                      <span className="font-medium text-yellow-800 dark:text-yellow-200">Pic d'activité</span>
-                      <span className="text-xs text-yellow-600 dark:text-yellow-400 ml-auto">
+                      <span className="text-xs sm:text-sm font-medium text-yellow-800 dark:text-yellow-200">Pic d'activité</span>
+                      <span className="text-xs text-yellow-600 dark:text-yellow-400 sm:ml-auto">
                         {systemHealth?.responseTime !== undefined ? `${Math.round(systemHealth.responseTime)}ms temps de réponse` : '-'}
                       </span>
                     </div>
-                    <div className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                    <div className="text-xs sm:text-sm text-yellow-700 dark:text-yellow-300 mt-1">
                       {systemHealth?.responseTime !== undefined && systemHealth.responseTime < 500 ? 'Normal' : 'Légerement lent'}
                     </div>
                   </div>
 
                   <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <div className="flex items-center space-x-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-2 gap-1">
                       <Activity className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                      <span className="font-medium text-blue-800 dark:text-blue-200">Nouveau record</span>
-                      <span className="text-xs text-blue-600 dark:text-blue-400 ml-auto">
+                      <span className="text-xs sm:text-sm font-medium text-blue-800 dark:text-blue-200">Nouveau record</span>
+                      <span className="text-xs text-blue-600 dark:text-blue-400 sm:ml-auto">
                         {activityData?.length > 0 ? `${Math.round(new Date().getTime() / 1000 / 60)} min` : '-'}
                       </span>
                     </div>
-                    <div className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                    <div className="text-xs sm:text-sm text-blue-700 dark:text-blue-300 mt-1">
                       Comparaisons aujourd'hui: {activityData?.length > 0 ? activityData.reduce((sum, day) => sum + (day.newQuotes || 0), 0) : '-'}
                     </div>
                   </div>

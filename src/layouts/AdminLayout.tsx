@@ -102,23 +102,26 @@ export const AdminLayout: React.FC = () => {
               onClick={() => setSidebarOpen(false)}
             />
             <div className="fixed inset-y-0 left-0 w-72 bg-background shadow-xl z-50 overflow-y-auto animate-in slide-in-from-left duration-200">
-              <div className="flex items-center justify-between p-4 border-b">
-                <span className="font-semibold text-lg">Menu Admin</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSidebarOpen(false)}
-                >
-                  <X className="h-5 w-5" />
-                </Button>
-              </div>
+              <Sidebar userRole="ADMIN" onMobileClose={() => setSidebarOpen(false)} />
+            </div>
+          </div>
+        )}
+
+        {/* Mobile Sidebar Overlay */}
+        {sidebarOpen && (
+          <div className="fixed inset-0 z-50 lg:hidden">
+            <div
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+              onClick={() => setSidebarOpen(false)}
+            />
+            <div className="fixed inset-y-0 left-0 w-72 bg-background shadow-xl z-50 overflow-y-auto animate-in slide-in-from-left duration-200">
               <Sidebar userRole="ADMIN" />
             </div>
           </div>
         )}
 
         {/* Main Content */}
-        <main className="flex-1 lg:pl-64 xl:pl-72">
+        <main className="flex-1 min-w-0 lg:pl-64 xl:pl-72">
           {/* Mobile Header with Sidebar Toggle */}
           <div className="lg:hidden bg-card border-b sticky top-0 z-40">
             <div className="flex items-center justify-between px-4 py-3">

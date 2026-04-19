@@ -17,7 +17,7 @@ export interface FixedTariffItem {
 export interface FixedCoverageOption {
   id: string
   name: string
-  calculation_type: 'FIXED_AMOUNT' | 'FORMULA_BASED'
+  calculation_type: 'FIXED_AMOUNT' | 'MATRIX_BASED'
 }
 
 export interface FreeCoverageItem {
@@ -31,7 +31,7 @@ class TarificationSupabaseService {
   // Helper methods simplifiés
   private mapCalcMethodToDb(method: string): string {
     // Le mapping correspond aux 3 valeurs de l'enum en base de données
-    // FREE, FIXED_AMOUNT, FORMULA_BASED
+    // FREE, FIXED_AMOUNT, MATRIX_BASED
     switch (method) {
       case 'FREE':
         return 'FREE'
@@ -39,8 +39,8 @@ class TarificationSupabaseService {
         return 'FIXED_AMOUNT'
       case 'VARIABLE_BASED':
       case 'MATRIX_BASED':
-        // Les deux méthodes basées sur des formules grilles sont mappées à FORMULA_BASED
-        return 'FORMULA_BASED'
+        // Les deux méthodes basées sur des formules grilles sont mappées à MATRIX_BASED
+        return 'MATRIX_BASED'
       default:
         return 'FIXED_AMOUNT' // fallback
     }
@@ -390,7 +390,7 @@ class TarificationSupabaseService {
     const { data, error } = await supabase
       .from('coverages')
       .select('id, name, calculation_type')
-      .in('calculation_type', ['FIXED_AMOUNT', 'FORMULA_BASED'])
+      .in('calculation_type', ['FIXED_AMOUNT', 'MATRIX_BASED'])
       .eq('is_active', true)
       .order('display_order')
 
@@ -416,7 +416,7 @@ class TarificationSupabaseService {
           `${supabaseUrl}/rest/v1/coverages?` +
           [
             'select=' + encodeURIComponent('id,name,calculation_type'),
-            'calculation_type=in.(FIXED_AMOUNT,FORMULA_BASED)',
+            'calculation_type=in.(FIXED_AMOUNT,MATRIX_BASED)',
             'is_active=eq.true',
             'order=display_order.asc',
           ].join('&')

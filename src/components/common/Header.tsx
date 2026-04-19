@@ -146,23 +146,30 @@ export const Header: React.FC = () => {
             )}
           </div>
 
-          {/* Mobile menu button */}
-          <div className='md:hidden flex items-center space-x-2'>
-            {isAuthenticated && (
+          {/* Mobile menu button - uniquement pour non-connectés */}
+          {!isAuthenticated && (
+            <div className='md:hidden flex items-center space-x-2'>
               <ThemeToggle />
-            )}
-            <Button
-              variant='ghost'
-              size='sm'
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              aria-label={isMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
-              aria-expanded={isMenuOpen}
-              aria-controls='mobile-menu'
-              className='p-2'
-            >
-              {isMenuOpen ? <X className='h-5 w-5' /> : <Menu className='h-5 w-5' />}
-            </Button>
-          </div>
+              <Button
+                variant='ghost'
+                size='sm'
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                aria-label={isMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
+                aria-expanded={isMenuOpen}
+                aria-controls='mobile-menu'
+                className='p-2'
+              >
+                {isMenuOpen ? <X className='h-5 w-5' /> : <Menu className='h-5 w-5' />}
+              </Button>
+            </div>
+          )}
+
+          {/* Theme toggle pour connectés sur mobile */}
+          {isAuthenticated && (
+            <div className='md:hidden flex items-center space-x-2'>
+              <ThemeToggle />
+            </div>
+          )}
         </div>
       </div>
 
