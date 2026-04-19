@@ -396,7 +396,7 @@ export const fetchSystemHealth = async (): Promise<SystemHealth> => {
     try {
       const { data, error } = await supabase.rpc('system_health_check')
       if (error) throw error
-      componentMap = (data || []).reduce(
+      componentMap = (Array.isArray(data) ? data : []).reduce(
         (acc, component) => {
           if (component?.component) {
             acc[component.component] = component
@@ -407,6 +407,7 @@ export const fetchSystemHealth = async (): Promise<SystemHealth> => {
       )
     } catch (err) {
       logger.warn('system_health_check RPC unavailable, using fallback metrics', err)
+      componentMap = {}
     }
 
     const dbComponent = componentMap.database

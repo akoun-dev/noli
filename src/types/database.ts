@@ -33,6 +33,7 @@ export interface Database {
           preferences: Json
           created_at: string
           updated_at: string
+          custom_role_id: string | null
         }
         Insert: Omit<Database['public']['Tables']['profiles']['Row'], 'id' | 'created_at' | 'updated_at'> & {
           id?: string
@@ -363,6 +364,49 @@ export interface Database {
         }
         Update: Partial<Database['public']['Tables']['notification_logs']['Insert']>
       }
+      permissions: {
+        Row: {
+          id: string
+          name: string
+          resource: string
+          action: string
+          description: string | null
+          category: string
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['permissions']['Row'], 'id' | 'created_at'> & {
+          id?: string
+        }
+        Update: Partial<Database['public']['Tables']['permissions']['Insert']>
+      }
+      custom_roles: {
+        Row: {
+          id: string
+          name: string
+          description: string | null
+          is_system_role: boolean
+          is_active: boolean
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['custom_roles']['Row'], 'id' | 'created_at' | 'updated_at'> & {
+          id?: string
+        }
+        Update: Partial<Database['public']['Tables']['custom_roles']['Insert']>
+      }
+      role_permissions: {
+        Row: {
+          id: string
+          role_id: string
+          permission_id: string
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['role_permissions']['Row'], 'id' | 'created_at'> & {
+          id?: string
+        }
+        Update: Partial<Database['public']['Tables']['role_permissions']['Insert']>
+      }
     }
     Views: {
       user_stats_view: {
@@ -526,6 +570,20 @@ export interface Database {
       create_default_notification_preferences: (
         p_user_id: string
       ) => string
+      can_delete_role: (p_role_id: string) => boolean
+      get_role_with_permissions: (p_role_id: string) => {
+        id: string
+        name: string
+        description: string | null
+        is_system_role: boolean
+        is_active: boolean
+        permission_id: string | null
+        permission_name: string | null
+        permission_resource: string | null
+        permission_action: string | null
+        permission_category: string | null
+      }
+      is_admin_custom: (p_user_id: string) => boolean
     }
     Enums: {
       user_role: 'USER' | 'INSURER' | 'ADMIN'
@@ -566,6 +624,9 @@ export type Notification = Database['public']['Tables']['notifications']['Row']
 export type NotificationPreferences = Database['public']['Tables']['notification_preferences']['Row']
 export type NotificationTemplate = Database['public']['Tables']['notification_templates']['Row']
 export type NotificationLog = Database['public']['Tables']['notification_logs']['Row']
+export type Permission = Database['public']['Tables']['permissions']['Row']
+export type CustomRole = Database['public']['Tables']['custom_roles']['Row']
+export type RolePermission = Database['public']['Tables']['role_permissions']['Row']
 
 // Types pour les vues analytiques
 export type UserStatsView = Database['public']['Views']['user_stats_view']['Row']

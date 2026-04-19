@@ -54,6 +54,7 @@ export interface Role {
   createdAt: Date;
   updatedAt: Date;
   createdBy: string;
+  isSystemRole?: boolean;
 }
 
 export interface Permission {
@@ -77,7 +78,8 @@ export type PermissionCategory =
   | 'SYSTEM_CONFIG'
   | 'BACKUP_RESTORE'
   | 'DATA_IMPORT_EXPORT'
-  | 'NOTIFICATION_MANAGEMENT';
+  | 'NOTIFICATION_MANAGEMENT'
+  | 'INSURANCE_MANAGEMENT';
 
 export interface UserPermission {
   userId: string;

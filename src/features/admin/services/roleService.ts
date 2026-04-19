@@ -1,160 +1,422 @@
 import { Role, Permission, UserPermission, PermissionCategory } from '@/types/admin';
 import { supabase } from '@/lib/supabase';
 import { logger } from '@/lib/logger';
+import type { Permission as DBPermission, CustomRole, RolePermission } from '@/types/database';
 
-// NOTE: Role system is based on profiles.role field (USER, INSURER, ADMIN)
-// This service provides compatibility with the admin UI but uses the existing database structure
-// For advanced RBAC, create roles and permissions tables in Supabase
+/**
+ * Custom Roles Service
+ *
+ * Implements a flexible RBAC system with custom roles and permissions.
+ * Maintains backward compatibility with the legacy USER/INSURER/ADMIN system roles.
+ *
+ * - Custom roles are stored in custom_roles table
+ * - Permissions are stored in permissions table
+ * - Role-permission associations are in role_permissions table
+ * - Users can have either a custom_role_id or use the legacy role column
+ */
 
-// Default permissions based on user roles in the system
-const getDefaultPermissions = (roleName: string): Permission[] => {
-  // All roles can view basic data
-  const basePermissions: Permission[] = [
-    {
-      id: `${roleName.toLowerCase()}-view-profile`,
-      name: 'Voir son profil',
-      resource: 'USER',
-      action: 'READ',
-      description: 'Consulter son propre profil',
-      category: 'USER_MANAGEMENT',
-    },
-  ];
+// Map database permission to admin Permission type
+const mapDBPermissionToAdmin = (dbPerm: DBPermission): Permission => ({
+  id: dbPerm.id,
+  name: `${dbPerm.resource}.${dbPerm.action}`,
+  resource: dbPerm.resource.toUpperCase() as any,
+  action: dbPerm.action.toUpperCase() as any,
+  description: dbPerm.description || '',
+  category: dbPerm.category as PermissionCategory,
+});
 
-  switch (roleName) {
-    case 'ADMIN':
-      return [
-        ...basePermissions,
-        { id: 'admin-user-view', name: 'Voir les utilisateurs', resource: 'USER', action: 'READ', description: 'Consulter la liste des utilisateurs', category: 'USER_MANAGEMENT' },
-        { id: 'admin-user-create', name: 'Créer des utilisateurs', resource: 'USER', action: 'CREATE', description: 'Créer de nouveaux utilisateurs', category: 'USER_MANAGEMENT' },
-        { id: 'admin-user-update', name: 'Modifier les utilisateurs', resource: 'USER', action: 'UPDATE', description: 'Modifier les informations des utilisateurs', category: 'USER_MANAGEMENT' },
-        { id: 'admin-user-delete', name: 'Supprimer des utilisateurs', resource: 'USER', action: 'DELETE', description: 'Supprimer des utilisateurs', category: 'USER_MANAGEMENT' },
-        { id: 'admin-offer-view', name: 'Voir les offres', resource: 'OFFER', action: 'READ', description: 'Consulter les offres d\'assurance', category: 'OFFER_MANAGEMENT' },
-        { id: 'admin-offer-create', name: 'Créer des offres', resource: 'OFFER', action: 'CREATE', description: 'Créer de nouvelles offres d\'assurance', category: 'OFFER_MANAGEMENT' },
-        { id: 'admin-offer-update', name: 'Modifier des offres', resource: 'OFFER', action: 'UPDATE', description: 'Modifier les offres existantes', category: 'OFFER_MANAGEMENT' },
-        { id: 'admin-offer-delete', name: 'Supprimer des offres', resource: 'OFFER', action: 'DELETE', description: 'Supprimer des offres', category: 'OFFER_MANAGEMENT' },
-        { id: 'admin-analytics-view', name: 'Voir les analytics', resource: 'ANALYTICS', action: 'READ', description: 'Consulter les rapports et statistiques', category: 'ANALYTICS' },
-        { id: 'admin-audit-view', name: 'Voir les journaux d\'audit', resource: 'AUDIT', action: 'READ', description: 'Consulter les journaux d\'audit', category: 'AUDIT_LOGS' },
-        { id: 'admin-system-config-view', name: 'Voir la configuration système', resource: 'SYSTEM', action: 'READ', description: 'Consulter la configuration système', category: 'SYSTEM_CONFIG' },
-      ];
-    case 'INSURER':
-      return [
-        ...basePermissions,
-        { id: 'insurer-offer-view', name: 'Voir les offres', resource: 'OFFER', action: 'READ', description: 'Consulter les offres d\'assurance', category: 'OFFER_MANAGEMENT' },
-        { id: 'insurer-offer-create', name: 'Créer des offres', resource: 'OFFER', action: 'CREATE', description: 'Créer de nouvelles offres d\'assurance', category: 'OFFER_MANAGEMENT' },
-        { id: 'insurer-offer-update', name: 'Modifier des offres', resource: 'OFFER', action: 'UPDATE', description: 'Modifier les offres existantes', category: 'OFFER_MANAGEMENT' },
-        { id: 'insurer-quote-view', name: 'Voir les devis', resource: 'QUOTE', action: 'READ', description: 'Consulter les devis', category: 'QUOTE_MANAGEMENT' },
-        { id: 'insurer-quote-respond', name: 'Répondre aux devis', resource: 'QUOTE', action: 'RESPOND', description: 'Accepter ou rejeter les devis', category: 'QUOTE_MANAGEMENT' },
-        { id: 'insurer-policy-view', name: 'Voir les polices', resource: 'POLICY', action: 'READ', description: 'Consulter les polices d\'assurance', category: 'POLICY_MANAGEMENT' },
-        { id: 'insurer-analytics-view', name: 'Voir les analytics', resource: 'ANALYTICS', action: 'READ', description: 'Consulter les rapports et statistiques', category: 'ANALYTICS' },
-      ];
-    case 'USER':
-      return [
-        ...basePermissions,
-        { id: 'user-offer-view', name: 'Voir les offres', resource: 'OFFER', action: 'READ', description: 'Consulter les offres d\'assurance', category: 'OFFER_MANAGEMENT' },
-        { id: 'user-quote-create', name: 'Créer des devis', resource: 'QUOTE', action: 'CREATE', description: 'Créer des demandes de devis', category: 'QUOTE_MANAGEMENT' },
-        { id: 'user-quote-view', name: 'Voir les devis', resource: 'QUOTE', action: 'READ', description: 'Consulter ses devis', category: 'QUOTE_MANAGEMENT' },
-        { id: 'user-policy-view', name: 'Voir les polices', resource: 'POLICY', action: 'READ', description: 'Consulter ses polices d\'assurance', category: 'POLICY_MANAGEMENT' },
-        { id: 'user-payment-view', name: 'Voir les paiements', resource: 'PAYMENT', action: 'READ', description: 'Consulter l\'historique des paiements', category: 'PAYMENT_MANAGEMENT' },
-      ];
-    default:
-      return basePermissions;
+// Map database role to admin Role type
+const mapDBRoleToAdmin = async (dbRole: CustomRole & { permissions?: DBPermission[] }): Promise<Role> => {
+  // If permissions not included, fetch them
+  let permissions: DBPermission[] = dbRole.permissions || [];
+
+  if (!dbRole.permissions || dbRole.permissions.length === 0) {
+    const { data: rolePerms } = await supabase
+      .from('role_permissions')
+      .select('permission_id, permissions!inner(*)')
+      .eq('role_id', dbRole.id);
+
+    if (rolePerms) {
+      permissions = rolePerms.map(rp => (rp as any).permissions);
+    }
   }
-};
 
-// Roles based on profiles.role enum
-const getSystemRoles = (): Role[] => {
-  return [
-    {
-      id: 'ADMIN',
-      name: 'Administrateur',
-      description: 'Accès complet à toutes les fonctionnalités du système',
-      permissions: getDefaultPermissions('ADMIN'),
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      createdBy: 'system',
-    },
-    {
-      id: 'INSURER',
-      name: 'Assureur',
-      description: 'Gestion des offres, devis et polices pour une compagnie d\'assurance',
-      permissions: getDefaultPermissions('INSURER'),
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      createdBy: 'system',
-    },
-    {
-      id: 'USER',
-      name: 'Utilisateur',
-      description: 'Accès client standard pour comparer des offres et gérer ses polices',
-      permissions: getDefaultPermissions('USER'),
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      createdBy: 'system',
-    },
-  ];
+  return {
+    id: dbRole.id,
+    name: dbRole.name,
+    description: dbRole.description || '',
+    permissions: permissions.map(mapDBPermissionToAdmin),
+    isActive: dbRole.is_active,
+    createdAt: new Date(dbRole.created_at),
+    updatedAt: new Date(dbRole.updated_at),
+    createdBy: dbRole.created_by || 'system',
+    isSystemRole: dbRole.is_system_role,
+  };
 };
 
 export const roleService = {
+  /**
+   * Get all roles (system + custom)
+   */
   async getRoles(): Promise<Role[]> {
     try {
-      // Return system roles based on profiles.role enum
-      return getSystemRoles();
-    } catch (error) {
-      logger.error('Error in getRoles:', error);
-      throw error;
-    }
-  },
+      const { data: roles, error } = await supabase
+        .from('custom_roles')
+        .select(`
+          *,
+          permissions:role_permissions(
+            permissions!inner(*)
+          )
+        `)
+        .order('is_system_role', { ascending: false })
+        .order('name');
 
-  async getRole(id: string): Promise<Role | null> {
-    try {
-      const roles = getSystemRoles();
-      return roles.find((role) => role.id === id) || null;
-    } catch (error) {
-      logger.error(`Error in getRole(${id}):`, error);
-      throw error;
-    }
-  },
-
-  async createRole(role: Omit<Role, 'id' | 'createdAt' | 'updatedAt'>): Promise<Role> {
-    // Not implemented - roles are fixed in system (USER, INSURER, ADMIN)
-    throw new Error('Creating custom roles is not supported. Roles are managed by the system.');
-  },
-
-  async updateRole(id: string, updates: Partial<Role>): Promise<Role> {
-    // Not implemented - roles are fixed in the system
-    throw new Error('Updating system roles is not supported.');
-  },
-
-  async deleteRole(id: string): Promise<void> {
-    // Not implemented - cannot delete system roles
-    throw new Error('Deleting system roles is not supported.');
-  },
-
-  async getPermissions(category?: PermissionCategory): Promise<Permission[]> {
-    try {
-      const roles = getSystemRoles();
-      const allPermissions = roles.flatMap((role) => role.permissions);
-
-      // Remove duplicates
-      const uniquePermissions = allPermissions.filter(
-        (permission, index, self) =>
-          index === self.findIndex((p) => p.id === permission.id)
-      );
-
-      if (category) {
-        return uniquePermissions.filter((p) => p.category === category);
+      if (error) {
+        logger.error('[roleService] Error fetching roles:', error);
+        throw error;
       }
 
-      return uniquePermissions;
+      // Map and flatten permissions
+      const mappedRoles = await Promise.all(
+        (roles || []).map(async (role: any) => {
+          const permissions = role.permissions
+            ?.map((rp: any) => rp.permissions)
+            .filter(Boolean) || [];
+
+          return {
+            id: role.id,
+            name: role.name,
+            description: role.description || '',
+            permissions: permissions.map(mapDBPermissionToAdmin),
+            isActive: role.is_active,
+            createdAt: new Date(role.created_at),
+            updatedAt: new Date(role.updated_at),
+            createdBy: role.created_by || 'system',
+            isSystemRole: role.is_system_role,
+          };
+        })
+      );
+
+      logger.info('[roleService] Fetched roles:', mappedRoles.length);
+      return mappedRoles;
     } catch (error) {
-      logger.error('Error in getPermissions:', error);
+      logger.error('[roleService] Error in getRoles:', error);
       throw error;
     }
   },
 
+  /**
+   * Get a single role by ID with permissions
+   */
+  async getRole(id: string): Promise<Role | null> {
+    try {
+      const { data: role, error } = await supabase
+        .from('custom_roles')
+        .select(`
+          *,
+          permissions:role_permissions(
+            permissions!inner(*)
+          )
+        `)
+        .eq('id', id)
+        .single();
+
+      if (error || !role) {
+        logger.warn(`[roleService] Role not found: ${id}`);
+        return null;
+      }
+
+      const permissions = (role as any).permissions
+        ?.map((rp: any) => rp.permissions)
+        .filter(Boolean) || [];
+
+      return {
+        id: role.id,
+        name: role.name,
+        description: role.description || '',
+        permissions: permissions.map(mapDBPermissionToAdmin),
+        isActive: role.is_active,
+        createdAt: new Date(role.created_at),
+        updatedAt: new Date(role.updated_at),
+        createdBy: role.created_by || 'system',
+        isSystemRole: role.is_system_role,
+      };
+    } catch (error) {
+      logger.error(`[roleService] Error in getRole(${id}):`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Create a new custom role
+   */
+  async createRole(role: Omit<Role, 'id' | 'createdAt' | 'updatedAt'>): Promise<Role> {
+    try {
+      // Validate: cannot create system roles
+      if (role.isSystemRole) {
+        throw new Error('Cannot create system roles through this interface');
+      }
+
+      // Get current user for created_by
+      const { data: { user } } = await supabase.auth.getUser();
+      const createdBy = user?.id || null;
+
+      // Check for duplicate name
+      const { data: existing } = await supabase
+        .from('custom_roles')
+        .select('id')
+        .eq('name', role.name)
+        .single();
+
+      if (existing) {
+        throw new Error(`Role with name "${role.name}" already exists`);
+      }
+
+      // Create the role
+      const { data: newRole, error: roleError } = await supabase
+        .from('custom_roles')
+        .insert({
+          name: role.name,
+          description: role.description,
+          is_system_role: false,
+          is_active: role.isActive,
+          created_by: createdBy,
+        })
+        .select()
+        .single();
+
+      if (roleError || !newRole) {
+        logger.error('[roleService] Error creating role:', roleError);
+        throw roleError || new Error('Failed to create role');
+      }
+
+      // Associate permissions
+      if (role.permissions.length > 0) {
+        const permissionAssociations = role.permissions.map(perm => ({
+          role_id: newRole.id,
+          permission_id: perm.id,
+        }));
+
+        const { error: permError } = await supabase
+          .from('role_permissions')
+          .insert(permissionAssociations);
+
+        if (permError) {
+          logger.error('[roleService] Error associating permissions:', permError);
+          // Clean up the role if permission association failed
+          await supabase.from('custom_roles').delete().eq('id', newRole.id);
+          throw permError;
+        }
+      }
+
+      // Log the action
+      await supabase.rpc('log_user_action_safe', {
+        user_action: 'create_role',
+        resource_name: 'custom_role',
+        resource_id_value: newRole.id,
+        metadata_value: {
+          role_name: role.name,
+          permissions_count: role.permissions.length,
+        } as any,
+      });
+
+      logger.info(`[roleService] Created role: ${newRole.id}`);
+
+      // Return the complete role
+      return this.getRole(newRole.id) as Promise<Role>;
+    } catch (error) {
+      logger.error('[roleService] Error in createRole:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Update an existing custom role
+   */
+  async updateRole(id: string, updates: Partial<Role>): Promise<Role> {
+    try {
+      // First, check if the role exists and is not a system role
+      const { data: existingRole, error: fetchError } = await supabase
+        .from('custom_roles')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (fetchError || !existingRole) {
+        throw new Error('Role not found');
+      }
+
+      if (existingRole.is_system_role) {
+        throw new Error('Cannot modify system roles');
+      }
+
+      // Prepare updates
+      const roleUpdates: any = {
+        updated_at: new Date().toISOString(),
+      };
+
+      if (updates.name !== undefined) {
+        // Check for duplicate name (excluding current role)
+        const { data: duplicate } = await supabase
+          .from('custom_roles')
+          .select('id')
+          .eq('name', updates.name)
+          .neq('id', id)
+          .single();
+
+        if (duplicate) {
+          throw new Error(`Role with name "${updates.name}" already exists`);
+        }
+        roleUpdates.name = updates.name;
+      }
+
+      if (updates.description !== undefined) {
+        roleUpdates.description = updates.description;
+      }
+
+      if (updates.isActive !== undefined) {
+        roleUpdates.is_active = updates.isActive;
+      }
+
+      // Update the role
+      const { error: updateError } = await supabase
+        .from('custom_roles')
+        .update(roleUpdates)
+        .eq('id', id);
+
+      if (updateError) {
+        logger.error('[roleService] Error updating role:', updateError);
+        throw updateError;
+      }
+
+      // Update permissions if provided
+      if (updates.permissions) {
+        // Delete existing permissions
+        const { error: deleteError } = await supabase
+          .from('role_permissions')
+          .delete()
+          .eq('role_id', id);
+
+        if (deleteError) {
+          logger.error('[roleService] Error deleting old permissions:', deleteError);
+          throw deleteError;
+        }
+
+        // Add new permissions
+        if (updates.permissions.length > 0) {
+          const permissionAssociations = updates.permissions.map(perm => ({
+            role_id: id,
+            permission_id: perm.id,
+          }));
+
+          const { error: insertError } = await supabase
+            .from('role_permissions')
+            .insert(permissionAssociations);
+
+          if (insertError) {
+            logger.error('[roleService] Error inserting new permissions:', insertError);
+            throw insertError;
+          }
+        }
+      }
+
+      // Log the action
+      await supabase.rpc('log_user_action_safe', {
+        user_action: 'update_role',
+        resource_name: 'custom_role',
+        resource_id_value: id,
+        metadata_value: {
+          updates: Object.keys(updates),
+          permissions_count: updates.permissions?.length,
+        } as any,
+      });
+
+      logger.info(`[roleService] Updated role: ${id}`);
+
+      // Return the updated role
+      return this.getRole(id) as Promise<Role>;
+    } catch (error) {
+      logger.error(`[roleService] Error in updateRole(${id}):`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Delete a custom role
+   */
+  async deleteRole(id: string): Promise<void> {
+    try {
+      // Check if role can be deleted
+      const { data: canDelete, error: checkError } = await supabase
+        .rpc('can_delete_role', { p_role_id: id });
+
+      if (checkError) {
+        logger.error('[roleService] Error checking if role can be deleted:', checkError);
+        throw checkError;
+      }
+
+      if (!canDelete) {
+        throw new Error('Cannot delete this role: either it is a system role or it is assigned to users');
+      }
+
+      // Delete the role (cascade will delete role_permissions)
+      const { error: deleteError } = await supabase
+        .from('custom_roles')
+        .delete()
+        .eq('id', id);
+
+      if (deleteError) {
+        logger.error('[roleService] Error deleting role:', deleteError);
+        throw deleteError;
+      }
+
+      // Log the action
+      await supabase.rpc('log_user_action_safe', {
+        user_action: 'delete_role',
+        resource_name: 'custom_role',
+        resource_id_value: id,
+      });
+
+      logger.info(`[roleService] Deleted role: ${id}`);
+    } catch (error) {
+      logger.error(`[roleService] Error in deleteRole(${id}):`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get all permissions
+   */
+  async getPermissions(category?: PermissionCategory): Promise<Permission[]> {
+    try {
+      let query = supabase
+        .from('permissions')
+        .select('*')
+        .order('category', { ascending: true })
+        .order('resource', { ascending: true })
+        .order('action', { ascending: true });
+
+      if (category) {
+        query = query.eq('category', category);
+      }
+
+      const { data: permissions, error } = await query;
+
+      if (error) {
+        logger.error('[roleService] Error fetching permissions:', error);
+        throw error;
+      }
+
+      return (permissions || []).map(mapDBPermissionToAdmin);
+    } catch (error) {
+      logger.error('[roleService] Error in getPermissions:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get permission categories with descriptions
+   */
   async getPermissionCategories(): Promise<{
     category: PermissionCategory;
     label: string;
@@ -201,72 +463,175 @@ export const roleService = {
         label: 'Configuration système',
         description: 'Permissions pour la configuration du système',
       },
+      {
+        category: 'ROLE_MANAGEMENT',
+        label: 'Gestion des rôles',
+        description: 'Permissions pour la gestion des rôles et permissions',
+      },
     ];
   },
 
+  /**
+   * Get user permissions and role info
+   */
   async getUserPermissions(userId: string): Promise<UserPermission | null> {
     try {
-      // Récupérer le profil complet avec toutes les informations utilisateur
       const { data: profile, error } = await supabase
         .from('profiles')
         .select(`
           id,
-          first_name,
-          last_name,
-          email,
-          phone,
           role,
-          is_active
+          custom_role_id,
+          custom_roles!inner(
+            id,
+            name,
+            is_system_role,
+            is_active
+          )
         `)
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
       if (error) {
-        logger.error('Error fetching user profile:', error);
+        logger.error('[roleService] Error fetching user profile:', error);
         throw error;
       }
 
       if (!profile) {
-        logger.warn(`[roleService] User profile not found for userId: ${userId}`);
+        logger.warn(`[roleService] User profile not found: ${userId}`);
         return null;
       }
 
+      const roleId = profile.custom_role_id || profile.role;
+
       return {
         userId,
-        roleId: profile.role,
+        roleId,
         additionalPermissions: [],
         revokedPermissions: [],
       };
     } catch (error) {
-      logger.error(`Error in getUserPermissions(${userId}):`, error);
+      logger.error(`[roleService] Error in getUserPermissions(${userId}):`, error);
       throw error;
     }
   },
 
-  async assignRole(userId: string, roleId: string): Promise<void> {
+  /**
+   * Assign a custom role to a user
+   */
+  async assignCustomRole(userId: string, roleId: string): Promise<void> {
     try {
-      // Update user's role in profiles table
+      // Check if role exists and is active
+      const { data: role, error: roleError } = await supabase
+        .from('custom_roles')
+        .select('id, is_active')
+        .eq('id', roleId)
+        .single();
+
+      if (roleError || !role) {
+        throw new Error('Role not found');
+      }
+
+      if (!role.is_active) {
+        throw new Error('Cannot assign inactive role');
+      }
+
+      // Update user's custom_role_id
       const { error } = await supabase
         .from('profiles')
-        .update({ role: roleId as any })
+        .update({ custom_role_id: roleId })
+        .eq('id', userId);
+
+      if (error) {
+        logger.error(`[roleService] Error assigning role to user ${userId}:`, error);
+        throw error;
+      }
+
+      // Log the action
+      await supabase.rpc('log_user_action_safe', {
+        user_action: 'assign_role',
+        resource_name: 'profile',
+        resource_id_value: userId,
+        metadata_value: {
+          custom_role_id: roleId,
+        } as any,
+      });
+
+      logger.info(`[roleService] Assigned role ${roleId} to user ${userId}`);
+    } catch (error) {
+      logger.error(`[roleService] Error in assignCustomRole(${userId}, ${roleId}):`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Revoke a custom role from a user
+   */
+  async revokeCustomRole(userId: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ custom_role_id: null })
+        .eq('id', userId);
+
+      if (error) {
+        logger.error(`[roleService] Error revoking role from user ${userId}:`, error);
+        throw error;
+      }
+
+      // Log the action
+      await supabase.rpc('log_user_action_safe', {
+        user_action: 'revoke_role',
+        resource_name: 'profile',
+        resource_id_value: userId,
+      });
+
+      logger.info(`[roleService] Revoked custom role from user ${userId}`);
+    } catch (error) {
+      logger.error(`[roleService] Error in revokeCustomRole(${userId}):`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Assign a system role (legacy)
+   */
+  async assignRole(userId: string, roleId: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ role: roleId as any, custom_role_id: null })
         .eq('id', userId);
 
       if (error) {
         throw error;
       }
 
-      logger.info(`[roleService] Assigned role ${roleId} to user ${userId}`);
+      logger.info(`[roleService] Assigned system role ${roleId} to user ${userId}`);
     } catch (error) {
-      logger.error(`Error in assignRole(${userId}, ${roleId}):`, error);
+      logger.error(`[roleService] Error in assignRole(${userId}, ${roleId}):`, error);
       throw error;
     }
   },
 
+  /**
+   * Update user permissions
+   */
   async updateUserPermissions(userId: string, permissions: Partial<UserPermission>): Promise<UserPermission> {
     try {
-      // Update user's role if provided
       if (permissions.roleId) {
-        await this.assignRole(userId, permissions.roleId);
+        // Check if it's a custom role or system role
+        const { data: customRole } = await supabase
+          .from('custom_roles')
+          .select('id')
+          .eq('id', permissions.roleId)
+          .single();
+
+        if (customRole) {
+          await this.assignCustomRole(userId, permissions.roleId);
+        } else {
+          await this.assignRole(userId, permissions.roleId);
+        }
       }
 
       const userPermission = await this.getUserPermissions(userId);
@@ -279,42 +644,80 @@ export const roleService = {
         ...permissions,
       };
     } catch (error) {
-      logger.error(`Error in updateUserPermissions(${userId}):`, error);
+      logger.error(`[roleService] Error in updateUserPermissions(${userId}):`, error);
       throw error;
     }
   },
 
+  /**
+   * Get user's effective permissions
+   */
   async getUserEffectivePermissions(userId: string): Promise<Permission[]> {
     try {
-      const userPermission = await this.getUserPermissions(userId);
-      if (!userPermission) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('custom_role_id, role')
+        .eq('id', userId)
+        .single();
+
+      if (!profile) {
         return [];
       }
 
-      const role = await this.getRole(userPermission.roleId);
-      if (!role) {
-        return [];
+      let permissions: DBPermission[] = [];
+
+      // If user has custom role, get those permissions
+      if (profile.custom_role_id) {
+        const { data: rolePerms } = await supabase
+          .from('role_permissions')
+          .select('permissions!inner(*)')
+          .eq('role_id', profile.custom_role_id);
+
+        permissions = rolePerms?.map(rp => (rp as any).permissions) || [];
+      } else {
+        // Use system role permissions
+        const { data: systemRole } = await supabase
+          .from('custom_roles')
+          .select('id')
+          .eq('name', profile.role)
+          .single();
+
+        if (systemRole) {
+          const { data: rolePerms } = await supabase
+            .from('role_permissions')
+            .select('permissions!inner(*)')
+            .eq('role_id', systemRole.id);
+
+          permissions = rolePerms?.map(rp => (rp as any).permissions) || [];
+        }
       }
 
-      return role.permissions;
+      return permissions.map(mapDBPermissionToAdmin);
     } catch (error) {
-      logger.error(`Error in getUserEffectivePermissions(${userId}):`, error);
+      logger.error(`[roleService] Error in getUserEffectivePermissions(${userId}):`, error);
       throw error;
     }
   },
 
+  /**
+   * Check if user has specific permission
+   */
   async checkPermission(userId: string, resource: string, action: string): Promise<boolean> {
     try {
       const effectivePermissions = await this.getUserEffectivePermissions(userId);
       return effectivePermissions.some(
-        (p) => p.resource === resource && p.action === action
+        (p) => p.resource.toLowerCase() === resource.toLowerCase() &&
+               p.action.toLowerCase() === action.toLowerCase()
       );
     } catch (error) {
-      logger.error(`Error in checkPermission(${userId}, ${resource}, ${action}):`, error);
+      logger.error(`[roleService] Error in checkPermission(${userId}, ${resource}, ${action}):`, error);
       return false;
     }
   },
 
+  /**
+   * Get role statistics
+   */
   async getRoleStatistics(): Promise<{
     totalRoles: number;
     activeRoles: number;
@@ -322,45 +725,57 @@ export const roleService = {
     usersByRole: { roleId: string; roleName: string; userCount: number }[];
   }> {
     try {
-      // Count users by role from profiles table
-      const { data: profiles, error } = await supabase
-        .from('profiles')
-        .select('role, id, first_name, last_name, email, is_active')
-        .order('created_at', { ascending: false });
+      // Get all roles
+      const { data: roles, error: rolesError } = await supabase
+        .from('custom_roles')
+        .select('id, name, is_active')
+        .order('is_system_role', { ascending: false })
+        .order('name');
 
-      if (error) {
-        logger.error('[roleService] Error fetching profiles for role statistics:', error);
-        throw error;
+      if (rolesError) {
+        logger.error('[roleService] Error fetching roles for statistics:', rolesError);
+        throw rolesError;
       }
 
-      logger.info(`[roleService] Fetched ${profiles?.length || 0} profiles for statistics`);
+      // Count users by role (including system role fallback)
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('custom_role_id, role')
+        .not('custom_role_id', 'is', null);
 
-      // Count users per role
-      const roleCounts = (profiles || []).reduce((acc, profile) => {
-        const role = profile.role || 'USER';
-        acc[role] = (acc[role] || 0) + 1;
+      if (profilesError) {
+        logger.error('[roleService] Error fetching profiles for statistics:', profilesError);
+        throw profilesError;
+      }
+
+      // Count users per custom role
+      const customRoleCounts = (profiles || []).reduce((acc, profile) => {
+        if (profile.custom_role_id) {
+          acc[profile.custom_role_id] = (acc[profile.custom_role_id] || 0) + 1;
+        }
         return acc;
       }, {} as Record<string, number>);
 
-      logger.info('[roleService] Role counts:', roleCounts);
+      // Get total permissions count
+      const { count: totalPermissions, error: countError } = await supabase
+        .from('permissions')
+        .select('*', { count: 'exact', head: true });
 
-      // Include all system roles even if no users
-      const systemRoles = getSystemRoles();
-      const usersByRole = systemRoles.map((role) => ({
+      if (countError) {
+        logger.error('[roleService] Error counting permissions:', countError);
+        throw countError;
+      }
+
+      const usersByRole = (roles || []).map((role) => ({
         roleId: role.id,
         roleName: role.name,
-        userCount: roleCounts[role.id] || 0,
+        userCount: customRoleCounts[role.id] || 0,
       }));
 
-      const totalPermissions = systemRoles.reduce(
-        (sum, role) => sum + role.permissions.length,
-        0
-      );
-
       return {
-        totalRoles: systemRoles.length,
-        activeRoles: systemRoles.filter((role) => role.isActive).length,
-        totalPermissions,
+        totalRoles: roles?.length || 0,
+        activeRoles: roles?.filter(r => r.is_active).length || 0,
+        totalPermissions: totalPermissions || 0,
         usersByRole,
       };
     } catch (error) {

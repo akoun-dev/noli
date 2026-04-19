@@ -58,7 +58,7 @@ export const AdminDashboardCharts: React.FC<AdminDashboardChartsProps> = ({
 
   // Préparer les données pour le graphique d'activité
   const activityChartData = activityData?.map(item => ({
-    date: new Date(item.date).toLocaleDateString('fr-FR', { day: 'short', month: 'short' }),
+    date: new Date(item.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }),
     newUsers: item.newUsers,
     newQuotes: item.newQuotes,
     newPolicies: item.newPolicies
