@@ -1,0 +1,21 @@
+echo "📝 Validating commit message..."
+
+# Run commitlint
+npx --no -- commitlint --edit ${1}
+
+# Additional custom validations
+message=$(cat "$1")
+
+# Check for minimum length
+if [ ${#message} -lt 10 ]; then
+  echo "❌ Commit message is too short (minimum 10 characters)."
+  exit 1
+fi
+
+# Check for common mistakes
+if echo "$message" | grep -q -E "(wip|WIP|fixup|squash)"; then
+  echo "❌ WIP/fixup commits should not be pushed to main/develop."
+  exit 1
+fi
+
+echo "✅ Commit message validation passed!"

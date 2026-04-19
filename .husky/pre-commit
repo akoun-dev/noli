@@ -1,0 +1,109 @@
+#!/usr/bin/env sh
+echo "🔍 Running pre-commit hooks..."
+
+# Run lint-staged
+npx lint-staged
+
+# Check for console.log statements (excluding test files and husky scripts)
+echo "🚫 Checking for console.log statements..."
+STAGED_FILES=$(git diff --cached --name-only)
+if echo "$STAGED_FILES" | xargs grep -l "console\." 2>/dev/null | grep -v "\.test\." | grep -v "\.spec\." | grep -v "\.husky/" | grep -v "scripts/" | grep -v "src/lib/logger"; then
+  echo "❌ Found console.log statements in staged files. Please remove them before committing."
+  echo "💡 Use logger instead of console.log for debugging."
+  exit 1
+fi
+
+# Check for TODO comments without ticket numbers (excluding husky scripts)
+echo "📝 Checking TODO comments..."
+echo "🔍 DEBUG: STAGED_FILES: $STAGED_FILES"
+# Filter out husky files from staged files
+FILTERED_STAGED_FILES=$(echo "$STAGED_FILES" | grep -v "\.husky/")
+echo "🔍 DEBUG: FILTERED_STAGED_FILES: $FILTERED_STAGED_FILES"
+if [ ! -z "$FILTERED_STAGED_FILES" ]; then
+  echo "🔍 DEBUG: About to check for TODO comments"
+  if echo "$FILTERED_STAGED_FILES" | xargs grep -n "TODO" 2>/dev/null | grep -v "TODO-[0-9]\+" | grep -v "TODO(#"; then
+    echo "⚠️  Found TODO comments without ticket numbers."
+    echo "💡 Please use TODO-XXXX or TODO(#XXXX) format where XXXX is the ticket number."
+  else
+    echo "🔍 DEBUG: No TODO comments found"
+  fi
+else
+  echo "🔍 DEBUG: No files to check after filtering"
+fi
+
+# Check for large files (>1MB)
+echo "📏 Checking for large files..."
+large_files=$(echo "$STAGED_FILES" | xargs du -k 2>/dev/null | awk '$1 > 1024 {print $2}')
+if [ ! -z "$large_files" ]; then
+  echo "⚠️  Large files detected:"
+  echo "$large_files"
+  echo "💡 Consider using Git LFS for large binary files."
+fi
+
+# Run quick type check
+echo "🔍 Running TypeScript type check..."
+npx tsc --noEmit --skipLibCheck
+
+# Check if package-lock.json is up to date
+echo "📦 Checking package-lock.json..."
+if [ -f "package.json" ] && [ -f "package-lock.json" ]; then
+  npm ci --dry-run > /dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    echo "❌ package-lock.json is out of sync with package.json"
+    echo "💡 Run 'npm install' to update package-lock.json"
+    exit 1
+  fi
+fi
+
+# Check for sensitive data patterns
+echo "🔒 Checking for sensitive data..."
+
+# Function to check for sensitive patterns in files
+check_sensitive_pattern() {
+  local pattern="$1"
+  local description="$2"
+  
+  # Create a temporary file with the list of existing files
+  TEMP_FILE=$(mktemp)
+  for file in $STAGED_FILES; do
+    if [ -f "$file" ]; then
+      # Skip certain files that are known to have legitimate configurations
+      if echo "$file" | grep -q "\.example\|\.template\|\.env\.\|supabase/config\.toml\|package-lock\.json\|\.husky/\|\.vscode/\|supabase/migrations/\|src/lib/supabase\|src/lib/security\|src/routes\|__tests__"; then
+        continue
+      fi
+      echo "$file" >> "$TEMP_FILE"
+    fi
+  done
+  
+  # Check each file individually to handle spaces in filenames
+  FOUND_SENSITIVE=""
+  while IFS= read -r file; do
+    if [ -f "$file" ]; then
+      # Check for the pattern in the file (suppress output, only check exit code)
+      if grep -i "$pattern" "$file" >/dev/null 2>&1; then
+        FOUND_SENSITIVE="$FOUND_SENSITIVE $file"
+      fi
+    fi
+  done < "$TEMP_FILE"
+  
+  rm -f "$TEMP_FILE"
+  
+  if [ ! -z "$FOUND_SENSITIVE" ]; then
+    echo "❌ Found potential sensitive data in staged files:"
+    echo "$FOUND_SENSITIVE"
+    echo "💡 Make sure sensitive data is properly secured!"
+    exit 1
+  fi
+}
+
+# Check for various sensitive patterns
+check_sensitive_pattern "password.*=" "password"
+check_sensitive_pattern "secret.*=" "secret"
+check_sensitive_pattern "token.*=" "token"
+check_sensitive_pattern "api_key.*=" "api_key"
+check_sensitive_pattern "private_key.*=" "private_key"
+
+# These manual checks are redundant since we already use check_sensitive_pattern above
+# Keeping them for now but they should be removed in a future cleanup
+
+echo "✅ Pre-commit checks passed!"

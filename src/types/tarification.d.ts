@@ -1,0 +1,409 @@
+export interface Vehicle {
+  id: string
+  categoryCode: string // 401, 402, etc.
+  energy: 'Essence' | 'Diesel'
+  fiscalPower: number // Puissance fiscale en CV
+  nbPlaces: number
+  firstCirculationDate: Date
+  values: {
+    venale: number // Valeur vénale
+    neuve: number // Valeur neuve
+  }
+}
+
+export interface TarifRC {
+  id: string
+  category: string
+  energy: string
+  powerMin: number
+  powerMax: number
+  prime: number
+}
+
+export interface TarifICIPT {
+  id: string
+  type: 'IC' | 'IPT'
+  formula: number // 1, 2, 3
+  nbPlaces: number
+  prime: number
+}
+
+export interface TarifTCMTCL {
+  id: string
+  category: string
+  guaranteeType: string
+  valueNeufMin: number
+  valueNeufMax: number
+  franchise: number
+  rate: number
+}
+
+export interface TarifFixe {
+  id: string
+  guaranteeName: string
+  prime: number
+  conditions?: string
+  packPriceReduced?: number
+}
+
+  // Tarifs pour FISCAL_POWER (grille par carburant et CV)
+  tariffs?: MatrixTariff[]
+
+  // Seuil optionnel pour appliquer un taux différent
+  threshold?: {
+    value: number // Seuil de la variable
+    ratePercent: number // Taux au-delà du seuil
+  }
+
+  // Condition spécifique pour la valeur neuve (seuil à 25 000 000 FCFA)
+  conditionedByNewValue?: boolean
+  newValueThreshold?: number // Seuil par défaut 25 000 000 FCFA
+  rateBelowThresholdPercent?: number // Taux si SI <= seuil (1,1%)
+  rateAboveThresholdPercent?: number // Taux si SI > seuil (2,1%)
+
+  // Min/Max facultatifs
+  minAmount?: number
+  maxAmount?: number
+}
+
+// Configuration pour MATRIX_BASED (grille de tarification simple)
+export interface MatrixTariff {
+  // Clé d'identification (ex: "essence_5_7", "diesel_1")
+  key: string
+
+  // Valeurs des dimensions
+  fiscalPowerMin?: number
+  fiscalPowerMax?: number
+  fuelType?: string // 'Essence' | 'Diesel' | 'Électrique' | 'Hybride'
+  vehicleCategory?: string // '401' | '402' | etc.
+  seats?: number
+  formula?: number // 1, 2, 3...
+
+  // Prime associée
+  prime: number
+}
+
+// Configuration pour les grilles par catégorie de véhicule (TCM/TCL)
+export interface VehicleCategoryTariff {
+  // Clé unique
+  key: string
+
+  // Catégorie de véhicule
+  categoryCode: string // '401', '402', '412', etc.
+  categoryName: string // 'Tourisme', 'Utilitaire', etc.
+
+  // Type de garantie
+  guaranteeType: 'TIERCE_COMPLETE' | 'TIERCE_COLLISION'
+
+  // Tranche de valeur à neuf
+  valueNeufMin: number
+  valueNeufMax: number
+  valueLabel: string // ex: "≤ 12 000 000", "12M < VN ≤ 25M"
+
+  // Montant de franchise
+  franchise: number
+  franchiseLabel: string // ex: "Sans franchise", "500 000 FCFA"
+
+  // Taux applicable (%)
+  rate: number
+
+  // Optionnel : montant fixe au lieu du taux
+  prime?: number
+}
+
+// Configuration pour les tarifs par nombre de places
+export interface PlacesTariff {
+  places: number
+  prime: number
+  label: string
+}
+
+// Configuration pour les formules (IC/IPT) avec plafonds et prime
+export interface FormulaConfig {
+  // Numéro de Formule
+  formula: number
+
+  // Libellé de la formule
+  label: string
+
+  // Plafonds de garanties
+  capitalDeces: number
+  capitalInvalidite: number
+  fraisMedicaux: number
+
+  // Prime fixe annuelle (si usePlaces = false)
+  prime: number
+
+  // Utiliser le nombre de places pour déterminer la prime
+  usePlaces?: boolean
+
+  // Tarifs par nombre de places (si usePlaces = true)
+  placesTariffs?: PlacesTariff[]
+}
+
+export interface MatrixBasedConfig {
+  // Grille de tarification (liste des tarifs)
+  tariffs: MatrixTariff[]
+
+  // Dimension unique de la matrice (pas de combinaison)
+  dimension: 'FISCAL_POWER' | 'FUEL_TYPE' | 'VEHICLE_CATEGORY' | 'SEATS' | 'FORMULA'
+
+  // Valeur par défaut si aucune correspondance
+  defaultPrime?: number
+
+  // Configuration pour dimension FORMULA (formules avec plafonds)
+  formulas?: FormulaConfig[]
+
+  // Configuration pour dimension VEHICLE_CATEGORY (grilles TCM/TCL)
+  categoryTariffs?: VehicleCategoryTariff[]
+}
+
+// Configuration unifiée pour les paramètres de garantie (simplifiée)
+export interface GuaranteeParameters {
+  // Configuration pour méthode VARIABLE_BASED
+  variableBased?: VariableBasedConfig
+
+  // Configuration pour méthode MATRIX_BASED
+  matrixBased?: MatrixBasedConfig
+
+  // Configuration pour méthode FIXED_AMOUNT
+  fixedAmount?: number
+  packPriceReduced?: number // Prix réduit en pack
+
+  // Autres paramètres génériques
+  [key: string]: any
+}
+
+export interface CalculationMethod {
+  id: string
+  name: string
+  description: string
+  type: CalculationMethodType
+}
+
+// Les méthodes de calcul génériques
+export type CalculationMethodType =
+  | 'FREE' // Gratuit (0 FCFA)
+  | 'FIXED_AMOUNT' // Montant fixe
+  | 'VARIABLE_BASED' // Basé sur une variable (ex: % de la valeur du véhicule)
+  | 'MATRIX_BASED' // Basé sur une matrice/grille de tarification
+
+// Méthodes spécifiques (obsolètes, ne pas utiliser dans le code - compatibilité base de données uniquement)
+export type ObsoleteCalculationMethodType =
+  | 'MTPL_TARIFF' // Responsabilité Civile avec grille par carburant et CV
+  | 'IC_IPT_FORMULA' // Individuelle Conducteur / Passagers avec formules
+  | 'IPT_PLACES_FORMULA' // Individuelle Passagers avec tarif par places
+  | 'FIRE_THEFT' // Incendie & Vol
+  | 'THEFT_ARMED' // Vol à mains armées
+  | 'GLASS_ROOF' // Bris de glaces toit ouvrant
+  | 'GLASS_STANDARD' // Bris de glaces standard
+  | 'TIERCE_COMPLETE_CAP' // Tierce complète plafonnée
+  | 'TIERCE_COLLISION_CAP' // Tierce collision plafonnée
+  | 'IC_IPT_FORMULA' // Individuelle Conducteur / Passagers avec formules
+  | 'IPT_PLACES_FORMULA' // Individuelle Passagers avec tarif par places
+  | 'FIRE_THEFT' // Incendie & Vol
+  | 'THEFT_ARMED' // Vol à mains armées
+  | 'GLASS_ROOF' // Bris de glaces toit ouvrant
+  | 'GLASS_STANDARD' // Bris de glaces standard
+  | 'TIERCE_COMPLETE_CAP' // Tierce complète plafonnée
+  | 'TIERCE_COLLISION_CAP' // Tierce collision plafonnée
+
+export interface Guarantee {
+  id: string
+  name: string
+  code: string
+  category: GuaranteeCategory
+  description: string
+  calculationMethod: CalculationMethodType
+  isOptional: boolean
+  isActive: boolean
+  conditions?: string
+  minValue?: number
+  maxValue?: number
+  rate?: number // Compatible avec ancien système
+  fixedAmount?: number // Compatible avec ancien système
+  franchiseOptions?: number[]
+  parameters?: GuaranteeParameters
+  createdAt: Date
+  updatedAt: Date
+  createdBy: string
+  insurerId?: string // ID de l'assureur associé
+}
+
+export type GuaranteeCategory =
+  | 'RESPONSABILITE_CIVILE'
+  | 'DEFENSE_RECOURS'
+  | 'INDIVIDUELLE_CONDUCTEUR'
+  | 'INDIVIDUELLE_PASSAGERS'
+  | 'INCENDIE'
+  | 'VOL'
+  | 'VOL_MAINS_ARMEES'
+  | 'BRIS_GLACES'
+  | 'TIERCE_COMPLETE'
+  | 'TIERCE_COLLISION'
+  | 'ASSISTANCE'
+  | 'AVANCE_RECOURS'
+  | 'ACCESSOIRES'
+
+export interface InsurancePackage {
+  id: string
+  name: string
+  code: string
+  description: string
+  guarantees: string[] // Guarantee IDs
+  basePrice: number
+  totalPrice: number
+  isPopular?: boolean
+  conditions?: string
+  vehicleTypeRestrictions?: string[]
+  isActive: boolean
+  createdAt: Date
+  updatedAt: Date
+  createdBy: string
+}
+
+export interface PricingCalculation {
+  vehicle: Vehicle
+  guaranteeIds: string[]
+  packageId?: string
+  calculationMethod?: 'PACK' | 'TAILOR_MADE'
+  parameters?: {
+    icIptFormula?: number
+    tierceFranchise?: number
+    [key: string]: any
+  }
+}
+
+export interface PricingResult {
+  totalBasePrice: number
+  totalWithGuarantees: number
+  guaranteeBreakdown: GuaranteePricing[]
+  package?: InsurancePackage
+  appliedTaxes?: {
+    taxName: string
+    rate: number
+    amount: number
+  }[]
+  calculationDate: Date
+}
+
+export interface GuaranteePricing {
+  guarantee: Guarantee
+  basePrice: number
+  calculatedPrice: number
+  pricingMethod: string
+  calculationDetails?: {
+    [key: string]: any
+  }
+}
+
+export interface TarificationGrids {
+  tarifRC: TarifRC[]
+  tarifICIPT: TarifICIPT[]
+  tarifTCMTCL: TarifTCMTCL[]
+  tarifFixes: TarifFixe[]
+}
+
+export interface PricingRule {
+  id: string
+  name: string
+  description: string
+  condition: string // Expression de condition
+  action: string // Action à appliquer
+  isActive: boolean
+  priority: number
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface TarificationStats {
+  totalGuarantees: number
+  activeGuarantees: number
+  totalPackages: number
+  activePackages: number
+  mostUsedGuarantees: {
+    guaranteeId: string
+    guaranteeName: string
+    usageCount: number
+  }[]
+  averagePackagePrice: number
+  priceRange: {
+    min: number
+    max: number
+  }
+}
+
+// Configuration pour les grilles de tarification
+export interface TarificationConfig {
+  updateFrequency: 'DAILY' | 'WEEKLY' | 'MONTHLY'
+  lastUpdate: Date
+  nextUpdate: Date
+  autoUpdateEnabled: boolean
+  version: string
+  grids: {
+    rcVersion: string
+    icIptVersion: string
+    tcmTclVersion: string
+    fixesVersion: string
+  }
+}
+
+// Types pour les formulaires admin
+export interface GuaranteeFormData {
+  name: string
+  code: string
+  category: GuaranteeCategory
+  description: string
+  calculationMethod: CalculationMethodType
+  isOptional: boolean
+  insurerId?: string // ID de l'assureur associé à la garantie
+  conditions?: string
+  minValue?: number
+  maxValue?: number
+  rate?: number
+  fixedAmount?: number
+  franchiseOptions?: number[]
+  parameters?: GuaranteeParameters
+}
+
+export interface PackageFormData {
+  name: string
+  code: string
+  description: string
+  guaranteeIds: string[]
+  basePrice: number
+  conditions?: string
+  vehicleTypeRestrictions?: string[]
+  isPopular?: boolean
+}
+
+export interface TarifRCFormData {
+  category: string
+  energy: string
+  powerMin: number
+  powerMax: number
+  prime: number
+}
+
+export interface TarifICIPTFormData {
+  type: 'IC' | 'IPT'
+  formula: number
+  nbPlaces: number
+  prime: number
+}
+
+export interface TarifTCMTCLFormData {
+  category: string
+  guaranteeType: string
+  valueNeufMin: number
+  valueNeufMax: number
+  franchise: number
+  rate: number
+}
+
+export interface TarifFixeFormData {
+  guaranteeName: string
+  prime: number
+  conditions?: string
+  packPriceReduced?: number
+}
