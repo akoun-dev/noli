@@ -19,19 +19,25 @@ import {
   Clock,
   CheckCircle,
   TrendingUp,
+  Grid3X3,
+  List,
+  Globe,
+  Mail,
+  Users,
+  FileText,
+  Ban,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import {
   Select,
   SelectContent,
@@ -53,6 +59,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Skeleton } from '@/components/ui/skeleton'
 import { AdminBreadcrumb } from '@/components/common/BreadcrumbRenderer'
 import { useAuth } from '@/contexts/AuthContext'
 import { logger } from '@/lib/logger'
@@ -71,24 +78,17 @@ import {
 import { insurerLogoService } from '@/features/admin/services/insurerLogoService'
 import { LogoUploader } from '@/features/admin/components/LogoUploader'
 
+type ViewMode = 'grid' | 'list'
+
 const AdminInsurersPage = () => {
   // Récupérer l'état d'authentification pour conditionner les requêtes
   const { isLoading: authLoading, isAuthenticated, user } = useAuth()
 
   // Condition pour activer les requêtes : auth terminé + utilisateur authentifié + rôle ADMIN
-  // ✅ Corrigé : isInitializing retiré pour éviter le blocage après refresh
   const shouldFetch = !authLoading && isAuthenticated && user?.role === 'ADMIN'
 
-  // 🔍 DEBUG: Log l'état de l'auth et shouldFetch
-  useEffect(() => {
-    logger.auth('🔍 [AdminInsurersPage] Auth state:', {
-      authLoading,
-      isAuthenticated,
-      userRole: user?.role,
-      shouldFetch,
-    })
-  }, [authLoading, isAuthenticated, user?.role, shouldFetch])
-
+  // View mode state
+  const [viewMode, setViewMode] = useState<ViewMode>('grid')
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [selectedInsurers, setSelectedInsurers] = useState<string[]>([])
@@ -100,7 +100,7 @@ const AdminInsurersPage = () => {
 
   // React Query hooks
   const { data: insurers = [], isLoading, error, refetch } = useInsurers(shouldFetch)
-  const { data: stats } = useInsurerStats(shouldFetch)
+  const { data: stats, isLoading: statsLoading } = useInsurerStats(shouldFetch)
   const createInsurer = useCreateInsurer()
   const updateInsurer = useUpdateInsurer()
   const deleteInsurer = useDeleteInsurer()
@@ -119,6 +119,22 @@ const AdminInsurersPage = () => {
 
     return matchesSearch && matchesStatus
   })
+
+  // Select/Deselect individual insurer
+  const handleSelectInsurer = (insurerId: string) => {
+    setSelectedInsurers((prev) =>
+      prev.includes(insurerId) ? prev.filter((id) => id !== insurerId) : [...prev, insurerId]
+    )
+  }
+
+  // Select/Deselect all
+  const handleSelectAll = () => {
+    if (selectedInsurers.length === filteredInsurers.length) {
+      setSelectedInsurers([])
+    } else {
+      setSelectedInsurers(filteredInsurers.map((i) => i.id))
+    }
+  }
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -284,88 +300,90 @@ const AdminInsurersPage = () => {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      {stats && (
-        <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4'>
-          <Card>
-            <CardContent className='p-6'>
-              <div className='flex items-center justify-between'>
-                <div>
-                  <p className='text-sm font-medium text-muted-foreground'>Total Assureurs</p>
-                  <p className='text-2xl font-bold text-blue-600 dark:text-blue-400'>
-                    {stats.total}
-                  </p>
-                </div>
-                <Building className='h-8 w-8 text-blue-600 dark:text-blue-400' />
-              </div>
-            </CardContent>
-          </Card>
+      {/* Hero Stats Section */}
+      <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4'>
+        {statsLoading ? (
+          <>
+            {[1, 2, 3, 4].map((i) => (
+              <Card key={i}>
+                <CardContent className='p-6'>
+                  <Skeleton className='h-12 w-12 mb-2' />
+                  <Skeleton className='h-8 w-24 mb-2' />
+                  <Skeleton className='h-4 w-32' />
+                </CardContent>
+              </Card>
+            ))}
+          </>
+        ) : (
+          <>
+            <StatCard
+              title='Total Assureurs'
+              value={stats?.total ?? 0}
+              icon={Building}
+              color='text-blue-600 dark:text-blue-400'
+            />
+            <StatCard
+              title='Actifs'
+              value={stats?.active ?? 0}
+              icon={Shield}
+              color='text-green-600 dark:text-green-400'
+            />
+            <StatCard
+              title='En attente'
+              value={stats?.pending ?? 0}
+              icon={Clock}
+              color='text-yellow-600 dark:text-yellow-400'
+              highlight={stats && stats.pending > 0}
+            />
+            <StatCard
+              title='Taux Conversion'
+              value={`${stats?.avgConversionRate.toFixed(1) ?? 0}%`}
+              icon={TrendingUp}
+              color='text-purple-600 dark:text-purple-400'
+            />
+          </>
+        )}
+      </div>
 
-          <Card>
-            <CardContent className='p-6'>
-              <div className='flex items-center justify-between'>
+      {/* Alert Banner - Pending Insurers */}
+      {stats && stats.pending > 0 && (
+        <Card className='border-l-4 border-l-yellow-400 bg-gradient-to-r from-yellow-50 to-white dark:from-yellow-950/20 dark:to-card'>
+          <CardContent className='p-4'>
+            <div className='flex items-center justify-between'>
+              <div className='flex items-center gap-3'>
+                <div className='h-10 w-10 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center'>
+                  <Clock className='h-5 w-5 text-yellow-600 dark:text-yellow-400' />
+                </div>
                 <div>
-                  <p className='text-sm font-medium text-muted-foreground'>Actifs</p>
-                  <p className='text-2xl font-bold text-green-600 dark:text-green-400'>
-                    {stats.active}
+                  <p className='font-semibold text-yellow-900 dark:text-yellow-100'>
+                    {stats.pending} assureur{stats.pending > 1 ? 's' : ''} en attente de validation
+                  </p>
+                  <p className='text-sm text-yellow-700 dark:text-yellow-300'>
+                    Approuvez les demandes pour activer les comptes
                   </p>
                 </div>
-                <Shield className='h-8 w-8 text-green-600 dark:text-green-400' />
               </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className='p-6'>
-              <div className='flex items-center justify-between'>
-                <div>
-                  <p className='text-sm font-medium text-muted-foreground'>En attente</p>
-                  <p className='text-2xl font-bold text-yellow-600 dark:text-yellow-400'>
-                    {stats.pending}
-                  </p>
-                </div>
-                <Clock className='h-8 w-8 text-yellow-600 dark:text-yellow-400' />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className='p-6'>
-              <div className='flex items-center justify-between'>
-                <div>
-                  <p className='text-sm font-medium text-muted-foreground'>Taux Conversion</p>
-                  <p className='text-2xl font-bold text-purple-600 dark:text-purple-400'>
-                    {stats.avgConversionRate.toFixed(1)}%
-                  </p>
-                </div>
-                <TrendingUp className='h-8 w-8 text-purple-600 dark:text-purple-400' />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={() => setStatusFilter('pending')}
+                className='border-yellow-300 dark:border-yellow-700'
+              >
+                Voir
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
-      {/* Filters and Search */}
+      {/* Filters Section */}
       <Card>
-        <CardHeader>
-          <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4'>
-            <CardTitle>Liste des Assureurs</CardTitle>
-            {selectedInsurers.length > 0 && (
-              <div className='flex flex-col sm:flex-row sm:items-center gap-2'>
-                <span className='text-sm text-muted-foreground'>
-                  {selectedInsurers.length} sélectionnés
-                </span>
-                <Button variant='outline' size='sm' onClick={handleBulkApprove}>
-                  <CheckCircle className='h-3 w-3 mr-2' />
-                  Approuver
-                </Button>
-              </div>
-            )}
-          </div>
+        <CardContent className='p-4'>
           <div className='flex flex-col sm:flex-row gap-4'>
+            {/* Search */}
             <div className='flex-1'>
               <div className='relative'>
-                <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 h-4 w-4' />
+                <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground' />
                 <Input
                   placeholder='Rechercher par nom, email...'
                   value={searchTerm}
@@ -374,8 +392,10 @@ const AdminInsurersPage = () => {
                 />
               </div>
             </div>
+
+            {/* Status Filter */}
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className='w-40'>
+              <SelectTrigger className='w-full sm:w-[180px]'>
                 <SelectValue placeholder='Statut' />
               </SelectTrigger>
               <SelectContent>
@@ -386,168 +406,139 @@ const AdminInsurersPage = () => {
                 <SelectItem value='suspended'>Suspendus</SelectItem>
               </SelectContent>
             </Select>
-            <Button variant='outline' onClick={handleSearch} disabled={searchInsurers.isPending}>
-              {searchInsurers.isPending ? (
-                <Loader2 className='h-4 w-4 animate-spin' />
-              ) : (
-                <Filter className='h-4 w-4' />
-              )}
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className='flex justify-center items-center h-64'>
-              <Loader2 className='h-8 w-8 animate-spin text-blue-600 dark:text-blue-400' />
-              <span className='ml-2'>Chargement des assureurs...</span>
+
+            {/* Bulk Actions */}
+            {selectedInsurers.length > 0 && (
+              <Button
+                variant='default'
+                size='sm'
+                onClick={handleBulkApprove}
+                className='bg-green-600 hover:bg-green-700'
+              >
+                <CheckCircle className='h-4 w-4 mr-2' />
+                Approuver ({selectedInsurers.length})
+              </Button>
+            )}
+
+            {/* View Toggle */}
+            <div className='flex bg-muted rounded-lg p-1'>
+              <Button
+                variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                size='sm'
+                onClick={() => setViewMode('grid')}
+              >
+                <Grid3X3 className='h-4 w-4' />
+              </Button>
+              <Button
+                variant={viewMode === 'list' ? 'default' : 'ghost'}
+                size='sm'
+                onClick={() => setViewMode('list')}
+              >
+                <List className='h-4 w-4' />
+              </Button>
             </div>
-          ) : (
-            <div className='responsive-table-wrapper'>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className='w-12'>
-                      <input
-                        type='checkbox'
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedInsurers(filteredInsurers.map((i) => i.id))
-                          } else {
-                            setSelectedInsurers([])
-                          }
-                        }}
-                      />
-                    </TableHead>
-                    <TableHead>Assureur</TableHead>
-                    <TableHead>Contact</TableHead>
-                    <TableHead>Statut</TableHead>
-                    <TableHead>Activité</TableHead>
-                    <TableHead>Date de création</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredInsurers.map((insurer) => (
-                    <TableRow
-                      key={insurer.id}
-                      className='hover:bg-gray-50 dark:hover:bg-gray-800/50'
-                    >
-                      <TableCell>
-                        <input
-                          type='checkbox'
-                          checked={selectedInsurers.includes(insurer.id)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedInsurers([...selectedInsurers, insurer.id])
-                            } else {
-                              setSelectedInsurers(
-                                selectedInsurers.filter((id) => id !== insurer.id)
-                              )
-                            }
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <div className='flex items-center space-x-3'>
-                          <Avatar>
-                            <AvatarImage
-                              src={insurer.logoUrl || undefined}
-                            />
-                            <AvatarFallback>
-                              {insurer.companyName.substring(0, 2).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <div className='font-medium'>{insurer.companyName}</div>
-                            <div className='text-sm text-gray-500 dark:text-gray-400'>
-                              {insurer.email}
-                            </div>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className='space-y-1'>
-                          {insurer.phone && (
-                            <div className='flex items-center space-x-2 text-sm'>
-                              <Phone className='h-3 w-3 text-gray-400' />
-                              <span>{insurer.phone}</span>
-                            </div>
-                          )}
-                          {insurer.website && (
-                            <div className='flex items-center space-x-2 text-sm'>
-                              <Car className='h-3 w-3 text-gray-400' />
-                              <span className='text-blue-600 dark:text-blue-400'>
-                                {insurer.website}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>{getStatusBadge(insurer.status)}</TableCell>
-                      <TableCell>
-                        <div className='text-sm'>
-                          <div className='font-medium'>{insurer.quotesCount} devis</div>
-                          <div className='text-gray-500'>{insurer.offersCount} offres</div>
-                          <div className='text-green-600'>
-                            {insurer.conversionRate.toFixed(1)}% conversion
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className='text-sm'>
-                          {new Date(insurer.createdAt).toLocaleDateString('fr-FR')}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className='flex flex-col sm:flex-row gap-2'>
-                          <Button
-                            variant='outline'
-                            size='sm'
-                            onClick={() => setViewingInsurer(insurer)}
-                          >
-                            <Eye className='h-3 w-3' />
-                          </Button>
-                          <Button
-                            variant='outline'
-                            size='sm'
-                            onClick={() => setEditingInsurer(insurer)}
-                          >
-                            <Edit className='h-3 w-3' />
-                          </Button>
-                          {insurer.status === 'pending' && (
-                            <Button
-                              variant='outline'
-                              size='sm'
-                              onClick={() => handleApproveInsurer(insurer.id)}
-                              disabled={approveInsurer.isPending}
-                            >
-                              {approveInsurer.isPending ? (
-                                <Loader2 className='h-3 w-3 animate-spin' />
-                              ) : (
-                                <CheckCircle className='h-3 w-3' />
-                              )}
-                            </Button>
-                          )}
-                          <Button
-                            variant='outline'
-                            size='sm'
-                            onClick={() => {
-                              setEditingInsurer(insurer)
-                              setShowDeleteDialog(true)
-                            }}
-                          >
-                            <Trash2 className='h-3 w-3' />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+          </div>
+
+          {/* Selection Info */}
+          {selectedInsurers.length > 0 && (
+            <div className='mt-3 flex items-center gap-2 text-sm text-muted-foreground'>
+              <Checkbox
+                checked={selectedInsurers.length === filteredInsurers.length}
+                onCheckedChange={handleSelectAll}
+              />
+              <span>
+                {selectedInsurers.length} sur {filteredInsurers.length} sélectionné(s)
+              </span>
+              <Button
+                variant='link'
+                size='sm'
+                className='h-auto p-0 ml-auto'
+                onClick={() => setSelectedInsurers([])}
+              >
+                Désélectionner
+              </Button>
             </div>
           )}
         </CardContent>
       </Card>
+
+      {/* Insurers Grid/List */}
+      {isLoading ? (
+        <div className={`grid gap-4 ${
+          viewMode === 'grid' ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'
+        }`}>
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <Card key={i}>
+              <CardContent className='p-4'>
+                <div className='flex items-start gap-4'>
+                  <Skeleton className='h-16 w-16 rounded-lg' />
+                  <div className='flex-1 space-y-2'>
+                    <Skeleton className='h-5 w-3/4' />
+                    <Skeleton className='h-4 w-1/2' />
+                    <Skeleton className='h-4 w-1/3' />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : filteredInsurers.length === 0 ? (
+        <Card>
+          <CardContent className='py-12 text-center'>
+            <Building className='h-16 w-16 mx-auto text-muted-foreground/30 mb-4' />
+            <h3 className='text-lg font-semibold mb-2'>Aucun assureur trouvé</h3>
+            <p className='text-sm text-muted-foreground mb-4'>
+              {searchTerm || statusFilter !== 'all'
+                ? 'Essayez de modifier vos critères de recherche'
+                : 'Commencez par ajouter un nouvel assureur'}
+            </p>
+            {!searchTerm && statusFilter === 'all' && (
+              <Button onClick={() => setIsCreateDialogOpen(true)}>
+                <Plus className='h-4 w-4 mr-2' />
+                Ajouter un assureur
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      ) : viewMode === 'grid' ? (
+        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
+          {filteredInsurers.map((insurer) => (
+            <InsurerGridCard
+              key={insurer.id}
+              insurer={insurer}
+              isSelected={selectedInsurers.includes(insurer.id)}
+              onSelect={handleSelectInsurer}
+              onView={setViewingInsurer}
+              onEdit={setEditingInsurer}
+              onApprove={handleApproveInsurer}
+              onDelete={(ins) => {
+                setEditingInsurer(ins)
+                setShowDeleteDialog(true)
+              }}
+              isApproving={approveInsurer.isPending}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className='space-y-3'>
+          {filteredInsurers.map((insurer) => (
+            <InsurerListItem
+              key={insurer.id}
+              insurer={insurer}
+              isSelected={selectedInsurers.includes(insurer.id)}
+              onSelect={handleSelectInsurer}
+              onView={setViewingInsurer}
+              onEdit={setEditingInsurer}
+              onApprove={handleApproveInsurer}
+              onDelete={(ins) => {
+                setEditingInsurer(ins)
+                setShowDeleteDialog(true)
+              }}
+              isApproving={approveInsurer.isPending}
+            />
+          ))}
+        </div>
+      )}
 
       {/* View Insurer Dialog */}
       <Dialog open={!!viewingInsurer} onOpenChange={() => setViewingInsurer(null)}>
@@ -620,6 +611,351 @@ const AdminInsurersPage = () => {
         </DialogContent>
       </Dialog>
     </div>
+  )
+}
+
+// StatCard Component
+interface StatCardProps {
+  title: string
+  value: number | string
+  icon: React.ComponentType<{ className?: string }>
+  color: string
+  highlight?: boolean
+}
+
+const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, color, highlight }) => {
+  return (
+    <Card className={`overflow-hidden hover:shadow-md transition-all duration-200 ${
+      highlight ? 'ring-2 ring-yellow-400' : ''
+    }`}>
+      <CardContent className='p-6'>
+        <div className='flex items-center justify-between'>
+          <div className='flex-1'>
+            <p className='text-sm font-medium text-muted-foreground mb-1'>{title}</p>
+            <p className='text-3xl font-bold tracking-tight'>{value}</p>
+          </div>
+          <div className={`h-12 w-12 rounded-lg bg-opacity-10 flex items-center justify-center ${color.replace('text-', 'bg-').replace('dark:', 'dark:bg-')}`}>
+            <Icon className={`h-6 w-6 ${color}`} />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+// InsurerGridCard Component
+interface InsurerGridCardProps {
+  insurer: Insurer
+  isSelected: boolean
+  onSelect: (id: string) => void
+  onView: (insurer: Insurer) => void
+  onEdit: (insurer: Insurer) => void
+  onApprove: (id: string) => void
+  onDelete: (insurer: Insurer) => void
+  isApproving: boolean
+}
+
+const InsurerGridCard: React.FC<InsurerGridCardProps> = ({
+  insurer,
+  isSelected,
+  onSelect,
+  onView,
+  onEdit,
+  onApprove,
+  onDelete,
+  isApproving,
+}) => {
+  const getInitials = () => {
+    return insurer.companyName.substring(0, 2).toUpperCase()
+  }
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'active':
+        return <Badge className='bg-green-100 text-green-800 dark:bg-green-500/20 dark:text-green-400'>Actif</Badge>
+      case 'pending':
+        return <Badge className='bg-yellow-100 text-yellow-800 dark:bg-yellow-500/20 dark:text-yellow-400'>En attente</Badge>
+      case 'inactive':
+        return <Badge className='bg-gray-100 text-gray-800 dark:bg-gray-500/20 dark:text-gray-400'>Inactif</Badge>
+      case 'suspended':
+        return <Badge className='bg-red-100 text-red-800 dark:bg-red-500/20 dark:text-red-400'>Suspendu</Badge>
+      default:
+        return <Badge>{status}</Badge>
+    }
+  }
+
+  return (
+    <Card
+      className={`hover:shadow-lg transition-all duration-200 cursor-pointer ${
+        isSelected ? 'ring-2 ring-primary' : ''
+      } ${insurer.status === 'pending' ? 'border-yellow-300 dark:border-yellow-700' : ''}`}
+      onClick={() => onView(insurer)}
+    >
+      <CardContent className='p-4'>
+        {/* Header with logo, checkbox, and menu */}
+        <div className='flex items-start gap-3 mb-4'>
+          {/* Logo/Avatar */}
+          <Avatar className='h-14 w-14 flex-shrink-0'>
+            <AvatarImage src={insurer.logoUrl || undefined} />
+            <AvatarFallback className='bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 font-semibold'>
+              {getInitials()}
+            </AvatarFallback>
+          </Avatar>
+
+          {/* Content */}
+          <div className='flex-1 min-w-0'>
+            <div className='flex items-start justify-between gap-2'>
+              <div className='flex-1 min-w-0'>
+                <h3 className='font-semibold text-base truncate'>{insurer.companyName}</h3>
+                <p className='text-sm text-muted-foreground truncate'>{insurer.email}</p>
+              </div>
+              <Checkbox
+                checked={isSelected}
+                onCheckedChange={() => onSelect(insurer.id)}
+                onClick={(e) => e.stopPropagation()}
+              />
+            </div>
+          </div>
+
+          {/* Dropdown Menu */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+              <Button variant='ghost' size='sm' className='h-8 w-8 p-0'>
+                <MoreHorizontal className='h-4 w-4' />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align='end'>
+              <DropdownMenuItem onClick={() => onView(insurer)}>
+                <Eye className='h-4 w-4 mr-2' />
+                Voir détails
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onEdit(insurer)}>
+                <Edit className='h-4 w-4 mr-2' />
+                Modifier
+              </DropdownMenuItem>
+              {insurer.status === 'pending' && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => onApprove(insurer.id)}
+                    disabled={isApproving}
+                    className='text-green-600'
+                  >
+                    {isApproving ? (
+                      <Loader2 className='h-4 w-4 mr-2 animate-spin' />
+                    ) : (
+                      <CheckCircle className='h-4 w-4 mr-2' />
+                    )}
+                    Approuver
+                  </DropdownMenuItem>
+                </>
+              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => onDelete(insurer)}
+                className='text-red-600'
+              >
+                <Trash2 className='h-4 w-4 mr-2' />
+                Supprimer
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        {/* Status Badge */}
+        <div className='mb-3'>{getStatusBadge(insurer.status)}</div>
+
+        {/* Contact Info */}
+        <div className='space-y-2 mb-3 text-sm'>
+          {insurer.phone && (
+            <div className='flex items-center gap-2 text-muted-foreground'>
+              <Phone className='h-3.5 w-3.5 flex-shrink-0' />
+              <span className='truncate'>{insurer.phone}</span>
+            </div>
+          )}
+          {insurer.website && (
+            <div className='flex items-center gap-2 text-muted-foreground'>
+              <Globe className='h-3.5 w-3.5 flex-shrink-0' />
+              <span className='truncate text-blue-600 dark:text-blue-400'>{insurer.website}</span>
+            </div>
+          )}
+          {insurer.address && (
+            <div className='flex items-center gap-2 text-muted-foreground'>
+              <MapPin className='h-3.5 w-3.5 flex-shrink-0' />
+              <span className='truncate'>{insurer.address}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Stats */}
+        <div className='grid grid-cols-3 gap-2 pt-3 border-t'>
+          <div className='text-center'>
+            <FileText className='h-4 w-4 mx-auto mb-1 text-blue-600' />
+            <p className='text-lg font-semibold'>{insurer.quotesCount}</p>
+            <p className='text-xs text-muted-foreground'>Devis</p>
+          </div>
+          <div className='text-center'>
+            <Shield className='h-4 w-4 mx-auto mb-1 text-green-600' />
+            <p className='text-lg font-semibold'>{insurer.offersCount}</p>
+            <p className='text-xs text-muted-foreground'>Offres</p>
+          </div>
+          <div className='text-center'>
+            <TrendingUp className='h-4 w-4 mx-auto mb-1 text-purple-600' />
+            <p className='text-lg font-semibold'>{insurer.conversionRate.toFixed(1)}%</p>
+            <p className='text-xs text-muted-foreground'>Conversion</p>
+          </div>
+        </div>
+
+        {/* Created Date */}
+        <div className='mt-3 pt-3 border-t text-xs text-muted-foreground'>
+          <Calendar className='h-3 w-3 inline mr-1' />
+          {new Date(insurer.createdAt).toLocaleDateString('fr-FR')}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+// InsurerListItem Component (List View)
+const InsurerListItem: React.FC<InsurerGridCardProps> = ({
+  insurer,
+  isSelected,
+  onSelect,
+  onView,
+  onEdit,
+  onApprove,
+  onDelete,
+  isApproving,
+}) => {
+  const getInitials = () => {
+    return insurer.companyName.substring(0, 2).toUpperCase()
+  }
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'active':
+        return <Badge className='bg-green-100 text-green-800 dark:bg-green-500/20 dark:text-green-400'>Actif</Badge>
+      case 'pending':
+        return <Badge className='bg-yellow-100 text-yellow-800 dark:bg-yellow-500/20 dark:text-yellow-400'>En attente</Badge>
+      case 'inactive':
+        return <Badge className='bg-gray-100 text-gray-800 dark:bg-gray-500/20 dark:text-gray-400'>Inactif</Badge>
+      case 'suspended':
+        return <Badge className='bg-red-100 text-red-800 dark:bg-red-500/20 dark:text-red-400'>Suspendu</Badge>
+      default:
+        return <Badge>{status}</Badge>
+    }
+  }
+
+  return (
+    <Card
+      className={`hover:shadow-md transition-all duration-200 ${
+        isSelected ? 'ring-2 ring-primary' : ''
+      } ${insurer.status === 'pending' ? 'border-l-4 border-l-yellow-400' : ''}`}
+    >
+      <CardContent className='p-4'>
+        <div className='flex items-center gap-4'>
+          {/* Checkbox */}
+          <Checkbox
+            checked={isSelected}
+            onCheckedChange={() => onSelect(insurer.id)}
+          />
+
+          {/* Logo/Avatar */}
+          <Avatar className='h-12 w-12 flex-shrink-0'>
+            <AvatarImage src={insurer.logoUrl || undefined} />
+            <AvatarFallback className='bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 font-semibold'>
+              {getInitials()}
+            </AvatarFallback>
+          </Avatar>
+
+          {/* Company Info */}
+          <div className='flex-1 min-w-0'>
+            <div className='flex items-center gap-2 mb-1'>
+              <h3 className='font-semibold truncate'>{insurer.companyName}</h3>
+              {getStatusBadge(insurer.status)}
+            </div>
+            <div className='flex items-center gap-4 text-sm text-muted-foreground'>
+              {insurer.phone && (
+                <div className='flex items-center gap-1'>
+                  <Phone className='h-3.5 w-3.5' />
+                  <span>{insurer.phone}</span>
+                </div>
+              )}
+              <div className='flex items-center gap-1'>
+                <Mail className='h-3.5 w-3.5' />
+                <span className='truncate'>{insurer.email}</span>
+              </div>
+              {insurer.website && (
+                <div className='flex items-center gap-1'>
+                  <Globe className='h-3.5 w-3.5' />
+                  <span className='truncate text-blue-600 dark:text-blue-400'>{insurer.website}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Stats */}
+          <div className='hidden md:flex items-center gap-6 text-sm'>
+            <div className='text-center'>
+              <p className='font-semibold'>{insurer.quotesCount}</p>
+              <p className='text-xs text-muted-foreground'>Devis</p>
+            </div>
+            <div className='text-center'>
+              <p className='font-semibold'>{insurer.offersCount}</p>
+              <p className='text-xs text-muted-foreground'>Offres</p>
+            </div>
+            <div className='text-center'>
+              <p className='font-semibold text-purple-600'>{insurer.conversionRate.toFixed(1)}%</p>
+              <p className='text-xs text-muted-foreground'>Conversion</p>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className='flex items-center gap-2'>
+            {insurer.status === 'pending' && (
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={() => onApprove(insurer.id)}
+                disabled={isApproving}
+                className='text-green-600 border-green-600 hover:bg-green-50'
+              >
+                {isApproving ? (
+                  <Loader2 className='h-4 w-4 animate-spin' />
+                ) : (
+                  <CheckCircle className='h-4 w-4' />
+                )}
+              </Button>
+            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant='ghost' size='sm' className='h-8 w-8 p-0'>
+                  <MoreHorizontal className='h-4 w-4' />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align='end'>
+                <DropdownMenuItem onClick={() => onView(insurer)}>
+                  <Eye className='h-4 w-4 mr-2' />
+                  Voir détails
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onEdit(insurer)}>
+                  <Edit className='h-4 w-4 mr-2' />
+                  Modifier
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => onDelete(insurer)}
+                  className='text-red-600'
+                >
+                  <Trash2 className='h-4 w-4 mr-2' />
+                  Supprimer
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 

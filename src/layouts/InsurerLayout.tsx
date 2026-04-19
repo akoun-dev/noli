@@ -1,98 +1,147 @@
-import React, { useState } from 'react';
-import { Outlet } from 'react-router-dom';
-import { Sidebar } from '@/components/layout/Sidebar';
-import { Header } from '@/components/common/Header';
-import { useAuth } from '@/contexts/AuthContext';
-import { NotificationSystem } from '@/components/insurer/NotificationSystem';
-import { Button } from '@/components/ui/button';
-import { Menu, X } from 'lucide-react';
+import React, { useState } from 'react'
+import { Outlet, useLocation } from 'react-router-dom'
+import { Sidebar } from '@/components/layout/Sidebar'
+import { useAuth } from '@/contexts/AuthContext'
+import { NotificationSystem } from '@/components/insurer/NotificationSystem'
+import { Button } from '@/components/ui/button'
+import { ThemeToggle } from '@/components/ui/theme-toggle'
+import { Badge } from '@/components/ui/badge'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
+  Menu,
+  LogOut,
+  Bell,
+} from 'lucide-react'
 
 export const InsurerLayout: React.FC = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { user } = useAuth();
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const { user, logout } = useAuth()
+  const location = useLocation()
 
-  const insurerNavigation = [
-    { name: 'Tableau de bord', href: '/assureur/tableau-de-bord', icon: 'LayoutDashboard' },
-    { name: 'Mes Offres', href: '/assureur/offres', icon: 'Car' },
-    { name: 'Devis Reçus', href: '/assureur/devis', icon: 'FileText', badge: '3' },
-    { name: 'Notifications', href: '/assureur/notifications', icon: 'Bell', badge: '2' },
-    { name: 'Analytics', href: '/assureur/analytics', icon: 'BarChart3' },
-    { name: 'Clients', href: '/assureur/clients', icon: 'Users' },
-    { name: 'Paramètres', href: '/assureur/parametres', icon: 'Settings' },
-  ];
+  // Titre de la page actuelle
+  const getPageTitle = () => {
+    const path = location.pathname
+    if (path.includes('tableau-de-bord')) return 'Tableau de bord'
+    if (path.includes('offres')) return 'Mes offres'
+    if (path.includes('devis')) return 'Devis reçus'
+    if (path.includes('analytics')) return 'Analytics'
+    if (path.includes('notifications')) return 'Notifications'
+    if (path.includes('clients')) return 'Clients'
+    if (path.includes('parametres')) return 'Paramètres'
+    return 'Espace Assureur'
+  }
+
+  const handleLogout = () => {
+    logout()
+  }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Header global */}
-      <Header />
-
-      <div className="flex flex-1">
+    <div className='min-h-screen bg-background'>
+      <div className='flex'>
         {/* Sidebar - Desktop - Fixed */}
-        <div className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-50 lg:block lg:w-64" style={{ top: '80px' }}>
-          <Sidebar userRole="INSURER" />
+        <div className='hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-50 lg:block lg:w-64 xl:w-72'>
+          <Sidebar userRole='INSURER' />
         </div>
 
         {/* Mobile Sidebar Overlay */}
         {sidebarOpen && (
-          <div className="fixed inset-0 z-50 lg:hidden">
+          <div className='fixed inset-0 z-50 lg:hidden'>
             <div
-              className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+              className='fixed inset-0 bg-black/50 backdrop-blur-sm'
               onClick={() => setSidebarOpen(false)}
             />
-            <div className="fixed inset-y-0 left-0 w-72 bg-background shadow-xl z-50 overflow-y-auto animate-in slide-in-from-left duration-200">
-              <Sidebar userRole="INSURER" onMobileClose={() => setSidebarOpen(false)} />
+            <div className='fixed inset-y-0 left-0 w-72 bg-background shadow-xl z-50 overflow-y-auto animate-in slide-in-from-left duration-200'>
+              <Sidebar userRole='INSURER' onMobileClose={() => setSidebarOpen(false)} />
             </div>
           </div>
         )}
 
         {/* Main Content */}
-        <main className="flex-1 lg:pl-64">
-          <div className="min-h-screen">
-            {/* Mobile Sidebar Toggle */}
-            <div className="lg:hidden bg-card/80 backdrop-blur-sm border-b sticky top-[88px] z-40 px-4 py-2 flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setSidebarOpen(true)}
-                className="flex-1"
-              >
-                <Menu className="h-4 w-4 mr-2" />
-                Menu Assureur
-              </Button>
-              <NotificationSystem />
-            </div>
-
-            {/* Insurer Stats Bar */}
-            <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 sm:p-6">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-                <div className="text-center">
-                  <div className="text-xl sm:text-2xl font-bold">156</div>
-                  <div className="text-blue-100 text-xs sm:text-sm">Devis ce mois</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-xl sm:text-2xl font-bold">89%</div>
-                  <div className="text-blue-100 text-xs sm:text-sm">Taux conversion</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-xl sm:text-2xl font-bold">2.4M</div>
-                  <div className="text-blue-100 text-xs sm:text-sm">CA (FCFA)</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-xl sm:text-2xl font-bold">4.8</div>
-                  <div className="text-blue-100 text-xs sm:text-sm">Note moyenne</div>
+        <main className='flex-1 min-w-0 lg:pl-64 xl:pl-72'>
+          {/* Insurer Header */}
+          <header className='sticky top-0 z-40 bg-card/80 backdrop-blur-lg border-b'>
+            <div className='flex items-center justify-between px-4 sm:px-6 py-3'>
+              {/* Left: Mobile menu toggle + Page title */}
+              <div className='flex items-center gap-3'>
+                <button
+                  onClick={() => setSidebarOpen(true)}
+                  className='lg:hidden p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent'
+                  aria-label='Ouvrir le menu'
+                >
+                  <Menu className='h-5 w-5' />
+                </button>
+                <div>
+                  <div className='flex items-center gap-2'>
+                    <h1 className='text-lg sm:text-xl font-bold text-foreground'>
+                      {getPageTitle()}
+                    </h1>
+                    <Badge variant='outline' className='hidden sm:inline-flex'>
+                      Assureur
+                    </Badge>
+                  </div>
+                  <p className='text-xs text-muted-foreground mt-0.5'>
+                    {user?.companyName || 'Bienvenue'}
+                  </p>
                 </div>
               </div>
-            </div>
 
-            {/* Page Content */}
-            <div className="p-4 sm:p-6">
-              <Outlet />
+              {/* Right: Notifications + User menu */}
+              <div className='flex items-center gap-2 sm:gap-3'>
+                <div className='hidden sm:block'>
+                  <NotificationSystem />
+                </div>
+                <ThemeToggle />
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant='ghost'
+                      size='sm'
+                      className='gap-2'
+                      aria-label='Menu utilisateur'
+                    >
+                      <div className='hidden sm:block text-left'>
+                        <p className='text-sm font-medium'>{user?.firstName} {user?.lastName}</p>
+                        <p className='text-xs text-muted-foreground'>Assureur</p>
+                      </div>
+                      <div className='h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center'>
+                        <span className='text-sm font-semibold text-primary'>
+                          {user?.firstName?.[0]}{user?.lastName?.[0]}
+                        </span>
+                      </div>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align='end' className='w-56'>
+                    <DropdownMenuItem onClick={() => {/* Navigate to profile */}}>
+                      Mon profil
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => {/* Navigate to settings */}}>
+                      Paramètres
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleLogout} className='text-destructive'>
+                      <LogOut className='h-4 w-4 mr-2' />
+                      Déconnexion
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
+          </header>
+
+          {/* Page Content */}
+          <div className='p-4 sm:p-6 overflow-hidden'>
+            <Outlet />
           </div>
         </main>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default InsurerLayout;
+export default InsurerLayout

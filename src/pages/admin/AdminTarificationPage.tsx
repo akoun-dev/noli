@@ -35,6 +35,14 @@ import {
 } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Skeleton } from '@/components/ui/skeleton'
 import { logger } from '@/lib/logger'
 import {
   guaranteeService,
@@ -74,6 +82,7 @@ import {
   Copy,
   FileText,
   Grid3X3,
+  List,
   Database,
   Zap,
   DollarSign,
@@ -82,9 +91,184 @@ import {
   Layers,
   Sparkles,
   Fuel,
+  MoreHorizontal,
+  Building,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
+import { AdminBreadcrumb } from '@/components/common/BreadcrumbRenderer'
+
+// StatCard Component
+interface StatCardProps {
+  title: string
+  value: number | string
+  subtitle?: string
+  icon: React.ComponentType<{ className?: string }>
+  color: string
+}
+
+const StatCard: React.FC<StatCardProps> = ({ title, value, subtitle, icon: Icon, color }) => {
+  return (
+    <Card className='overflow-hidden hover:shadow-md transition-all duration-200'>
+      <CardContent className='p-6'>
+        <div className='flex items-center justify-between'>
+          <div className='flex-1'>
+            <p className='text-sm font-medium text-muted-foreground mb-1'>{title}</p>
+            <p className='text-2xl font-bold tracking-tight'>{value}</p>
+            {subtitle && <p className='text-xs text-muted-foreground'>{subtitle}</p>}
+          </div>
+          <div className={`h-12 w-12 rounded-lg bg-opacity-10 flex items-center justify-center ${color.replace('text-', 'bg-').replace('dark:', 'dark:bg-')}`}>
+            <Icon className={`h-6 w-6 ${color}`} />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+// GuaranteeCard Component
+interface GuaranteeCardProps {
+  guarantee: Guarantee
+  insurer?: { id: string; name: string; code?: string }
+  onEdit: () => void
+  onToggle: () => void
+  onDelete: () => void
+}
+
+const GuaranteeCard: React.FC<GuaranteeCardProps> = ({
+  guarantee,
+  insurer,
+  onEdit,
+  onToggle,
+  onDelete,
+}) => {
+  const getCalculationMethodLabel = (method: CalculationMethodType) => {
+    const methods: Record<CalculationMethodType, { label: string; description: string; color: string }> = {
+      FIXED_AMOUNT: { label: 'Montant Fixe', description: 'Montant fixe en FCFA', color: 'text-blue-600' },
+      RATE_ON_SI: { label: 'Taux SI', description: 'Pourcentage de la somme assurée', color: 'text-green-600' },
+      RATE_ON_NEW_VALUE: { label: 'Taux Valeur Neuf', description: 'Pourcentage de la valeur à neuf', color: 'text-purple-600' },
+      CONDITIONAL_RATE: { label: 'Taux Conditionnel', description: 'Taux selon conditions', color: 'text-orange-600' },
+      MATRIX_BASED: { label: 'Matrice', description: 'Basé sur une matrice', color: 'text-pink-600' },
+      VARIABLE_BASED: { label: 'Variable', description: 'Basé sur des variables', color: 'text-cyan-600' },
+      FREE: { label: 'Gratuit', description: 'Sans coût', color: 'text-emerald-600' },
+    }
+    return methods[method] || { label: method, description: '', color: 'text-gray-600' }
+  }
+
+  const methodInfo = getCalculationMethodLabel(guarantee.calculationMethod)
+  const getValueDisplay = () => {
+    if (guarantee.calculationMethod === 'FREE') return 'Gratuit'
+    if (guarantee.calculationMethod === 'FIXED_AMOUNT') {
+      return typeof guarantee.fixedAmount === 'number'
+        ? `${guarantee.fixedAmount.toLocaleString()} FCFA`
+        : '-'
+    }
+    if (['RATE_ON_SI', 'RATE_ON_NEW_VALUE', 'CONDITIONAL_RATE'].includes(guarantee.calculationMethod)) {
+      return typeof guarantee.rate === 'number' ? `${guarantee.rate}%` : '-'
+    }
+    return '-'
+  }
+
+  return (
+    <Card className={`hover:shadow-lg transition-all duration-200 ${
+      !guarantee.isActive ? 'opacity-60' : ''
+    }`}>
+      <CardContent className='p-4'>
+        {/* Header */}
+        <div className='flex items-start justify-between mb-3'>
+          <div className='flex-1 min-w-0'>
+            <div className='flex items-center gap-2 mb-1'>
+              <h3 className='font-semibold text-base truncate'>{guarantee.name}</h3>
+              {!guarantee.isOptional && (
+                <Badge variant='outline' className='text-xs bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400'>
+                  Obligatoire
+                </Badge>
+              )}
+            </div>
+            <p className='text-xs text-muted-foreground'>Code: {guarantee.code}</p>
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant='ghost' size='sm' className='h-8 w-8 p-0'>
+                <MoreHorizontal className='h-4 w-4' />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align='end'>
+              <DropdownMenuItem onClick={onEdit}>
+                <Edit className='h-4 w-4 mr-2' />
+                Modifier
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onToggle}>
+                {guarantee.isActive ? (
+                  <>
+                    <XCircle className='h-4 w-4 mr-2' />
+                    Désactiver
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className='h-4 w-4 mr-2' />
+                    Activer
+                  </>
+                )}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={onDelete} className='text-red-600'>
+                <Trash2 className='h-4 w-4 mr-2' />
+                Supprimer
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        {/* Description */}
+        {guarantee.description && (
+          <p className='text-sm text-muted-foreground mb-3 line-clamp-2'>
+            {guarantee.description}
+          </p>
+        )}
+
+        {/* Calculation Method */}
+        <div className='space-y-2 mb-3'>
+          <div className='flex items-center justify-between'>
+            <span className='text-xs text-muted-foreground'>Méthode</span>
+            <span className={`text-xs font-medium ${methodInfo.color}`}>
+              {methodInfo.label}
+            </span>
+          </div>
+          <div className='flex items-center justify-between'>
+            <span className='text-xs text-muted-foreground'>Valeur</span>
+            <span className='text-sm font-semibold'>{getValueDisplay()}</span>
+          </div>
+          {guarantee.minValue && guarantee.maxValue && (
+            <div className='text-xs text-muted-foreground'>
+              Min: {guarantee.minValue.toLocaleString()} - Max: {guarantee.maxValue.toLocaleString()}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className='flex items-center justify-between pt-3 border-t'>
+          {insurer && (
+            <div className='text-xs text-muted-foreground'>
+              <Building className='h-3 w-3 inline mr-1' />
+              {insurer.name}
+            </div>
+          )}
+          <Badge
+            variant={guarantee.isActive ? 'default' : 'secondary'}
+            className={`text-xs ${
+              guarantee.isActive
+                ? 'bg-green-100 text-green-800 dark:bg-green-500/20 dark:text-green-400'
+                : 'bg-red-100 text-red-800 dark:bg-red-500/20 dark:text-red-400'
+            }`}
+          >
+            {guarantee.isActive ? 'Active' : 'Inactive'}
+          </Badge>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
 
 export const AdminTarificationPage: React.FC = () => {
   // Important: wait for real authentication before loading data
@@ -2539,89 +2723,138 @@ export const AdminTarificationPage: React.FC = () => {
   }
 
   return (
-    <div className='space-y-6'>
+    <div className='space-y-6 w-full'>
+      {/* Breadcrumb */}
+      <AdminBreadcrumb />
+
+      {/* Header */}
       <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4'>
         <div>
-          <h1 className='text-2xl sm:text-3xl font-bold'>Tarification & Garanties</h1>
+          <h1 className='text-2xl sm:text-3xl font-bold tracking-tight'>Tarification & Garanties</h1>
           <p className='text-muted-foreground text-sm sm:text-base'>
             Gérez les garanties et grilles de tarification
           </p>
         </div>
+        <div className='flex items-center gap-2'>
+          <Button variant='outline' size='sm'>
+            <Settings className='h-4 w-4 mr-2' />
+            Configuration
+          </Button>
+          <Button size='sm' onClick={() => setIsCreateGuaranteeDialogOpen(true)}>
+            <Plus className='h-4 w-4 mr-2' />
+            Nouvelle Garantie
+          </Button>
+        </div>
       </div>
 
-      {statistics && (
+      {/* Stats Cards */}
+      {statistics ? (
         <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4'>
-          <Card>
-            <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-              <CardTitle className='text-sm font-medium'>Total Garanties</CardTitle>
-              <Shield className='h-4 w-4 text-muted-foreground' />
-            </CardHeader>
-            <CardContent>
-              <div className='text-2xl font-bold'>{statistics.totalGuarantees}</div>
-              <p className='text-xs text-muted-foreground'>{statistics.activeGuarantees} actives</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-              <CardTitle className='text-sm font-medium'>Prix Moyen</CardTitle>
-              <TrendingUp className='h-4 w-4 text-muted-foreground' />
-            </CardHeader>
-            <CardContent>
-              <div className='text-2xl font-bold'>
-                {Math.round(
-                  (statistics.priceRange.min + statistics.priceRange.max) / 2
-                ).toLocaleString()}{' '}
-                FCFA
-              </div>
-              <p className='text-xs text-muted-foreground'>Moyenne des garanties</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-              <CardTitle className='text-sm font-medium'>Gamme de Prix</CardTitle>
-              <Calculator className='h-4 w-4 text-muted-foreground' />
-            </CardHeader>
-            <CardContent>
-              <div className='text-2xl font-bold'>
-                {Math.round(statistics.priceRange.min).toLocaleString()} -{' '}
-                {Math.round(statistics.priceRange.max).toLocaleString()}
-              </div>
-              <p className='text-xs text-muted-foreground'>FCFA</p>
-            </CardContent>
-          </Card>
+          <StatCard
+            title='Total Garanties'
+            value={statistics.totalGuarantees}
+            subtitle={`${statistics.activeGuarantees} actives`}
+            icon={Shield}
+            color='text-blue-600 dark:text-blue-400'
+          />
+          <StatCard
+            title='Prix Moyen'
+            value={`${Math.round((statistics.priceRange.min + statistics.priceRange.max) / 2).toLocaleString()} FCFA`}
+            subtitle='Moyenne des garanties'
+            icon={TrendingUp}
+            color='text-green-600 dark:text-green-400'
+          />
+          <StatCard
+            title='Gamme de Prix'
+            value={`${Math.round(statistics.priceRange.min).toLocaleString()} - ${Math.round(statistics.priceRange.max).toLocaleString()}`}
+            subtitle='FCFA'
+            icon={Calculator}
+            color='text-purple-600 dark:text-purple-400'
+          />
+          <StatCard
+            title='Tarifs Fixes'
+            value={tarifFixes.length}
+            subtitle={`${fixedCoverageOptions.length} options`}
+            icon={Database}
+            color='text-orange-600 dark:text-orange-400'
+          />
+        </div>
+      ) : (
+        <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4'>
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i}>
+              <CardContent className='p-6'>
+                <Skeleton className='h-12 w-12 mb-2' />
+                <Skeleton className='h-8 w-24 mb-2' />
+                <Skeleton className='h-4 w-32' />
+              </CardContent>
+            </Card>
+          ))}
         </div>
       )}
 
       <Tabs defaultValue='guarantees' className='space-y-4'>
-        <TabsList className='grid grid-cols-1 sm:grid-cols-4 w-full'>
-          <TabsTrigger value='guarantees' className='text-xs sm:text-sm'>
-            Garanties
+        <TabsList className='grid grid-cols-1 sm:grid-cols-3 w-full h-auto'>
+          <TabsTrigger value='guarantees' className='gap-2'>
+            <Shield className='h-4 w-4' />
+            <span>Garanties</span>
+            <Badge variant='secondary' className='ml-auto'>
+              {guarantees.length}
+            </Badge>
           </TabsTrigger>
-          <TabsTrigger value='grids' className='text-xs sm:text-sm'>
-            Grilles
+          <TabsTrigger value='grids' className='gap-2'>
+            <Grid3X3 className='h-4 w-4' />
+            <span>Grilles Tarifaires</span>
+            <Badge variant='secondary' className='ml-auto'>
+              {tarifFixes.length}
+            </Badge>
           </TabsTrigger>
-          <TabsTrigger value='statistics' className='text-xs sm:text-sm'>
-            Statistiques
+          <TabsTrigger value='statistics' className='gap-2'>
+            <TrendingUp className='h-4 w-4' />
+            <span>Statistiques</span>
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value='guarantees' className='space-y-4'>
+          {/* Filters Card */}
           <Card>
-            <CardHeader>
-              <CardTitle className='flex justify-between items-center'>
-                <span>Gestion des Garanties</span>
-                <Dialog
-                  open={isCreateGuaranteeDialogOpen}
-                  onOpenChange={setIsCreateGuaranteeDialogOpen}
-                >
-                  <DialogTrigger asChild>
-                    <Button disabled={isCreatingGuarantee}>
-                      <Plus className='w-4 h-4 mr-2' />
-                      {isCreatingGuarantee ? 'Création…' : 'Nouvelle Garantie'}
-                    </Button>
-                  </DialogTrigger>
+            <CardContent className='p-4'>
+              <div className='flex flex-col sm:flex-row gap-4'>
+                {/* Search */}
+                <div className='flex-1'>
+                  <div className='relative'>
+                    <Search className='absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4' />
+                    <Input
+                      placeholder='Rechercher une garantie...'
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className='pl-10'
+                    />
+                  </div>
+                </div>
+
+                {/* Filters */}
+                <div className='flex gap-2'>
+                  <Select
+                    value={showInactive ? 'all' : 'active'}
+                    onValueChange={(value) => setShowInactive(value === 'all')}
+                  >
+                    <SelectTrigger className='w-full sm:w-[140px]'>
+                      <SelectValue placeholder='Statut' />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value='active'>Actives uniquement</SelectItem>
+                      <SelectItem value='all'>Toutes</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <Dialog open={isCreateGuaranteeDialogOpen} onOpenChange={setIsCreateGuaranteeDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button>
+                        <Plus className='h-4 w-4 mr-2' />
+                        Nouvelle
+                      </Button>
+                    </DialogTrigger>
                   <DialogContent className='max-w-[98vw] sm:max-w-5xl max-h-[90vh] overflow-y-auto'>
                     <DialogHeader>
                       <DialogTitle className='text-xl'>Créer une nouvelle garantie</DialogTitle>
@@ -3158,186 +3391,61 @@ export const AdminTarificationPage: React.FC = () => {
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className='flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mb-4'>
-                <div className='relative flex-1 sm:flex-initial'>
-                  <Search className='absolute left-3 top-1/2 w-4 h-4 -translate-y-1/2 text-muted-foreground' />
-                  <Input
-                    placeholder='Rechercher une garantie...'
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className='pl-10 w-full sm:max-w-sm'
-                  />
-                </div>
-                <div className='flex items-center gap-2'>
-                  <Checkbox
-                    id='show-inactive'
-                    checked={showInactive}
-                    onCheckedChange={(checked) => setShowInactive(!!checked)}
-                  />
-                  <Label htmlFor='show-inactive' className='text-sm'>
-                    Afficher inactives
-                  </Label>
                 </div>
               </div>
 
-              <div className='responsive-table-wrapper'>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className='p-2'>Garantie</TableHead>
-                      {/* Colonne Catégorie retirée */}
-                      <TableHead className='p-2 hidden md:table-cell'>Assureur</TableHead>
-                      <TableHead className='p-2 hidden md:table-cell'>Méthode de calcul</TableHead>
-                      <TableHead className='p-2'>Taux/Montant</TableHead>
-                      <TableHead className='p-2'>Statut</TableHead>
-                      <TableHead className='p-2'>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredGuarantees.map((guarantee) => (
-                      <TableRow key={guarantee.id}>
-                        <TableCell className='p-2'>
-                          <div>
-                            <div className='font-medium text-sm'>{guarantee.name}</div>
-                            <div className='text-xs text-muted-foreground'>
-                              Code: {guarantee.code}
-                            </div>
-                            {guarantee.description && (
-                              <div className='text-xs text-muted-foreground max-w-xs truncate'>
-                                {guarantee.description}
-                              </div>
-                            )}
-                          </div>
-                        </TableCell>
-                        {/* Cellule Assureur ajoutée */}
-                        <TableCell className='p-2 hidden md:table-cell'>
-                          <div className='text-xs'>
-                            {insurers.length > 0 ? (
-                              guarantee.insurerId 
-                                ? insurers.find(i => i.id === guarantee.insurerId)?.name || 'Inconnu'
-                                : (insurers[0]?.name || 'Système')
-                            ) : 'Chargement...'}
-                          </div>
-                        </TableCell>
-                        {/* Cellule Catégorie retirée */}
-                        <TableCell className='p-2 hidden md:table-cell'>
-                          <div className='flex flex-col'>
-                            <span className='text-xs font-medium'>
-                              {
-                                calculationMethods.find(
-                                  (m) => m.value === guarantee.calculationMethod
-                                )?.label
-                              }
-                            </span>
-                            <span
-                              className='text-xs text-muted-foreground max-w-xs truncate'
-                              title={
-                                calculationMethods.find(
-                                  (m) => m.value === guarantee.calculationMethod
-                                )?.description
-                              }
-                            >
-                              {
-                                calculationMethods.find(
-                                  (m) => m.value === guarantee.calculationMethod
-                                )?.description
-                              }
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell className='p-2'>
-                          <div className='text-xs'>
-                            {(() => {
-                              const method = guarantee.calculationMethod
-                              if (method === 'FREE') {
-                                return 'Gratuit'
-                              }
-                              if (method === 'FIXED_AMOUNT') {
-                                return typeof guarantee.fixedAmount === 'number'
-                                  ? `${guarantee.fixedAmount.toLocaleString()} FCFA`
-                                  : '-'
-                              }
-                              if (
-                                ['RATE_ON_SI', 'RATE_ON_NEW_VALUE', 'CONDITIONAL_RATE'].includes(
-                                  method as string
-                                )
-                              ) {
-                                return typeof guarantee.rate === 'number'
-                                  ? `${guarantee.rate}%`
-                                  : '-'
-                              }
-                              return '-'
-                            })()}
-                          </div>
-                          {guarantee.minValue && guarantee.maxValue && (
-                            <div className='text-xs text-muted-foreground'>
-                              Min: {guarantee.minValue.toLocaleString()} - Max:{' '}
-                              {guarantee.maxValue.toLocaleString()}
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell className='p-2'>
-                          <div className='flex flex-col gap-1'>
-                            <Badge
-                              className={
-                                guarantee.isActive
-                                  ? 'bg-green-100 text-green-800 dark:bg-green-500/20 dark:text-green-400'
-                                  : 'bg-red-100 text-red-800 dark:bg-red-500/20 dark:text-red-400'
-                              }
-                              style={{ fontSize: '0.7rem' }}
-                            >
-                              {guarantee.isActive ? 'Active' : 'Inactive'}
-                            </Badge>
-                            {!guarantee.isOptional && (
-                              <Badge
-                                className='bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400'
-                                style={{ fontSize: '0.7rem' }}
-                              >
-                                Obligatoire
-                              </Badge>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className='p-2'>
-                          <div className='flex items-center space-x-1 sm:space-x-2'>
-                            <Button
-                              variant='outline'
-                              size='sm'
-                              onClick={() => openEditGuaranteeDialog(guarantee)}
-                              className='h-8 w-8 p-0 sm:h-auto sm:w-auto sm:p-2'
-                            >
-                              <Edit className='w-3 h-3 sm:w-4 sm:h-4' />
-                            </Button>
-                            <Button
-                              variant='outline'
-                              size='sm'
-                              onClick={() => handleToggleGuarantee(guarantee.id)}
-                              className='h-8 w-8 p-0 sm:h-auto sm:w-auto sm:p-2'
-                            >
-                              {guarantee.isActive ? (
-                                <XCircle className='w-3 h-3 sm:w-4 sm:h-4' />
-                              ) : (
-                                <CheckCircle className='w-3 h-3 sm:w-4 sm:h-4' />
-                              )}
-                            </Button>
-                            <Button
-                              variant='outline'
-                              size='sm'
-                              onClick={() => handleDeleteGuarantee(guarantee.id)}
-                              className='text-red-600 hover:text-red-700 h-8 w-8 p-0 sm:h-auto sm:w-auto sm:p-2'
-                            >
-                              <Trash2 className='w-3 h-3 sm:w-4 sm:h-4' />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+              {/* Guarantees Grid */}
+              {loading ? (
+                <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
+                  {[1, 2, 3, 4, 5, 6].map((i) => (
+                    <Card key={i}>
+                      <CardContent className='p-4'>
+                        <Skeleton className='h-6 w-3/4 mb-2' />
+                        <Skeleton className='h-4 w-1/2 mb-4' />
+                        <Skeleton className='h-8 w-full mb-2' />
+                        <Skeleton className='h-4 w-2/3' />
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : filteredGuarantees.length === 0 ? (
+                <Card>
+                  <CardContent className='py-12 text-center'>
+                    <Shield className='h-16 w-16 mx-auto text-muted-foreground/30 mb-4' />
+                    <h3 className='text-lg font-semibold mb-2'>Aucune garantie trouvée</h3>
+                    <p className='text-sm text-muted-foreground mb-4'>
+                      {searchTerm
+                        ? 'Essayez de modifier vos critères de recherche'
+                        : 'Commencez par créer une nouvelle garantie'}
+                    </p>
+                    {!searchTerm && (
+                      <Button onClick={() => setIsCreateGuaranteeDialogOpen(true)}>
+                        <Plus className='h-4 w-4 mr-2' />
+                        Créer une garantie
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
+                  {filteredGuarantees.map((guarantee) => (
+                    <GuaranteeCard
+                      key={guarantee.id}
+                      guarantee={guarantee}
+                      insurer={
+                        insurers.length > 0
+                          ? guarantee.insurerId
+                            ? insurers.find((i) => i.id === guarantee.insurerId)
+                            : insurers[0]
+                          : undefined
+                      }
+                      onEdit={() => openEditGuaranteeDialog(guarantee)}
+                      onToggle={() => handleToggleGuarantee(guarantee.id)}
+                      onDelete={() => handleDeleteGuarantee(guarantee.id)}
+                    />
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
