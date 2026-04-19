@@ -28,7 +28,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
-import { AdminBreadcrumb } from '@/components/common/BreadcrumbRenderer'
+
 import { useAuth } from '@/contexts/AuthContext'
 import {
   Users,
@@ -888,8 +888,7 @@ export const AdminUsersPage: React.FC = () => {
 
   return (
     <div className="space-y-6 w-full">
-      {/* Breadcrumb */}
-      <AdminBreadcrumb />
+
 
       {/* Header */}
       <div className="flex items-center justify-between">

@@ -60,7 +60,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
-import { AdminBreadcrumb } from '@/components/common/BreadcrumbRenderer'
+
 import { useAuth } from '@/contexts/AuthContext'
 import { logger } from '@/lib/logger'
 import {
@@ -92,10 +92,10 @@ const AdminInsurersPage = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [selectedInsurers, setSelectedInsurers] = useState<string[]>([])
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
-  const [editingInsurer, setEditingInsurer] = useState<Insurer | null>(null)
-  const [viewingInsurer, setViewingInsurer] = useState<Insurer | null>(null)
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  type DialogType = 'create' | 'edit' | 'view' | 'delete' | null
+
+  const [activeDialog, setActiveDialog] = useState<DialogType>(null)
+  const [selectedInsurer, setSelectedInsurer] = useState<Insurer | null>(null)
   const [mutationError, setMutationError] = useState<string | null>(null)
 
   // React Query hooks
@@ -171,7 +171,7 @@ const AdminInsurersPage = () => {
     setMutationError(null)
     createInsurer.mutate(data, {
       onSuccess: () => {
-        setIsCreateDialogOpen(false)
+        setActiveDialog(null)
         setMutationError(null)
       },
       onError: (error) => {
@@ -181,13 +181,14 @@ const AdminInsurersPage = () => {
   }
 
   const handleUpdateInsurer = (data: InsurerFormData) => {
-    if (editingInsurer) {
+    if (selectedInsurer) {
       setMutationError(null)
       updateInsurer.mutate(
-        { id: editingInsurer.id, data },
+        { id: selectedInsurer.id, data },
         {
           onSuccess: () => {
-            setEditingInsurer(null)
+            setActiveDialog(null)
+            setSelectedInsurer(null)
             setMutationError(null)
           },
           onError: (error) => {
@@ -199,14 +200,26 @@ const AdminInsurersPage = () => {
   }
 
   const handleDeleteInsurer = () => {
-    if (editingInsurer) {
-      deleteInsurer.mutate(editingInsurer.id, {
+    if (selectedInsurer) {
+      deleteInsurer.mutate(selectedInsurer.id, {
         onSuccess: () => {
-          setShowDeleteDialog(false)
-          setEditingInsurer(null)
+          setActiveDialog(null)
+          setSelectedInsurer(null)
         },
       })
     }
+  }
+
+  const handleOpenDialog = (type: DialogType, insurer?: Insurer) => {
+    setActiveDialog(type)
+    setSelectedInsurer(insurer || null)
+    setMutationError(null)
+  }
+
+  const handleCloseDialog = () => {
+    setActiveDialog(null)
+    setSelectedInsurer(null)
+    setMutationError(null)
   }
 
   const handleApproveInsurer = (id: string) => {
@@ -238,7 +251,7 @@ const AdminInsurersPage = () => {
   if (error) {
     return (
       <div className='space-y-6 w-full'>
-        <AdminBreadcrumb />
+
         <Alert>
           <AlertCircle className='h-4 w-4' />
           <AlertDescription>
@@ -255,8 +268,7 @@ const AdminInsurersPage = () => {
 
   return (
     <div className='space-y-6 w-full'>
-      {/* Breadcrumb */}
-      <AdminBreadcrumb />
+
 
       {/* Header */}
       <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4'>
@@ -274,10 +286,9 @@ const AdminInsurersPage = () => {
             Exporter
           </Button>
           <Dialog
-            open={isCreateDialogOpen}
+            open={activeDialog === 'create'}
             onOpenChange={(open) => {
-              setIsCreateDialogOpen(open)
-              if (!open) setMutationError(null)
+              if (!open) handleCloseDialog()
             }}
           >
             <DialogTrigger asChild>
@@ -493,7 +504,7 @@ const AdminInsurersPage = () => {
                 : 'Commencez par ajouter un nouvel assureur'}
             </p>
             {!searchTerm && statusFilter === 'all' && (
-              <Button onClick={() => setIsCreateDialogOpen(true)}>
+              <Button onClick={() => handleOpenDialog('create')}>
                 <Plus className='h-4 w-4 mr-2' />
                 Ajouter un assureur
               </Button>
@@ -508,13 +519,10 @@ const AdminInsurersPage = () => {
               insurer={insurer}
               isSelected={selectedInsurers.includes(insurer.id)}
               onSelect={handleSelectInsurer}
-              onView={setViewingInsurer}
-              onEdit={setEditingInsurer}
+              onView={(ins) => handleOpenDialog('view', ins)}
+              onEdit={(ins) => handleOpenDialog('edit', ins)}
               onApprove={handleApproveInsurer}
-              onDelete={(ins) => {
-                setEditingInsurer(ins)
-                setShowDeleteDialog(true)
-              }}
+              onDelete={(ins) => handleOpenDialog('delete', ins)}
               isApproving={approveInsurer.isPending}
             />
           ))}
@@ -527,13 +535,10 @@ const AdminInsurersPage = () => {
               insurer={insurer}
               isSelected={selectedInsurers.includes(insurer.id)}
               onSelect={handleSelectInsurer}
-              onView={setViewingInsurer}
-              onEdit={setEditingInsurer}
+              onView={(ins) => handleOpenDialog('view', ins)}
+              onEdit={(ins) => handleOpenDialog('edit', ins)}
               onApprove={handleApproveInsurer}
-              onDelete={(ins) => {
-                setEditingInsurer(ins)
-                setShowDeleteDialog(true)
-              }}
+              onDelete={(ins) => handleOpenDialog('delete', ins)}
               isApproving={approveInsurer.isPending}
             />
           ))}
@@ -541,35 +546,27 @@ const AdminInsurersPage = () => {
       )}
 
       {/* View Insurer Dialog */}
-      <Dialog open={!!viewingInsurer} onOpenChange={() => setViewingInsurer(null)}>
+      <Dialog open={activeDialog === 'view'} onOpenChange={handleCloseDialog}>
         <DialogContent className='responsive-modal-lg'>
           <DialogHeader>
             <DialogTitle>Détails de l'assureur</DialogTitle>
           </DialogHeader>
-          {viewingInsurer && <InsurerDetails insurer={viewingInsurer} />}
+          {selectedInsurer && <InsurerDetails insurer={selectedInsurer} />}
         </DialogContent>
       </Dialog>
 
       {/* Edit Insurer Dialog */}
-      <Dialog
-        open={!!editingInsurer && !showDeleteDialog}
-        onOpenChange={(open) => {
-          if (!open) {
-            setEditingInsurer(null)
-            setMutationError(null)
-          }
-        }}
-      >
+      <Dialog open={activeDialog === 'edit'} onOpenChange={handleCloseDialog}>
         <DialogContent className='responsive-modal-lg'>
           <DialogHeader>
             <DialogTitle>Modifier l'assureur</DialogTitle>
           </DialogHeader>
-          {editingInsurer && (
+          {selectedInsurer && (
             <InsurerForm
-              insurer={editingInsurer}
+              insurer={selectedInsurer}
               onSubmit={handleUpdateInsurer}
               isLoading={updateInsurer.isPending}
-              onCancel={() => setEditingInsurer(null)}
+              onCancel={handleCloseDialog}
               error={mutationError}
             />
           )}
@@ -577,7 +574,7 @@ const AdminInsurersPage = () => {
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+      <Dialog open={activeDialog === 'delete'} onOpenChange={handleCloseDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Confirmer la suppression</DialogTitle>
@@ -585,11 +582,11 @@ const AdminInsurersPage = () => {
           <div className='space-y-4'>
             <p>
               Êtes-vous sûr de vouloir supprimer l'assureur{' '}
-              <strong>{editingInsurer?.companyName}</strong> ?
+              <strong>{selectedInsurer?.companyName}</strong> ?
             </p>
             <p className='text-sm text-red-600 dark:text-red-400'>Cette action est irréversible.</p>
             <DialogFooter>
-              <Button variant='outline' onClick={() => setShowDeleteDialog(false)}>
+              <Button variant='outline' onClick={handleCloseDialog}>
                 Annuler
               </Button>
               <Button
@@ -725,11 +722,11 @@ const InsurerGridCard: React.FC<InsurerGridCardProps> = ({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align='end'>
-              <DropdownMenuItem onClick={() => onView(insurer)}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onView(insurer) }}>
                 <Eye className='h-4 w-4 mr-2' />
                 Voir détails
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onEdit(insurer)}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(insurer) }}>
                 <Edit className='h-4 w-4 mr-2' />
                 Modifier
               </DropdownMenuItem>
@@ -737,7 +734,7 @@ const InsurerGridCard: React.FC<InsurerGridCardProps> = ({
                 <>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    onClick={() => onApprove(insurer.id)}
+                    onClick={(e) => { e.stopPropagation(); onApprove(insurer.id) }}
                     disabled={isApproving}
                     className='text-green-600'
                   >
@@ -752,7 +749,7 @@ const InsurerGridCard: React.FC<InsurerGridCardProps> = ({
               )}
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                onClick={() => onDelete(insurer)}
+                onClick={(e) => { e.stopPropagation(); onDelete(insurer) }}
                 className='text-red-600'
               >
                 <Trash2 className='h-4 w-4 mr-2' />

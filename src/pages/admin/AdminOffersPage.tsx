@@ -44,6 +44,7 @@ import {
 import { guaranteeService } from '@/features/tarification/services/guaranteeService';
 import { pricingService } from '@/features/tarification/services/pricingService';
 import { offerService, type Offer, type Insurer, type OfferAnalytics, type OfferFormData, type OfferStats } from '@/features/admin/services/offerService';
+import { OfferForm } from '@/components/admin/OfferForm';
 import type { Guarantee, InsurancePackage } from '@/types/tarification';
 import { toast } from 'sonner';
 import { logger } from '@/lib/logger';
@@ -312,7 +313,7 @@ export const AdminOffersPage: React.FC = () => {
                 Nouvelle offre
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-[95vw] sm:max-w-5xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Créer une nouvelle offre</DialogTitle>
                 <DialogDescription>
@@ -322,10 +323,17 @@ export const AdminOffersPage: React.FC = () => {
               <OfferForm
                 insurers={insurers}
                 categories={categories}
-                onSuccess={() => {
-                  setIsCreateDialogOpen(false);
-                  loadData();
+                onSubmit={async (data) => {
+                  try {
+                    await offerService.createOffer(data);
+                    setIsCreateDialogOpen(false);
+                    loadData();
+                    toast.success('Offre créée avec succès!');
+                  } catch (error) {
+                    toast.error('Erreur lors de la création de l\'offre');
+                  }
                 }}
+                isLoading={isSubmitting}
               />
             </DialogContent>
           </Dialog>

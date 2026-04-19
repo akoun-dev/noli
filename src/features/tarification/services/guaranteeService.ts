@@ -809,6 +809,7 @@ class GuaranteeService {
       metadata: Record<string, any>;
       display_order?: number;
       created_by?: string;
+      insurer_id?: string;
     } = {
       code: generatedCode,
       type: this.mapCategoryToCoverageType(data.category),
@@ -825,6 +826,56 @@ class GuaranteeService {
       payload.created_by = userId;
     }
 
+    // Gestion de l'insurer_id - validation et fallback vers un assureur par défaut
+    let validInsurerId: string | null = null;
+
+    if (data.insurerId && data.insurerId !== '00000000-0000-0000-0000-000000000003') {
+      // Vérifier si l'assureur existe dans la base de données
+      try {
+        const { data: insurer, error: insurerError } = await supabase
+          .from('insurers')
+          .select('id')
+          .eq('id', data.insurerId)
+          .single();
+
+        if (!insurerError && insurer) {
+          validInsurerId = data.insurerId;
+        } else {
+          logger.warn(`Assureur avec ID ${data.insurerId} non trouvé`);
+        }
+      } catch (validationError) {
+        logger.warn(`Erreur de validation de l'assureur: ${validationError}`);
+      }
+    }
+
+    // Si aucun insurer_id valide n'est fourni, essayer de trouver un assureur par défaut
+    if (!validInsurerId) {
+      try {
+        const { data: defaultInsurer, error: defaultInsurerError } = await supabase
+          .from('insurers')
+          .select('id')
+          .order('created_at', { ascending: true })
+          .limit(1)
+          .single();
+
+        if (!defaultInsurerError && defaultInsurer) {
+          validInsurerId = defaultInsurer.id;
+          logger.info(`Utilisation de l'assureur par défaut avec ID ${validInsurerId}`);
+        }
+      } catch (defaultInsurerError) {
+        logger.error('Impossible de trouver un assureur par défaut', defaultInsurerError);
+      }
+    }
+
+    // Ajouter l'insurer_id au payload uniquement si nous avons trouvé un assureur valide
+    if (validInsurerId) {
+      payload.insurer_id = validInsurerId;
+    } else {
+      // Si aucun assureur n'est disponible, nous devons lever une erreur car le champ est NOT NULL
+      logger.error('Aucun assureur valide disponible pour la création de garantie');
+      throw new Error('Impossible de créer la garantie: aucun assureur valide disponible');
+    }
+
     try {
       const { data: inserted, error } = await supabase
         .from('coverages')
@@ -836,6 +887,13 @@ class GuaranteeService {
 
       if (error) {
         logger.error('GuaranteeService.createGuarantee: Supabase error', error);
+        // Gestion spécifique pour les erreurs de clé étrangère
+        if (error.code === '23503' && error.details?.includes('insurers')) {
+          throw new Error(`L'assureur avec l'ID ${data.insurerId} n'existe pas dans la base de données`);
+        }
+        if (error.code === '23502' && error.message?.includes('insurer_id')) {
+          throw new Error(`Le champ insurer_id est requis mais aucun assureur valide n'a été fourni`);
+        }
         throw error;
       }
 

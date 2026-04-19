@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Check } from 'lucide-react'
+import { Check, Edit, Trash2, Pause, Play, LayoutGrid, List } from 'lucide-react'
 import {
   Table,
   TableBody,
@@ -96,7 +96,7 @@ import {
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
-import { AdminBreadcrumb } from '@/components/common/BreadcrumbRenderer'
+
 
 // StatCard Component
 interface StatCardProps {
@@ -283,6 +283,7 @@ export const AdminTarificationPage: React.FC = () => {
   const [selectedCoverageId, setSelectedCoverageId] = useState<string>('')
   const [availableFormulas, setAvailableFormulas] = useState<string[]>([])
   const [selectedFormulaName, setSelectedFormulaName] = useState<string>('')
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid') // Nouveau: mode d'affichage
 
   // États pour la Responsabilité Civile
   const [tarifRC, setTarifRC] = useState<TarifRC[]>([])
@@ -2724,8 +2725,7 @@ export const AdminTarificationPage: React.FC = () => {
 
   return (
     <div className='space-y-6 w-full'>
-      {/* Breadcrumb */}
-      <AdminBreadcrumb />
+
 
       {/* Header */}
       <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4'>
@@ -3427,24 +3427,102 @@ export const AdminTarificationPage: React.FC = () => {
                   </CardContent>
                 </Card>
               ) : (
-                <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
-                  {filteredGuarantees.map((guarantee) => (
-                    <GuaranteeCard
-                      key={guarantee.id}
-                      guarantee={guarantee}
-                      insurer={
-                        insurers.length > 0
-                          ? guarantee.insurerId
-                            ? insurers.find((i) => i.id === guarantee.insurerId)
-                            : insurers[0]
-                          : undefined
-                      }
-                      onEdit={() => openEditGuaranteeDialog(guarantee)}
-                      onToggle={() => handleToggleGuarantee(guarantee.id)}
-                      onDelete={() => handleDeleteGuarantee(guarantee.id)}
-                    />
-                  ))}
+                <div className='space-y-4'>
+                  <div className='flex justify-end'>
+                    <div className='flex items-center gap-1 border rounded-lg p-1 bg-background'>
+                      <Button
+                        variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+                        size='sm'
+                        onClick={() => setViewMode('grid')}
+                        title='Vue grille'
+                      >
+                        <LayoutGrid className='h-4 w-4' />
+                      </Button>
+                      <Button
+                        variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                        size='sm'
+                        onClick={() => setViewMode('list')}
+                        title='Vue liste'
+                      >
+                        <List className='h-4 w-4' />
+                      </Button>
+                    </div>
+                  </div>
+                  {viewMode === 'grid' ? (
+                    <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
+                      {filteredGuarantees.map((guarantee) => (
+                        <GuaranteeCard
+                          key={guarantee.id}
+                          guarantee={guarantee}
+                          insurer={
+                            insurers.length > 0
+                              ? guarantee.insurerId
+                                ? insurers.find((i) => i.id === guarantee.insurerId)
+                                : insurers[0]
+                              : undefined
+                          }
+                          onEdit={() => openEditGuaranteeDialog(guarantee)}
+                          onToggle={() => handleToggleGuarantee(guarantee.id)}
+                          onDelete={() => handleDeleteGuarantee(guarantee.id)}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className='space-y-2'>
+                      {filteredGuarantees.map((guarantee) => (
+                        <Card key={guarantee.id} className='hover:shadow-md transition-shadow'>
+                          <CardContent className='p-4'>
+                            <div className='flex items-center justify-between'>
+                              <div className='flex-1'>
+                                <h3 className='font-semibold text-lg mb-1'>{guarantee.name}</h3>
+                                <p className='text-sm text-muted-foreground mb-2'>{guarantee.code}</p>
+                                <div className='flex flex-wrap gap-2 mb-2'>
+                                  <Badge variant='outline' className='text-xs'>
+                                    {guarantee.category}
+                                  </Badge>
+                                  <Badge 
+                                    variant={guarantee.isActive ? 'default' : 'secondary'}
+                                    className={`text-xs ${guarantee.isActive ? 'bg-green-100 text-green-800 dark:bg-green-500/20 dark:text-green-400' : 'bg-red-100 text-red-800 dark:bg-red-500/20 dark:text-red-400'}`}
+                                  >
+                                    {guarantee.isActive ? 'Active' : 'Inactive'}
+                                  </Badge>
+                                </div>
+                              </div>
+                              <div className='flex items-center gap-2 ml-4'>
+                                <Button 
+                                  variant='outline' 
+                                  size='sm'
+                                  onClick={() => openEditGuaranteeDialog(guarantee)}
+                                  title='Modifier'
+                                >
+                                  <Edit className='h-3 w-3' />
+                                </Button>
+                                <Button
+                                  variant='outline'
+                                  size='sm'
+                                  onClick={() => handleToggleGuarantee(guarantee.id)}
+                                  title={guarantee.isActive ? 'Désactiver' : 'Activer'}
+                                >
+                                  {guarantee.isActive ? <Pause className='h-3 w-3' /> : <Play className='h-3 w-3' />}
+                                </Button>
+                                <Button
+                                  variant='outline'
+                                  size='sm'
+                                  onClick={() => handleDeleteGuarantee(guarantee.id)}
+                                  title='Supprimer'
+                                  className='text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'
+                                >
+                                  <Trash2 className='h-3 w-3' />
+                                </Button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
                 </div>
+=======
               )}
             </CardContent>
           </Card>
@@ -3556,7 +3634,7 @@ export const AdminTarificationPage: React.FC = () => {
                         </SelectContent>
                       </Select>
                     </div>
-                    {availableFormulas.length > 0 && (
+                    {availableFormulas.length > 0 ? (
                       <div>
                         <Label>Formule (si applicable)</Label>
                         <Select
@@ -3574,6 +3652,15 @@ export const AdminTarificationPage: React.FC = () => {
                             ))}
                           </SelectContent>
                         </Select>
+                      </div>
+                    ) : (
+                      <div>
+                        <Label>Formule (si applicable)</Label>
+                        <Input
+                          value="Aucune formule disponible pour cette garantie"
+                          readOnly
+                          className="bg-gray-100 dark:bg-gray-800 cursor-not-allowed"
+                        />
                       </div>
                     )}
                     <div>
@@ -3726,7 +3813,7 @@ export const AdminTarificationPage: React.FC = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                {availableFormulas.length > 0 && (
+                {availableFormulas.length > 0 ? (
                   <div>
                     <Label>Formule (si applicable)</Label>
                     <Select
@@ -3744,6 +3831,15 @@ export const AdminTarificationPage: React.FC = () => {
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
+                ) : (
+                  <div>
+                    <Label>Formule (si applicable)</Label>
+                    <Input
+                      value="Aucune formule disponible pour cette garantie"
+                      readOnly
+                      className="bg-gray-100 dark:bg-gray-800 cursor-not-allowed"
+                    />
                   </div>
                 )}
                 <div>

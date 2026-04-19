@@ -21,6 +21,7 @@ import {
 
 export const InsurerLayout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const { user, logout } = useAuth()
   const location = useLocation()
 
@@ -45,25 +46,41 @@ export const InsurerLayout: React.FC = () => {
     <div className='min-h-screen bg-background'>
       <div className='flex'>
         {/* Sidebar - Desktop - Fixed */}
-        <div className='hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-50 lg:block lg:w-64 xl:w-72'>
-          <Sidebar userRole='INSURER' />
+        <div className={`hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-50 lg:block transition-all duration-300 ${
+          sidebarCollapsed ? 'lg:w-[72px]' : 'lg:w-64 xl:w-72'
+        }`}>
+          <Sidebar
+            userRole='INSURER'
+            isCollapsed={sidebarCollapsed}
+            onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+          />
         </div>
 
         {/* Mobile Sidebar Overlay */}
         {sidebarOpen && (
-          <div className='fixed inset-0 z-50 lg:hidden'>
+          <div className='fixed inset-0 z-50 lg:hidden overflow-hidden'>
             <div
               className='fixed inset-0 bg-black/50 backdrop-blur-sm'
               onClick={() => setSidebarOpen(false)}
             />
-            <div className='fixed inset-y-0 left-0 w-72 bg-background shadow-xl z-50 overflow-y-auto animate-in slide-in-from-left duration-200'>
-              <Sidebar userRole='INSURER' onMobileClose={() => setSidebarOpen(false)} />
+            <div className={`fixed inset-y-0 left-0 bg-background shadow-xl z-50 overflow-y-auto animate-in slide-in-from-left duration-200 transition-all duration-300 ${
+                sidebarCollapsed ? 'w-[72px] max-w-[72px]' : 'w-full max-w-[280px]'
+              }`}>
+              <Sidebar
+                userRole='INSURER'
+                isCollapsed={sidebarCollapsed}
+                onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+                onMobileClose={() => setSidebarOpen(false)}
+                isMobile={true}
+              />
             </div>
           </div>
         )}
 
         {/* Main Content */}
-        <main className='flex-1 min-w-0 lg:pl-64 xl:pl-72'>
+        <main className={`flex-1 min-w-0 transition-all duration-300 ${
+          sidebarCollapsed ? 'lg:pl-[72px]' : 'lg:pl-64 xl:pl-72'
+        }`}>
           {/* Insurer Header */}
           <header className='sticky top-0 z-40 bg-card/80 backdrop-blur-lg border-b'>
             <div className='flex items-center justify-between px-4 sm:px-6 py-3'>
@@ -71,10 +88,10 @@ export const InsurerLayout: React.FC = () => {
               <div className='flex items-center gap-3'>
                 <button
                   onClick={() => setSidebarOpen(true)}
-                  className='lg:hidden p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent'
+                  className='lg:hidden p-2.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent'
                   aria-label='Ouvrir le menu'
                 >
-                  <Menu className='h-5 w-5' />
+                  <Menu className='h-6 w-6' />
                 </button>
                 <div>
                   <div className='flex items-center gap-2'>

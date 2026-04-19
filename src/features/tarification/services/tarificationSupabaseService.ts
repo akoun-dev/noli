@@ -494,18 +494,28 @@ class TarificationSupabaseService {
   }
 
   async listFormulas(coverageId: string): Promise<string[]> {
-    const { data, error } = await supabase
-      .from('coverage_tariff_rules')
-      .select('formula_name')
-      .eq('coverage_id', coverageId)
-      .is('formula_name', null, false)
-      .eq('is_active', true)
+    try {
+      const { data, error } = await supabase
+        .from('coverage_tariff_rules')
+        .select('formula_name')
+        .eq('coverage_id', coverageId)
+        .is('formula_name', null, false)
+        .eq('is_active', true)
 
-    if (error) throw error
-    const names = (data || [])
-      .map((r: any) => r.formula_name)
-      .filter((v: any) => !!v)
-    return Array.from(new Set(names))
+      if (error) {
+        logger.error('listFormulas: supabase error', error)
+        return ['Aucune formule disponible']
+      }
+
+      const names = (data || [])
+        .map((r: any) => r.formula_name)
+        .filter((v: any) => !!v)
+      
+      return names.length > 0 ? Array.from(new Set(names)) : ['Aucune formule disponible']
+    } catch (error) {
+      logger.error('listFormulas: unexpected error', error)
+      return ['Aucune formule disponible']
+    }
   }
 
   async createFixedTariff(input: {
