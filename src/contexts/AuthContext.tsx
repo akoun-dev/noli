@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Session } from '@supabase/supabase-js'
 import { User } from '@/types'
@@ -7,7 +7,6 @@ import { supabase, supabaseHelpers } from '@/lib/supabase'
 import { logger } from '@/lib/logger'
 import { usePermissionCache, permissionCache } from '@/lib/permission-cache'
 import { useQueryClient } from '@tanstack/react-query'
-import { testDatabaseConnection } from '@/lib/helpers/supabaseHealthCheck'
 
 export interface Permission {
   permission_name: string
@@ -25,15 +24,19 @@ export type ProfileError = {
   details?: string
 }
 
+// États distincts pour le state machine
+type AuthStatus = 'initializing' | 'authenticated' | 'unauthenticated' | 'error'
+
 export interface AuthState {
   user: User | null
   isAuthenticated: boolean
   isLoading: boolean
   permissions: Permission[]
   profileError: ProfileError | null
+  authStatus: AuthStatus
 }
 
-interface AuthContextType extends AuthState {
+interface AuthContextType extends Omit<AuthState, 'authStatus'> {
   login: (email: string, password: string, securityContextData?: any) => Promise<{
     user: User;
     rateLimitInfo?: { allowed: boolean; remainingAttempts: number; lockoutTime?: number };
@@ -58,181 +61,223 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const navigate = useNavigate()
   const { getUserPermissions } = usePermissionCache()
   const queryClient = useQueryClient()
-  const [state, setState] = useState<AuthState>({
+
+  // Utiliser useRef pour éviter les dépendances cycliques dans useEffect
+  const stateRef = useRef<AuthState>({
     user: null,
     isAuthenticated: false,
     isLoading: true,
     permissions: [],
     profileError: null,
+    authStatus: 'initializing',
   })
 
-  const [initializedSession, setInitializedSession] = useState(false)
+  const [, forceUpdate] = useState({})
+  const setState = (newState: Partial<AuthState>) => {
+    stateRef.current = { ...stateRef.current, ...newState }
+    forceUpdate({})
+  }
 
-  // Fonction pour charger les permissions
-  const loadPermissions = async (userId: string) => {
+  // IMPORTANT: Lire directement depuis stateRef.current pour avoir toujours les valeurs à jour
+  // Le useState initial n'est qu'un placeholder
+  const [state] = useState<AuthState>(stateRef.current)
+  const getState = () => stateRef.current
+
+  // Références pour éviter les race conditions
+  const initializationInProgress = useRef(false)
+  const currentSessionId = useRef<string | null>(null)
+  const profileLoadPromise = useRef<Map<string, Promise<User | null>>>(new Map())
+
+  // ============================================
+  // HELPER: Exponential backoff pour les retries
+  // ============================================
+  const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
+  // ============================================
+  // LOAD PERMISSIONS: Avec timeout et fallback
+  // ============================================
+  const loadPermissions = useCallback(async (userId: string): Promise<Permission[]> => {
     try {
-      const permissions = await getUserPermissions(
-        userId,
-        () => authService.getUserPermissions(userId)
+      // Timeout de 5 secondes pour les permissions
+      const timeoutPromise = new Promise<Permission[]>((_, reject) =>
+        setTimeout(() => reject(new Error('Permissions timeout')), 5000)
       )
+
+      const permissions = await Promise.race([
+        getUserPermissions(userId, () => authService.getUserPermissions(userId)),
+        timeoutPromise
+      ]) as Permission[]
+
       logger.auth('Permissions loaded:', permissions.length)
-      setState((prev) => ({ ...prev, permissions }))
+      return permissions
     } catch (error) {
-      logger.warn('Could not load permissions:', error)
+      logger.warn('Could not load permissions, using fallback:', error)
+      // Utiliser les permissions basées sur le rôle depuis le state
+      const userRole = stateRef.current.user?.role || 'USER'
+      return getFallbackPermissions(userRole)
+    }
+  }, [])
+
+  // Permissions de secours basées sur le rôle
+  const getFallbackPermissions = (role: string): Permission[] => {
+    switch (role) {
+      case 'ADMIN':
+        return [
+          { permission_name: 'admin_access', resource_type: 'all', can_read: true, can_write: true, can_delete: true },
+          { permission_name: 'user_management', resource_type: 'users', can_read: true, can_write: true, can_delete: true },
+        ]
+      case 'INSURER':
+        return [
+          { permission_name: 'insurer_access', resource_type: 'all', can_read: true, can_write: true, can_delete: false },
+          { permission_name: 'offer_management', resource_type: 'offers', can_read: true, can_write: true, can_delete: true },
+        ]
+      default:
+        return [
+          { permission_name: 'user_access', resource_type: 'all', can_read: true, can_write: false, can_delete: false },
+        ]
     }
   }
 
-  // Fonction pour charger le profil utilisateur
-  const loadProfile = async (userId: string, retryCount = 0) => {
-    const MAX_RETRIES = 3
-    const RETRY_DELAY = 1000
+  // ============================================
+  // LOAD PROFILE: Avec retry et cache
+  // ============================================
+  const loadProfile = useCallback(async (userId: string, sessionUser: Session['user']): Promise<User | null> => {
+    const MAX_RETRIES = 2
+    const BASE_DELAY = 500
+
+    // Vérifier si on a déjà une promise en cours pour cet utilisateur
+    const existingPromise = profileLoadPromise.current.get(userId)
+    if (existingPromise) {
+      logger.debug('Profile load already in progress, returning existing promise')
+      return existingPromise
+    }
+
+    const profilePromise = (async () => {
+      for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        try {
+          logger.debug('Loading user profile', { userId, attempt: attempt + 1, maxRetries: MAX_RETRIES + 1 })
+
+          // IMPORTANT: S'assurer que la session est active avant de requêter la DB
+          // Cela garantit que le JWT est disponible pour les requêtes RLS
+          const { data: sessionData } = await supabase.auth.getSession()
+          if (!sessionData.session) {
+            logger.warn('No active session, using session metadata')
+            return buildUserFromSession(sessionUser)
+          }
+
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', userId)
+            .maybeSingle()
+
+          if (error) {
+            // Gérer les erreurs spécifiques
+            if (error.code === 'PGRST116' && attempt === 0) {
+              logger.info('Profile not found, attempting recovery', { userId })
+              const recovered = await attemptProfileRecovery(userId)
+              if (recovered) {
+                // Réessayer après récupération
+                continue
+              }
+            }
+
+            // Pour les erreurs de permission ou réseau, réessayer avec backoff
+            if (attempt < MAX_RETRIES && (
+              error.message.includes('permission') ||
+              error.message.includes('denied') ||
+              error.message.includes('network') ||
+              error.message.includes('fetch')
+            )) {
+              const delay = BASE_DELAY * Math.pow(2, attempt)
+              logger.debug(`Retrying after error, delay: ${delay}ms`, { attempt: attempt + 1 })
+              await sleep(delay)
+              continue
+            }
+
+            // Erreur fatale, utiliser le profil depuis la session
+            logger.warn('Profile load failed, using session metadata', { userId, error: error.message })
+            return buildUserFromSession(sessionUser)
+          }
+
+          if (!data) {
+            // Pas de données, essayer de récupérer ou utiliser les métadonnées
+            if (attempt === 0) {
+              await attemptProfileRecovery(userId)
+              continue
+            }
+            logger.warn('No profile found, using session metadata')
+            return buildUserFromSession(sessionUser)
+          }
+
+          logger.info('Profile loaded successfully', { userId, email: data.email })
+
+          return {
+            id: data.id,
+            email: data.email || sessionUser.email || '',
+            firstName: data.first_name || '',
+            lastName: data.last_name || '',
+            companyName: data.company_name || '',
+            role: (data.role || sessionUser.user_metadata?.role || 'USER') as 'USER' | 'INSURER' | 'ADMIN',
+            phone: data.phone || '',
+            avatar: data.avatar_url || '',
+            createdAt: data.created_at ? new Date(data.created_at) : new Date(sessionUser.created_at),
+            updatedAt: data.updated_at ? new Date(data.updated_at) : new Date(),
+            address: data.address || '',
+            dateOfBirth: data.date_of_birth || '',
+            lastLogin: data.last_login ? new Date(data.last_login) : new Date(),
+            emailVerified: data.email_verified ?? !!sessionUser.email_confirmed_at,
+            phoneVerified: data.phone_verified ?? !!data.phone,
+          }
+        } catch (error) {
+          logger.error('Error loading profile', error instanceof Error ? error : undefined, { userId, attempt })
+
+          if (attempt < MAX_RETRIES) {
+            const delay = BASE_DELAY * Math.pow(2, attempt)
+            await sleep(delay)
+          } else {
+            // Dernier essai échoué, utiliser les métadonnées de session
+            logger.warn('All retries failed, using session metadata')
+            return buildUserFromSession(sessionUser)
+          }
+        }
+      }
+
+      return buildUserFromSession(sessionUser)
+    })()
+
+    profileLoadPromise.current.set(userId, profilePromise)
 
     try {
-      logger.debug('Loading user profile', { userId, attempt: retryCount + 1, maxRetries: MAX_RETRIES + 1 })
-
-      // Direct profile load without health check for faster loading
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle()
-
-      if (error) {
-        logger.error('Error loading profile from Supabase', error as Error, { userId })
-
-        if (error.message.includes('schema cache') || error.message.includes('Could not find the table')) {
-          logger.error('Schema cache error - profiles table not accessible', undefined, { userId })
-          setProfileError({
-            type: 'database',
-            message: 'Connexion à la base de données impossible',
-            details: "Could not find the table 'public.profiles' in the schema cache\n\nLa table des profils n'existe pas ou n'est pas accessible. Veuillez contacter le support.",
-          })
-          setState(prev => ({ ...prev, isLoading: false }))
-          return
-        }
-
-        if (error.code === 'PGRST116') {
-          logger.info('Profile not found, attempting recovery', { userId })
-          const recovered = await attemptProfileRecovery(userId)
-          if (recovered) {
-            return loadProfile(userId, retryCount + 1)
-          }
-
-          setProfileError({
-            type: 'not_found',
-            message: 'Profil introuvable',
-            details: "Votre profil n'a pas été créé correctement. Tentative de récupération échouée.",
-          })
-        } else if (error.message.includes('permission') || error.message.includes('denied')) {
-          logger.warn('Permission error detected', { userId })
-
-          if (retryCount < MAX_RETRIES) {
-            logger.debug('Retrying after permission error', { attempt: retryCount + 1 })
-            await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY * (retryCount + 1)))
-            return loadProfile(userId, retryCount + 1)
-          }
-
-          setProfileError({
-            type: 'permission',
-            message: 'Connexion à la base de données impossible',
-            details: 'permission denied for table profiles\n\nVérifiez votre connexion Internet et réessayez dans quelques instants.',
-          })
-        } else {
-          setProfileError({
-            type: 'database',
-            message: 'Erreur de base de données',
-            details: error.message,
-          })
-        }
-
-        throw error
-      }
-
-      if (!data) {
-        logger.warn('No profile found for user', { userId })
-
-        if (retryCount === 0) {
-          logger.info('Attempting profile recovery', { userId })
-          const recovered = await attemptProfileRecovery(userId)
-          if (recovered) {
-            return loadProfile(userId, 1)
-          }
-        }
-
-        if (retryCount < MAX_RETRIES) {
-          logger.debug('Retrying profile load', { delay: RETRY_DELAY * (retryCount + 1) })
-          await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY * (retryCount + 1)))
-          return loadProfile(userId, retryCount + 1)
-        }
-
-        logger.error('Profile not found after all retries', undefined, { userId })
-        setProfileError({
-          type: 'not_found',
-          message: 'Profil introuvable',
-          details: 'Impossible de trouver votre profil après plusieurs tentatives. Veuillez contacter le support.',
-        })
-        setState(prev => ({ ...prev, isLoading: false }))
-        return
-      }
-
-      logger.info('Profile loaded successfully', { userId, email: data.email })
-
-      const profileUser: User = {
-        id: data.id,
-        email: data.email || '',
-        firstName: data.first_name || '',
-        lastName: data.last_name || '',
-        companyName: data.company_name || '',
-        role: (data.role || 'USER') as 'USER' | 'INSURER' | 'ADMIN',
-        phone: data.phone || '',
-        avatar: data.avatar_url || '',
-        createdAt: data.created_at ? new Date(data.created_at) : new Date(),
-        updatedAt: data.updated_at ? new Date(data.updated_at) : new Date(),
-        address: data.address || '',
-        dateOfBirth: data.date_of_birth || '',
-        lastLogin: data.last_login ? new Date(data.last_login) : new Date(),
-        emailVerified: data.email_verified ?? true,
-        phoneVerified: data.phone_verified ?? !!data.phone,
-      }
-
-      // Update user state with profile data (allow updates even if user was not yet set)
-      setState(prev => {
-        const updatedUser = prev.user ? { ...prev.user, ...profileUser } : profileUser
-        return {
-          ...prev,
-          user: updatedUser,
-          isLoading: false,
-          profileError: null,
-        }
-      })
-
-      loadPermissions(userId)
-    } catch (error: unknown) {
-      logger.error('Error loading profile', error instanceof Error ? error : undefined, { userId })
-
-      if (retryCount < MAX_RETRIES) {
-        logger.debug('Retrying after error', { delay: RETRY_DELAY * (retryCount + 1) })
-        await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY * (retryCount + 1)))
-        return loadProfile(userId, retryCount + 1)
-      }
-
-      if (!state.profileError) {
-        setProfileError({
-          type: 'unknown',
-          message: 'Erreur inconnue',
-          details: error instanceof Error ? error.message : "Une erreur inattendue s'est produite.",
-        })
-      }
-      setState(prev => ({ ...prev, isLoading: false }))
+      const result = await profilePromise
+      profileLoadPromise.current.delete(userId)
+      return result
+    } catch (error) {
+      profileLoadPromise.current.delete(userId)
+      return buildUserFromSession(sessionUser)
     }
-  }
+  }, [supabase])
 
-  // Helper pour setProfileError
-  const setProfileError = (error: ProfileError | null) => {
-    setState(prev => ({ ...prev, profileError: error }))
-  }
+  // Construire un user depuis les métadonnées de session (fallback)
+  const buildUserFromSession = (sessionUser: Session['user']): User => ({
+    id: sessionUser.id,
+    email: sessionUser.email || '',
+    firstName: sessionUser.user_metadata?.first_name || '',
+    lastName: sessionUser.user_metadata?.last_name || '',
+    companyName: sessionUser.user_metadata?.company || '',
+    role: (sessionUser.user_metadata?.role || 'USER') as 'USER' | 'INSURER' | 'ADMIN',
+    phone: sessionUser.phone || '',
+    avatar: sessionUser.user_metadata?.avatar_url || '',
+    createdAt: new Date(sessionUser.created_at),
+    updatedAt: new Date(),
+    address: '',
+    dateOfBirth: '',
+    lastLogin: new Date(),
+    emailVerified: !!sessionUser.email_confirmed_at,
+    phoneVerified: !!sessionUser.phone,
+  })
 
-  // Fonction pour récupérer le profil depuis session
+  // Récupération du profil depuis les métadonnées session
   const attemptProfileRecovery = async (userId: string): Promise<boolean> => {
     try {
       logger.info('Attempting to create profile for user', { userId })
@@ -272,143 +317,224 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }
 
+  // ============================================
+  // INITIALISATION: Un seul chemin, sans race condition
+  // ============================================
   useEffect(() => {
-    const loadingTimeout = setTimeout(() => {
-      setState(prev => {
-        if (prev.isLoading) {
-          console.warn('Auth loading timeout - forcing loading to false')
-          return { ...prev, isLoading: false }
-        }
-        return prev
-      })
-    }, 10000)
+    let isMounted = true
 
-    let disposed = false
-
-    const buildUserFromSession = (sessionUser: Session['user']): User => ({
-      id: sessionUser.id,
-      email: sessionUser.email || '',
-      firstName: sessionUser.user_metadata?.first_name || '',
-      lastName: sessionUser.user_metadata?.last_name || '',
-      companyName: sessionUser.user_metadata?.company || '',
-      role: (sessionUser.user_metadata?.role || 'USER') as 'USER' | 'INSURER' | 'ADMIN',
-      phone: sessionUser.phone || '',
-      avatar: sessionUser.user_metadata?.avatar_url || '',
-      createdAt: new Date(sessionUser.created_at),
-      updatedAt: new Date(),
-    })
-
-    const handleSessionChange = async (session: Session | null, source: 'initial' | 'event') => {
-      if (disposed) {
-        return
-      }
-
-      // Pour les initialisations initiales, ne traiter qu'une fois
-      if (source === 'initial') {
-        if (initializedSession) {
-          return
-        }
-        setInitializedSession(true)
-      }
-
-      if (!session?.user) {
+    // Timeout de sécurité: forcer isLoading à false après 8 secondes
+    const safetyTimeout = setTimeout(() => {
+      if (isMounted && stateRef.current.isLoading && stateRef.current.authStatus === 'initializing') {
+        logger.warn('Auth initialization timeout - forcing completion')
         setState({
-          user: null,
-          isAuthenticated: false,
           isLoading: false,
-          permissions: [],
-          profileError: null,
+          authStatus: stateRef.current.isAuthenticated ? 'authenticated' : 'error',
+          profileError: {
+            type: 'unknown',
+            message: "Délai d'initialisation dépassé",
+            details: "L'initialisation a pris trop de temps. Certaines fonctionnalités peuvent être limitées.",
+          }
         })
+      }
+    }, 8000)
+
+    // Fonction principale d'initialisation
+    const initializeAuth = async () => {
+      // Éviter les initialisations multiples
+      if (initializationInProgress.current) {
+        logger.debug('Auth initialization already in progress')
         return
       }
 
-      const user = buildUserFromSession(session.user)
+      initializationInProgress.current = true
 
-      setState(prev => ({
-        ...prev,
-        user,
-        isAuthenticated: true,
-        isLoading: true,
-        profileError: null,
-      }))
-
-      await loadProfile(session.user.id)
-    }
-
-    const initializeSession = async () => {
       try {
-        const {
-          data: { session },
-          error,
-        } = await supabase.auth.getSession()
+        logger.debug('Starting auth initialization')
+
+        // 1. Récupérer la session depuis Supabase
+        const { data: { session }, error } = await supabase.auth.getSession()
 
         if (error) {
           logger.warn('Initial session fetch warning:', error)
         }
 
-        await handleSessionChange(session, 'initial')
+        if (!session?.user) {
+          // Pas de session = utilisateur non connecté
+          if (isMounted) {
+            setState({
+              user: null,
+              isAuthenticated: false,
+              isLoading: false,
+              permissions: [],
+              profileError: null,
+              authStatus: 'unauthenticated',
+            })
+          }
+          return
+        }
+
+        // 2. Créer l'utilisateur basique depuis la session
+        const sessionId = session.user.id
+        currentSessionId.current = sessionId
+
+        // 3. Charger le profil complet avec retry
+        const profileUser = await loadProfile(sessionId, session.user)
+
+        // 4. Charger les permissions (sans bloquer)
+        loadPermissions(sessionId)
+          .then(permissions => {
+            if (isMounted) {
+              setState({ permissions })
+            }
+          })
+          .catch(err => {
+            logger.warn('Failed to load permissions:', err)
+          })
+
+        // 5. Finaliser l'état
+        if (isMounted && currentSessionId.current === sessionId) {
+          setState({
+            user: profileUser,
+            isAuthenticated: true,
+            isLoading: false,
+            profileError: null,
+            authStatus: 'authenticated',
+          })
+
+          logger.info('Auth initialized successfully', {
+            userId: sessionId,
+            role: profileUser.role,
+            email: profileUser.email
+          })
+        }
       } catch (error) {
-        logger.error('Error fetching initial session', error)
-        setState(prev => ({ ...prev, isLoading: false }))
-        setInitializedSession(true)
+        logger.error('Error during auth initialization:', error)
+        if (isMounted) {
+          setState({
+            user: null,
+            isAuthenticated: false,
+            isLoading: false,
+            permissions: [],
+            profileError: {
+              type: 'unknown',
+              message: "Erreur d'initialisation",
+              details: error instanceof Error ? error.message : "Une erreur inattendue s'est produite",
+            },
+            authStatus: 'error',
+          })
+        }
+      } finally {
+        initializationInProgress.current = false
       }
     }
 
-    initializeSession()
+    // Lancer l'initialisation
+    initializeAuth()
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state changed:', event, session?.user?.id)
+    // 6. S'abonner aux changements d'auth (pour SIGNED_IN, SIGNED_OUT, TOKEN_REFRESHED)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      logger.debug('Auth state event:', event, session?.user?.id)
 
-      if (event === 'SIGNED_IN' || (event === 'INITIAL_SESSION' && session?.user)) {
-        await handleSessionChange(session, 'event')
-      } else if (event === 'SIGNED_OUT') {
-        setState({
-          user: null,
-          isAuthenticated: false,
-          isLoading: false,
-          permissions: [],
-          profileError: null,
-        })
-      } else if (event === 'TOKEN_REFRESHED' && session?.user) {
-        loadPermissions(session.user.id)
-      } else if (event === 'INITIAL_SESSION' && !session) {
-        setState(prev => ({
-          ...prev,
-          user: null,
-          isAuthenticated: false,
-          isLoading: false,
-          profileError: null,
-        }))
+      if (!isMounted) return
+
+      switch (event) {
+        case 'SIGNED_IN':
+          if (session?.user) {
+            const userId = session.user.id
+            currentSessionId.current = userId
+
+            setState({ isLoading: true, authStatus: 'initializing' })
+
+            const profileUser = await loadProfile(userId, session.user)
+            const permissions = await loadPermissions(userId)
+
+            setState({
+              user: profileUser,
+              isAuthenticated: true,
+              isLoading: false,
+              permissions,
+              profileError: null,
+              authStatus: 'authenticated',
+            })
+          }
+          break
+
+        case 'SIGNED_OUT':
+          // Nettoyer le cache
+          if (stateRef.current.user?.id) {
+            permissionCache.invalidateUser(stateRef.current.user.id)
+          }
+          profileLoadPromise.current.clear()
+          currentSessionId.current = null
+
+          setState({
+            user: null,
+            isAuthenticated: false,
+            isLoading: false,
+            permissions: [],
+            profileError: null,
+            authStatus: 'unauthenticated',
+          })
+          break
+
+        case 'TOKEN_REFRESHED':
+          if (session?.user && stateRef.current.isAuthenticated) {
+            // Mettre à jour les permissions en arrière-plan
+            loadPermissions(session.user.id).then(permissions => {
+              if (isMounted) {
+                setState({ permissions })
+              }
+            })
+          }
+          break
+
+        case 'USER_UPDATED':
+          if (session?.user && stateRef.current.isAuthenticated) {
+            // Mettre à jour les métadonnées utilisateur
+            setState({
+              user: stateRef.current.user ? {
+                ...stateRef.current.user,
+                firstName: session.user.user_metadata?.first_name || stateRef.current.user.firstName,
+                lastName: session.user.user_metadata?.last_name || stateRef.current.user.lastName,
+                avatar: session.user.user_metadata?.avatar_url || stateRef.current.user.avatar,
+              } : null
+            })
+          }
+          break
       }
     })
 
+    // Cleanup
     return () => {
-      disposed = true
-      setInitializedSession(false) // Réinitialiser pour les prochains montages
+      isMounted = false
+      clearTimeout(safetyTimeout)
       subscription.unsubscribe()
-      clearTimeout(loadingTimeout)
     }
-  }, [])
+  }, [loadProfile, loadPermissions])
 
+  // ============================================
+  // LOGIN: Simplifié avec état garanti
+  // ============================================
   const login = async (email: string, password: string, securityContextData?: any) => {
     logger.auth('🔐 AuthContext.login appelé avec:', email)
-    setState(prev => ({ ...prev, isLoading: true, profileError: null }))
+    setState({ isLoading: true, authStatus: 'initializing', profileError: null })
 
     try {
       const response = await authService.login({ email, password })
       logger.auth('✅ authService.login réussi:', response.user)
 
-      setState(prev => ({
-        ...prev,
+      // Charger les permissions en arrière-plan (ne pas bloquer)
+      loadPermissions(response.user.id).then(permissions => {
+        setState({ permissions })
+      })
+
+      setState({
         user: response.user,
         isAuthenticated: true,
         isLoading: false,
-      }))
-
-      // Charger les permissions en arrière-plan
-      loadPermissions(response.user.id)
+        authStatus: 'authenticated',
+      })
 
       return {
         user: response.user,
@@ -418,13 +544,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (error) {
       logger.error('❌ Erreur dans AuthContext.login:', error)
-      setState(prev => ({ ...prev, isLoading: false }))
+      setState({
+        isLoading: false,
+        authStatus: 'error',
+        profileError: {
+          type: 'unknown',
+          message: 'Erreur de connexion',
+          details: error instanceof Error ? error.message : 'Identifiants invalides',
+        }
+      })
       throw error
     }
   }
 
   const register = async (userData: Partial<User> & { password: string; role?: 'USER' | 'INSURER' | 'ADMIN' }) => {
-    setState(prev => ({ ...prev, isLoading: true, profileError: null }))
+    setState({ isLoading: true, authStatus: 'initializing', profileError: null })
     try {
       const registerData = {
         email: userData.email!,
@@ -436,22 +570,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       const response = await authService.register(registerData)
-      const permissions = await getUserPermissions(
-        response.user.id,
-        () => authService.getUserPermissions(response.user.id)
-      )
 
-      setState(prev => ({
-        ...prev,
+      // Charger les permissions en arrière-plan
+      loadPermissions(response.user.id).then(permissions => {
+        setState({ permissions })
+      })
+
+      setState({
         user: response.user,
         isAuthenticated: true,
         isLoading: false,
-        permissions,
-      }))
+        authStatus: 'authenticated',
+      })
 
       return response.user
     } catch (error) {
-      setState(prev => ({ ...prev, isLoading: false }))
+      setState({
+        isLoading: false,
+        authStatus: 'error',
+        profileError: {
+          type: 'unknown',
+          message: "Erreur d'inscription",
+          details: error instanceof Error ? error.message : "Impossible de créer le compte",
+        }
+      })
       throw error
     }
   }
@@ -465,21 +607,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }
 
+  // ============================================
+  // LOGOUT: Nettoyage complet et garanti
+  // ============================================
   const logout = async () => {
-    const userId = state.user?.id
+    const userId = stateRef.current.user?.id
 
-    // Invalidate permission cache first
+    logger.auth('🚪 AuthContext.logout appelé')
+
+    // 1. Invalider les caches
     if (userId) {
       permissionCache.invalidateUser(userId)
     }
-
-    // Clear all permission cache
     permissionCache.invalidateAll()
+    profileLoadPromise.current.clear()
+    currentSessionId.current = null
 
-    // Clear localStorage FIRST before Supabase signOut
-    // This prevents any refresh attempts during logout
+    // 2. Réinitialiser l'état immédiatement
+    setState({
+      user: null,
+      isAuthenticated: false,
+      isLoading: false,
+      permissions: [],
+      profileError: null,
+      authStatus: 'unauthenticated',
+    })
+
+    // 3. Nettoyer localStorage/sessionStorage
     try {
-      // Clear all Supabase-related keys from localStorage
       const keysToRemove: string[] = []
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i)
@@ -487,41 +642,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           keysToRemove.push(key)
         }
       }
-
       keysToRemove.forEach(key => {
-        try {
-          localStorage.removeItem(key)
-        } catch (e) {
-          // Ignore errors
-        }
+        try { localStorage.removeItem(key) } catch { /* ignore */ }
       })
-
-      // Also clear sessionStorage
       sessionStorage.clear()
     } catch (e) {
       logger.warn('Error clearing storage during logout:', e)
     }
 
-    // Reset state immediately
-    setState({
-      user: null,
-      isAuthenticated: false,
-      isLoading: false,
-      permissions: [],
-      profileError: null,
-    })
+    // 4. Vider le cache React Query
+    try {
+      queryClient.clear()
+    } catch (e) {
+      logger.warn('Error clearing React Query cache:', e)
+    }
 
-    // Clear React Query cache
-    queryClient.clear()
-
-    // Sign out from Supabase (after local cleanup)
+    // 5. Sign out from Supabase (non-bloquant)
     try {
       await supabase.auth.signOut()
     } catch (error) {
       logger.warn('Supabase signOut error (non-critical):', error)
     }
 
-    // Navigate to login
+    // 6. Naviguer vers login
     navigate('/auth/connexion', { replace: true })
   }
 
@@ -529,11 +672,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const updatedUser = await authService.updateProfile(userData)
 
-      setState(prev => ({
-        ...prev,
-        user: updatedUser,
-      }))
-
+      setState({ user: updatedUser })
       return updatedUser
     } catch (error) {
       logger.error('Update user error:', error)
@@ -549,28 +688,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         () => authService.getUserPermissions(response.user.id)
       )
 
-      setState(prev => ({
-        ...prev,
+      setState({
         user: response.user,
         isAuthenticated: true,
         isLoading: false,
         permissions,
-      }))
+        authStatus: 'authenticated',
+      })
     } catch (error) {
       logger.error('Refresh token error:', error)
-      setState(prev => ({
-        ...prev,
+      setState({
         user: null,
         isAuthenticated: false,
         isLoading: false,
         permissions: [],
-      }))
+        authStatus: 'unauthenticated',
+      })
       throw error
     }
   }
 
   const hasPermission = (permission: string, action: 'read' | 'write' | 'delete' = 'read'): boolean => {
-    const perm = state.permissions.find(p => p.permission_name === permission)
+    const perm = stateRef.current.permissions.find(p => p.permission_name === permission)
 
     if (!perm) {
       return false
@@ -607,20 +746,44 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }
 
   const clearProfileError = () => {
-    setProfileError(null)
+    setState({ profileError: null })
   }
 
   const refreshProfile = async () => {
-    if (state.user) {
-      setState(prev => ({ ...prev, isLoading: true, profileError: null }))
-      await loadProfile(state.user.id)
+    if (stateRef.current.user) {
+      setState({ isLoading: true, profileError: null })
+
+      try {
+        const { data: { user: sessionUser } } = await supabase.auth.getUser()
+        if (sessionUser) {
+          const profileUser = await loadProfile(sessionUser.id, sessionUser)
+          const permissions = await loadPermissions(sessionUser.id)
+
+          setState({
+            user: profileUser,
+            permissions,
+            isLoading: false,
+            profileError: null,
+          })
+        }
+      } catch (error) {
+        logger.error('Error refreshing profile:', error)
+        setState({
+          isLoading: false,
+          profileError: {
+            type: 'unknown',
+            message: 'Erreur lors du rafraîchissement du profil',
+            details: error instanceof Error ? error.message : undefined,
+          }
+        })
+      }
     }
   }
 
   return (
     <AuthContext.Provider
       value={{
-        ...state,
+        ...getState(),
         login,
         register,
         loginWithOAuth,

@@ -73,12 +73,12 @@ export const Header: React.FC = () => {
           </div>
 
           {/* Desktop Navigation */}
-          <nav className='hidden lg:flex items-center gap-6' aria-label='Navigation principale'>
+          <nav className='hidden md:flex items-center gap-4 md:gap-6' aria-label='Navigation principale'>
             {navigation.map((item) => (
               <Link
                 key={item.name}
                 to={item.href}
-                className={`text-sm font-semibold uppercase tracking-wide transition-colors relative after:absolute after:left-0 after:-bottom-1 after:h-0.5 after:w-full after:origin-left after:scale-x-0 after:bg-accent after:transition-transform ${
+                className={`text-xs md:text-sm font-semibold uppercase tracking-wide transition-colors relative after:absolute after:left-0 after:-bottom-1 after:h-0.5 after:w-full after:origin-left after:scale-x-0 after:bg-accent after:transition-transform ${
                   location.pathname === item.href
                     ? 'text-foreground after:scale-x-100'
                     : 'text-muted-foreground hover:text-foreground hover:after:scale-x-100'
@@ -91,11 +91,11 @@ export const Header: React.FC = () => {
           </nav>
 
           {/* Desktop User Menu */}
-          <div className='hidden lg:flex items-center space-x-3'>
+          <div className='hidden md:flex items-center space-x-2 md:space-x-3'>
             {isAuthenticated && user ? (
               <>
-                <div className='flex items-center space-x-3'>
-                  <span className='text-sm text-foreground'>Bonjour, {user.firstName}</span>
+                <div className='flex items-center space-x-2 md:space-x-3'>
+                  <span className='hidden sm:inline text-xs md:text-sm text-foreground'>Bonjour, {user.firstName}</span>
                   <ThemeToggle />
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -130,15 +130,15 @@ export const Header: React.FC = () => {
                 </div>
               </>
             ) : (
-              <div className='flex items-center space-x-3'>
+              <div className='flex items-center space-x-2 md:space-x-3'>
                 <ThemeToggle />
                 <Link to='/auth/connexion'>
-                  <Button variant='ghost' size='sm' className='font-semibold text-foreground'>
+                  <Button variant='ghost' size='sm' className='font-semibold text-foreground text-xs md:text-sm'>
                     Connexion
                   </Button>
                 </Link>
                 <Link to='/auth/inscription'>
-                  <Button size='sm' className='font-semibold bg-secondary text-secondary-foreground'>
+                  <Button size='sm' className='font-semibold bg-secondary text-secondary-foreground text-xs md:text-sm'>
                     S'inscrire
                   </Button>
                 </Link>
@@ -147,12 +147,10 @@ export const Header: React.FC = () => {
           </div>
 
           {/* Mobile menu button */}
-          <div className='lg:hidden flex items-center space-x-2'>
-            <Link to='/comparer'>
-              <Button size='sm' className='bg-accent text-accent-foreground font-semibold px-4'>
-                Passe à l'action
-              </Button>
-            </Link>
+          <div className='md:hidden flex items-center space-x-2'>
+            {isAuthenticated && (
+              <ThemeToggle />
+            )}
             <Button
               variant='ghost'
               size='sm'
@@ -160,8 +158,9 @@ export const Header: React.FC = () => {
               aria-label={isMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
               aria-expanded={isMenuOpen}
               aria-controls='mobile-menu'
+              className='p-2'
             >
-              {isMenuOpen ? <X className='h-6 w-6' /> : <Menu className='h-6 w-6' />}
+              {isMenuOpen ? <X className='h-5 w-5' /> : <Menu className='h-5 w-5' />}
             </Button>
           </div>
         </div>
@@ -171,16 +170,16 @@ export const Header: React.FC = () => {
       {isMenuOpen && (
         <div
           id='mobile-menu'
-          className='lg:hidden bg-card/95 backdrop-blur-xl border-t border-border/50'
+          className='md:hidden bg-card/95 backdrop-blur-xl border-t border-border/50'
           role='navigation'
           aria-label='Menu principal mobile'
         >
-          <div className='px-4 pt-4 pb-6 space-y-3'>
+          <div className='px-3 sm:px-4 pt-4 pb-6 space-y-2 sm:space-y-3 max-h-[80vh] overflow-y-auto'>
             {navigation.map((item) => (
               <Link
                 key={item.name}
                 to={item.href}
-                className={`block px-4 py-3 rounded-xl text-base font-semibold uppercase tracking-wide ${
+                className={`block px-3 sm:px-4 py-3 rounded-xl text-sm sm:text-base font-semibold uppercase tracking-wide ${
                   location.pathname === item.href
                     ? 'bg-primary text-primary-foreground'
                     : 'text-foreground bg-muted hover:bg-muted/80'
@@ -216,6 +215,15 @@ export const Header: React.FC = () => {
                     Déconnexion
                   </button>
                 </div>
+                <div className='border-t pt-4 mt-4'>
+                  <Link
+                    to='/comparer'
+                    className='block px-4 py-3 rounded-xl text-center font-semibold bg-accent text-accent-foreground'
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Passe à l'action
+                  </Link>
+                </div>
               </>
             ) : (
               <div className='border-t pt-4 mt-4 space-y-3'>
@@ -235,15 +243,15 @@ export const Header: React.FC = () => {
                   {/* cspell:ignore S'inscrire */}
                   S'inscrire
                 </Link>
+                <Link
+                  to='/comparer'
+                  className='block px-4 py-3 rounded-xl text-center font-semibold bg-accent text-accent-foreground'
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Passe à l'action
+                </Link>
               </div>
             )}
-            <Link
-              to='/comparer'
-              className='block px-4 py-3 rounded-xl text-center font-semibold bg-accent text-accent-foreground'
-              onClick={() => setIsMenuOpen(false)}
-            >
-              Passe à l'action
-            </Link>
           </div>
         </div>
       )}

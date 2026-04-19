@@ -416,19 +416,85 @@ All colors MUST be HSL.
 
   /* Grilles spécialisées pour l'administration */
   .admin-stats-grid {
-    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4;
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4;
   }
 
   .admin-dashboard-grid {
-    @apply grid grid-cols-1 lg:grid-cols-3 gap-6;
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6;
   }
 
   .admin-two-column {
-    @apply grid grid-cols-1 lg:grid-cols-2 gap-6;
+    @apply grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6;
   }
 
   .admin-three-column {
-    @apply grid grid-cols-1 md:grid-cols-3 gap-4;
+    @apply grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4;
+  }
+
+  .admin-four-column {
+    @apply grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4;
+  }
+
+  /* Tables responsives pour l'admin */
+  .admin-table-responsive {
+    @apply overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 shadow-sm rounded-lg border;
+  }
+
+  .admin-table-dense {
+    @apply overflow-x-auto -mx-2 px-2 sm:mx-0 sm:px-0 text-sm;
+  }
+
+  .admin-table-compact {
+    @apply overflow-x-auto text-xs sm:text-sm;
+  }
+
+  /* Cartes responsives pour l'admin */
+  .admin-card-responsive {
+    @apply p-4 sm:p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200;
+  }
+
+  .admin-card-compact {
+    @apply p-3 sm:p-4 rounded-md shadow-sm;
+  }
+
+  .admin-card-stats {
+    @apply p-4 sm:p-6 rounded-lg shadow-sm bg-card;
+  }
+
+  /* En-têtes responsives pour l'admin */
+  .admin-header-responsive {
+    @apply flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6;
+  }
+
+  .admin-header-compact {
+    @apply flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4 mb-4;
+  }
+
+  /* Filtres responsifs pour l'admin */
+  .admin-filters-grid {
+    @apply grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3;
+  }
+
+  .admin-filters-flex {
+    @apply flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 flex-wrap;
+  }
+
+  /* Actions responsives pour l'admin */
+  .admin-actions-responsive {
+    @apply flex flex-col sm:flex-row gap-2 sm:gap-3;
+  }
+
+  .admin-actions-reverse {
+    @apply flex flex-col sm:flex-row-reverse gap-2 sm:gap-3;
+  }
+
+  /* Grilles de statistiques responsives */
+  .admin-stats-overview {
+    @apply grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 sm:gap-4;
+  }
+
+  .admin-stats-detailed {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4;
   }
 
   /* Actions responsives */

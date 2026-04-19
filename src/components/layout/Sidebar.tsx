@@ -91,8 +91,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ userRole }) => {
 
   return (
     <div
-      className={`bg-card shadow-lg border-r transition-all duration-300 h-screen ${
-        isCollapsed ? 'w-16' : 'w-64'
+      className={`bg-card shadow-lg border-r transition-all duration-300 h-screen overflow-y-auto ${
+        isCollapsed ? 'w-16' : 'w-64 sm:w-72'
       }`}
     >
       <div className='flex flex-col h-full'>
@@ -123,25 +123,25 @@ export const Sidebar: React.FC<SidebarProps> = ({ userRole }) => {
         </div>
 
         {/* Navigation */}
-        <nav className='flex-1 p-4 space-y-2'>
+        <nav className='flex-1 p-2 sm:p-4 space-y-1 sm:space-y-2'>
           {items.map((item) => {
             const isActive = location.pathname === item.href
             return (
               <Link
                 key={item.name}
                 to={item.href}
-                className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors duration-200 ${
+                className={`flex items-center space-x-2 sm:space-x-3 px-2 sm:px-3 py-1.5 sm:py-2 rounded-md sm:rounded-lg transition-colors duration-200 text-xs sm:text-sm ${
                   isActive
                     ? 'bg-primary text-primary-foreground'
                     : 'text-muted-foreground hover:bg-accent hover:text-foreground'
                 }`}
               >
-                <item.icon className={`h-5 w-5 ${isCollapsed ? 'mx-auto' : ''}`} />
+                <item.icon className={`h-4 w-4 sm:h-5 sm:w-5 ${isCollapsed ? 'mx-auto' : ''}`} />
                 {!isCollapsed && (
                   <>
-                    <span className='flex-1 text-sm font-medium'>{item.name}</span>
+                    <span className='flex-1 text-xs sm:text-sm font-medium'>{item.name}</span>
                     {item.badge && (
-                      <span className='bg-red-500 text-white text-xs px-2 py-1 rounded-full'>
+                      <span className='bg-red-500 text-white text-xs px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full'>
                         {item.badge}
                       </span>
                     )}

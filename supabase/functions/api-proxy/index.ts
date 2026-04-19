@@ -188,7 +188,7 @@ serve(async (req: Request) => {
     // Récupérer la réponse
     const responseData = await response.text();
     let data: any;
-    let contentType = response.headers.get('content-type') || '';
+    const contentType = response.headers.get('content-type') || '';
 
     // Parser la réponse selon le type de contenu
     if (contentType.includes('application/json')) {

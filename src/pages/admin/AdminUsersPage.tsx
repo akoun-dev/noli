@@ -137,25 +137,25 @@ export const AdminUsersPage: React.FC = () => {
       <AdminBreadcrumb />
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="admin-header-responsive">
         <div>
-          <h1 className="text-2xl font-bold">Gestion des Utilisateurs</h1>
-          <p className="text-muted-foreground">Gérez tous les utilisateurs de la plateforme</p>
+          <h1 className="text-xl sm:text-2xl font-bold">Gestion des Utilisateurs</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">Gérez tous les utilisateurs de la plateforme</p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-2">
-          <Button variant="outline" onClick={handleExportUsers}>
-            <Download className="h-4 w-4 mr-2" />
-            Exporter
+        <div className="flex flex-col sm:flex-row gap-1 sm:gap-2">
+          <Button variant="outline" size="sm" onClick={handleExportUsers}>
+            <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">Exporter</span>
           </Button>
-          <Button variant="outline" onClick={importUsers}>
-            <Upload className="h-4 w-4 mr-2" />
-            Importer
+          <Button variant="outline" size="sm" onClick={importUsers}>
+            <Upload className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">Importer</span>
           </Button>
           <Dialog>
             <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Ajouter un utilisateur
+              <Button size="sm">
+                <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Ajouter un utilisateur</span>
               </Button>
             </DialogTrigger>
             <DialogContent className="responsive-modal-lg">
@@ -169,11 +169,11 @@ export const AdminUsersPage: React.FC = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="admin-stats-detailed">
         {stats && (
           <>
             <Card>
-              <CardContent className="p-6">
+              <CardContent className="p-4 sm:p-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Total Utilisateurs</p>
@@ -185,7 +185,7 @@ export const AdminUsersPage: React.FC = () => {
             </Card>
 
             <Card>
-              <CardContent className="p-6">
+              <CardContent className="p-4 sm:p-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Utilisateurs Actifs</p>
@@ -197,7 +197,7 @@ export const AdminUsersPage: React.FC = () => {
             </Card>
 
             <Card>
-              <CardContent className="p-6">
+              <CardContent className="p-4 sm:p-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">En attente</p>
@@ -209,7 +209,7 @@ export const AdminUsersPage: React.FC = () => {
             </Card>
 
             <Card>
-              <CardContent className="p-6">
+              <CardContent className="p-4 sm:p-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Suspendus</p>
@@ -226,13 +226,13 @@ export const AdminUsersPage: React.FC = () => {
       {/* Filters and Search */}
       <Card>
         <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <CardTitle>Liste des Utilisateurs</CardTitle>
+          <div className="admin-header-responsive">
+            <CardTitle className="text-lg sm:text-xl">Liste des Utilisateurs</CardTitle>
             {selectedUsers.length > 0 && (
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+              <div className="admin-actions-responsive sm:items-center">
                 <span className="text-sm text-muted-foreground">{selectedUsers.length} sélectionnés</span>
                 <Select onValueChange={(value) => handleBulkAction(value)}>
-                  <SelectTrigger className="w-40">
+                  <SelectTrigger className="w-full sm:w-40">
                     <SelectValue placeholder="Actions groupées" />
                   </SelectTrigger>
                   <SelectContent>
@@ -245,41 +245,43 @@ export const AdminUsersPage: React.FC = () => {
               </div>
             )}
           </div>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
+          <div className="admin-filters-flex">
+            <div className="flex-1 min-w-[200px]">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 h-4 w-4" />
                 <Input
-                  placeholder="Rechercher par nom, email..."
+                  placeholder="Rechercher..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 w-full"
                 />
               </div>
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Statut" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tous les statuts</SelectItem>
-                <SelectItem value="active">Actifs</SelectItem>
-                <SelectItem value="inactive">Inactifs</SelectItem>
-                <SelectItem value="pending">En attente</SelectItem>
-                <SelectItem value="suspended">Suspendus</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={roleFilter} onValueChange={setRoleFilter}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Rôle" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tous les rôles</SelectItem>
-                <SelectItem value="USER">Utilisateurs</SelectItem>
-                <SelectItem value="INSURER">Assureurs</SelectItem>
-                <SelectItem value="ADMIN">Admins</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="admin-actions-responsive">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full sm:w-32">
+                  <SelectValue placeholder="Statut" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous</SelectItem>
+                  <SelectItem value="active">Actif</SelectItem>
+                  <SelectItem value="inactive">Inactif</SelectItem>
+                  <SelectItem value="pending">En attente</SelectItem>
+                  <SelectItem value="suspended">Suspendu</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={roleFilter} onValueChange={setRoleFilter}>
+                <SelectTrigger className="w-full sm:w-32">
+                  <SelectValue placeholder="Rôle" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous</SelectItem>
+                  <SelectItem value="USER">Utilisateur</SelectItem>
+                  <SelectItem value="INSURER">Assureur</SelectItem>
+                  <SelectItem value="ADMIN">Admin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -289,11 +291,11 @@ export const AdminUsersPage: React.FC = () => {
               <span className="ml-2">Chargement des utilisateurs...</span>
             </div>
           ) : (
-            <div className="responsive-table-wrapper">
-              <table className="w-full">
+            <div className="admin-table-responsive">
+              <table className="w-full min-w-[800px]">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left p-4">
+                  <th className="text-left p-2 sm:p-4">
                     <input
                       type="checkbox"
                       onChange={(e) => {
@@ -305,12 +307,12 @@ export const AdminUsersPage: React.FC = () => {
                       }}
                     />
                   </th>
-                  <th className="text-left p-4">Utilisateur</th>
-                  <th className="text-left p-4">Contact</th>
-                  <th className="text-left p-4">Rôle</th>
-                  <th className="text-left p-4">Statut</th>
-                  <th className="text-left p-4">Activité</th>
-                  <th className="text-left p-4">Actions</th>
+                  <th className="text-left p-2 sm:p-4">Utilisateur</th>
+                  <th className="text-left p-2 sm:p-4">Contact</th>
+                  <th className="text-left p-2 sm:p-4">Rôle</th>
+                  <th className="text-left p-2 sm:p-4">Statut</th>
+                  <th className="text-left p-2 sm:p-4">Activité</th>
+                  <th className="text-left p-2 sm:p-4">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -379,11 +381,11 @@ export const AdminUsersPage: React.FC = () => {
                         </div>
                       </div>
                     </td>
-                    <td className="p-4">
-                      <div className="flex flex-col sm:flex-row gap-2">
+                    <td className="p-2 sm:p-4">
+                      <div className="flex flex-col sm:flex-row gap-1 sm:gap-2">
                         <Dialog>
                           <DialogTrigger asChild>
-                            <Button variant="outline" size="sm">
+                            <Button variant="outline" size="xs sm:size-sm">
                               <Eye className="h-3 w-3" />
                             </Button>
                           </DialogTrigger>
@@ -396,7 +398,7 @@ export const AdminUsersPage: React.FC = () => {
                         </Dialog>
                         <Dialog>
                           <DialogTrigger asChild>
-                            <Button variant="outline" size="sm" onClick={() => setSelectedUser(user)}>
+                            <Button variant="outline" size="xs sm:size-sm" onClick={() => setSelectedUser(user)}>
                               <Edit className="h-3 w-3" />
                             </Button>
                           </DialogTrigger>
@@ -409,7 +411,7 @@ export const AdminUsersPage: React.FC = () => {
                         </Dialog>
                         <Button
                           variant="outline"
-                          size="sm"
+                          size="xs sm:size-sm"
                           onClick={() => handleUserAction(user.status === 'active' ? 'suspend' : 'activate', user.id)}
                           disabled={bulkUpdateUsers.isPending}
                         >
@@ -423,7 +425,7 @@ export const AdminUsersPage: React.FC = () => {
                         </Button>
                         <Button
                           variant="outline"
-                          size="sm"
+                          size="xs sm:size-sm"
                           onClick={() => {
                             setSelectedUser(user);
                             setShowDeleteDialog(true);

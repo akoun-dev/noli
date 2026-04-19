@@ -214,39 +214,39 @@ export const AdminDashboardPage: React.FC = () => {
   return (
     <div className='space-y-6 w-full'>
       {/* En-tête avec actions rapides */}
-      <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4'>
+      <div className='admin-header-responsive'>
         <div>
-          <h1 className='text-2xl font-bold text-foreground'>Tableau de Bord</h1>
-          <p className='text-muted-foreground'>Supervision en temps réel de la plateforme NOLI</p>
+          <h1 className='text-xl sm:text-2xl font-bold text-foreground'>Tableau de Bord</h1>
+          <p className='text-sm sm:text-base text-muted-foreground'>Supervision en temps réel de la plateforme NOLI</p>
         </div>
-        <div className='flex items-center gap-2'>
-          <Button variant='outline' size='sm' onClick={handleRefresh}>
-            <RefreshCw className='h-4 w-4 mr-2' />
-            Actualiser
+        <div className='flex items-center gap-1 sm:gap-2'>
+          <Button variant='outline' size='xs sm:size-sm' onClick={handleRefresh}>
+            <RefreshCw className='h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2' />
+            <span className='hidden sm:inline'>Actualiser</span>
           </Button>
-          <Button variant='outline' size='sm'>
-            <Settings className='h-4 w-4 mr-2' />
-            Paramètres
+          <Button variant='outline' size='xs sm:size-sm'>
+            <Settings className='h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2' />
+            <span className='hidden sm:inline'>Paramètres</span>
           </Button>
         </div>
       </div>
 
       {/* Actions rapides */}
-      <div className='grid grid-cols-2 sm:grid-cols-4 gap-3'>
-        <Button className='h-16 flex-col' variant='outline'>
-          <Users className='h-5 w-5 mb-1' />
+      <div className='admin-stats-overview'>
+        <Button className='h-12 sm:h-16 flex-col p-2 sm:p-3' variant='outline'>
+          <Users className='h-4 w-4 sm:h-5 sm:w-5 mb-1' />
           <span className='text-xs'>Utilisateurs</span>
         </Button>
-        <Button className='h-16 flex-col' variant='outline'>
-          <Shield className='h-5 w-5 mb-1' />
+        <Button className='h-12 sm:h-16 flex-col p-2 sm:p-3' variant='outline'>
+          <Shield className='h-4 w-4 sm:h-5 sm:w-5 mb-1' />
           <span className='text-xs'>Assureurs</span>
         </Button>
-        <Button className='h-16 flex-col' variant='outline'>
-          <FileText className='h-5 w-5 mb-1' />
+        <Button className='h-12 sm:h-16 flex-col p-2 sm:p-3' variant='outline'>
+          <FileText className='h-4 w-4 sm:h-5 sm:w-5 mb-1' />
           <span className='text-xs'>Devis</span>
         </Button>
-        <Button className='h-16 flex-col' variant='outline'>
-          <Bell className='h-5 w-5 mb-1' />
+        <Button className='h-12 sm:h-16 flex-col p-2 sm:p-3' variant='outline'>
+          <Bell className='h-4 w-4 sm:h-5 sm:w-5 mb-1' />
           <span className='text-xs'>Alertes</span>
         </Button>
       </div>
@@ -410,7 +410,7 @@ export const AdminDashboardPage: React.FC = () => {
           </div>
 
           {/* System Health */}
-          <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6'>
+          <div className='admin-three-column'>
             {healthLoading ? (
               <div className='col-span-full'>
                 <Card>
@@ -427,18 +427,18 @@ export const AdminDashboardPage: React.FC = () => {
             ) : systemHealth ? (
               <>
                 <Card>
-                  <CardContent className='p-6'>
+                  <CardContent className='p-4 sm:p-6'>
                     <div className='flex items-center justify-between'>
                       <div>
                         <p className='text-sm font-medium text-muted-foreground'>
                           Performance système
                         </p>
-                        <p className='text-2xl font-bold text-green-600 dark:text-green-400'>
+                        <p className='text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400'>
                           {systemHealth.uptime}%
                         </p>
                       </div>
-                      <div className='bg-green-100 dark:bg-green-900/20 p-3 rounded-lg'>
-                        <Activity className='h-6 w-6 text-green-600 dark:text-green-400' />
+                      <div className='bg-green-100 dark:bg-green-900/20 p-2 sm:p-3 rounded-lg'>
+                        <Activity className='h-4 w-4 sm:h-6 sm:w-6 text-green-600 dark:text-green-400' />
                       </div>
                     </div>
                     <div className='mt-4'>
@@ -553,12 +553,12 @@ export const AdminDashboardPage: React.FC = () => {
                   <p className='text-sm text-muted-foreground'>Chargement des statistiques...</p>
                 </div>
               ) : primaryMetrics.length > 0 ? (
-                <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-6'>
+                <div className='admin-stats-detailed'>
                   {primaryMetrics.map((stat, index) => (
-                    <div key={index} className='text-center p-4 border rounded-lg'>
-                      <stat.icon className={`h-8 w-8 mx-auto mb-2 ${stat.color}`} />
-                      <p className='text-2xl font-bold text-foreground'>{stat.value}</p>
-                      <p className='text-sm text-muted-foreground'>{stat.label}</p>
+                    <div key={index} className='text-center p-3 sm:p-4 border rounded-lg sm:rounded-xl'>
+                      <stat.icon className={`h-6 w-6 sm:h-8 sm:w-8 mx-auto mb-1 sm:mb-2 ${stat.color}`} />
+                      <p className='text-xl sm:text-2xl font-bold text-foreground'>{stat.value}</p>
+                      <p className='text-xs sm:text-sm text-muted-foreground'>{stat.label}</p>
                       <p className='text-xs text-green-600 dark:text-green-400'>{stat.change}</p>
                     </div>
                   ))}

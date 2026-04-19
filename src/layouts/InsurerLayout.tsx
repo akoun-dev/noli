@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from '@/components/layout/Sidebar';
+import { Header } from '@/components/common/Header';
 import { useAuth } from '@/contexts/AuthContext';
 import { NotificationSystem } from '@/components/insurer/NotificationSystem';
-import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { Button } from '@/components/ui/button';
+import { Menu, X } from 'lucide-react';
 
 export const InsurerLayout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -20,21 +22,34 @@ export const InsurerLayout: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="flex">
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Header global */}
+      <Header />
+
+      <div className="flex flex-1">
         {/* Sidebar - Desktop - Fixed */}
-        <div className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-50 lg:block lg:w-64">
+        <div className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-50 lg:block lg:w-64" style={{ top: '80px' }}>
           <Sidebar userRole="INSURER" />
         </div>
 
         {/* Mobile Sidebar Overlay */}
         {sidebarOpen && (
-          <div className="fixed inset-0 z-40 lg:hidden">
+          <div className="fixed inset-0 z-50 lg:hidden">
             <div
-              className="fixed inset-0 bg-gray-600 bg-opacity-75"
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm"
               onClick={() => setSidebarOpen(false)}
             />
-            <div className="fixed inset-y-0 left-0 w-64 bg-background shadow-lg border-r z-50">
+            <div className="fixed inset-y-0 left-0 w-72 bg-background shadow-xl z-50 overflow-y-auto animate-in slide-in-from-left duration-200">
+              <div className="flex items-center justify-between p-4 border-b">
+                <span className="font-semibold text-lg">Menu Assureur</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSidebarOpen(false)}
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
               <Sidebar userRole="INSURER" />
             </div>
           </div>
@@ -43,49 +58,44 @@ export const InsurerLayout: React.FC = () => {
         {/* Main Content */}
         <main className="flex-1 lg:pl-64">
           <div className="min-h-screen">
-            {/* Mobile Header */}
-            <div className="lg:hidden bg-card border-b px-4 py-3 flex items-center justify-between">
-              <button
+            {/* Mobile Sidebar Toggle */}
+            <div className="lg:hidden bg-card/80 backdrop-blur-sm border-b sticky top-[88px] z-40 px-4 py-2 flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => setSidebarOpen(true)}
-                className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent"
+                className="flex-1"
               >
-                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
-              <div className="flex items-center space-x-2">
-                <ThemeToggle />
-                <span className="text-sm font-medium text-foreground">
-                  Espace Assureur - {user?.firstName}
-                </span>
-                <NotificationSystem />
-              </div>
+                <Menu className="h-4 w-4 mr-2" />
+                Menu Assureur
+              </Button>
+              <NotificationSystem />
             </div>
 
             {/* Insurer Stats Bar */}
-            <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 sm:p-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                 <div className="text-center">
-                  <div className="text-2xl font-bold">156</div>
-                  <div className="text-blue-100 text-sm">Devis ce mois</div>
+                  <div className="text-xl sm:text-2xl font-bold">156</div>
+                  <div className="text-blue-100 text-xs sm:text-sm">Devis ce mois</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold">89%</div>
-                  <div className="text-blue-100 text-sm">Taux conversion</div>
+                  <div className="text-xl sm:text-2xl font-bold">89%</div>
+                  <div className="text-blue-100 text-xs sm:text-sm">Taux conversion</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold">2.4M</div>
-                  <div className="text-blue-100 text-sm">CA (FCFA)</div>
+                  <div className="text-xl sm:text-2xl font-bold">2.4M</div>
+                  <div className="text-blue-100 text-xs sm:text-sm">CA (FCFA)</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold">4.8</div>
-                  <div className="text-blue-100 text-sm">Note moyenne</div>
+                  <div className="text-xl sm:text-2xl font-bold">4.8</div>
+                  <div className="text-blue-100 text-xs sm:text-sm">Note moyenne</div>
                 </div>
               </div>
             </div>
 
             {/* Page Content */}
-            <div className="p-6">
+            <div className="p-4 sm:p-6">
               <Outlet />
             </div>
           </div>
