@@ -13,9 +13,9 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --font-display: "Klein", "Space Grotesk", "Nunito Sans", sans-serif;
-    --font-subtitle: "Nunito Sans", "Poppins", sans-serif;
-    --font-body: "Poppins", "Nunito Sans", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-display: 'Klein', 'Space Grotesk', 'Nunito Sans', sans-serif;
+    --font-subtitle: 'Nunito Sans', 'Poppins', sans-serif;
+    --font-body: 'Poppins', 'Nunito Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
 
     --background: 0 0% 100%; /* Blanc */
     --foreground: 120 2% 9%; /* Noir profond #171817 */
@@ -60,8 +60,13 @@ All colors MUST be HSL.
 
     --info: 188 48% 35%;
     --info-foreground: 0 0% 100%;
-    
-    --hero-gradient: linear-gradient(145deg, hsl(188 48% 92%) 0%, hsl(176 58% 90%) 35%, hsl(66 85% 80%) 100%);
+
+    --hero-gradient: linear-gradient(
+      145deg,
+      hsl(188 48% 92%) 0%,
+      hsl(176 58% 90%) 35%,
+      hsl(66 85% 80%) 100%
+    );
     --card-shadow: 0 20px 45px -15px hsl(188 48% 22% / 0.15);
     --hover-shadow: 0 30px 55px -15px hsl(176 58% 33% / 0.25);
   }
@@ -103,7 +108,12 @@ All colors MUST be HSL.
     --sidebar-border: 188 25% 18%;
     --sidebar-ring: 66 85% 61%;
 
-    --hero-gradient: linear-gradient(145deg, hsl(120 3% 8%) 0%, hsl(188 35% 15%) 70%, hsl(176 58% 22%) 100%);
+    --hero-gradient: linear-gradient(
+      145deg,
+      hsl(120 3% 8%) 0%,
+      hsl(188 35% 15%) 70%,
+      hsl(176 58% 22%) 100%
+    );
     --card-shadow: 0 25px 55px -20px hsl(188 48% 5% / 0.6);
     --hover-shadow: 0 30px 65px -20px hsl(66 85% 61% / 0.45);
   }
@@ -125,7 +135,7 @@ All colors MUST be HSL.
   }
 
   body::before {
-    content: "";
+    content: '';
     position: fixed;
     inset: 0;
     background-image:
@@ -133,8 +143,14 @@ All colors MUST be HSL.
       radial-gradient(circle at 80% 10%, hsl(188 48% 45% / 0.12) 0%, transparent 40%),
       url('/img/noli_sans_fond.png');
     background-repeat: no-repeat;
-    background-size: 1200px auto, 900px auto, min(520px, 70vw);
-    background-position: -200px -150px, 90% -120px, calc(100% - 8vw) 5vh;
+    background-size:
+      1200px auto,
+      900px auto,
+      min(520px, 70vw);
+    background-position:
+      -200px -150px,
+      90% -120px,
+      calc(100% - 8vw) 5vh;
     opacity: 0.12;
     pointer-events: none;
     z-index: -1;
@@ -162,12 +178,13 @@ All colors MUST be HSL.
   }
 
   /* S'assurer que le contenu est accessible */
-  [role="button"]:focus,
-  [role="link"]:focus,
-  [role="menuitem"]:focus {
+  [role='button']:focus,
+  [role='link']:focus,
+  [role='menuitem']:focus {
     @apply outline-none ring-2 ring-ring ring-offset-2;
   }
-  h1, .text-display {
+  h1,
+  .text-display {
     font-family: var(--font-display);
     font-weight: 700;
     letter-spacing: -0.02em;
@@ -175,7 +192,8 @@ All colors MUST be HSL.
     font-size: clamp(2rem, 5vw, 3rem);
   }
 
-  h2, .text-subtitle {
+  h2,
+  .text-subtitle {
     font-family: var(--font-subtitle);
     font-weight: 700;
     letter-spacing: -0.01em;
@@ -183,17 +201,20 @@ All colors MUST be HSL.
     font-size: clamp(1.5rem, 3vw, 2.25rem);
   }
 
-  p, li, label, span {
+  p,
+  li,
+  label,
+  span {
     font-family: var(--font-body);
     font-size: 1rem;
     line-height: 1.6;
   }
 
   .bg-hero {
-    background: radial-gradient(circle at 20% 20%, hsl(176 58% 55%) 0%, transparent 35%),
+    background:
+      radial-gradient(circle at 20% 20%, hsl(176 58% 55%) 0%, transparent 35%),
       radial-gradient(circle at 80% 0%, hsl(188 48% 45%) 0%, transparent 30%),
-      radial-gradient(circle at 50% 80%, hsl(66 85% 45%) 0%, transparent 25%),
-      hsl(188 48% 20%);
+      radial-gradient(circle at 50% 80%, hsl(66 85% 45%) 0%, transparent 25%), hsl(188 48% 20%);
   }
 }
 
@@ -237,120 +258,120 @@ All colors MUST be HSL.
   .mobile-touch-target {
     @apply min-h-[44px] min-w-[44px];
   }
-  
+
   .mobile-text {
     @apply text-sm;
   }
-  
+
   .mobile-padding {
     @apply px-4 py-3;
   }
-  
+
   .mobile-margin {
     @apply mx-4 my-2;
   }
-  
+
   /* Grilles flexibles pour tous les écrans */
   .responsive-grid {
     @apply grid grid-cols-1 gap-4;
   }
-  
+
   .responsive-grid-sm {
     @apply grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4;
   }
-  
+
   .responsive-grid-md {
     @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4;
   }
-  
+
   .responsive-grid-lg {
     @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4;
   }
-  
+
   /* Conteneurs responsifs */
   .responsive-container {
     @apply w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
   }
-  
+
   .responsive-container-sm {
     @apply w-full max-w-2xl mx-auto px-4 sm:px-6;
   }
-  
+
   /* Images responsives */
   .responsive-img {
     @apply w-full h-auto object-cover;
   }
-  
+
   .responsive-img-contain {
     @apply w-full h-auto object-contain;
   }
-  
+
   /* Textes responsifs */
   .responsive-text-xs {
     @apply text-xs sm:text-sm;
   }
-  
+
   .responsive-text-sm {
     @apply text-sm sm:text-base;
   }
-  
+
   .responsive-text-base {
     @apply text-base sm:text-lg;
   }
-  
+
   .responsive-text-lg {
     @apply text-lg sm:text-xl lg:text-2xl;
   }
-  
+
   .responsive-text-xl {
     @apply text-xl sm:text-2xl lg:text-3xl;
   }
-  
+
   /* Espacements responsifs */
   .responsive-spacing-y {
     @apply space-y-2 sm:space-y-4 lg:space-y-6;
   }
-  
+
   .responsive-spacing-x {
     @apply space-x-2 sm:space-x-4 lg:space-x-6;
   }
-  
+
   /* Boutons responsifs */
   .responsive-btn-sm {
     @apply px-3 py-2 text-xs sm:text-sm h-8 sm:h-10;
   }
-  
+
   .responsive-btn {
     @apply px-4 py-2 text-sm sm:text-base h-10 sm:h-12;
   }
-  
+
   .responsive-btn-lg {
     @apply px-6 py-3 text-base sm:text-lg h-12 sm:h-14;
   }
-  
+
   /* Cartes responsives */
   .responsive-card {
     @apply p-4 sm:p-6 rounded-lg shadow-sm;
   }
-  
+
   .responsive-card-sm {
     @apply p-3 sm:p-4 rounded-md shadow-sm;
   }
-  
+
   /* Formulaires responsifs */
   .responsive-form {
     @apply space-y-4 sm:space-y-6;
   }
-  
+
   .responsive-form-group {
     @apply space-y-2 sm:space-y-3;
   }
-  
+
   /* Navigation responsive */
   .responsive-nav {
     @apply flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4;
   }
-  
+
   /* Tables responsives - wrapper pour le défilement horizontal */
   .responsive-table-wrapper {
     @apply overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0;
@@ -366,60 +387,60 @@ All colors MUST be HSL.
       min-width: 100%;
     }
   }
-  
+
   /* Modales responsives */
   .responsive-modal {
     @apply w-full max-w-md sm:max-w-lg mx-4 sm:mx-auto;
   }
-  
+
   .responsive-modal-lg {
     @apply w-full max-w-lg sm:max-w-2xl mx-4 sm:mx-auto;
   }
-  
+
   /* Statistiques responsives */
   .responsive-stats-grid {
     @apply grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4;
   }
-  
+
   /* Listes responsives */
   .responsive-list {
     @apply space-y-3 sm:space-y-4;
   }
-  
+
   /* En-têtes responsifs */
   .responsive-header {
     @apply flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4;
   }
-  
+
   /* Badges responsifs */
   .responsive-badge {
     @apply text-xs px-2 py-1;
   }
-  
+
   /* Actions responsives */
   .responsive-actions {
     @apply flex flex-col sm:flex-row gap-2 sm:gap-3;
   }
-  
+
   /* Filtres responsifs */
   .responsive-filters {
     @apply flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4;
   }
-  
+
   /* Onglets responsifs */
   .responsive-tabs {
     @apply flex flex-col sm:flex-row overflow-x-auto;
   }
-  
+
   .responsive-tab {
     @apply px-3 py-2 text-xs sm:text-sm whitespace-nowrap;
   }
-  
+
   /* Alertes responsives */
   .responsive-alert {
     @apply p-3 sm:p-4 text-sm;
   }
-  
+
   /* Footer responsive */
   .responsive-footer {
     @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8;
@@ -660,7 +681,7 @@ All colors MUST be HSL.
   .orientation-portrait {
     @apply block;
   }
-  
+
   .orientation-landscape {
     @apply hidden;
   }
@@ -670,7 +691,7 @@ All colors MUST be HSL.
   .orientation-portrait {
     @apply hidden;
   }
-  
+
   .orientation-landscape {
     @apply block;
   }
@@ -681,11 +702,11 @@ All colors MUST be HSL.
   .tiny-screen-hidden {
     @apply hidden;
   }
-  
+
   .tiny-screen-text {
     @apply text-xs;
   }
-  
+
   .tiny-screen-padding {
     @apply px-2 py-1;
   }
@@ -696,11 +717,11 @@ All colors MUST be HSL.
   .ultra-wide-container {
     @apply max-w-screen-2xl mx-auto;
   }
-  
+
   .ultra-wide-text {
     @apply text-lg;
   }
-  
+
   .ultra-wide-spacing {
     @apply space-y-8;
   }
@@ -717,7 +738,11 @@ All colors MUST be HSL.
   }
 
   /* Augmenter la taille des cibles tactiles */
-  button, a, input, select, textarea {
+  button,
+  a,
+  input,
+  select,
+  textarea {
     @apply min-h-[44px];
   }
 }
@@ -725,7 +750,12 @@ All colors MUST be HSL.
 /* Améliorations pour la navigation au clavier et le focus visible */
 .keyboard-navigation {
   /* S'assurer que tous les éléments interactifs sont focusables */
-  button, a, input, textarea, select, [tabindex]:not([tabindex="-1"]) {
+  button,
+  a,
+  input,
+  textarea,
+  select,
+  [tabindex]:not([tabindex='-1']) {
     @apply focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background;
   }
 
@@ -802,7 +832,7 @@ All colors MUST be HSL.
   .reduce-motion {
     @apply transition-none duration-0;
   }
-  
+
   * {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
@@ -833,7 +863,8 @@ All colors MUST be HSL.
 }
 
 @keyframes float {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0px);
   }
   50% {

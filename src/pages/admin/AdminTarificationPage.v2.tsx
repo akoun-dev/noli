@@ -70,18 +70,18 @@ const StatCard: React.FC<{
             <p className='text-sm text-muted-foreground'>{title}</p>
             <p className='text-2xl font-bold mt-2'>{value}</p>
             {trend && (
-              <p className={cn(
-                'text-xs mt-1 flex items-center gap-1',
-                trend.isPositive ? 'text-green-600' : 'text-red-600'
-              )}>
+              <p
+                className={cn(
+                  'text-xs mt-1 flex items-center gap-1',
+                  trend.isPositive ? 'text-green-600' : 'text-red-600'
+                )}
+              >
                 {trend.isPositive ? '+' : '-'}
                 {trend.value}%
               </p>
             )}
           </div>
-          <div className={cn('p-3 rounded-lg', colorClasses[color])}>
-            {icon}
-          </div>
+          <div className={cn('p-3 rounded-lg', colorClasses[color])}>{icon}</div>
         </div>
       </CardContent>
     </Card>
@@ -142,10 +142,10 @@ export const AdminTarificationPageV2 = () => {
     try {
       const data = await tarificationSupabaseService.listAdminCoverages()
       setGuarantees(data)
-      setStats(prev => ({
+      setStats((prev) => ({
         ...prev,
         totalGuarantees: data.length,
-        activeGuarantees: data.filter(g => g.isActive).length,
+        activeGuarantees: data.filter((g) => g.isActive).length,
       }))
     } catch (error) {
       logger.error('Error loading guarantees:', error)
@@ -157,7 +157,7 @@ export const AdminTarificationPageV2 = () => {
     try {
       const data = await guaranteeService.getTarificationRC()
       setTarifsRC(data)
-      setStats(prev => ({ ...prev, totalTarifs: data.length }))
+      setStats((prev) => ({ ...prev, totalTarifs: data.length }))
     } catch (error) {
       logger.error('Error loading RC tariffs:', error)
       throw error
@@ -198,9 +198,7 @@ export const AdminTarificationPageV2 = () => {
       <div className='flex items-center justify-center min-h-screen'>
         <Alert className='max-w-md'>
           <AlertCircle className='h-4 w-4' />
-          <AlertDescription className='ml-2'>
-            Accès réservé aux administrateurs
-          </AlertDescription>
+          <AlertDescription className='ml-2'>Accès réservé aux administrateurs</AlertDescription>
         </Alert>
       </div>
     )
@@ -311,9 +309,7 @@ export const AdminTarificationPageV2 = () => {
                   {guarantees.map((guarantee) => (
                     <TableRow key={guarantee.id}>
                       <TableCell className='hidden md:table-cell'>
-                        <code className='text-xs bg-muted px-2 py-1 rounded'>
-                          {guarantee.code}
-                        </code>
+                        <code className='text-xs bg-muted px-2 py-1 rounded'>{guarantee.code}</code>
                       </TableCell>
                       <TableCell className='font-medium'>
                         <div className='flex flex-col'>
@@ -324,7 +320,9 @@ export const AdminTarificationPageV2 = () => {
                         </div>
                       </TableCell>
                       <TableCell className='hidden sm:table-cell'>
-                        <Badge variant='outline' className='text-xs'>{guarantee.category}</Badge>
+                        <Badge variant='outline' className='text-xs'>
+                          {guarantee.category}
+                        </Badge>
                       </TableCell>
                       <TableCell className='hidden sm:table-cell'>
                         <Badge className='text-xs'>{guarantee.calculationMethod}</Badge>
@@ -375,7 +373,11 @@ export const AdminTarificationPageV2 = () => {
                   <p className='text-xs sm:text-sm text-muted-foreground mb-4'>
                     Configurez les tarifs de responsabilité civile
                   </p>
-                  <Button onClick={() => setIsTarifRCDialogOpen(true)} size='sm' className='w-full sm:w-auto'>
+                  <Button
+                    onClick={() => setIsTarifRCDialogOpen(true)}
+                    size='sm'
+                    className='w-full sm:w-auto'
+                  >
                     <Plus className='h-4 w-4 mr-2' />
                     Configurer les tarifs
                   </Button>
@@ -383,7 +385,9 @@ export const AdminTarificationPageV2 = () => {
               ) : (
                 <Card>
                   <CardHeader className='pb-4'>
-                    <CardTitle className='text-lg sm:text-xl'>Tarifs par Type de Carburant</CardTitle>
+                    <CardTitle className='text-lg sm:text-xl'>
+                      Tarifs par Type de Carburant
+                    </CardTitle>
                     <CardDescription className='text-sm'>
                       Tarifs de responsabilité civile selon la puissance fiscale
                     </CardDescription>
@@ -420,8 +424,7 @@ export const AdminTarificationPageV2 = () => {
                                     <span className='text-xs sm:text-sm font-mono'>
                                       {tarif.fiscal_power_min === tarif.fiscal_power_max
                                         ? `CV ${tarif.fiscal_power_min}`
-                                        : `CV ${tarif.fiscal_power_min}-${tarif.fiscal_power_max}`
-                                      }
+                                        : `CV ${tarif.fiscal_power_min}-${tarif.fiscal_power_max}`}
                                     </span>
                                     <Badge variant='outline' className='text-xs'>
                                       {tarif.is_active ? 'Actif' : 'Inactif'}
@@ -449,15 +452,14 @@ export const AdminTarificationPageV2 = () => {
           <Card>
             <CardHeader>
               <CardTitle>Paramètres globaux</CardTitle>
-              <CardDescription>
-                Configuration générale de la tarification
-              </CardDescription>
+              <CardDescription>Configuration générale de la tarification</CardDescription>
             </CardHeader>
             <CardContent className='space-y-6'>
               <Alert>
                 <Info className='h-4 w-4' />
                 <AlertDescription className='ml-2'>
-                  Cette section vous permet de configurer les paramètres globaux qui s'appliquent à tous les calculs de tarification.
+                  Cette section vous permet de configurer les paramètres globaux qui s'appliquent à
+                  tous les calculs de tarification.
                 </AlertDescription>
               </Alert>
 

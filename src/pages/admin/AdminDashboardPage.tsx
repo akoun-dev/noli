@@ -217,7 +217,9 @@ export const AdminDashboardPage: React.FC = () => {
       <div className='admin-header-responsive'>
         <div>
           <h1 className='text-xl sm:text-2xl font-bold text-foreground'>Tableau de Bord</h1>
-          <p className='text-sm sm:text-base text-muted-foreground'>Supervision en temps réel de la plateforme NOLI</p>
+          <p className='text-sm sm:text-base text-muted-foreground'>
+            Supervision en temps réel de la plateforme NOLI
+          </p>
         </div>
         <div className='flex items-center gap-1 sm:gap-2'>
           <Button variant='outline' size='xs sm:size-sm' onClick={handleRefresh}>
@@ -555,8 +557,13 @@ export const AdminDashboardPage: React.FC = () => {
               ) : primaryMetrics.length > 0 ? (
                 <div className='admin-stats-detailed'>
                   {primaryMetrics.map((stat, index) => (
-                    <div key={index} className='text-center p-3 sm:p-4 border rounded-lg sm:rounded-xl'>
-                      <stat.icon className={`h-6 w-6 sm:h-8 sm:w-8 mx-auto mb-1 sm:mb-2 ${stat.color}`} />
+                    <div
+                      key={index}
+                      className='text-center p-3 sm:p-4 border rounded-lg sm:rounded-xl'
+                    >
+                      <stat.icon
+                        className={`h-6 w-6 sm:h-8 sm:w-8 mx-auto mb-1 sm:mb-2 ${stat.color}`}
+                      />
                       <p className='text-xl sm:text-2xl font-bold text-foreground'>{stat.value}</p>
                       <p className='text-xs sm:text-sm text-muted-foreground'>{stat.label}</p>
                       <p className='text-xs text-green-600 dark:text-green-400'>{stat.change}</p>
