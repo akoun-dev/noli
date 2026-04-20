@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
@@ -26,6 +26,8 @@ import {
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useAuth } from '@/contexts/AuthContext'
+import { supabase } from '@/lib/supabase'
+import { useQuery } from '@tanstack/react-query'
 
 interface SidebarItem {
   name: string
@@ -61,6 +63,29 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const currentRole = userRole || user?.role || 'USER'
 
+  // Récupérer le nombre de devis en attente pour l'assureur
+  const { data: pendingQuotesCount = 0 } = useQuery({
+    queryKey: ['pending-quotes-count', currentRole === 'INSURER'],
+    queryFn: async () => {
+      if (currentRole !== 'INSURER') return 0
+
+      const { data: insurerData, error } = await supabase.rpc('get_current_insurer_id')
+      if (error || !insurerData || insurerData.length === 0) return 0
+
+      const insurerId = insurerData[0].insurer_id
+
+      // Compter les quote_offers avec status PENDING pour cet assureur
+      const { count, error: countError } = await supabase
+        .from('quote_offers')
+        .select('*', { count: 'exact', head: true })
+        .eq('insurer_id', insurerId)
+        .eq('status', 'PENDING')
+
+      return count || 0
+    },
+    refetchInterval: 60000, // Rafraîchir toutes les minutes
+  })
+
   const sidebarItems: Record<string, SidebarItem[]> = {
     USER: [
       { name: 'Tableau de bord', href: '/tableau-de-bord', icon: LayoutDashboard },
@@ -79,7 +104,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       { name: 'Contrats', href: '/assureur/contrats', icon: Shield },
       { name: 'Sinistres', href: '/assureur/sinistres', icon: AlertTriangle },
       { name: 'Offres', href: '/assureur/offres', icon: Car },
-      { name: 'Devis Reçus', href: '/assureur/devis', icon: FileText, badge: '3' },
+      { name: 'Devis Reçus', href: '/assureur/devis', icon: FileText, badge: pendingQuotesCount > 0 ? pendingQuotesCount.toString() : undefined },
       { name: 'Analytics', href: '/assureur/analytics', icon: BarChart3 },
       { name: 'Mes Garanties', href: '/assureur/garanties', icon: Shield },
       { name: 'Paramètres', href: '/assureur/parametres', icon: Settings },

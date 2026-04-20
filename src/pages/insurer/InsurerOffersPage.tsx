@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Plus,
   Search,
@@ -14,7 +15,19 @@ import {
   Eye,
   ToggleLeft,
   ToggleRight,
-  MoreHorizontal
+  MoreHorizontal,
+  LayoutGrid,
+  List,
+  X,
+  Copy,
+  TrendingUp,
+  Users,
+  Package,
+  Activity,
+  Calendar,
+  Shield,
+  DollarSign,
+  ChevronRight
 } from 'lucide-react';
 import {
   Table,
@@ -29,10 +42,19 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { OfferFormModal } from '@/components/insurer/OfferFormModal';
 import { CSVImportModal } from '@/components/insurer/CSVImportModal';
 import { useInsurerOffers, useCreateInsurerOffer, useUpdateInsurerOffer, useDeleteInsurerOffer } from '@/features/insurer/services/offerService';
+import { cn } from '@/lib/utils';
 
 interface Offer {
   id: string;
@@ -45,25 +67,42 @@ interface Offer {
   conversion: number;
   lastUpdated: string;
   description: string;
+  deductible?: number;
+  maxCoverage?: number;
+  duration?: number;
+  features?: string[];
 }
+
+type ViewMode = 'grid' | 'list';
+
+const CONTRACT_TYPE_COLORS = {
+  'Tiers Simple': 'bg-blue-100 text-blue-700 border-blue-200',
+  'Tiers +': 'bg-purple-100 text-purple-700 border-purple-200',
+  'Tous Risques': 'bg-green-100 text-green-700 border-green-200',
+};
 
 export const InsurerOffersPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [editingOffer, setEditingOffer] = useState<Offer | null>(null);
+  const [selectedOffer, setSelectedOffer] = useState<Offer | null>(null);
+  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
+  const [filterType, setFilterType] = useState<'all' | 'Tiers Simple' | 'Tiers +' | 'Tous Risques'>('all');
+  const [priceRange, setPriceRange] = useState<'all' | 'low' | 'medium' | 'high'>('all');
+
   const { data: serverOffers = [], isLoading } = useInsurerOffers();
   const createMutation = useCreateInsurerOffer();
   const updateMutation = useUpdateInsurerOffer();
   const deleteMutation = useDeleteInsurerOffer();
 
-  // Computed isSubmitting state based on mutations
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
 
-  const filteredOffers = serverOffers.map((o: any) => ({
+  const offers: Offer[] = serverOffers.map((o: any) => ({
     id: o.id,
     name: o.name,
-    type: (o.contract_type === 'all_risks' ? 'Tous Risques' : o.contract_type === 'third_party_plus' ? 'Tiers +' : 'Tiers') as Offer['type'],
+    type: (o.contract_type === 'all_risks' ? 'Tous Risques' : o.contract_type === 'third_party_plus' ? 'Tiers +' : 'Tiers Simple') as Offer['type'],
     price: o.price_min || 0,
     coverage: o.description || '',
     status: o.is_active ? 'active' : 'inactive',
@@ -71,10 +110,33 @@ export const InsurerOffersPage: React.FC = () => {
     conversion: 0,
     lastUpdated: new Date(o.updated_at).toISOString().split('T')[0],
     description: o.description || '',
-  })).filter(offer =>
-    offer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    offer.type.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+    deductible: o.deductible,
+    maxCoverage: o.coverage_amount,
+    duration: 12,
+    features: o.features || [],
+  }));
+
+  const filteredOffers = offers.filter(offer => {
+    const matchesSearch = offer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      offer.type.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = filterStatus === 'all' || offer.status === filterStatus;
+    const matchesType = filterType === 'all' || offer.type === filterType;
+    const matchesPrice = priceRange === 'all' ||
+      (priceRange === 'low' && offer.price < 50000) ||
+      (priceRange === 'medium' && offer.price >= 50000 && offer.price < 150000) ||
+      (priceRange === 'high' && offer.price >= 150000);
+
+    return matchesSearch && matchesStatus && matchesType && matchesPrice;
+  });
+
+  const stats = {
+    total: offers.length,
+    active: offers.filter(o => o.status === 'active').length,
+    totalCustomers: offers.reduce((sum, o) => sum + o.customers, 0),
+    avgConversion: offers.length > 0
+      ? Math.round(offers.reduce((sum, o) => sum + o.conversion, 0) / offers.length)
+      : 0,
+  };
 
   const toggleOfferStatus = async (offerId: string) => {
     const current = serverOffers.find((o: any) => o.id === offerId);
@@ -83,6 +145,23 @@ export const InsurerOffersPage: React.FC = () => {
 
   const deleteOffer = async (offerId: string) => {
     await deleteMutation.mutateAsync(offerId);
+    setSelectedOffer(null);
+  };
+
+  const duplicateOffer = async (offer: Offer) => {
+    await createMutation.mutateAsync({
+      name: `${offer.name} (copie)`,
+      type: offer.type === 'Tous Risques' ? 'tous_risques' : offer.type === 'Tiers +' ? 'tiers_plus' : 'tiers_simple',
+      price: offer.price,
+      coverage: offer.coverage,
+      description: offer.description,
+      deductible: offer.deductible || 0,
+      maxCoverage: offer.maxCoverage || 0,
+      duration: offer.duration || 12,
+      features: offer.features || [],
+      conditions: '',
+      isActive: false,
+    });
   };
 
   const handleCreateOffer = async (data: any) => {
@@ -99,7 +178,6 @@ export const InsurerOffersPage: React.FC = () => {
       conditions: data.conditions || '',
       isActive: true,
     });
-    // Modal will be closed by the OfferFormModal after successful submission
   };
 
   const handleEditOffer = async (data: any) => {
@@ -116,38 +194,18 @@ export const InsurerOffersPage: React.FC = () => {
         features: data.features || [],
       } as any,
     });
-    // Modal will be closed by the OfferFormModal after successful submission
     setEditingOffer(null);
-  };
-
-  const handleImportOffers = async (importedOffers: any[]) => {
-    // Bulk create sequentially for simplicity
-    for (const offer of importedOffers) {
-      await createMutation.mutateAsync({
-        name: offer.name,
-        type: offer.type,
-        price: offer.price,
-        coverage: offer.coverage,
-        description: offer.description,
-        deductible: offer.deductible || 0,
-        maxCoverage: offer.maxCoverage || 0,
-        duration: offer.duration || 12,
-        features: offer.features || [],
-      });
-    }
   };
 
   const exportOffers = () => {
     const csvContent = [
-      ['Nom', 'Type', 'Prix (FCFA)', 'Couverture', 'Statut', 'Clients', 'Conversion', 'Description'],
+      ['Nom', 'Type', 'Prix (FCFA)', 'Couverture', 'Statut', 'Description'],
       ...filteredOffers.map(offer => [
         offer.name,
         offer.type,
         offer.price.toString(),
         offer.coverage,
         offer.status,
-        offer.customers.toString(),
-        offer.conversion.toString(),
         offer.description
       ])
     ].map(row => row.join(',')).join('\n');
@@ -163,30 +221,119 @@ export const InsurerOffersPage: React.FC = () => {
     document.body.removeChild(link);
   };
 
-  const getStatusBadge = (status: 'active' | 'inactive') => {
-    return status === 'active' ? (
-      <Badge variant="default" className="bg-green-100 text-green-800">
-        Actif
-      </Badge>
-    ) : (
-      <Badge variant="secondary" className="bg-gray-100 text-gray-800">
-        Inactif
-      </Badge>
-    );
-  };
+  const OfferCard = ({ offer }: { offer: Offer }) => (
+    <Card className="group hover:shadow-lg transition-all duration-200 cursor-pointer border-l-4 hover:border-l-blue-500">
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1 min-w-0" onClick={() => setSelectedOffer(offer)}>
+            <CardTitle className="text-lg truncate group-hover:text-blue-600 transition-colors">
+              {offer.name}
+            </CardTitle>
+            <CardDescription className="line-clamp-2 mt-1">{offer.description}</CardDescription>
+          </div>
+          <Badge className={cn('shrink-0', CONTRACT_TYPE_COLORS[offer.type])}>
+            {offer.type}
+          </Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-gray-500">Prix</p>
+            <p className="text-xl font-bold text-blue-600">
+              {offer.price.toLocaleString('fr-FR')} FCFA
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-sm text-gray-500">Statut</p>
+            {offer.status === 'active' ? (
+              <Badge variant="default" className="bg-green-100 text-green-700">
+                Actif
+              </Badge>
+            ) : (
+              <Badge variant="secondary" className="bg-gray-100 text-gray-700">
+                Inactif
+              </Badge>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-4 text-sm text-gray-600 pt-2 border-t">
+          <div className="flex items-center gap-1">
+            <Users className="h-4 w-4" />
+            <span>{offer.customers} clients</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <TrendingUp className="h-4 w-4" />
+            <span>{offer.conversion}%</span>
+          </div>
+        </div>
+
+        <div className="flex gap-2 pt-2">
+          <Button
+            size="sm"
+            variant="outline"
+            className="flex-1"
+            onClick={(e) => { e.stopPropagation(); setEditingOffer(offer); }}
+          >
+            <Edit className="h-4 w-4 mr-1" />
+            Modifier
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+              <Button size="sm" variant="ghost">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setSelectedOffer(offer)}>
+                <Eye className="h-4 w-4 mr-2" />
+                Voir détails
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => duplicateOffer(offer)}>
+                <Copy className="h-4 w-4 mr-2" />
+                Dupliquer
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => toggleOfferStatus(offer.id)}>
+                {offer.status === 'active' ? (
+                  <>
+                    <ToggleLeft className="h-4 w-4 mr-2" />
+                    Désactiver
+                  </>
+                ) : (
+                  <>
+                    <ToggleRight className="h-4 w-4 mr-2" />
+                    Activer
+                  </>
+                )}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-red-600"
+                onClick={() => deleteOffer(offer.id)}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Supprimer
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </CardContent>
+    </Card>
+  );
 
   return (
     <div className="space-y-6">
-      {/* Header Actions */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      {/* Header */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Mes Offres</h1>
           <p className="text-gray-600">Gérez vos offres d'assurance</p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-2">
+        <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
           <Button variant="outline" className="flex items-center gap-2" onClick={() => setIsImportModalOpen(true)}>
             <Upload className="h-4 w-4" />
-            Importer CSV
+            Importer
           </Button>
           <Button variant="outline" className="flex items-center gap-2" onClick={exportOffers}>
             <Download className="h-4 w-4" />
@@ -199,19 +346,17 @@ export const InsurerOffersPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Total offres</p>
-                <p className="text-2xl font-bold">{serverOffers.length}</p>
+                <p className="text-2xl font-bold">{stats.total}</p>
               </div>
               <div className="bg-blue-100 p-2 rounded-lg">
-                <svg className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
+                <Package className="h-6 w-6 text-blue-600" />
               </div>
             </div>
           </CardContent>
@@ -222,14 +367,10 @@ export const InsurerOffersPage: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Offres actives</p>
-                <p className="text-2xl font-bold text-green-600">
-                  {filteredOffers.filter(o => o.status === 'active').length}
-                </p>
+                <p className="text-2xl font-bold text-green-600">{stats.active}</p>
               </div>
               <div className="bg-green-100 p-2 rounded-lg">
-                <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+                <Activity className="h-6 w-6 text-green-600" />
               </div>
             </div>
           </CardContent>
@@ -240,14 +381,10 @@ export const InsurerOffersPage: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Clients totaux</p>
-                <p className="text-2xl font-bold">
-                  {filteredOffers.reduce((sum, offer) => sum + offer.customers, 0)}
-                </p>
+                <p className="text-2xl font-bold">{stats.totalCustomers}</p>
               </div>
               <div className="bg-purple-100 p-2 rounded-lg">
-                <svg className="h-6 w-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                </svg>
+                <Users className="h-6 w-6 text-purple-600" />
               </div>
             </div>
           </CardContent>
@@ -258,143 +395,319 @@ export const InsurerOffersPage: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Taux conversion moyen</p>
-                <p className="text-2xl font-bold">
-                  {filteredOffers.length > 0
-                    ? Math.round(filteredOffers.reduce((sum, offer) => sum + offer.conversion, 0) / filteredOffers.length)
-                    : 0}%
-                </p>
+                <p className="text-2xl font-bold">{stats.avgConversion}%</p>
               </div>
               <div className="bg-orange-100 p-2 rounded-lg">
-                <svg className="h-6 w-6 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                </svg>
+                <TrendingUp className="h-6 w-6 text-orange-600" />
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Search and Filter */}
+      {/* Search and Filters */}
       <Card>
         <CardContent className="p-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Rechercher une offre..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Rechercher une offre..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Select value={filterStatus} onValueChange={(v: any) => setFilterStatus(v)}>
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue placeholder="Statut" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous</SelectItem>
+                    <SelectItem value="active">Actifs</SelectItem>
+                    <SelectItem value="inactive">Inactifs</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={filterType} onValueChange={(v: any) => setFilterType(v)}>
+                  <SelectTrigger className="w-[160px]">
+                    <SelectValue placeholder="Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous les types</SelectItem>
+                    <SelectItem value="Tiers Simple">Tiers Simple</SelectItem>
+                    <SelectItem value="Tiers +">Tiers +</SelectItem>
+                    <SelectItem value="Tous Risques">Tous Risques</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={priceRange} onValueChange={(v: any) => setPriceRange(v)}>
+                  <SelectTrigger className="w-[150px]">
+                    <SelectValue placeholder="Prix" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous les prix</SelectItem>
+                    <SelectItem value="low">&lt; 50k FCFA</SelectItem>
+                    <SelectItem value="medium">50k - 150k</SelectItem>
+                    <SelectItem value="high">&gt; 150k</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <Button variant="outline" className="flex items-center gap-2">
-              <Filter className="h-4 w-4" />
-              Filtrer
-            </Button>
+
+            <div className="flex items-center justify-between pt-2 border-t">
+              <p className="text-sm text-gray-600">
+                {filteredOffers.length} offre{filteredOffers.length > 1 ? 's' : ''} trouvée{filteredOffers.length > 1 ? 's' : ''}
+              </p>
+              <div className="flex items-center gap-2 bg-gray-100 p-1 rounded-lg">
+                <Button
+                  size="sm"
+                  variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                  onClick={() => setViewMode('grid')}
+                  className="h-8"
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                </Button>
+                <Button
+                  size="sm"
+                  variant={viewMode === 'list' ? 'default' : 'ghost'}
+                  onClick={() => setViewMode('list')}
+                  className="h-8"
+                >
+                  <List className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Offers Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Liste des offres</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nom de l'offre</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Prix</TableHead>
-                <TableHead>Couverture</TableHead>
-                <TableHead>Statut</TableHead>
-                <TableHead>Clients</TableHead>
-                <TableHead>Conversion</TableHead>
-                <TableHead>Dernière mise à jour</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+      {/* Content */}
+      <div className={cn('transition-all', selectedOffer ? 'lg:grid lg:grid-cols-3 lg:gap-6' : '')}>
+        {/* Offers Grid/List */}
+        <div className={cn(selectedOffer ? 'lg:col-span-2' : '')}>
+          {isLoading ? (
+            <Card>
+              <CardContent className="p-8 text-center text-gray-500">
+                Chargement des offres...
+              </CardContent>
+            </Card>
+          ) : filteredOffers.length === 0 ? (
+            <Card>
+              <CardContent className="p-12 text-center">
+                <div className="bg-gray-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Package className="h-8 w-8 text-gray-400" />
+                </div>
+                <h3 className="text-lg font-semibold mb-2">Aucune offre trouvée</h3>
+                <p className="text-gray-600 mb-4">
+                  {searchTerm || filterStatus !== 'all' || filterType !== 'all' || priceRange !== 'all'
+                    ? 'Essayez de modifier vos critères de recherche'
+                    : 'Commencez par créer votre première offre'}
+                </p>
+                {!searchTerm && filterStatus === 'all' && filterType === 'all' && priceRange === 'all' && (
+                  <Button onClick={() => setIsCreateModalOpen(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Créer une offre
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          ) : viewMode === 'grid' ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {filteredOffers.map((offer) => (
-                <TableRow key={offer.id}>
-                  <TableCell>
-                    <div>
-                      <div className="font-medium">{offer.name}</div>
-                      <div className="text-sm text-gray-500">{offer.description}</div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{offer.type}</Badge>
-                  </TableCell>
-                  <TableCell className="font-medium">
-                    {offer.price.toLocaleString('fr-FR')} FCFA
-                  </TableCell>
-                  <TableCell>{offer.coverage}</TableCell>
-                  <TableCell>{getStatusBadge(offer.status)}</TableCell>
-                  <TableCell>{offer.customers}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1">
-                      <span className="font-medium">{offer.conversion}%</span>
-                      <svg className="h-4 w-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                      </svg>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-sm text-gray-500">
-                    {new Date(offer.lastUpdated).toLocaleDateString('fr-FR')}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem className="flex items-center gap-2">
-                          <Eye className="h-4 w-4" />
-                          Voir détails
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="flex items-center gap-2"
-                          onClick={() => setEditingOffer(offer)}
-                        >
-                          <Edit className="h-4 w-4" />
-                          Modifier
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="flex items-center gap-2"
-                          onClick={() => toggleOfferStatus(offer.id)}
-                        >
-                          {offer.status === 'active' ? (
-                            <>
-                              <ToggleLeft className="h-4 w-4" />
-                              Désactiver
-                            </>
-                          ) : (
-                            <>
-                              <ToggleRight className="h-4 w-4" />
-                              Activer
-                            </>
-                          )}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="flex items-center gap-2 text-red-600"
-                          onClick={() => deleteOffer(offer.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          Supprimer
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
+                <OfferCard key={offer.id} offer={offer} />
               ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+            </div>
+          ) : (
+            <Card>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Offre</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Prix</TableHead>
+                    <TableHead>Statut</TableHead>
+                    <TableHead>Clients</TableHead>
+                    <TableHead>Conversion</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredOffers.map((offer) => (
+                    <TableRow key={offer.id} className="cursor-pointer hover:bg-gray-50" onClick={() => setSelectedOffer(offer)}>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{offer.name}</div>
+                          <div className="text-sm text-gray-500 truncate max-w-[200px]">{offer.description}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={CONTRACT_TYPE_COLORS[offer.type]}>{offer.type}</Badge>
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {offer.price.toLocaleString('fr-FR')} FCFA
+                      </TableCell>
+                      <TableCell>
+                        {offer.status === 'active' ? (
+                          <Badge variant="default" className="bg-green-100 text-green-700">Actif</Badge>
+                        ) : (
+                          <Badge variant="secondary" className="bg-gray-100 text-gray-700">Inactif</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>{offer.customers}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <span className="font-medium">{offer.conversion}%</span>
+                          {offer.conversion > 0 && <TrendingUp className="h-3 w-3 text-green-500" />}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1">
+                          <Button size="sm" variant="ghost" onClick={() => setEditingOffer(offer)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button size="sm" variant="ghost">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => setSelectedOffer(offer)}>
+                                <Eye className="h-4 w-4 mr-2" />
+                                Voir détails
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => duplicateOffer(offer)}>
+                                <Copy className="h-4 w-4 mr-2" />
+                                Dupliquer
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => toggleOfferStatus(offer.id)}>
+                                {offer.status === 'active' ? (
+                                  <>
+                                    <ToggleLeft className="h-4 w-4 mr-2" />
+                                    Désactiver
+                                  </>
+                                ) : (
+                                  <>
+                                    <ToggleRight className="h-4 w-4 mr-2" />
+                                    Activer
+                                  </>
+                                )}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem className="text-red-600" onClick={() => deleteOffer(offer.id)}>
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Supprimer
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Card>
+          )}
+        </div>
+
+        {/* Preview Panel */}
+        {selectedOffer && (
+          <div className="lg:col-span-1">
+            <Card className="lg:sticky lg:top-4">
+              <CardHeader className="flex flex-row items-center justify-between pb-3">
+                <CardTitle className="text-lg">Détails de l'offre</CardTitle>
+                <Button size="sm" variant="ghost" onClick={() => setSelectedOffer(null)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Badge className={CONTRACT_TYPE_COLORS[selectedOffer.type]}>
+                    {selectedOffer.type}
+                  </Badge>
+                </div>
+
+                <div>
+                  <h3 className="font-semibold text-lg">{selectedOffer.name}</h3>
+                  <p className="text-sm text-gray-600 mt-1">{selectedOffer.description}</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 py-4 border-y">
+                  <div>
+                    <p className="text-sm text-gray-500">Prix</p>
+                    <p className="text-lg font-bold text-blue-600">
+                      {selectedOffer.price.toLocaleString('fr-FR')} FCFA
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Statut</p>
+                    {selectedOffer.status === 'active' ? (
+                      <Badge variant="default" className="bg-green-100 text-green-700">Actif</Badge>
+                    ) : (
+                      <Badge variant="secondary" className="bg-gray-100 text-gray-700">Inactif</Badge>
+                    )}
+                  </div>
+                  {selectedOffer.maxCoverage && (
+                    <div>
+                      <p className="text-sm text-gray-500">Plafond</p>
+                      <p className="font-medium">{selectedOffer.maxCoverage.toLocaleString('fr-FR')} FCFA</p>
+                    </div>
+                  )}
+                  {selectedOffer.deductible !== undefined && selectedOffer.deductible > 0 && (
+                    <div>
+                      <p className="text-sm text-gray-500">Franchise</p>
+                      <p className="font-medium">{selectedOffer.deductible.toLocaleString('fr-FR')} FCFA</p>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <p className="text-sm text-gray-500 mb-2">Couverture</p>
+                  <p className="text-sm bg-gray-50 p-3 rounded-lg">{selectedOffer.coverage}</p>
+                </div>
+
+                {selectedOffer.features && selectedOffer.features.length > 0 && (
+                  <div>
+                    <p className="text-sm text-gray-500 mb-2">Fonctionnalités</p>
+                    <div className="flex flex-wrap gap-1">
+                      {selectedOffer.features.map((feature, idx) => (
+                        <Badge key={idx} variant="outline" className="text-xs">
+                          {feature}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex gap-2 pt-4 border-t">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => {
+                      setEditingOffer(selectedOffer);
+                      setSelectedOffer(null);
+                    }}
+                  >
+                    <Edit className="h-4 w-4 mr-1" />
+                    Modifier
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => duplicateOffer(selectedOffer)}
+                  >
+                    <Copy className="h-4 w-4 mr-1" />
+                    Dupliquer
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+      </div>
 
       {/* Modals */}
       <OfferFormModal
@@ -415,10 +728,10 @@ export const InsurerOffersPage: React.FC = () => {
           price: editingOffer.price,
           coverage: editingOffer.coverage,
           description: editingOffer.description,
-          deductible: 0,
-          maxCoverage: 0,
-          duration: 12,
-          features: [],
+          deductible: editingOffer.deductible || 0,
+          maxCoverage: editingOffer.maxCoverage || 0,
+          duration: editingOffer.duration || 12,
+          features: editingOffer.features || [],
           conditions: '',
         } : undefined}
       />
@@ -426,7 +739,7 @@ export const InsurerOffersPage: React.FC = () => {
       <CSVImportModal
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
-        onImport={handleImportOffers}
+        onImport={() => {}}
       />
     </div>
   );

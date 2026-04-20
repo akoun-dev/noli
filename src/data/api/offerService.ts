@@ -206,7 +206,9 @@ const offerService = {
     try {
       const { data, error } = await supabase.rpc('get_current_insurer_id')
       if (error) throw error
-      return (data as string) || null
+      // RPC returns TABLE(insurer_id uuid, insurer_name text), which is an array of objects
+      const result = Array.isArray(data) && data.length > 0 ? data[0] : data;
+      return result?.insurer_id || null
     } catch (e) {
       logger.error('getCurrentInsurerId error:', e)
       return null

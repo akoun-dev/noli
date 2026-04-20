@@ -32,9 +32,11 @@ async function getCurrentInsurerId(): Promise<string | null> {
   try {
     const { data, error } = await supabase.rpc('get_current_insurer_id');
     if (error) throw error;
-    return (data as any) || null;
+    // RPC returns TABLE(insurer_id uuid, insurer_name text), which is an array of objects
+    const result = Array.isArray(data) && data.length > 0 ? data[0] : data;
+    return result?.insurer_id || null;
   } catch (e) {
-    logger.error('getCurrentInsurerId error', e);
+    console.error('getCurrentInsurerId error', e);
     return null;
   }
 }
@@ -62,7 +64,7 @@ export async function createInsurerOffer(input: InsurerOfferInput) {
     .insert({
       id,
       insurer_id: insurerId,
-      category_id: 'auto',
+      category_id: null,
       name: input.name,
       description: input.description,
       price_min: input.price,
