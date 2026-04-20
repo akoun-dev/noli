@@ -114,7 +114,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       { name: 'Supervision', href: '/admin/supervision', icon: Eye },
       { name: 'Utilisateurs', href: '/admin/utilisateurs', icon: Users },
       { name: 'Assureurs', href: '/admin/assureurs', icon: Shield },
-      { name: 'Tarification', href: '/admin/tarification', icon: Database },
+      { name: 'Garanties', href: '/admin/tarification', icon: Database },
       { name: 'Offres', href: '/admin/offres', icon: Car },
       { name: 'Devis', href: '/admin/devis', icon: FileText },
       { name: 'Analytics', href: '/admin/analytics', icon: BarChart3 },

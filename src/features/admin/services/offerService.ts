@@ -38,6 +38,7 @@ export interface Insurer {
   id: string;
   name: string;
   logo?: string;
+  logo_url?: string;
   status: 'active' | 'inactive' | 'pending';
 }
 
@@ -293,7 +294,7 @@ class OfferService {
     try {
       const { data, error } = await supabase
         .from('insurers')
-        .select('*')
+        .select('id, name, code, logo_url')
         .order('name', { ascending: true });
 
       if (error) {
