@@ -306,10 +306,13 @@ export class AuthService {
 
       logger.auth('Synchronisation du profil utilisateur avec upsert:', profileData)
 
-      const { error: upsertError } = await (supabase.from('profiles') as any)
-        .upsert(profileData, { onConflict: 'email' })
-        .eq('email', data.email)
-        .select()
+      // Use upsert with id as conflict target (primary key)
+      const { error: upsertError } = await supabase
+        .from('profiles')
+        .upsert(profileData, {
+          onConflict: 'id',
+          ignoreDuplicates: false
+        })
 
       if (upsertError) {
         logger.error('Erreur lors de la synchronisation du profil:', upsertError)
@@ -319,6 +322,51 @@ export class AuthService {
       }
 
       logger.auth('✅ Profil synchronisé avec succès pour:', authData.user.id)
+
+      // 3. Si l'utilisateur est un assureur, créer automatiquement sa compagnie d'assurance
+      if (userRole === 'INSURER' && data.companyName) {
+        try {
+          logger.auth('🏢 Création automatique de la compagnie d\'assurance pour:', data.companyName)
+
+          // Générer un code unique pour la compagnie (basé sur le nom)
+          const companyCode = data.companyName
+            .toUpperCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '') // Remove accents
+            .replace(/[^A-Z0-9]/g, '')
+            .substring(0, 10)
+
+          // Créer la compagnie d'assurance et le lien en une seule opération
+          const { data: insurerResult, error: insurerError } = await supabase.rpc('create_insurer_with_link', {
+            p_code: companyCode,
+            p_name: data.companyName,
+            p_description: `Compagnie d'assurance ${data.companyName}`,
+            p_contact_email: data.email,
+            p_phone: data.phone,
+            p_website: null,
+          })
+
+          if (insurerError) {
+            logger.error('Erreur lors de la création de la compagnie d\'assurance:', insurerError)
+            throw new Error(`Erreur création compagnie: ${insurerError.message}`)
+          }
+
+          if (!insurerResult || insurerResult.length === 0) {
+            throw new Error('Erreur lors de la création de la compagnie: aucune donnée retournée')
+          }
+
+          const result = insurerResult[0]
+          if (!result.success) {
+            throw new Error(result.message || 'Erreur lors de la création de la compagnie')
+          }
+
+          logger.auth('✅ Compagnie d\'assurance créée et liée avec succès:', result.insurer_id)
+        } catch (insurerError) {
+          logger.error('❌ Erreur lors de la création de la compagnie d\'assurance:', insurerError)
+          // On ne bloque pas l'inscription si la création de la compagnie échoue
+          // L'assureur pourra créer sa compagnie plus tard
+        }
+      }
 
       // Logger la création du compte
       try {

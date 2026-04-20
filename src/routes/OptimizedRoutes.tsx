@@ -39,6 +39,7 @@ import {
   InsurerQuotesPage,
   InsurerAnalyticsPage,
   InsurerNotificationsPage,
+  InsurerGuaranteesPage,
 
   // Pages admin
   AdminSupervisionPage,
@@ -291,6 +292,14 @@ export const OptimizedAppRoutes = () => {
             element={
               <LazyWrapper>
                 <InsurerNotificationsPage />
+              </LazyWrapper>
+            }
+          />
+          <Route
+            path='/assureur/garanties'
+            element={
+              <LazyWrapper>
+                <InsurerGuaranteesPage />
               </LazyWrapper>
             }
           />

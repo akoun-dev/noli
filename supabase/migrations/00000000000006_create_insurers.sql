@@ -15,6 +15,8 @@ CREATE TABLE public.insurers (
   contact_email text,
   phone text,
   website text,
+  contact_address text,
+  license_number text,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone NOT NULL DEFAULT now(),
   CONSTRAINT insurers_pkey PRIMARY KEY (id)
@@ -58,13 +60,34 @@ CREATE POLICY insurers_public_active_select
   TO anon, authenticated
   USING (is_active = TRUE);
 
-DROP POLICY IF EXISTS insurers_admin_manage ON public.insurers;
-CREATE POLICY insurers_admin_manage
+DROP POLICY IF EXISTS insurers_admin_insert ON public.insurers;
+CREATE POLICY insurers_admin_insert
   ON public.insurers
-  FOR ALL
+  FOR INSERT
+  TO authenticated
+  WITH CHECK (public.is_admin());
+
+DROP POLICY IF EXISTS insurers_admin_select ON public.insurers;
+CREATE POLICY insurers_admin_select
+  ON public.insurers
+  FOR SELECT
+  TO authenticated
+  USING (public.is_admin());
+
+DROP POLICY IF EXISTS insurers_admin_update ON public.insurers;
+CREATE POLICY insurers_admin_update
+  ON public.insurers
+  FOR UPDATE
   TO authenticated
   USING (public.is_admin())
   WITH CHECK (public.is_admin());
+
+DROP POLICY IF EXISTS insurers_admin_delete ON public.insurers;
+CREATE POLICY insurers_admin_delete
+  ON public.insurers
+  FOR DELETE
+  TO authenticated
+  USING (public.is_admin());
 
 -- Grants
 GRANT SELECT ON public.insurers TO anon, authenticated;

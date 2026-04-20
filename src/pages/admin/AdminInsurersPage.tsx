@@ -931,17 +931,17 @@ const InsurerListItem: React.FC<InsurerGridCardProps> = ({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align='end'>
-                <DropdownMenuItem onClick={() => onView(insurer)}>
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onView(insurer) }}>
                   <Eye className='h-4 w-4 mr-2' />
                   Voir détails
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onEdit(insurer)}>
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(insurer) }}>
                   <Edit className='h-4 w-4 mr-2' />
                   Modifier
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  onClick={() => onDelete(insurer)}
+                  onClick={(e) => { e.stopPropagation(); onDelete(insurer) }}
                   className='text-red-600'
                 >
                   <Trash2 className='h-4 w-4 mr-2' />

@@ -45,21 +45,51 @@ CREATE POLICY quote_offers_user_select
       SELECT 1
       FROM public.quotes q
       WHERE q.id = quote_offers.quote_id
-        AND q.user_id = auth.uid()
+        AND q.user_id = (SELECT auth.uid())
     )
   );
 
-DROP POLICY IF EXISTS quote_offers_insurer_manage ON public.quote_offers;
-CREATE POLICY quote_offers_insurer_manage
+DROP POLICY IF EXISTS quote_offers_insurer_insert ON public.quote_offers;
+CREATE POLICY quote_offers_insurer_insert
   ON public.quote_offers
-  FOR ALL
+  FOR INSERT
+  TO authenticated
+  WITH CHECK (
+    public.is_admin()
+    OR EXISTS (
+      SELECT 1
+      FROM public.insurer_accounts ia
+      WHERE ia.profile_id = (SELECT auth.uid())
+        AND ia.insurer_id = quote_offers.insurer_id
+    )
+  );
+
+DROP POLICY IF EXISTS quote_offers_insurer_select ON public.quote_offers;
+CREATE POLICY quote_offers_insurer_select
+  ON public.quote_offers
+  FOR SELECT
   TO authenticated
   USING (
     public.is_admin()
     OR EXISTS (
       SELECT 1
       FROM public.insurer_accounts ia
-      WHERE ia.profile_id = auth.uid()
+      WHERE ia.profile_id = (SELECT auth.uid())
+        AND ia.insurer_id = quote_offers.insurer_id
+    )
+  );
+
+DROP POLICY IF EXISTS quote_offers_insurer_update ON public.quote_offers;
+CREATE POLICY quote_offers_insurer_update
+  ON public.quote_offers
+  FOR UPDATE
+  TO authenticated
+  USING (
+    public.is_admin()
+    OR EXISTS (
+      SELECT 1
+      FROM public.insurer_accounts ia
+      WHERE ia.profile_id = (SELECT auth.uid())
         AND ia.insurer_id = quote_offers.insurer_id
     )
   )
@@ -68,13 +98,28 @@ CREATE POLICY quote_offers_insurer_manage
     OR EXISTS (
       SELECT 1
       FROM public.insurer_accounts ia
-      WHERE ia.profile_id = auth.uid()
+      WHERE ia.profile_id = (SELECT auth.uid())
         AND ia.insurer_id = quote_offers.insurer_id
     )
   );
 
-DROP POLICY IF EXISTS quote_offers_admin_read ON public.quote_offers;
-CREATE POLICY quote_offers_admin_read
+DROP POLICY IF EXISTS quote_offers_insurer_delete ON public.quote_offers;
+CREATE POLICY quote_offers_insurer_delete
+  ON public.quote_offers
+  FOR DELETE
+  TO authenticated
+  USING (
+    public.is_admin()
+    OR EXISTS (
+      SELECT 1
+      FROM public.insurer_accounts ia
+      WHERE ia.profile_id = (SELECT auth.uid())
+        AND ia.insurer_id = quote_offers.insurer_id
+    )
+  );
+
+DROP POLICY IF EXISTS quote_offers_admin_select ON public.quote_offers;
+CREATE POLICY quote_offers_admin_select
   ON public.quote_offers
   FOR SELECT
   TO authenticated

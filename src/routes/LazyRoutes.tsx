@@ -57,6 +57,7 @@ export const InsurerAnalyticsPage = lazy(() => import('@/pages/insurer/InsurerAn
 export const InsurerNotificationsPage = lazy(
   () => import('@/pages/insurer/InsurerNotificationsPage')
 )
+export const InsurerGuaranteesPage = lazy(() => import('@/pages/insurer/InsurerGuaranteesPage'))
 
 // Pages admin - Priorité basse (chargées à la demande)
 export const AdminSupervisionPage = lazy(() => import('@/pages/admin/AdminSupervisionPage'))

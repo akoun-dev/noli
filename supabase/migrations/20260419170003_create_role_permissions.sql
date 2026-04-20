@@ -1,72 +1,9 @@
 -- =============================================================================
--- Migration: Custom Roles System
+-- Migration: Role Permissions Table
 -- Date: 2026-04-19
--- Purpose: Create a flexible RBAC system with custom roles and permissions
--- Maintains backward compatibility with existing USER, INSURER, ADMIN roles
+-- Purpose: Associates permissions with roles
 -- =============================================================================
 
--- =============================================================================
--- TABLE: permissions
--- Defines all available permissions in the system
--- =============================================================================
-CREATE TABLE IF NOT EXISTS public.permissions (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  name text NOT NULL UNIQUE,
-  resource text NOT NULL,
-  action text NOT NULL,
-  description text,
-  category text NOT NULL,
-  created_at timestamp with time zone NOT NULL DEFAULT now()
-);
-
--- Add comments
-COMMENT ON TABLE public.permissions IS 'Available permissions in the system';
-COMMENT ON COLUMN public.permissions.name IS 'Unique permission identifier (e.g., user.view, offer.create)';
-COMMENT ON COLUMN public.permissions.resource IS 'Resource type (user, offer, quote, policy, analytics, etc.)';
-COMMENT ON COLUMN public.permissions.action IS 'Action type (view, create, update, delete, respond, assign)';
-COMMENT ON COLUMN public.permissions.category IS 'Permission category for grouping in UI';
-
--- Indexes
-CREATE INDEX IF NOT EXISTS permissions_resource_idx ON public.permissions (resource);
-CREATE INDEX IF NOT EXISTS permissions_category_idx ON public.permissions (category);
-CREATE INDEX IF NOT EXISTS permissions_name_idx ON public.permissions (name);
-
--- =============================================================================
--- TABLE: custom_roles
--- Custom roles with granular permissions
--- =============================================================================
-CREATE TABLE IF NOT EXISTS public.custom_roles (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  name text NOT NULL UNIQUE,
-  description text,
-  is_system_role boolean NOT NULL DEFAULT false,
-  is_active boolean NOT NULL DEFAULT true,
-  created_by uuid REFERENCES public.profiles(id) ON DELETE SET NULL,
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
-  updated_at timestamp with time zone NOT NULL DEFAULT now()
-);
-
--- Add comments
-COMMENT ON TABLE public.custom_roles IS 'Custom roles with granular permissions';
-COMMENT ON COLUMN public.custom_roles.is_system_role IS 'System roles (USER, INSURER, ADMIN) cannot be modified or deleted';
-COMMENT ON COLUMN public.custom_roles.is_active IS 'Inactive roles cannot be assigned to users';
-
--- Indexes
-CREATE INDEX IF NOT EXISTS custom_roles_name_idx ON public.custom_roles (name);
-CREATE INDEX IF NOT EXISTS custom_roles_active_idx ON public.custom_roles (is_active);
-CREATE INDEX IF NOT EXISTS custom_roles_system_idx ON public.custom_roles (is_system_role);
-
--- Updated_at trigger
-DROP TRIGGER IF EXISTS trg_set_updated_at_custom_roles ON public.custom_roles;
-CREATE TRIGGER trg_set_updated_at_custom_roles
-  BEFORE UPDATE ON public.custom_roles
-  FOR EACH ROW
-  EXECUTE FUNCTION public.set_updated_at();
-
--- =============================================================================
--- TABLE: role_permissions
--- Associates permissions with roles
--- =============================================================================
 CREATE TABLE IF NOT EXISTS public.role_permissions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   role_id uuid NOT NULL REFERENCES public.custom_roles(id) ON DELETE CASCADE,
@@ -82,18 +19,39 @@ COMMENT ON TABLE public.role_permissions IS 'Associates permissions with custom 
 CREATE INDEX IF NOT EXISTS role_permissions_role_idx ON public.role_permissions (role_id);
 CREATE INDEX IF NOT EXISTS role_permissions_permission_idx ON public.role_permissions (permission_id);
 
--- =============================================================================
--- ALTER TABLE: profiles
--- Add custom_role_id column for backward compatibility
--- =============================================================================
-ALTER TABLE public.profiles
-ADD COLUMN IF NOT EXISTS custom_role_id uuid REFERENCES public.custom_roles(id) ON DELETE SET NULL;
+-- RLS
+ALTER TABLE public.role_permissions ENABLE ROW LEVEL SECURITY;
 
--- Add comment
-COMMENT ON COLUMN public.profiles.custom_role_id IS 'Custom role assigned to user (null = use system role from role column)';
+DROP POLICY IF EXISTS role_permissions_authenticated_read ON public.role_permissions;
+CREATE POLICY role_permissions_authenticated_read
+  ON public.role_permissions
+  FOR SELECT
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.custom_roles
+      WHERE custom_roles.id = role_permissions.role_id
+      AND custom_roles.is_active = true
+    )
+  );
 
--- Index for quick lookup of users by custom role
-CREATE INDEX IF NOT EXISTS profiles_custom_role_idx ON public.profiles (custom_role_id) WHERE custom_role_id IS NOT NULL;
+DROP POLICY IF EXISTS role_permissions_admin_insert ON public.role_permissions;
+CREATE POLICY role_permissions_admin_insert
+  ON public.role_permissions
+  FOR INSERT
+  TO authenticated
+  WITH CHECK (public.is_admin());
+
+DROP POLICY IF EXISTS role_permissions_admin_delete ON public.role_permissions;
+CREATE POLICY role_permissions_admin_delete
+  ON public.role_permissions
+  FOR DELETE
+  TO authenticated
+  USING (public.is_admin());
+
+-- GRANTS
+GRANT SELECT, INSERT, DELETE ON public.role_permissions TO authenticated;
+GRANT SELECT ON public.role_permissions TO anon;
 
 -- =============================================================================
 -- INSERT DEFAULT PERMISSIONS (21 permissions)
@@ -103,13 +61,13 @@ INSERT INTO public.permissions (name, resource, action, description, category) V
   ('user.view', 'user', 'view', 'Voir les utilisateurs', 'USER_MANAGEMENT'),
   ('user.create', 'user', 'create', 'Créer des utilisateurs', 'USER_MANAGEMENT'),
   ('user.update', 'user', 'update', 'Modifier les utilisateurs', 'USER_MANAGEMENT'),
-  ('user.delete', 'user', 'delete', 'Supprimer des utilisateurs', 'USER_MANAGEMENT'),
+  ('user.delete', 'user', 'delete', 'Supprimer les utilisateurs', 'USER_MANAGEMENT'),
 
   -- Offer Management
   ('offer.view', 'offer', 'view', 'Voir les offres', 'OFFER_MANAGEMENT'),
   ('offer.create', 'offer', 'create', 'Créer des offres', 'OFFER_MANAGEMENT'),
-  ('offer.update', 'offer', 'update', 'Modifier des offres', 'OFFER_MANAGEMENT'),
-  ('offer.delete', 'offer', 'delete', 'Supprimer des offres', 'OFFER_MANAGEMENT'),
+  ('offer.update', 'offer', 'update', 'Modifier les offres', 'OFFER_MANAGEMENT'),
+  ('offer.delete', 'offer', 'delete', 'Supprimer les offres', 'OFFER_MANAGEMENT'),
 
   -- Quote Management
   ('quote.view', 'quote', 'view', 'Voir les devis', 'QUOTE_MANAGEMENT'),
@@ -119,7 +77,7 @@ INSERT INTO public.permissions (name, resource, action, description, category) V
   -- Policy Management
   ('policy.view', 'policy', 'view', 'Voir les polices', 'POLICY_MANAGEMENT'),
   ('policy.create', 'policy', 'create', 'Créer des polices', 'POLICY_MANAGEMENT'),
-  ('policy.update', 'policy', 'update', 'Modifier des polices', 'POLICY_MANAGEMENT'),
+  ('policy.update', 'policy', 'update', 'Modifier les polices', 'POLICY_MANAGEMENT'),
 
   -- Analytics
   ('analytics.view', 'analytics', 'view', 'Voir les analytics', 'ANALYTICS'),
@@ -134,7 +92,7 @@ INSERT INTO public.permissions (name, resource, action, description, category) V
   -- Role Management
   ('role.view', 'role', 'view', 'Voir les rôles', 'ROLE_MANAGEMENT'),
   ('role.create', 'role', 'create', 'Créer des rôles', 'ROLE_MANAGEMENT'),
-  ('role.update', 'role', 'update', 'Modifier des rôles', 'ROLE_MANAGEMENT'),
+  ('role.update', 'role', 'update', 'Modifier les rôles', 'ROLE_MANAGEMENT'),
   ('role.delete', 'role', 'delete', 'Supprimer des rôles', 'ROLE_MANAGEMENT'),
   ('role.assign', 'role', 'assign', 'Assigner des rôles aux utilisateurs', 'ROLE_MANAGEMENT')
 ON CONFLICT (name) DO NOTHING;
@@ -221,82 +179,6 @@ SELECT
   id
 FROM public.permissions
 ON CONFLICT (role_id, permission_id) DO NOTHING;
-
--- =============================================================================
--- ROW LEVEL SECURITY (RLS)
--- =============================================================================
-
--- Permissions table RLS
-ALTER TABLE public.permissions ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS permissions_authenticated_read ON public.permissions;
-CREATE POLICY permissions_authenticated_read
-  ON public.permissions
-  FOR SELECT
-  TO authenticated
-  USING (true);
-
-DROP POLICY IF EXISTS permissions_admin_manage ON public.permissions;
-CREATE POLICY permissions_admin_manage
-  ON public.permissions
-  FOR ALL
-  TO authenticated
-  USING (public.is_admin())
-  WITH CHECK (public.is_admin());
-
--- Custom roles table RLS
-ALTER TABLE public.custom_roles ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS custom_roles_authenticated_read_active ON public.custom_roles;
-CREATE POLICY custom_roles_authenticated_read_active
-  ON public.custom_roles
-  FOR SELECT
-  TO authenticated
-  USING (is_active = true);
-
-DROP POLICY IF EXISTS custom_roles_admin_manage ON public.custom_roles;
-CREATE POLICY custom_roles_admin_manage
-  ON public.custom_roles
-  FOR ALL
-  TO authenticated
-  USING (public.is_admin())
-  WITH CHECK (public.is_admin());
-
--- Role permissions table RLS
-ALTER TABLE public.role_permissions ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS role_permissions_authenticated_read ON public.role_permissions;
-CREATE POLICY role_permissions_authenticated_read
-  ON public.role_permissions
-  FOR SELECT
-  TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.custom_roles
-      WHERE custom_roles.id = role_permissions.role_id
-      AND custom_roles.is_active = true
-    )
-  );
-
-DROP POLICY IF EXISTS role_permissions_admin_manage ON public.role_permissions;
-CREATE POLICY role_permissions_admin_manage
-  ON public.role_permissions
-  FOR ALL
-  TO authenticated
-  USING (public.is_admin())
-  WITH CHECK (public.is_admin());
-
--- =============================================================================
--- UPDATE PROFILES TABLE RLS for custom_role_id
--- =============================================================================
-
-DROP POLICY IF EXISTS profiles_update_custom_role ON public.profiles;
-CREATE POLICY profiles_update_custom_role
-  ON public.profiles
-  FOR UPDATE
-  TO authenticated
-  USING (public.is_admin())
-  WITH CHECK (public.is_admin());
 
 -- =============================================================================
 -- UPDATED/NEW FUNCTIONS
@@ -491,18 +373,6 @@ BEGIN
   RETURN FALSE;
 END;
 $$;
-
--- =============================================================================
--- GRANTS
--- =============================================================================
-GRANT SELECT, INSERT, UPDATE ON public.permissions TO authenticated;
-GRANT SELECT ON public.permissions TO anon;
-
-GRANT SELECT, INSERT, UPDATE ON public.custom_roles TO authenticated;
-GRANT SELECT ON public.custom_roles TO anon;
-
-GRANT SELECT, INSERT, DELETE ON public.role_permissions TO authenticated;
-GRANT SELECT ON public.role_permissions TO anon;
 
 -- =============================================================================
 -- HELPER FUNCTIONS FOR ROLE MANAGEMENT

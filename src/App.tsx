@@ -78,6 +78,9 @@ const InsurerOffersPage = lazy(() => import('@/pages/insurer/InsurerOffersPage')
 const InsurerQuotesPage = lazy(() => import('@/pages/insurer/InsurerQuotesPage'))
 const InsurerAnalyticsPage = lazy(() => import('@/pages/insurer/InsurerAnalyticsPage'))
 const InsurerNotificationsPage = lazy(() => import('@/pages/insurer/InsurerNotificationsPage'))
+const InsurerGuaranteesPage = lazy(() => import('@/pages/insurer/InsurerGuaranteesPage'))
+const InsurerSettingsPage = lazy(() => import('@/pages/insurer/InsurerSettingsPage'))
+const InsurerSetupPage = lazy(() => import('@/pages/insurer/InsurerSetupPage'))
 
 // Feature Pages - Lazy loaded
 const ComparisonPage = lazy(() => import('@/features/comparison/pages/ComparisonPage'))
@@ -305,6 +308,15 @@ const App = () => (
 
                   {/* Protected Insurer Routes */}
                   <Route element={<AuthGuard requiredRole='INSURER' />}>
+                    {/* Insurer Setup Route (no layout) */}
+                    <Route
+                      path='/assureur/configuration'
+                      element={
+                        <Suspense fallback={<PageLoader />}>
+                          <InsurerSetupPage />
+                        </Suspense>
+                      }
+                    />
                     <Route element={<InsurerLayout />}>
                       <Route
                         path='/assureur/tableau-de-bord'
@@ -347,6 +359,14 @@ const App = () => (
                         }
                       />
                       <Route
+                        path='/assureur/garanties'
+                        element={
+                          <Suspense fallback={<PageLoader />}>
+                            <InsurerGuaranteesPage />
+                          </Suspense>
+                        }
+                      />
+                      <Route
                         path='/assureur/clients'
                         element={
                           <Suspense fallback={<PageLoader />}>
@@ -358,7 +378,7 @@ const App = () => (
                         path='/assureur/parametres'
                         element={
                           <Suspense fallback={<PageLoader />}>
-                            <div>Insurer Settings</div>
+                            <InsurerSettingsPage />
                           </Suspense>
                         }
                       />

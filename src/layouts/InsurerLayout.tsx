@@ -32,6 +32,7 @@ export const InsurerLayout: React.FC = () => {
     if (path.includes('offres')) return 'Mes offres'
     if (path.includes('devis')) return 'Devis reçus'
     if (path.includes('analytics')) return 'Analytics'
+    if (path.includes('garanties')) return 'Mes Garanties'
     if (path.includes('notifications')) return 'Notifications'
     if (path.includes('clients')) return 'Clients'
     if (path.includes('parametres')) return 'Paramètres'

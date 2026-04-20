@@ -535,6 +535,27 @@ export interface Database {
       log_user_login: () => void
       log_user_logout: () => void
       get_current_insurer_id: () => string | null
+      create_insurer_for_registration: (
+        p_code: string,
+        p_name: string,
+        p_description?: string,
+        p_contact_email?: string,
+        p_phone?: string,
+        p_website?: string
+      ) => string
+      create_insurer_account_link: (p_insurer_id: string) => boolean
+      create_insurer_with_link: (
+        p_code: string,
+        p_name: string,
+        p_description?: string,
+        p_contact_email?: string,
+        p_phone?: string,
+        p_website?: string
+      ) => {
+        insurer_id: string
+        success: boolean
+        message: string
+      }
       create_notification: (
         p_user_id: string,
         p_title: string,

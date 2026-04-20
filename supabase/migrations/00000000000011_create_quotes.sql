@@ -49,27 +49,63 @@ CREATE TRIGGER trg_set_updated_at_quotes
 -- RLS
 ALTER TABLE public.quotes ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS quotes_owner_access ON public.quotes;
-CREATE POLICY quotes_owner_access
+DROP POLICY IF EXISTS quotes_owner_select ON public.quotes;
+CREATE POLICY quotes_owner_select
   ON public.quotes
   FOR SELECT
-  USING (auth.uid() = user_id);
-
-DROP POLICY IF EXISTS quotes_owner_manage ON public.quotes;
-CREATE POLICY quotes_owner_manage
-  ON public.quotes
-  FOR ALL
   TO authenticated
-  USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id);
+  USING ((SELECT auth.uid()) = user_id);
 
-DROP POLICY IF EXISTS quotes_admin_all ON public.quotes;
-CREATE POLICY quotes_admin_all
+DROP POLICY IF EXISTS quotes_owner_insert ON public.quotes;
+CREATE POLICY quotes_owner_insert
   ON public.quotes
-  FOR ALL
+  FOR INSERT
+  TO authenticated
+  WITH CHECK ((SELECT auth.uid()) = user_id);
+
+DROP POLICY IF EXISTS quotes_owner_update ON public.quotes;
+CREATE POLICY quotes_owner_update
+  ON public.quotes
+  FOR UPDATE
+  TO authenticated
+  USING ((SELECT auth.uid()) = user_id)
+  WITH CHECK ((SELECT auth.uid()) = user_id);
+
+DROP POLICY IF EXISTS quotes_owner_delete ON public.quotes;
+CREATE POLICY quotes_owner_delete
+  ON public.quotes
+  FOR DELETE
+  TO authenticated
+  USING ((SELECT auth.uid()) = user_id);
+
+DROP POLICY IF EXISTS quotes_admin_insert ON public.quotes;
+CREATE POLICY quotes_admin_insert
+  ON public.quotes
+  FOR INSERT
+  TO authenticated
+  WITH CHECK (public.is_admin());
+
+DROP POLICY IF EXISTS quotes_admin_select ON public.quotes;
+CREATE POLICY quotes_admin_select
+  ON public.quotes
+  FOR SELECT
+  TO authenticated
+  USING (public.is_admin());
+
+DROP POLICY IF EXISTS quotes_admin_update ON public.quotes;
+CREATE POLICY quotes_admin_update
+  ON public.quotes
+  FOR UPDATE
   TO authenticated
   USING (public.is_admin())
   WITH CHECK (public.is_admin());
+
+DROP POLICY IF EXISTS quotes_admin_delete ON public.quotes;
+CREATE POLICY quotes_admin_delete
+  ON public.quotes
+  FOR DELETE
+  TO authenticated
+  USING (public.is_admin());
 
 -- Grants
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.quotes TO authenticated;

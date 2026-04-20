@@ -1,7 +1,7 @@
 -- =============================================================================
--- Migration: Admin Settings Tables
+-- Migration: Admin System Settings Table
 -- Date: 2026-04-19
--- Purpose: Create tables for system settings management
+-- Purpose: Create table for system settings management
 -- =============================================================================
 
 -- Table for system settings (key-value pairs)
@@ -16,31 +16,12 @@ CREATE TABLE IF NOT EXISTS public.admin_system_settings (
   updated_at timestamptz NOT NULL DEFAULT NOW()
 );
 
--- Table for settings change history
-CREATE TABLE IF NOT EXISTS public.admin_settings_history (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  setting_key text NOT NULL,
-  old_value jsonb,
-  new_value jsonb,
-  changed_by uuid REFERENCES auth.users(id) ON DELETE SET NULL,
-  change_reason text,
-  ip_address inet,
-  created_at timestamptz NOT NULL DEFAULT NOW()
-);
-
 -- Indexes
 CREATE INDEX IF NOT EXISTS admin_system_settings_category_idx
   ON public.admin_system_settings (category);
-CREATE INDEX IF NOT EXISTS admin_settings_history_key_idx
-  ON public.admin_settings_history (setting_key);
-CREATE INDEX IF NOT EXISTS admin_settings_history_changed_by_idx
-  ON public.admin_settings_history (changed_by);
-CREATE INDEX IF NOT EXISTS admin_settings_history_created_at_idx
-  ON public.admin_settings_history (created_at DESC);
 
 -- RLS
 ALTER TABLE public.admin_system_settings ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.admin_settings_history ENABLE ROW LEVEL SECURITY;
 
 -- Policies for system settings
 DROP POLICY IF EXISTS admin_system_settings_admin_select ON public.admin_system_settings;
@@ -50,31 +31,29 @@ CREATE POLICY admin_system_settings_admin_select
   TO authenticated
   USING (public.is_admin());
 
-DROP POLICY IF EXISTS admin_system_settings_admin_manage ON public.admin_system_settings;
-CREATE POLICY admin_system_settings_admin_manage
+DROP POLICY IF EXISTS admin_system_settings_admin_insert ON public.admin_system_settings;
+CREATE POLICY admin_system_settings_admin_insert
   ON public.admin_system_settings
-  FOR ALL
-  TO authenticated
-  USING (public.is_admin())
-  WITH CHECK (public.is_admin());
-
--- Policies for settings history
-DROP POLICY IF EXISTS admin_settings_history_admin_select ON public.admin_settings_history;
-CREATE POLICY admin_settings_history_admin_select
-  ON public.admin_settings_history
-  FOR SELECT
-  TO authenticated
-  USING (public.is_admin());
-
-DROP POLICY IF EXISTS admin_settings_history_admin_insert ON public.admin_settings_history;
-CREATE POLICY admin_settings_history_admin_insert
-  ON public.admin_settings_history
   FOR INSERT
   TO authenticated
   WITH CHECK (public.is_admin());
 
+DROP POLICY IF EXISTS admin_system_settings_admin_update ON public.admin_system_settings;
+CREATE POLICY admin_system_settings_admin_update
+  ON public.admin_system_settings
+  FOR UPDATE
+  TO authenticated
+  USING (public.is_admin())
+  WITH CHECK (public.is_admin());
+
+DROP POLICY IF EXISTS admin_system_settings_admin_delete ON public.admin_system_settings;
+CREATE POLICY admin_system_settings_admin_delete
+  ON public.admin_system_settings
+  FOR DELETE
+  TO authenticated
+  USING (public.is_admin());
+
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.admin_system_settings TO authenticated;
-GRANT SELECT, INSERT ON public.admin_settings_history TO authenticated;
 
 -- Function to get setting value
 CREATE OR REPLACE FUNCTION public.get_setting(setting_key text)
@@ -104,7 +83,7 @@ DECLARE
   current_user_id uuid;
 BEGIN
   -- Get current user
-  current_user_id := auth.uid();
+  current_user_id := (SELECT auth.uid());
 
   -- Get old value
   SELECT value INTO old_value

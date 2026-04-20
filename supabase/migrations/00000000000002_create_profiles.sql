@@ -66,7 +66,7 @@ AS $$
   SELECT EXISTS (
     SELECT 1
     FROM public.profiles
-    WHERE id = auth.uid()
+    WHERE id = (SELECT auth.uid())
       AND role = 'ADMIN'
       AND is_active = TRUE
   );
@@ -100,7 +100,7 @@ AS $$
   SELECT EXISTS (
     SELECT 1
     FROM public.profiles
-    WHERE id = auth.uid()
+    WHERE id = (SELECT auth.uid())
       AND role = 'INSURER'
       AND is_active = TRUE
   );
@@ -279,20 +279,23 @@ DROP POLICY IF EXISTS profiles_self_select ON public.profiles;
 CREATE POLICY profiles_self_select
   ON public.profiles
   FOR SELECT
-  USING (auth.uid() = id);
+  TO authenticated
+  USING ((SELECT auth.uid()) = id);
 
 DROP POLICY IF EXISTS profiles_self_update ON public.profiles;
 CREATE POLICY profiles_self_update
   ON public.profiles
   FOR UPDATE
-  USING (auth.uid() = id)
-  WITH CHECK (auth.uid() = id);
+  TO authenticated
+  USING ((SELECT auth.uid()) = id)
+  WITH CHECK ((SELECT auth.uid()) = id);
 
 DROP POLICY IF EXISTS profiles_insert_self ON public.profiles;
 CREATE POLICY profiles_insert_self
   ON public.profiles
   FOR INSERT
-  WITH CHECK (auth.uid() = id);
+  TO authenticated
+  WITH CHECK ((SELECT auth.uid()) = id);
 
 DROP POLICY IF EXISTS profiles_admin_insert ON public.profiles;
 CREATE POLICY profiles_admin_insert
@@ -305,12 +308,14 @@ DROP POLICY IF EXISTS profiles_admin_select ON public.profiles;
 CREATE POLICY profiles_admin_select
   ON public.profiles
   FOR SELECT
+  TO authenticated
   USING (public.is_admin());
 
 DROP POLICY IF EXISTS profiles_admin_update ON public.profiles;
 CREATE POLICY profiles_admin_update
   ON public.profiles
   FOR UPDATE
+  TO authenticated
   USING (public.is_admin())
   WITH CHECK (public.is_admin());
 

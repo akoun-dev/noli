@@ -78,6 +78,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       { name: 'Offres', href: '/assureur/offres', icon: Car },
       { name: 'Devis Reçus', href: '/assureur/devis', icon: FileText, badge: '3' },
       { name: 'Analytics', href: '/assureur/analytics', icon: BarChart3 },
+      { name: 'Mes Garanties', href: '/assureur/garanties', icon: Shield },
       { name: 'Paramètres', href: '/assureur/parametres', icon: Settings },
     ],
     ADMIN: [

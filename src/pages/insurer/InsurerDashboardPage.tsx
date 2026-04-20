@@ -23,35 +23,102 @@ import {
   UserPlus,
   Activity,
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { InsurerAlertPanel } from '@/features/insurers/components/InsurerAlertPanel';
 import { ClientContactPanel } from '@/features/insurers/components/ClientContactPanel';
 import { insurerAlertService } from '@/features/insurers/services/insurerAlertService';
 import { useClientCommunication } from '@/features/insurers/hooks/useClientCommunication';
+import { logger } from '@/lib/logger';
+import { supabase } from '@/lib/supabase';
 
 export const InsurerDashboardPage: React.FC = () => {
+  const navigate = useNavigate();
   const [unreadAlerts, setUnreadAlerts] = useState(0);
   const [activeClients, setActiveClients] = useState(0);
   const [selectedClient, setSelectedClient] = useState<any>(null);
+  const [recentQuotes, setRecentQuotes] = useState<any[]>([]);
+  const [topOffers, setTopOffers] = useState<any[]>([]);
+  const [insurerId, setInsurerId] = useState<string | null>(null);
+  const [isLoadingSetup, setIsLoadingSetup] = useState(true);
 
-  const { clients, totalRevenue, averageConversionRate } = useClientCommunication('insurer-1');
+  // Only call the hook when insurerId is available
+  const { clients, totalRevenue, averageConversionRate } = useClientCommunication(
+    insurerId || '' // Use empty string instead of placeholder to avoid UUID error
+  );
 
+  // Check if insurer has a company setup and get insurer ID
   useEffect(() => {
-    // S'abonner aux alertes
-    const unsubscribe = insurerAlertService.subscribe((alerts) => {
-      setUnreadAlerts(insurerAlertService.getUnreadAlerts().length);
-    });
-
-    return unsubscribe;
+    checkInsurerSetup();
   }, []);
 
+  const checkInsurerSetup = async () => {
+    try {
+      const { data: insurerData, error } = await supabase.rpc('get_current_insurer_id');
+
+      if (error || !insurerData || insurerData.length === 0) {
+        // No insurer account found, redirect to setup
+        logger.info('No insurer account found, redirecting to setup');
+        navigate('/assureur/configuration', { replace: true });
+        return;
+      }
+
+      // Insurer has a company, set insurer ID and load dashboard
+      setInsurerId(insurerData[0].insurer_id);
+      setIsLoadingSetup(false);
+      logger.info('Insurer account found', { insurerId: insurerData[0].insurer_id });
+    } catch (error) {
+      logger.error('Error checking insurer setup:', error);
+      // On error, still redirect to setup to be safe
+      navigate('/assureur/configuration', { replace: true });
+    }
+  };
+
+  // Update active clients when clients list changes
   useEffect(() => {
     setActiveClients(clients.filter(c => c.status === 'active').length);
   }, [clients]);
 
+  // Load dashboard data when insurer is ready
+  useEffect(() => {
+    if (isLoadingSetup || !insurerId) return; // Don't load data until setup is confirmed
+
+    // S'abonner aux alertes
+    const unsubscribe = insurerAlertService.subscribe((alerts) => {
+      setUnreadAlerts(alerts.filter(a => !a.isRead && !a.resolvedAt).length);
+    });
+
+    // Charger les données réelles
+    loadDashboardData();
+
+    return () => {
+      unsubscribe();
+    };
+  }, [isLoadingSetup, insurerId]);
+
+  const loadDashboardData = async () => {
+    try {
+      // Charger les devis récents depuis l'API
+      const quotesResponse = await fetch('/api/insurer/quotes/recent');
+      if (quotesResponse.ok) {
+        const quotesData = await quotesResponse.json();
+        setRecentQuotes(quotesData);
+      }
+
+      // Charger les meilleures offres depuis l'API
+      const offersResponse = await fetch('/api/insurer/offers/top');
+      if (offersResponse.ok) {
+        const offersData = await offersResponse.json();
+        setTopOffers(offersData);
+      }
+    } catch (error) {
+      logger.error('Erreur lors du chargement des données du tableau de bord:', error);
+    }
+  };
+
   const stats = [
     {
       label: 'Devis reçus',
-      value: '156',
+      value: recentQuotes.length.toString(),
       change: '+23%',
       icon: FileText,
       color: 'text-blue-600',
@@ -81,19 +148,6 @@ export const InsurerDashboardPage: React.FC = () => {
       color: 'text-orange-600',
       action: { text: 'Voir les clients', url: '/assureur/clients' }
     },
-  ];
-
-  const recentQuotes = [
-    { id: 1, customer: 'Jean Kouadio', vehicle: 'Toyota Yaris 2020', amount: '125,000 FCFA', date: '2024-01-15', status: 'pending' },
-    { id: 2, customer: 'Marie Amani', vehicle: 'Honda Civic 2019', amount: '98,000 FCFA', date: '2024-01-14', status: 'approved' },
-    { id: 3, customer: 'Koffi Yao', vehicle: 'BMW X3 2021', amount: '350,000 FCFA', date: '2024-01-13', status: 'pending' },
-    { id: 4, customer: 'Fatou Sylla', vehicle: 'Peugeot 208 2018', amount: '85,000 FCFA', date: '2024-01-12', status: 'approved' },
-  ];
-
-  const topOffers = [
-    { name: 'Assurance Tiers Simple', customers: 456, conversion: '92%', revenue: '1.2M FCFA' },
-    { name: 'Tiers +', customers: 234, conversion: '87%', revenue: '980K FCFA' },
-    { name: 'Tous Risques', customers: 123, conversion: '78%', revenue: '2.1M FCFA' },
   ];
 
   const getStatusBadge = (status: string) => {

@@ -17,12 +17,18 @@ export const useClientCommunication = (insurerId: string) => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Skip API calls if insurerId is not valid
+    if (!insurerId) return;
+
     loadClients();
     loadTemplates();
     loadAlertRules();
   }, [insurerId]);
 
   const loadClients = async () => {
+    // Skip if insurerId is not valid
+    if (!insurerId) return;
+
     setIsLoading(true);
     try {
       const clientsData = await clientCommunicationService.getClients(insurerId);
@@ -35,6 +41,9 @@ export const useClientCommunication = (insurerId: string) => {
   };
 
   const loadCommunicationHistory = async (clientId: string) => {
+    // Skip if insurerId is not valid
+    if (!insurerId) return;
+
     try {
       const history = await clientCommunicationService.getCommunicationHistory(
         clientId,
@@ -47,6 +56,9 @@ export const useClientCommunication = (insurerId: string) => {
   };
 
   const loadTemplates = async () => {
+    // Skip if insurerId is not valid
+    if (!insurerId) return;
+
     try {
       const templatesData = await clientCommunicationService.getTemplates(insurerId);
       setTemplates(templatesData);
@@ -56,6 +68,9 @@ export const useClientCommunication = (insurerId: string) => {
   };
 
   const loadAlertRules = async () => {
+    // Skip if insurerId is not valid
+    if (!insurerId) return;
+
     try {
       const rulesData = await clientCommunicationService.getAlertRules(insurerId);
       setAlertRules(rulesData);

@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Check, Edit, Trash2, Pause, Play, LayoutGrid, List } from 'lucide-react'
+import { Check, Pause, Play, LayoutGrid } from 'lucide-react'
 import {
   Table,
   TableBody,
@@ -68,8 +68,6 @@ import {
 } from '@/types/tarification'
 import {
   Plus,
-  Edit,
-  Trash2,
   Search,
   Shield,
   Calculator,
@@ -93,6 +91,8 @@ import {
   Fuel,
   MoreHorizontal,
   Building,
+  Edit,
+  Trash2,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
@@ -3522,7 +3522,6 @@ export const AdminTarificationPage: React.FC = () => {
                     </div>
                   )}
                 </div>
-=======
               )}
             </CardContent>
           </Card>
