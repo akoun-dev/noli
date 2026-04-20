@@ -47,10 +47,12 @@ import {
   Pause,
   Play,
   Loader2,
+  List,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { logger } from '@/lib/logger'
 import { supabase } from '@/lib/supabase'
+import { toast } from '@/components/ui/use-toast'
 import {
   guaranteeService,
   getBuiltinDefaultGuarantees,
@@ -91,7 +93,6 @@ const InsurerGuaranteesPage = () => {
     name: '',
     code: '',
     description: '',
-    category: 'RC',
     calculationType: 'FIXED_AMOUNT',
     calculationMethod: 'FIXED_AMOUNT',
     isMandatory: false,
@@ -195,9 +196,9 @@ const InsurerGuaranteesPage = () => {
       // Map GuaranteeForm data to database structure
       const guaranteeData = {
         name: data.name,
-        code: data.code || `${data.category.substring(0, 3).toUpperCase()}-${Date.now()}`,
+        code: data.code || `GAR${Date.now()}`,
         description: data.description,
-        type: data.category,
+        type: 'RC', // Default category since it's removed from form
         calculation_type: data.calculationMethod,
         is_mandatory: data.isMandatory || false,
         is_active: true,
@@ -211,13 +212,34 @@ const InsurerGuaranteesPage = () => {
         display_order: guarantees.length,
       }
 
+      logger.info('Creating guarantee with data:', guaranteeData)
+
+      // Check if user is insurer before attempting insert
+      const { data: roleCheck } = await supabase.rpc('get_current_insurer_id')
+      if (!roleCheck || roleCheck.length === 0) {
+        throw new Error('You must be logged in as an insurer to create guarantees')
+      }
+
+      logger.info('User insurer verification passed:', { insurerId: roleCheck[0].insurer_id })
+
       const { data: insertedData, error } = await supabase
         .from('coverages')
         .insert(guaranteeData)
         .select()
         .single()
 
-      if (error) throw error
+      if (error) {
+        logger.error('Supabase insert error:', {
+          error,
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code,
+          table: 'coverages',
+          data: guaranteeData,
+        })
+        throw new Error(`Database error: ${error.message}${error.hint ? ` (${error.hint})` : ''}`)
+      }
 
       logger.info('Guarantee created successfully', { id: insertedData.id, insurerId: data.insurerId })
       setIsCreateDialogOpen(false)
@@ -226,7 +248,14 @@ const InsurerGuaranteesPage = () => {
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to create guarantee'
       setMutationError(message)
-      logger.error('Error creating guarantee', { error: message })
+      logger.error('Error creating guarantee', { error: err, stack: err instanceof Error ? err.stack : undefined })
+
+      // Show toast with more details for debugging
+      toast({
+        variant: 'destructive',
+        title: 'Erreur de création',
+        description: message,
+      })
     } finally {
       setIsSubmitting(false)
     }
@@ -242,7 +271,7 @@ const InsurerGuaranteesPage = () => {
       const guaranteeData = {
         name: formData.name,
         description: formData.description,
-        type: formData.category,
+        type: 'RC',
         calculation_type: formData.calculationType,
         is_mandatory: formData.isMandatory,
         metadata: {
@@ -318,7 +347,6 @@ const InsurerGuaranteesPage = () => {
       name: '',
       code: '',
       description: '',
-      category: 'RC',
       calculationType: 'FIXED_AMOUNT',
       calculationMethod: 'FIXED_AMOUNT',
       isMandatory: false,
@@ -336,7 +364,6 @@ const InsurerGuaranteesPage = () => {
       name: guarantee.name,
       code: guarantee.code,
       description: guarantee.description,
-      category: guarantee.category,
       calculationType: guarantee.calculationType,
       calculationMethod: guarantee.calculationMethod,
       isMandatory: guarantee.isMandatory,
@@ -357,17 +384,6 @@ const InsurerGuaranteesPage = () => {
         Inactive
       </Badge>
     )
-  }
-
-  const getCategoryLabel = (category: string) => {
-    const labels: Record<string, string> = {
-      'RC': 'Responsabilité Civile',
-      'DEFENSE_RECOURS': 'Défense et Recours',
-      'DOMMAGES': 'Dommages',
-      'PERSONNE': 'Personne',
-      'AUTRE': 'Autre',
-    }
-    return labels[category] || category
   }
 
   const getCalculationTypeLabel = (type: CalculationMethodType) => {
@@ -425,7 +441,7 @@ const InsurerGuaranteesPage = () => {
               size='sm'
               onClick={() => setViewMode('list')}
             >
-              <Settings className='h-4 w-4' />
+              <List className='h-4 w-4' />
             </Button>
           </div>
           <Dialog
@@ -442,6 +458,7 @@ const InsurerGuaranteesPage = () => {
               </Button>
             </DialogTrigger>
             <DialogContent className='max-w-4xl max-h-[90vh] overflow-y-auto p-0'>
+              <DialogTitle className='px-6 pt-6 pb-2'>Nouvelle garantie</DialogTitle>
               {!insurerId ? (
                 <div className='p-6'>
                   <Alert variant="destructive">
@@ -539,7 +556,6 @@ const InsurerGuaranteesPage = () => {
                 setShowDeleteDialog(true)
               }}
               getStatusBadge={getStatusBadge}
-              getCategoryLabel={getCategoryLabel}
               getCalculationTypeLabel={getCalculationTypeLabel}
             />
           ))}
@@ -558,7 +574,6 @@ const InsurerGuaranteesPage = () => {
                 setShowDeleteDialog(true)
               }}
               getStatusBadge={getStatusBadge}
-              getCategoryLabel={getCategoryLabel}
               getCalculationTypeLabel={getCalculationTypeLabel}
             />
           ))}
@@ -590,34 +605,14 @@ const InsurerGuaranteesPage = () => {
               </Alert>
             )}
 
-            <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
-              <div>
-                <Label htmlFor='edit-name'>Nom de la garantie *</Label>
-                <Input
-                  id='edit-name'
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor='edit-category'>Catégorie *</Label>
-                <Select
-                  value={formData.category}
-                  onValueChange={(value) => setFormData({ ...formData, category: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value='RC'>Responsabilité Civile</SelectItem>
-                    <SelectItem value='DEFENSE_RECOURS'>Défense et Recours</SelectItem>
-                    <SelectItem value='DOMMAGES'>Dommages</SelectItem>
-                    <SelectItem value='PERSONNE'>Personne</SelectItem>
-                    <SelectItem value='AUTRE'>Autre</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div>
+              <Label htmlFor='edit-name'>Nom de la garantie *</Label>
+              <Input
+                id='edit-name'
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                required
+              />
             </div>
 
             <div>
@@ -722,31 +717,31 @@ const InsurerGuaranteesPage = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Désactiver la garantie</DialogTitle>
+            <DialogDescription>
+              La garantie ne sera plus proposée dans les nouveaux devis mais restera visible dans les historiques.
+            </DialogDescription>
           </DialogHeader>
           <div className='space-y-4'>
             <p>
               Êtes-vous sûr de vouloir désactiver la garantie{' '}
               <strong>{viewingGuarantee?.name}</strong> ?
             </p>
-            <p className='text-sm text-muted-foreground'>
-              La garantie ne sera plus proposée dans les nouveaux devis mais restera visible dans les historiques.
-            </p>
-            <DialogFooter>
-              <Button variant='outline' onClick={() => setShowDeleteDialog(false)}>
-                Annuler
-              </Button>
-              <Button variant='destructive' onClick={handleDeleteGuarantee} disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className='h-4 w-4 mr-2 animate-spin' />
-                    Désactivation...
-                  </>
-                ) : (
-                  'Désactiver'
-                )}
-              </Button>
-            </DialogFooter>
           </div>
+          <DialogFooter>
+            <Button variant='outline' onClick={() => setShowDeleteDialog(false)}>
+              Annuler
+            </Button>
+            <Button variant='destructive' onClick={handleDeleteGuarantee} disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className='h-4 w-4 mr-2 animate-spin' />
+                  Désactivation...
+                </>
+              ) : (
+                'Désactiver'
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
@@ -761,7 +756,6 @@ interface GuaranteeCardProps {
   onToggle: (guarantee: Guarantee) => void
   onDelete: (guarantee: Guarantee) => void
   getStatusBadge: (isActive: boolean) => React.ReactNode
-  getCategoryLabel: (category: string) => string
   getCalculationTypeLabel: (type: CalculationMethodType) => string
 }
 
@@ -772,7 +766,6 @@ const GuaranteeCard: React.FC<GuaranteeCardProps> = ({
   onToggle,
   onDelete,
   getStatusBadge,
-  getCategoryLabel,
   getCalculationTypeLabel,
 }) => {
   return (
@@ -790,10 +783,6 @@ const GuaranteeCard: React.FC<GuaranteeCardProps> = ({
         </div>
 
         <div className='space-y-2 mb-3'>
-          <div className='flex items-center justify-between text-sm'>
-            <span className='text-muted-foreground'>Catégorie:</span>
-            <Badge variant='outline'>{getCategoryLabel(guarantee.category)}</Badge>
-          </div>
           <div className='flex items-center justify-between text-sm'>
             <span className='text-muted-foreground'>Calcul:</span>
             <span className='font-medium'>{getCalculationTypeLabel(guarantee.calculationType)}</span>
@@ -864,7 +853,6 @@ const GuaranteeListItem: React.FC<GuaranteeCardProps> = ({
   onToggle,
   onDelete,
   getStatusBadge,
-  getCategoryLabel,
   getCalculationTypeLabel,
 }) => {
   return (
@@ -878,9 +866,6 @@ const GuaranteeListItem: React.FC<GuaranteeCardProps> = ({
               {getStatusBadge(guarantee.isActive)}
             </div>
             <p className='text-xs text-muted-foreground font-mono'>{guarantee.code}</p>
-          </div>
-          <div className='hidden sm:block flex-1'>
-            <Badge variant='outline'>{getCategoryLabel(guarantee.category)}</Badge>
           </div>
           <div className='hidden md:block flex-1'>
             <span className='text-sm'>{getCalculationTypeLabel(guarantee.calculationType)}</span>

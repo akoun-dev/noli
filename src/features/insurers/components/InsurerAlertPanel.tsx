@@ -41,11 +41,37 @@ export const InsurerAlertPanel: React.FC = () => {
     // S'abonner aux alertes
     const unsubscribe = insurerAlertService.subscribe((newAlerts) => {
       setAlerts(newAlerts);
-      setMetrics(insurerAlertService.getMetrics());
+      // Load metrics asynchronously
+      insurerAlertService.getMetrics().then(setMetrics).catch(err => {
+        console.error('Failed to load metrics:', err);
+        setMetrics({
+          totalAlerts: 0,
+          unreadAlerts: 0,
+          criticalAlerts: 0,
+          alertsByType: {},
+          alertsBySeverity: {},
+          averageResolutionTime: 0,
+          resolutionRate: 0,
+        });
+      });
     });
 
     // Charger les paramètres
     setSettings(insurerAlertService.getSettings());
+
+    // Also load initial metrics
+    insurerAlertService.getMetrics().then(setMetrics).catch(err => {
+      console.error('Failed to load initial metrics:', err);
+      setMetrics({
+        totalAlerts: 0,
+        unreadAlerts: 0,
+        criticalAlerts: 0,
+        alertsByType: {},
+        alertsBySeverity: {},
+        averageResolutionTime: 0,
+        resolutionRate: 0,
+      });
+    });
 
     return unsubscribe;
   }, []);
@@ -471,24 +497,30 @@ export const InsurerAlertPanel: React.FC = () => {
                   <Card className="p-4">
                     <h4 className="font-medium mb-3">Répartition par type</h4>
                     <div className="space-y-2">
-                      {Object.entries(metrics.alertsByType).map(([type, count]) => (
+                      {Object.entries(metrics.alertsByType || {}).map(([type, count]) => (
                         <div key={type} className="flex justify-between text-sm">
                           <span className="capitalize">{type.replace('_', ' ')}</span>
                           <span className="font-medium">{count}</span>
                         </div>
                       ))}
+                      {(!metrics.alertsByType || Object.keys(metrics.alertsByType).length === 0) && (
+                        <p className="text-sm text-muted-foreground">Aucune donnée</p>
+                      )}
                     </div>
                   </Card>
 
                   <Card className="p-4">
                     <h4 className="font-medium mb-3">Répartition par sévérité</h4>
                     <div className="space-y-2">
-                      {Object.entries(metrics.alertsBySeverity).map(([severity, count]) => (
+                      {Object.entries(metrics.alertsBySeverity || {}).map(([severity, count]) => (
                         <div key={severity} className="flex justify-between text-sm">
                           <span className="capitalize">{severity}</span>
                           <span className="font-medium">{count}</span>
                         </div>
                       ))}
+                      {(!metrics.alertsBySeverity || Object.keys(metrics.alertsBySeverity).length === 0) && (
+                        <p className="text-sm text-muted-foreground">Aucune donnée</p>
+                      )}
                     </div>
                   </Card>
                 </div>

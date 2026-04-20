@@ -39,7 +39,6 @@ export interface Insurer {
   name: string
   description: string | null
   logo_url: string | null
-  rating: number | null
   is_active: boolean
   contact_email: string | null
   phone: string | null
@@ -180,7 +179,6 @@ function mapDbToInsurer(db: DBInsurer): Insurer {
     name: db.name,
     description: db.description,
     logo_url: db.logo_url,
-    rating: db.rating,
     is_active: db.is_active,
     contact_email: db.contact_email,
     phone: db.phone,

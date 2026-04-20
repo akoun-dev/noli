@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -27,6 +27,8 @@ import {
   Archive
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { supabase } from '@/lib/supabase';
+import { logger } from '@/lib/logger';
 
 interface Notification {
   id: string;
@@ -51,120 +53,92 @@ interface Notification {
 }
 
 export const InsurerNotificationsPage: React.FC = () => {
-  const [notifications, setNotifications] = useState<Notification[]>([
-    {
-      id: '1',
-      type: 'quote_request',
-      title: 'Nouveau devis reçu',
-      message: 'Jean Kouadio a demandé un devis pour une Toyota Yaris 2020. Le client est intéressé par l\'offre Tiers Simple avec une couverture étendue.',
-      timestamp: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-      isRead: false,
-      priority: 'medium',
-      action: {
-        type: 'view',
-        label: 'Voir le devis',
-        data: { quoteId: 'quote-123' }
-      },
-      customer: {
-        name: 'Jean Kouadio',
-        email: 'jean.kouadio@email.com',
-        phone: '+225 07 00 00 00 00'
-      },
-      quoteId: 'quote-123'
-    },
-    {
-      id: '2',
-      type: 'urgent',
-      title: 'Devis urgent - Expiration imminente',
-      message: 'Le devis de Koffi Yao expire dans 2 heures. Client VIP avec un BMW X3 2021. Montant du devis: 150,000 FCFA.',
-      timestamp: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
-      isRead: false,
-      priority: 'high',
-      action: {
-        type: 'approve',
-        label: 'Traiter maintenant',
-        data: { quoteId: 'quote-456' }
-      },
-      customer: {
-        name: 'Koffi Yao',
-        email: 'koffi.yao@email.com',
-        phone: '+225 07 00 00 00 02'
-      },
-      quoteId: 'quote-456'
-    },
-    {
-      id: '3',
-      type: 'call',
-      title: 'Appel manqué',
-      message: 'Marie Amani a tenté de vous joindre concernant son devis pour une Honda Civic 2019. Elle souhaitait discuter des options de couverture.',
-      timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-      isRead: true,
-      priority: 'medium',
-      action: {
-        type: 'call',
-        label: 'Rappeler',
-        data: { phone: '+225 07 00 00 00 01' }
-      },
-      customer: {
-        name: 'Marie Amani',
-        email: 'marie.amani@email.com',
-        phone: '+225 07 00 00 00 01'
-      }
-    },
-    {
-      id: '4',
-      type: 'message',
-      title: 'Nouveau message reçu',
-      message: 'Fatou Sylla: "Je voudrais modifier mon devis pour ajouter la garantie vol. Mon véhicule est un Peugeot 208 2018."',
-      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-      isRead: true,
-      priority: 'low',
-      action: {
-        type: 'email',
-        label: 'Répondre',
-        data: { email: 'fatou.sylla@email.com' }
-      },
-      customer: {
-        name: 'Fatou Sylla',
-        email: 'fatou.sylla@email.com',
-        phone: '+225 07 00 00 00 03'
-      }
-    },
-    {
-      id: '5',
-      type: 'system',
-      title: 'Rapport de performance quotidien',
-      message: 'Votre rapport de performance du jour est prêt. Taux de conversion: 71%, CA journalier: 1,266,667 FCFA.',
-      timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-      isRead: true,
-      priority: 'low',
-      action: {
-        type: 'view',
-        label: 'Voir le rapport',
-        data: { reportId: 'daily-123' }
-      }
-    },
-    {
-      id: '6',
-      type: 'quote_request',
-      title: 'Devis approuvé automatiquement',
-      message: 'Le devis de Paul Kouamé a été approuvé automatiquement selon vos règles de souscription. Véhicule: Renault Clio 2019.',
-      timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-      isRead: true,
-      priority: 'low',
-      customer: {
-        name: 'Paul Kouamé',
-        email: 'paul.kouame@email.com',
-        phone: '+225 07 00 00 00 04'
-      },
-      quoteId: 'quote-789'
-    }
-  ]);
-
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [readFilter, setReadFilter] = useState('all');
+
+  useEffect(() => {
+    loadNotifications();
+
+    // Set up real-time subscription
+    const channel = supabase
+      .channel('insurer-alerts-page')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'insurer_alerts'
+        },
+        () => {
+          loadNotifications();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const loadNotifications = async () => {
+    try {
+      setIsLoading(true);
+
+      // Get current insurer ID
+      const { data: insurerData, error: insurerError } = await supabase.rpc('get_current_insurer_id');
+      if (insurerError || !insurerData || insurerData.length === 0) {
+        logger.error('Unable to retrieve insurer information');
+        return;
+      }
+
+      const insurerId = insurerData[0].insurer_id;
+
+      // Load alerts from insurer_alerts table
+      const { data: alerts, error } = await supabase
+        .from('insurer_alerts')
+        .select('*')
+        .eq('insurer_id', insurerId)
+        .is('is_deleted', false)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+
+      if (alerts) {
+        const mappedNotifications: Notification[] = alerts.map(alert => ({
+          id: alert.id,
+          type: alert.alert_type || 'system',
+          title: alert.title || 'Notification',
+          message: alert.message || '',
+          timestamp: alert.created_at,
+          isRead: alert.is_read ?? false,
+          priority: alert.priority || 'low',
+          action: alert.action_data ? {
+            type: alert.action_data.type || 'view',
+            label: alert.action_data.label || 'Voir',
+            data: alert.action_data.data
+          } : undefined,
+          customer: alert.customer_data ? {
+            name: alert.customer_data.name || '',
+            email: alert.customer_data.email || '',
+            phone: alert.customer_data.phone || '',
+            avatar: alert.customer_data.avatar
+          } : undefined,
+          quoteId: alert.quote_id
+        }));
+
+        setNotifications(mappedNotifications);
+      }
+    } catch (err) {
+      logger.error('Error loading notifications', { error: err });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const filteredNotifications = notifications.filter(notification => {
     const matchesSearch = notification.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -182,26 +156,64 @@ export const InsurerNotificationsPage: React.FC = () => {
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
-  const markAsRead = (notificationId: string) => {
-    setNotifications(notifications.map(n =>
-      n.id === notificationId ? { ...n, isRead: true } : n
-    ));
+  const markAsRead = async (notificationId: string) => {
+    try {
+      const { error } = await supabase
+        .from('insurer_alerts')
+        .update({ is_read: true, read_at: new Date().toISOString() })
+        .eq('id', notificationId);
+
+      if (error) throw error;
+
+      setNotifications(notifications.map(n =>
+        n.id === notificationId ? { ...n, isRead: true } : n
+      ));
+    } catch (err) {
+      logger.error('Error marking notification as read', { error: err });
+    }
   };
 
-  const markAllAsRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, isRead: true })));
+  const markAllAsRead = async () => {
+    try {
+      const unreadIds = notifications.filter(n => !n.isRead).map(n => n.id);
+
+      if (unreadIds.length === 0) return;
+
+      const { error } = await supabase
+        .from('insurer_alerts')
+        .update({ is_read: true, read_at: new Date().toISOString() })
+        .in('id', unreadIds);
+
+      if (error) throw error;
+
+      setNotifications(notifications.map(n => ({ ...n, isRead: true })));
+    } catch (err) {
+      logger.error('Error marking all as read', { error: err });
+    }
   };
 
   const handleAction = (notification: Notification) => {
     if (notification.action) {
       logger.info('Action:', notification.action.type, notification.action.data);
-      // Here you would typically navigate or perform the action
+      // Navigate or perform action
     }
     markAsRead(notification.id);
   };
 
-  const deleteNotification = (notificationId: string) => {
-    setNotifications(notifications.filter(n => n.id !== notificationId));
+  const deleteNotification = async (notificationId: string) => {
+    try {
+      // Mark as deleted instead of actually deleting
+      const { error } = await supabase
+        .from('insurer_alerts')
+        .update({ is_deleted: true })
+        .eq('id', notificationId);
+
+      if (error) throw error;
+
+      setNotifications(notifications.filter(n => n.id !== notificationId));
+    } catch (err) {
+      logger.error('Error deleting notification', { error: err });
+    }
   };
 
   const getNotificationIcon = (type: string) => {
@@ -241,13 +253,13 @@ export const InsurerNotificationsPage: React.FC = () => {
     const diffMinutes = Math.floor((now.getTime() - time.getTime()) / (1000 * 60));
 
     if (diffMinutes < 1) return 'À l\'instant';
-    if (diffMinutes < 60) return `Il y a ${diffMinutes} minutes`;
+    if (diffMinutes < 60) return `Il y a ${diffMinutes} minute${diffMinutes > 1 ? 's' : ''}`;
 
     const diffHours = Math.floor(diffMinutes / 60);
-    if (diffHours < 24) return `Il y a ${diffHours} heures`;
+    if (diffHours < 24) return `Il y a ${diffHours} heure${diffHours > 1 ? 's' : ''}`;
 
     const diffDays = Math.floor(diffHours / 24);
-    return `Il y a ${diffDays} jours`;
+    return `Il y a ${diffDays} jour${diffDays > 1 ? 's' : ''}`;
   };
 
   return (
@@ -392,15 +404,26 @@ export const InsurerNotificationsPage: React.FC = () => {
 
       {/* Notifications List */}
       <div className="space-y-4">
-        {filteredNotifications.length === 0 ? (
+        {isLoading ? (
+          <Card>
+            <CardContent className="p-12 text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-gray-500">Chargement des notifications...</p>
+            </CardContent>
+          </Card>
+        ) : filteredNotifications.length === 0 ? (
           <Card>
             <CardContent className="p-12 text-center">
               <Bell className="h-16 w-16 mx-auto mb-4 text-gray-300" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">
-                Aucune notification trouvée
+                {searchTerm || typeFilter !== 'all' || priorityFilter !== 'all' || readFilter !== 'all'
+                  ? 'Aucune notification trouvée'
+                  : 'Aucune notification'}
               </h3>
               <p className="text-gray-500">
-                Aucune notification ne correspond à vos critères de recherche.
+                {searchTerm || typeFilter !== 'all' || priorityFilter !== 'all' || readFilter !== 'all'
+                  ? 'Aucune notification ne correspond à vos critères de recherche.'
+                  : 'Vous n\'avez pas encore de notifications.'}
               </p>
             </CardContent>
           </Card>

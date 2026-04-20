@@ -79,23 +79,26 @@ export const InsurerAnalyticsPage: React.FC = () => {
   }, [selectedPeriod]);
 
   const loadAnalyticsData = async () => {
-    if (!insurerId) {
-      // Get insurer ID first
-      const { data: insurerData, error: insurerError } = await supabase.rpc('get_current_insurer_id');
-
-      if (insurerError || !insurerData || insurerData.length === 0) {
-        setError('Unable to load insurer information');
-        setIsLoading(false);
-        return;
-      }
-
-      setInsurerId(insurerData[0].insurer_id);
-    }
-
     setIsLoading(true);
     setError(null);
 
     try {
+      // Get insurer ID first
+      let currentInsurerId = insurerId;
+
+      if (!currentInsurerId) {
+        const { data: insurerData, error: insurerError } = await supabase.rpc('get_current_insurer_id');
+
+        if (insurerError || !insurerData || insurerData.length === 0) {
+          setError('Unable to load insurer information');
+          setIsLoading(false);
+          return;
+        }
+
+        currentInsurerId = insurerData[0].insurer_id;
+        setInsurerId(currentInsurerId);
+      }
+
       // Calculate date range based on selected period
       const now = new Date();
       const startDate = new Date();
@@ -115,11 +118,11 @@ export const InsurerAnalyticsPage: React.FC = () => {
           break;
       }
 
-      // Load quotes data for the period
-      const { data: quotes, error: quotesError } = await supabase
-        .from('quotes')
-        .select('*')
-        .eq('insurer_id', insurerId)
+      // Load quote_offers data for the period (this links insurers to quotes)
+      const { data: quoteOffers, error: quotesError } = await supabase
+        .from('quote_offers')
+        .select('*, quotes!inner(created_at, status)')
+        .eq('insurer_id', currentInsurerId)
         .gte('created_at', startDate.toISOString())
         .order('created_at', { ascending: true });
 
@@ -127,10 +130,10 @@ export const InsurerAnalyticsPage: React.FC = () => {
 
       // Calculate quotes stats
       const quotesStats = {
-        total: quotes?.length || 0,
-        approved: quotes?.filter(q => q.status === 'APPROVED').length || 0,
-        rejected: quotes?.filter(q => q.status === 'REJECTED').length || 0,
-        pending: quotes?.filter(q => q.status === 'PENDING').length || 0,
+        total: quoteOffers?.length || 0,
+        approved: quoteOffers?.filter(qo => qo.status === 'APPROVED').length || 0,
+        rejected: quoteOffers?.filter(qo => qo.status === 'REJECTED').length || 0,
+        pending: quoteOffers?.filter(qo => qo.status === 'PENDING').length || 0,
         conversionRate: 0,
       };
 
@@ -141,15 +144,15 @@ export const InsurerAnalyticsPage: React.FC = () => {
       // Load policies for revenue calculation
       const { data: policies, error: policiesError } = await supabase
         .from('policies')
-        .select('total_premium, created_at')
-        .eq('insurer_id', insurerId)
+        .select('premium_amount, created_at')
+        .eq('insurer_id', currentInsurerId)
         .gte('created_at', startDate.toISOString())
         .order('created_at', { ascending: true });
 
       if (policiesError) throw policiesError;
 
       // Calculate revenue stats
-      const totalRevenue = policies?.reduce((sum, p) => sum + (p.total_premium || 0), 0) || 0;
+      const totalRevenue = policies?.reduce((sum, p) => sum + (p.premium_amount || 0), 0) || 0;
       const monthlyRevenue = totalRevenue / (selectedPeriod === '1y' ? 12 : 1);
 
       // Get previous period data for growth calculation
@@ -158,19 +161,19 @@ export const InsurerAnalyticsPage: React.FC = () => {
 
       const { data: previousPolicies } = await supabase
         .from('policies')
-        .select('total_premium')
-        .eq('insurer_id', insurerId)
+        .select('premium_amount')
+        .eq('insurer_id', currentInsurerId)
         .gte('created_at', previousStartDate.toISOString())
         .lt('created_at', previousEndDate.toISOString());
 
-      const previousRevenue = previousPolicies?.reduce((sum, p) => sum + (p.total_premium || 0), 0) || 0;
+      const previousRevenue = previousPolicies?.reduce((sum, p) => sum + (p.premium_amount || 0), 0) || 0;
       const growth = previousRevenue > 0 ? Math.round(((totalRevenue - previousRevenue) / previousRevenue) * 1000) / 10 : 0;
 
       // Load offers performance
       const { data: offers, error: offersError } = await supabase
         .from('insurance_offers')
-        .select('*, coverage_types(name)')
-        .eq('insurer_id', insurerId)
+        .select('*')
+        .eq('insurer_id', currentInsurerId)
         .gte('created_at', startDate.toISOString())
         .order('created_at', { ascending: true });
 
@@ -178,16 +181,15 @@ export const InsurerAnalyticsPage: React.FC = () => {
 
       // Calculate offers stats
       const offerStats = offers?.reduce((acc: any, offer) => {
-        const name = offer.coverage_types?.name || offer.offer_type || 'Offre';
+        const name = offer.name || offer.contract_type || 'Offre';
         if (!acc[name]) {
           acc[name] = { name, customers: 0, revenue: 0, views: 0, quotes: 0, conversions: 0 };
         }
-        if (offer.status === 'ACTIVE') {
+        if (offer.is_active) {
           acc[name].customers += 1;
-          acc[name].revenue += offer.total_premium || 0;
+          acc[name].revenue += offer.price_max || offer.price_min || 0;
           acc[name].conversions += 1;
         }
-        acc[name].views += offer.view_count || 0;
         acc[name].quotes += 1;
         return acc;
       }, {}) || {};
@@ -212,21 +214,30 @@ export const InsurerAnalyticsPage: React.FC = () => {
         .sort((a: any, b: any) => b.conversion - a.conversion)
         .slice(0, 5);
 
-      // Load customers data
+      // Load customers data - users who have policies with this insurer
       const { data: customers, error: customersError } = await supabase
-        .from('profiles')
-        .select('id, created_at, date_of_birth')
-        .eq('role', 'USER')
+        .from('policies')
+        .select('user_id, created_at')
+        .eq('insurer_id', currentInsurerId)
         .gte('created_at', startDate.toISOString());
 
       if (customersError) throw customersError;
+
+      // Get unique customer IDs with their profile data
+      const uniqueCustomerIds = [...new Set(customers?.map(c => c.user_id) || [])];
+
+      // Load profile data for these customers (for demographics)
+      const { data: customerProfiles } = await supabase
+        .from('profiles')
+        .select('id, created_at, date_of_birth')
+        .in('id', uniqueCustomerIds);
 
       const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
       const newCustomers = customers?.filter(c => new Date(c.created_at) >= thirtyDaysAgo).length || 0;
 
       // Calculate demographics
-      const demographics = customers?.reduce((acc: any, customer) => {
+      const demographics = customerProfiles?.reduce((acc: any, customer) => {
         if (!customer.date_of_birth) return acc;
 
         const birthDate = new Date(customer.date_of_birth);
@@ -270,7 +281,7 @@ export const InsurerAnalyticsPage: React.FC = () => {
           performance: performanceOffers,
         },
         customers: {
-          total: customers?.length || 0,
+          total: uniqueCustomerIds.length || 0,
           new: newCustomers,
           retention: 0, // Would need more complex calculation
           demographics: demographicsArray,
@@ -278,7 +289,7 @@ export const InsurerAnalyticsPage: React.FC = () => {
       });
 
       logger.info('Analytics data loaded successfully', {
-        insurerId,
+        insurerId: currentInsurerId,
         quotesCount: quotesStats.total,
         revenue: totalRevenue
       });

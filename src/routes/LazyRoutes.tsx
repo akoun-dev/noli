@@ -53,11 +53,13 @@ export const MyReviewsPage = lazy(() => import('@/pages/user/MyReviewsPage'))
 // Pages assureur - Priorité moyenne
 export const InsurerOffersPage = lazy(() => import('@/pages/insurer/InsurerOffersPage'))
 export const InsurerQuotesPage = lazy(() => import('@/pages/insurer/InsurerQuotesPage'))
+export const InsurerClientsPage = lazy(() => import('@/pages/insurer/InsurerClientsPage'))
 export const InsurerAnalyticsPage = lazy(() => import('@/pages/insurer/InsurerAnalyticsPage'))
 export const InsurerNotificationsPage = lazy(
   () => import('@/pages/insurer/InsurerNotificationsPage')
 )
 export const InsurerGuaranteesPage = lazy(() => import('@/pages/insurer/InsurerGuaranteesPage'))
+export const InsurerSettingsPage = lazy(() => import('@/pages/insurer/InsurerSettingsPage'))
 
 // Pages admin - Priorité basse (chargées à la demande)
 export const AdminSupervisionPage = lazy(() => import('@/pages/admin/AdminSupervisionPage'))

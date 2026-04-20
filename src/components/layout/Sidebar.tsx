@@ -47,7 +47,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onMobileClose,
   isCollapsed: isCollapsedProp = false,
   onToggleCollapse,
-  isMobile = false
+  isMobile = false,
 }) => {
   // Use local state only if not controlled from parent
   const [localIsCollapsed, setLocalIsCollapsed] = useState(false)
@@ -75,6 +75,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
     ],
     INSURER: [
       { name: 'Tableau de bord', href: '/assureur/tableau-de-bord', icon: LayoutDashboard },
+      { name: 'Clients', href: '/assureur/clients', icon: Users },
+      { name: 'Contrats', href: '/assureur/contrats', icon: Shield },
+      { name: 'Sinistres', href: '/assureur/sinistres', icon: AlertTriangle },
       { name: 'Offres', href: '/assureur/offres', icon: Car },
       { name: 'Devis Reçus', href: '/assureur/devis', icon: FileText, badge: '3' },
       { name: 'Analytics', href: '/assureur/analytics', icon: BarChart3 },
@@ -119,20 +122,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {!isCollapsed && (
               <div className='flex items-center space-x-2'>
                 <img
-                  src="/img/noli vertical sans fond.png"
-                  alt="NOLI Assurance"
-                  className="h-6 sm:h-7 w-auto"
+                  src='/img/noli vertical sans fond.png'
+                  alt='NOLI Assurance'
+                  className='h-6 sm:h-7 w-auto'
                 />
                 <span className='text-sm sm:text-base font-semibold'>NOLI Assurance</span>
               </div>
             )}
             {isCollapsed && (
               <div className='mx-auto'>
-                <img
-                  src="/img/noli vertical sans fond.png"
-                  alt="NOLI"
-                  className="h-7 w-auto"
-                />
+                <img src='/img/noli vertical sans fond.png' alt='NOLI' className='h-7 w-auto' />
               </div>
             )}
             <Tooltip>
@@ -162,7 +161,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
               const isActive = location.pathname === item.href
               const navContent = (
                 <>
-                  <item.icon className={`h-5 w-5 sm:h-6 sm:w-6 flex-shrink-0 ${isCollapsed ? 'mx-auto' : ''}`} />
+                  <item.icon
+                    className={`h-5 w-5 sm:h-6 sm:w-6 flex-shrink-0 ${isCollapsed ? 'mx-auto' : ''}`}
+                  />
                   {!isCollapsed && (
                     <>
                       <span className='flex-1 text-sm sm:text-sm font-medium'>{item.name}</span>

@@ -14,7 +14,6 @@ interface GuaranteeFormData {
   name: string
   code: string
   description: string
-  category: string
   calculationMethod: 'FREE' | 'FIXED_AMOUNT' | 'VARIABLE_BASED' | 'MATRIX_BASED'
   insurerId: string
   insurerName?: string
@@ -65,14 +64,6 @@ const selectableCalculationMethods = [
   },
 ]
 
-const categories = [
-  { value: 'RC', label: 'Responsabilité Civile' },
-  { value: 'DEFENSE_RECOURS', label: 'Défense et Recours' },
-  { value: 'DOMMAGES', label: 'Dommages' },
-  { value: 'PERSONNE', label: 'Personne' },
-  { value: 'AUTRE', label: 'Autre' },
-]
-
 export const GuaranteeForm: React.FC<GuaranteeFormProps> = ({
   insurerId,
   insurerName,
@@ -85,7 +76,6 @@ export const GuaranteeForm: React.FC<GuaranteeFormProps> = ({
     name: '',
     code: '',
     description: '',
-    category: 'RC',
     calculationMethod: 'FIXED_AMOUNT',
     insurerId: insurerId,
     insurerName: insurerName || '',
@@ -107,10 +97,6 @@ export const GuaranteeForm: React.FC<GuaranteeFormProps> = ({
     await onSubmit(formData)
   }
 
-  const getCategoryLabel = (category: string) => {
-    return categories.find(c => c.value === category)?.label || category
-  }
-
   return (
     <form onSubmit={handleSubmit} className='space-y-6'>
       {error && (
@@ -119,30 +105,6 @@ export const GuaranteeForm: React.FC<GuaranteeFormProps> = ({
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
-
-      {/* Informations sur l'assureur */}
-      <Card className='border border-blue-200 shadow-sm'>
-        <CardHeader className='pb-3 bg-blue-50/50'>
-          <CardTitle className='text-base flex items-center gap-2'>
-            <div className='w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center'>
-              <span className='text-blue-600 text-xs font-bold'>ℹ️</span>
-            </div>
-            Assuranceur
-          </CardTitle>
-          <CardDescription className='text-sm'>
-            Cette garantie sera associée à votre compagnie d'assurance
-          </CardDescription>
-        </CardHeader>
-        <CardContent className='pt-4'>
-          <div className='p-3 bg-blue-50 border border-blue-200 rounded-md flex items-center gap-3'>
-            <Shield className='h-5 w-5 text-blue-600' />
-            <div>
-              <p className='font-medium text-sm'>{insurerName || 'Votre compagnie'}</p>
-              <p className='text-xs text-muted-foreground'>ID: {insurerId}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Section Informations générales */}
       <Card className='border border-gray-200 shadow-sm'>
@@ -183,25 +145,6 @@ export const GuaranteeForm: React.FC<GuaranteeFormProps> = ({
               placeholder='Description détaillée de la garantie'
               rows={3}
             />
-          </div>
-
-          <div className='space-y-2'>
-            <Label htmlFor='guarantee-category' className='flex items-center gap-1'>
-              Catégorie <span className='text-red-500'>*</span>
-            </Label>
-            <select
-              id='guarantee-category'
-              value={formData.category}
-              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-              className='flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50'
-              required
-            >
-              {categories.map((cat) => (
-                <option key={cat.value} value={cat.value}>
-                  {cat.label}
-                </option>
-              ))}
-            </select>
           </div>
         </CardContent>
       </Card>

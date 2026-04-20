@@ -126,7 +126,6 @@ export interface Database {
           name: string
           description: string | null
           logo_url: string | null
-          rating: number | null
           is_active: boolean
           contact_email: string | null
           phone: string | null

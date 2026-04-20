@@ -120,9 +120,14 @@ BEGIN
     RAISE EXCEPTION 'User must be authenticated';
   END IF;
 
-  -- Create the link
+  -- Create the link or update if already exists
   INSERT INTO public.insurer_accounts (profile_id, insurer_id)
-  VALUES ((SELECT auth.uid()), p_insurer_id);
+  VALUES ((SELECT auth.uid()), p_insurer_id)
+  ON CONFLICT (profile_id)
+  DO UPDATE SET
+    insurer_id = EXCLUDED.insurer_id,
+    updated_at = NOW()
+  WHERE insurer_accounts.profile_id = (SELECT auth.uid());
 
   RETURN TRUE;
 END;
@@ -157,8 +162,10 @@ BEGIN
     SELECT 1 FROM public.insurer_accounts
     WHERE profile_id = v_profile_id
   ) THEN
+    -- Get the existing insurer ID
+    SELECT insurer_id INTO v_insurer_id FROM public.insurer_accounts WHERE profile_id = v_profile_id;
     RETURN QUERY SELECT
-      NULL::uuid,
+      v_insurer_id,
       FALSE,
       'User already has an insurer account'::text;
     RETURN;

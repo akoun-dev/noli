@@ -45,6 +45,9 @@ export const APP_ROUTES = {
     offers: '/assureur/offres',
     quotes: '/assureur/devis',
     analytics: '/assureur/analytics',
+    contracts: '/assureur/contrats',
+    claims: '/assureur/sinistres',
+    clients: '/assureur/clients',
   },
 
   // Admin routes

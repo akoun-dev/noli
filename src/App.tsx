@@ -79,8 +79,11 @@ const InsurerQuotesPage = lazy(() => import('@/pages/insurer/InsurerQuotesPage')
 const InsurerAnalyticsPage = lazy(() => import('@/pages/insurer/InsurerAnalyticsPage'))
 const InsurerNotificationsPage = lazy(() => import('@/pages/insurer/InsurerNotificationsPage'))
 const InsurerGuaranteesPage = lazy(() => import('@/pages/insurer/InsurerGuaranteesPage'))
+const InsurerClientsPage = lazy(() => import('@/pages/insurer/InsurerClientsPage'))
 const InsurerSettingsPage = lazy(() => import('@/pages/insurer/InsurerSettingsPage'))
 const InsurerSetupPage = lazy(() => import('@/pages/insurer/InsurerSetupPage'))
+const InsurerContractsPage = lazy(() => import('@/pages/insurer/InsurerContractsPage'))
+const InsurerClaimsPage = lazy(() => import('@/pages/insurer/InsurerClaimsPage'))
 
 // Feature Pages - Lazy loaded
 const ComparisonPage = lazy(() => import('@/features/comparison/pages/ComparisonPage'))
@@ -370,7 +373,23 @@ const App = () => (
                         path='/assureur/clients'
                         element={
                           <Suspense fallback={<PageLoader />}>
-                            <div>Insurer Clients</div>
+                            <InsurerClientsPage />
+                          </Suspense>
+                        }
+                      />
+                      <Route
+                        path='/assureur/contrats'
+                        element={
+                          <Suspense fallback={<PageLoader />}>
+                            <InsurerContractsPage />
+                          </Suspense>
+                        }
+                      />
+                      <Route
+                        path='/assureur/sinistres'
+                        element={
+                          <Suspense fallback={<PageLoader />}>
+                            <InsurerClaimsPage />
                           </Suspense>
                         }
                       />

@@ -177,6 +177,28 @@ const InsurerSetupPage = () => {
 
       const result = insurerResult[0]
       if (!result.success) {
+        // If user already has an insurer account, we can redirect to dashboard
+        if (result.message && result.message.includes('already has an insurer account')) {
+          logger.info('User already has an insurer account, redirecting to dashboard', { insurerId: result.insurer_id })
+          
+          // Update profile with company name even if account already exists
+          await supabase
+            .from('profiles')
+            .update({
+              company_name: companyData.name,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', user.id)
+          
+          toast({
+            title: 'Compagnie déjà configurée',
+            description: 'Votre compagnie est déjà configurée. Redirection vers le tableau de bord...',
+          })
+          setTimeout(() => {
+            navigate('/assureur/tableau-de-bord')
+          }, 1500)
+          return
+        }
         throw new Error(result.message || 'Erreur lors de la création de la compagnie')
       }
 

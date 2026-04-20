@@ -22,6 +22,8 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
+import { supabase } from '@/lib/supabase';
+import { logger } from '@/lib/logger';
 
 interface Notification {
   id: string;
@@ -52,115 +54,133 @@ interface NotificationSystemProps {
 export const NotificationSystem: React.FC<NotificationSystemProps> = ({
   onNotificationAction,
 }) => {
-  const [notifications, setNotifications] = useState<Notification[]>([
-    {
-      id: '1',
-      type: 'quote_request',
-      title: 'Nouveau devis reçu',
-      message: 'Jean Kouadio a demandé un devis pour une Toyota Yaris 2020',
-      timestamp: new Date(Date.now() - 5 * 60 * 1000).toISOString(), // 5 minutes ago
-      isRead: false,
-      priority: 'medium',
-      action: {
-        type: 'view',
-        label: 'Voir le devis',
-        data: { quoteId: 'quote-123' }
-      },
-      customer: {
-        name: 'Jean Kouadio',
-        email: 'jean.kouadio@email.com',
-        phone: '+225 07 00 00 00 00'
-      },
-      quoteId: 'quote-123'
-    },
-    {
-      id: '2',
-      type: 'urgent',
-      title: 'Devis urgent - Expiration imminente',
-      message: 'Le devis de Koffi Yao expire dans 2 heures',
-      timestamp: new Date(Date.now() - 15 * 60 * 1000).toISOString(), // 15 minutes ago
-      isRead: false,
-      priority: 'high',
-      action: {
-        type: 'approve',
-        label: 'Traiter maintenant',
-        data: { quoteId: 'quote-456' }
-      },
-      customer: {
-        name: 'Koffi Yao',
-        email: 'koffi.yao@email.com',
-        phone: '+225 07 00 00 00 02'
-      },
-      quoteId: 'quote-456'
-    },
-    {
-      id: '3',
-      type: 'call',
-      title: 'Appel manqué',
-      message: 'Marie Amani a tenté de vous joindre concernant son devis',
-      timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(), // 30 minutes ago
-      isRead: true,
-      priority: 'medium',
-      action: {
-        type: 'call',
-        label: 'Rappeler',
-        data: { phone: '+225 07 00 00 00 01' }
-      },
-      customer: {
-        name: 'Marie Amani',
-        email: 'marie.amani@email.com',
-        phone: '+225 07 00 00 00 01'
-      }
-    },
-    {
-      id: '4',
-      type: 'message',
-      title: 'Nouveau message',
-      message: 'Fatou Sylla: "Je voudrais modifier mon devis"',
-      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
-      isRead: true,
-      priority: 'low',
-      action: {
-        type: 'email',
-        label: 'Répondre',
-        data: { email: 'fatou.sylla@email.com' }
-      },
-      customer: {
-        name: 'Fatou Sylla',
-        email: 'fatou.sylla@email.com',
-        phone: '+225 07 00 00 00 03'
-      }
-    },
-    {
-      id: '5',
-      type: 'system',
-      title: 'Rapport journalier disponible',
-      message: 'Votre rapport de performance du jour est prêt',
-      timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(), // 4 hours ago
-      isRead: true,
-      priority: 'low',
-      action: {
-        type: 'view',
-        label: 'Voir le rapport',
-        data: { reportId: 'daily-123' }
-      }
-    }
-  ]);
-
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    loadNotifications();
+
+    // Set up real-time subscription for new notifications
+    const channel = supabase
+      .channel('insurer-alerts-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'insurer_alerts',
+          filter: 'insurer_id=eq.current_insurer'
+        },
+        () => {
+          loadNotifications();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const loadNotifications = async () => {
+    try {
+      setIsLoading(true);
+
+      // Get current insurer ID
+      const { data: insurerData, error: insurerError } = await supabase.rpc('get_current_insurer_id');
+      if (insurerError || !insurerData || insurerData.length === 0) {
+        logger.error('Unable to retrieve insurer information');
+        return;
+      }
+
+      const insurerId = insurerData[0].insurer_id;
+
+      // Load alerts from insurer_alerts table
+      const { data: alerts, error } = await supabase
+        .from('insurer_alerts')
+        .select('*')
+        .eq('insurer_id', insurerId)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+
+      if (alerts) {
+        const mappedNotifications: Notification[] = alerts.map(alert => ({
+          id: alert.id,
+          type: alert.alert_type || 'system',
+          title: alert.title || 'Notification',
+          message: alert.message || '',
+          timestamp: alert.created_at,
+          isRead: alert.is_read ?? false,
+          priority: alert.priority || 'low',
+          action: alert.action_data ? {
+            type: alert.action_data.type || 'view',
+            label: alert.action_data.label || 'Voir',
+            data: alert.action_data.data
+          } : undefined,
+          customer: alert.customer_data ? {
+            name: alert.customer_data.name || '',
+            email: alert.customer_data.email || '',
+            phone: alert.customer_data.phone || '',
+            avatar: alert.customer_data.avatar
+          } : undefined,
+          quoteId: alert.quote_id
+        }));
+
+        setNotifications(mappedNotifications);
+      }
+    } catch (err) {
+      logger.error('Error loading notifications', { error: err });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     setUnreadCount(notifications.filter(n => !n.isRead).length);
   }, [notifications]);
 
-  const markAsRead = (notificationId: string) => {
-    setNotifications(notifications.map(n =>
-      n.id === notificationId ? { ...n, isRead: true } : n
-    ));
+  const markAsRead = async (notificationId: string) => {
+    try {
+      // Update in database
+      const { error } = await supabase
+        .from('insurer_alerts')
+        .update({ is_read: true, read_at: new Date().toISOString() })
+        .eq('id', notificationId);
+
+      if (error) throw error;
+
+      // Update local state
+      setNotifications(notifications.map(n =>
+        n.id === notificationId ? { ...n, isRead: true } : n
+      ));
+    } catch (err) {
+      logger.error('Error marking notification as read', { error: err });
+    }
   };
 
-  const markAllAsRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, isRead: true })));
+  const markAllAsRead = async () => {
+    try {
+      // Get all unread notification IDs
+      const unreadIds = notifications.filter(n => !n.isRead).map(n => n.id);
+
+      if (unreadIds.length === 0) return;
+
+      // Update in database
+      const { error } = await supabase
+        .from('insurer_alerts')
+        .update({ is_read: true, read_at: new Date().toISOString() })
+        .in('id', unreadIds);
+
+      if (error) throw error;
+
+      // Update local state
+      setNotifications(notifications.map(n => ({ ...n, isRead: true })));
+    } catch (err) {
+      logger.error('Error marking all as read', { error: err });
+    }
   };
 
   const handleAction = (notification: Notification) => {
@@ -170,8 +190,21 @@ export const NotificationSystem: React.FC<NotificationSystemProps> = ({
     markAsRead(notification.id);
   };
 
-  const removeNotification = (notificationId: string) => {
-    setNotifications(notifications.filter(n => n.id !== notificationId));
+  const removeNotification = async (notificationId: string) => {
+    try {
+      // Delete from database (or mark as deleted)
+      const { error } = await supabase
+        .from('insurer_alerts')
+        .update({ is_deleted: true })
+        .eq('id', notificationId);
+
+      if (error) throw error;
+
+      // Update local state
+      setNotifications(notifications.filter(n => n.id !== notificationId));
+    } catch (err) {
+      logger.error('Error removing notification', { error: err });
+    }
   };
 
   const getNotificationIcon = (type: string) => {
@@ -259,7 +292,12 @@ export const NotificationSystem: React.FC<NotificationSystemProps> = ({
           </div>
 
           <div className="max-h-80 overflow-y-auto">
-            {notifications.length === 0 ? (
+            {isLoading ? (
+              <div className="p-8 text-center text-gray-500">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+                <p>Chargement...</p>
+              </div>
+            ) : notifications.length === 0 ? (
               <div className="p-8 text-center text-gray-500">
                 <Bell className="h-12 w-12 mx-auto mb-2 text-gray-300" />
                 <p>Aucune notification</p>
@@ -350,9 +388,11 @@ export const NotificationSystem: React.FC<NotificationSystemProps> = ({
       </DropdownMenu>
 
       {/* Sound indicator for real-time notifications */}
-      <div className="absolute -top-1 -right-1">
-        <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
-      </div>
+      {unreadCount > 0 && (
+        <div className="absolute -top-1 -right-1">
+          <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
+        </div>
+      )}
     </div>
   );
 };

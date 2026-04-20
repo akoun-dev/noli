@@ -94,7 +94,7 @@ class OfferService {
         .from('insurance_offers')
         .select(`
           *,
-          insurer:insurers(id, name, description, logo_url, rating, is_active),
+          insurer:insurers(id, name, description, logo_url, is_active),
           category:insurance_categories(id, name, description, is_active)
         `)
         .order('updated_at', { ascending: false });
@@ -117,7 +117,7 @@ class OfferService {
         .from('insurance_offers')
         .select(`
           *,
-          insurer:insurers(id, name, description, logo_url, rating, is_active),
+          insurer:insurers(id, name, description, logo_url, is_active),
           category:insurance_categories(id, name, description, is_active)
         `)
         .eq('id', id)
@@ -154,7 +154,7 @@ class OfferService {
         })
         .select(`
           *,
-          insurer:insurers(id, name, description, logo_url, rating, is_active),
+          insurer:insurers(id, name, description, logo_url, is_active),
           category:insurance_categories(id, name, description, is_active)
         `)
         .single();
@@ -191,7 +191,7 @@ class OfferService {
         .eq('id', id)
         .select(`
           *,
-          insurer:insurers(id, name, description, logo_url, rating, is_active),
+          insurer:insurers(id, name, description, logo_url, is_active),
           category:insurance_categories(id, name, description, is_active)
         `)
         .single();
@@ -341,7 +341,7 @@ class OfferService {
         .from('insurance_offers')
         .select(`
           *,
-          insurer:insurers(id, name, description, logo_url, rating, is_active),
+          insurer:insurers(id, name, description, logo_url, is_active),
           category:insurance_categories(id, name, description, is_active)
         `);
 
@@ -378,7 +378,7 @@ class OfferService {
         .from('insurance_offers')
         .select(`
           *,
-          insurer:insurers(id, name, description, logo_url, rating, is_active),
+          insurer:insurers(id, name, description, logo_url, is_active),
           category:insurance_categories(id, name, description, is_active)
         `)
         .eq('is_active', true)
@@ -402,7 +402,7 @@ class OfferService {
         .from('insurance_offers')
         .select(`
           *,
-          insurer:insurers(id, name, description, logo_url, rating, is_active),
+          insurer:insurers(id, name, description, logo_url, is_active),
           category:insurance_categories(id, name, description, is_active)
         `)
         .eq('insurer_id', insurerId)
@@ -426,7 +426,7 @@ class OfferService {
         .from('insurance_offers')
         .select(`
           *,
-          insurer:insurers(id, name, description, logo_url, rating, is_active),
+          insurer:insurers(id, name, description, logo_url, is_active),
           category:insurance_categories(id, name, description, is_active)
         `)
         .eq('category_id', categoryId)

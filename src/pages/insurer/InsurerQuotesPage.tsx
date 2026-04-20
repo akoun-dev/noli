@@ -33,10 +33,12 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { quoteService } from '@/data/api/quoteService'
+import { useInsurerQuotes } from '@/features/insurer/services/quoteService'
+import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
 
 interface Quote {
+  // ...existing code...
   id: string
   customer: {
     name: string
@@ -61,35 +63,22 @@ interface Quote {
 }
 
 export const InsurerQuotesPage: React.FC = () => {
+  const { user } = useAuth()
+  const insurerId = user?.companyId // Assuming companyId is the insurer_id
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [priorityFilter, setPriorityFilter] = useState<string>('all')
-  const [quotes, setQuotes] = useState<Quote[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const { data: quotes = [], isLoading } = useInsurerQuotes(insurerId || '')
 
-  useEffect(() => {
-    const loadQuotes = async () => {
-      try {
-        setIsLoading(true)
-        const quotesData = await quoteService.getAllQuotes()
-        setQuotes(quotesData)
-      } catch (error) {
-        console.error('Error loading quotes:', error)
-        toast.error('Erreur lors du chargement des devis')
-      } finally {
-        setIsLoading(false)
-      }
-    }
+  const filteredQuotes = quotes.filter((quote: any) => {
+    const customerName = quote.customer?.firstName || quote.customer?.name || ''
+    const vehicleMake = quote.vehicle?.brand || quote.vehicle?.make || ''
+    const vehicleModel = quote.vehicle?.model || ''
 
-    loadQuotes()
-  }, [])
-
-  const filteredQuotes = quotes.filter((quote) => {
     const matchesSearch =
-      quote.customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      quote.vehicle.make.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      quote.vehicle.model.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      quote.vehicle.licensePlate.toLowerCase().includes(searchTerm.toLowerCase())
+      customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      vehicleMake.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      vehicleModel.toLowerCase().includes(searchTerm.toLowerCase())
 
     const matchesStatus = statusFilter === 'all' || quote.status === statusFilter
     const matchesPriority = priorityFilter === 'all' || quote.priority === priorityFilter

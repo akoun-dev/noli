@@ -37,6 +37,10 @@ import {
   // Pages assureur
   InsurerOffersPage,
   InsurerQuotesPage,
+  InsurerClientsPage,
+  InsurerClientDetailsPage,
+  InsurerContractsPage,
+  InsurerClaimsPage,
   InsurerAnalyticsPage,
   InsurerNotificationsPage,
   InsurerGuaranteesPage,
@@ -280,6 +284,38 @@ export const OptimizedAppRoutes = () => {
             }
           />
           <Route
+            path='/assureur/clients'
+            element={
+              <LazyWrapper>
+                <InsurerClientsPage />
+              </LazyWrapper>
+            }
+          />
+          <Route
+            path='/assureur/clients/:clientId'
+            element={
+              <LazyWrapper>
+                <InsurerClientDetailsPage />
+              </LazyWrapper>
+            }
+          />
+          <Route
+            path='/assureur/contrats'
+            element={
+              <LazyWrapper>
+                <InsurerContractsPage />
+              </LazyWrapper>
+            }
+          />
+          <Route
+            path='/assureur/sinistres'
+            element={
+              <LazyWrapper>
+                <InsurerClaimsPage />
+              </LazyWrapper>
+            }
+          />
+          <Route
             path='/assureur/analytics'
             element={
               <LazyWrapper>
@@ -307,7 +343,7 @@ export const OptimizedAppRoutes = () => {
             path='/assureur/parametres'
             element={
               <LazyWrapper>
-                <div>Insurer Settings</div>
+                <InsurerSettingsPage />
               </LazyWrapper>
             }
           />

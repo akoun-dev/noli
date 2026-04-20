@@ -33,7 +33,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
   DropdownMenu,
@@ -129,7 +128,7 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, subtitle, icon: Icon,
 // GuaranteeCard Component
 interface GuaranteeCardProps {
   guarantee: Guarantee
-  insurer?: { id: string; name: string; code?: string }
+  insurer?: { id: string; name: string; code?: string; logo_url?: string }
   onEdit: () => void
   onToggle: () => void
   onDelete: () => void
@@ -249,8 +248,18 @@ const GuaranteeCard: React.FC<GuaranteeCardProps> = ({
         {/* Footer */}
         <div className='flex items-center justify-between pt-3 border-t'>
           {insurer && (
-            <div className='text-xs text-muted-foreground'>
-              <Building className='h-3 w-3 inline mr-1' />
+            <div className='text-xs text-muted-foreground flex items-center gap-1'>
+              {insurer.logo_url && (
+                <img
+                  src={insurer.logo_url}
+                  alt={insurer.name}
+                  className='w-4 h-4 rounded object-cover'
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none'
+                  }}
+                />
+              )}
+              <Building className='h-3 w-3' />
               {insurer.name}
             </div>
           )}
@@ -372,7 +381,7 @@ export const AdminTarificationPage: React.FC = () => {
     insurerId: '00000000-0000-0000-0000-000000000001', // Default insurer
     parameters: undefined,
   })
-  const [insurers, setInsurers] = useState<Array<{ id: string; name: string; code?: string }>>([])
+  const [insurers, setInsurers] = useState<Array<{ id: string; name: string; code?: string; logo_url?: string }>>([])
   const [loadingInsurers, setLoadingInsurers] = useState(true)
   const [insurersDropdownOpen, setInsurersDropdownOpen] = useState(false)
   const [existingGuaranteeCodes, setExistingGuaranteeCodes] = useState<string[]>([])
@@ -480,7 +489,7 @@ export const AdminTarificationPage: React.FC = () => {
         setLoadingInsurers(true)
         const { data: insurersData, error: insurersError } = await supabase
           .from('insurers')
-          .select('id, name, code')
+          .select('id, name, code, logo_url')
           .order('name', { ascending: true })
         
         if (insurersError) {
@@ -2736,10 +2745,6 @@ export const AdminTarificationPage: React.FC = () => {
           </p>
         </div>
         <div className='flex items-center gap-2'>
-          <Button variant='outline' size='sm'>
-            <Settings className='h-4 w-4 mr-2' />
-            Configuration
-          </Button>
           <Button size='sm' onClick={() => setIsCreateGuaranteeDialogOpen(true)}>
             <Plus className='h-4 w-4 mr-2' />
             Nouvelle Garantie
@@ -2793,32 +2798,26 @@ export const AdminTarificationPage: React.FC = () => {
         </div>
       )}
 
-      <Tabs defaultValue='guarantees' className='space-y-4'>
-        <TabsList className='grid grid-cols-1 sm:grid-cols-3 w-full h-auto'>
-          <TabsTrigger value='guarantees' className='gap-2'>
-            <Shield className='h-4 w-4' />
-            <span>Garanties</span>
-            <Badge variant='secondary' className='ml-auto'>
-              {guarantees.length}
-            </Badge>
-          </TabsTrigger>
-          <TabsTrigger value='grids' className='gap-2'>
-            <Grid3X3 className='h-4 w-4' />
-            <span>Grilles Tarifaires</span>
-            <Badge variant='secondary' className='ml-auto'>
-              {tarifFixes.length}
-            </Badge>
-          </TabsTrigger>
-          <TabsTrigger value='statistics' className='gap-2'>
-            <TrendingUp className='h-4 w-4' />
-            <span>Statistiques</span>
-          </TabsTrigger>
-        </TabsList>
+      <div className='space-y-4'>
+        {/* Header */}
+        <div className='flex items-center justify-between'>
+          <div>
+            <h2 className='text-xl font-semibold flex items-center gap-2'>
+              <Shield className='h-5 w-5' />
+              Garanties
+            </h2>
+            <p className='text-sm text-muted-foreground mt-1'>
+              Gérez les garanties proposées par les assureurs
+            </p>
+          </div>
+          <Badge variant='secondary'>
+            {guarantees.length}
+          </Badge>
+        </div>
 
-        <TabsContent value='guarantees' className='space-y-4'>
-          {/* Filters Card */}
-          <Card>
-            <CardContent className='p-4'>
+        {/* Filters Card */}
+        <Card>
+          <CardContent className='p-4'>
               <div className='flex flex-col sm:flex-row gap-4'>
                 {/* Search */}
                 <div className='flex-1'>
@@ -2961,6 +2960,16 @@ export const AdminTarificationPage: React.FC = () => {
                                               newGuarantee.insurerId === insurer.id ? 'text-blue-600' : 'invisible'
                                             }`}
                                           />
+                                          {insurer.logo_url && (
+                                            <img
+                                              src={insurer.logo_url}
+                                              alt={insurer.name}
+                                              className='w-6 h-6 rounded object-cover'
+                                              onError={(e) => {
+                                                e.currentTarget.style.display = 'none'
+                                              }}
+                                            />
+                                          )}
                                           <div className='flex flex-col'>
                                             <span className='text-sm font-medium'>{insurer.name}</span>
                                             {insurer.code && (
@@ -3476,6 +3485,28 @@ export const AdminTarificationPage: React.FC = () => {
                               <div className='flex-1'>
                                 <h3 className='font-semibold text-lg mb-1'>{guarantee.name}</h3>
                                 <p className='text-sm text-muted-foreground mb-2'>{guarantee.code}</p>
+                                {(() => {
+                                  const insurer = insurers.length > 0
+                                    ? guarantee.insurerId
+                                      ? insurers.find((i) => i.id === guarantee.insurerId)
+                                      : insurers[0]
+                                    : undefined
+                                  return insurer ? (
+                                    <div className='flex items-center gap-2 mb-2'>
+                                      {insurer.logo_url && (
+                                        <img
+                                          src={insurer.logo_url}
+                                          alt={insurer.name}
+                                          className='w-4 h-4 rounded object-cover'
+                                          onError={(e) => {
+                                            e.currentTarget.style.display = 'none'
+                                          }}
+                                        />
+                                      )}
+                                      <span className='text-xs text-muted-foreground'>{insurer.name}</span>
+                                    </div>
+                                  ) : null
+                                })()}
                                 <div className='flex flex-wrap gap-2 mb-2'>
                                   <Badge variant='outline' className='text-xs'>
                                     {guarantee.category}
@@ -3525,430 +3556,7 @@ export const AdminTarificationPage: React.FC = () => {
               )}
             </CardContent>
           </Card>
-        </TabsContent>
-
-        <TabsContent value='grids' className='space-y-4'>
-          {import.meta.env.VITE_MOCK_DATA === 'true' && (
-            <Alert>
-              <AlertTriangle className='h-4 w-4' />
-              <AlertDescription>
-                Mode démonstration activé (VITE_MOCK_DATA=true). Les grilles affichées ci‑dessous
-                sont des exemples.
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {/* Section Garanties Gratuites (Supabase) */}
-          {freeCoverages.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className='flex items-center gap-2'>
-                  <Shield className='w-5 h-5' /> Garanties Gratuites
-                </CardTitle>
-                <CardDescription>Garanties dont la prime est gratuite</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className='space-y-2'>
-                  {freeCoverages.map((c) => (
-                    <div
-                      key={c.id}
-                      className='flex items-center justify-between border p-2 rounded-md'
-                    >
-                      <div className='flex items-center gap-2'>
-                        <Badge variant='outline'>Gratuit</Badge>
-                        <span className='font-medium'>{c.name}</span>
-                      </div>
-                      <div className='flex items-center gap-2'>
-                        {c.isMandatory && (
-                          <Badge
-                            variant='outline'
-                            className='bg-green-50 text-green-700 dark:bg-green-500/10 dark:text-green-400'
-                          >
-                            Obligatoire
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                  {freeCoverages.length === 0 && (
-                    <div className='text-sm text-muted-foreground'>
-                      Aucune garantie gratuite configurée
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Gestion des Tarifs Fixes */}
-          <Card id='tarifs-fixes-section'>
-            <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-              <CardTitle className='text-base sm:text-lg'>Gestion des Tarifs Fixes</CardTitle>
-              <Dialog
-                open={isCreateTarifFixeDialogOpen}
-                onOpenChange={(open) => {
-                  setIsCreateTarifFixeDialogOpen(open)
-                  if (open) {
-                    // reset selection and preload options
-                    setSelectedCoverageId('')
-                    setSelectedFormulaName('')
-                  }
-                }}
-              >
-                <DialogTrigger asChild>
-                  <Button size='sm'>
-                    <Plus className='w-4 h-4 mr-2' /> Nouveau tarif
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className='max-w-[98vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto'>
-                  <DialogHeader>
-                    <DialogTitle>Nouveau tarif fixe</DialogTitle>
-                    <DialogDescription>Ajouter un tarif fixe de garantie</DialogDescription>
-                  </DialogHeader>
-                  <div className='space-y-4'>
-                    <div>
-                      <Label>Garantie</Label>
-                      <Select
-                        value={selectedCoverageId}
-                        onValueChange={async (val) => {
-                          setSelectedCoverageId(val)
-                          setSelectedFormulaName('')
-                          try {
-                            const formulas = await tarificationSupabaseService.listFormulas(val)
-                            setAvailableFormulas(formulas)
-                          } catch (e) {
-                            setAvailableFormulas([])
-                          }
-                        }}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder='Sélectionnez une garantie' />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {fixedCoverageOptions.map((c) => (
-                            <SelectItem key={c.id} value={c.id}>
-                              {c.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    {availableFormulas.length > 0 ? (
-                      <div>
-                        <Label>Formule (si applicable)</Label>
-                        <Select
-                          value={selectedFormulaName}
-                          onValueChange={(v) => setSelectedFormulaName(v)}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder='Choisir une formule' />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {availableFormulas.map((f) => (
-                              <SelectItem key={f} value={f}>
-                                {f}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    ) : (
-                      <div>
-                        <Label>Formule (si applicable)</Label>
-                        <Input
-                          value="Aucune formule disponible pour cette garantie"
-                          readOnly
-                          className="bg-gray-100 dark:bg-gray-800 cursor-not-allowed"
-                        />
-                      </div>
-                    )}
-                    <div>
-                      <Label>Prime (FCFA)</Label>
-                      <Input
-                        type='number'
-                        value={newTarifFixe.prime}
-                        onChange={(e) =>
-                          setNewTarifFixe((p) => ({ ...p, prime: Number(e.target.value) || 0 }))
-                        }
-                        placeholder='Ex: 15000'
-                      />
-                    </div>
-                    <div>
-                      <Label>Conditions (optionnel)</Label>
-                      <Input
-                        value={newTarifFixe.conditions || ''}
-                        onChange={(e) =>
-                          setNewTarifFixe((p) => ({ ...p, conditions: e.target.value }))
-                        }
-                        placeholder='Ex: Uniquement pickups'
-                      />
-                    </div>
-                    <div>
-                      <Label>Prix réduit en pack (optionnel)</Label>
-                      <Input
-                        type='number'
-                        value={newTarifFixe.packPriceReduced ?? ''}
-                        onChange={(e) =>
-                          setNewTarifFixe((p) => ({
-                            ...p,
-                            packPriceReduced:
-                              e.target.value === '' ? undefined : Number(e.target.value) || 0,
-                          }))
-                        }
-                        placeholder='Ex: 4240'
-                      />
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button variant='outline' onClick={() => setIsCreateTarifFixeDialogOpen(false)}>
-                      Annuler
-                    </Button>
-                    <Button onClick={handleCreateTarifFixe}>Créer</Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </CardHeader>
-            <CardContent>
-              <div className='responsive-table-wrapper'>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Garantie</TableHead>
-                      <TableHead className='hidden sm:table-cell'>Conditions</TableHead>
-                      <TableHead>Prime</TableHead>
-                      <TableHead className='hidden md:table-cell'>Prix pack</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {tarifFixes.map((t) => (
-                      <TableRow key={t.id}>
-                        <TableCell className='font-medium'>
-                          {t.coverageName}
-                          {t.formulaName ? (
-                            <span className='text-xs text-muted-foreground'>
-                              {' '}
-                              — {t.formulaName}
-                            </span>
-                          ) : null}
-                        </TableCell>
-                        <TableCell className='hidden sm:table-cell'>
-                          {t.conditions || '-'}
-                        </TableCell>
-                        <TableCell>{t.fixedAmount.toLocaleString('fr-FR')} FCFA</TableCell>
-                        <TableCell className='hidden md:table-cell'>
-                          {t.packPriceReduced != null
-                            ? `${t.packPriceReduced.toLocaleString('fr-FR')} FCFA`
-                            : '-'}
-                        </TableCell>
-                        <TableCell>
-                          <div className='flex gap-2'>
-                            <Button
-                              variant='outline'
-                              size='sm'
-                              onClick={() => openEditTarifFixeDialog(t)}
-                            >
-                              <Edit className='w-4 h-4' />
-                            </Button>
-                            <Button
-                              variant='outline'
-                              size='sm'
-                              className='text-red-600 hover:text-red-700'
-                              onClick={() => handleDeleteTarifFixe(t.id)}
-                            >
-                              <Trash2 className='w-4 h-4' />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Dialog: Edit Tarif Fixe */}
-          <Dialog
-            open={isEditTarifFixeDialogOpen}
-            onOpenChange={(open) => {
-              setIsEditTarifFixeDialogOpen(open)
-              if (!open) {
-                setSelectedCoverageId('')
-                setSelectedFormulaName('')
-              }
-            }}
-          >
-            <DialogContent className='max-w-[98vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto'>
-              <DialogHeader>
-                <DialogTitle>Modifier le tarif fixe</DialogTitle>
-                <DialogDescription>Mettre à jour les informations</DialogDescription>
-              </DialogHeader>
-              <div className='space-y-4'>
-                <div>
-                  <Label>Garantie</Label>
-                  <Select
-                    value={selectedCoverageId}
-                    onValueChange={async (val) => {
-                      setSelectedCoverageId(val)
-                      setSelectedFormulaName('')
-                      try {
-                        const formulas = await tarificationSupabaseService.listFormulas(val)
-                        setAvailableFormulas(formulas)
-                      } catch (e) {
-                        setAvailableFormulas([])
-                      }
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder='Sélectionnez une garantie' />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {fixedCoverageOptions.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                {availableFormulas.length > 0 ? (
-                  <div>
-                    <Label>Formule (si applicable)</Label>
-                    <Select
-                      value={selectedFormulaName}
-                      onValueChange={(v) => setSelectedFormulaName(v)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder='Choisir une formule' />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableFormulas.map((f) => (
-                          <SelectItem key={f} value={f}>
-                            {f}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                ) : (
-                  <div>
-                    <Label>Formule (si applicable)</Label>
-                    <Input
-                      value="Aucune formule disponible pour cette garantie"
-                      readOnly
-                      className="bg-gray-100 dark:bg-gray-800 cursor-not-allowed"
-                    />
-                  </div>
-                )}
-                <div>
-                  <Label>Prime (FCFA)</Label>
-                  <Input
-                    type='number'
-                    value={newTarifFixe.prime}
-                    onChange={(e) =>
-                      setNewTarifFixe((p) => ({ ...p, prime: Number(e.target.value) || 0 }))
-                    }
-                  />
-                </div>
-                <div>
-                  <Label>Conditions (optionnel)</Label>
-                  <Input
-                    value={newTarifFixe.conditions || ''}
-                    onChange={(e) => setNewTarifFixe((p) => ({ ...p, conditions: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <Label>Prix réduit en pack (optionnel)</Label>
-                  <Input
-                    type='number'
-                    value={newTarifFixe.packPriceReduced ?? ''}
-                    onChange={(e) =>
-                      setNewTarifFixe((p) => ({
-                        ...p,
-                        packPriceReduced:
-                          e.target.value === '' ? undefined : Number(e.target.value) || 0,
-                      }))
-                    }
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant='outline' onClick={() => setIsEditTarifFixeDialogOpen(false)}>
-                  Annuler
-                </Button>
-                <Button onClick={handleUpdateTarifFixe}>Enregistrer</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </TabsContent>
-
-        <TabsContent value='statistics' className='space-y-4'>
-          <div className='grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6'>
-            <Card>
-              <CardHeader>
-                <CardTitle>Garanties les plus utilisées</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className='space-y-3'>
-                  {statistics?.mostUsedGuarantees?.map(
-                    (
-                      item: {
-                        guaranteeId: string
-                        guaranteeName: string
-                        usageCount: number
-                      },
-                      index: number
-                    ) => (
-                      <div key={item.guaranteeId} className='flex justify-between items-center'>
-                        <div className='flex items-center gap-3'>
-                          <span className='text-sm font-medium text-muted-foreground'>
-                            #{index + 1}
-                          </span>
-                          <span>{item.guaranteeName}</span>
-                        </div>
-                        <div className='flex items-center gap-2'>
-                          <div className='w-16 bg-muted rounded-full h-2'>
-                            <div
-                              className='bg-primary h-2 rounded-full'
-                              style={{ width: `${(item.usageCount / 100) * 100}%` }}
-                            />
-                          </div>
-                          <span className='text-sm text-muted-foreground min-w-[3rem]'>
-                            {item.usageCount}
-                          </span>
-                        </div>
-                      </div>
-                    )
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Répartition par catégorie retirée de l'UI */}
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Configuration des méthodes de calcul</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
-                {calculationMethods.map((method) => (
-                  <div key={method.value} className='p-4 border rounded-lg'>
-                    <h4 className='font-medium mb-2'>{method.label}</h4>
-                    <p className='text-sm text-muted-foreground mb-2'>{method.description}</p>
-                    <div className='text-xs text-muted-foreground'>
-                      {guarantees.filter((g) => g.calculationMethod === method.value).length}{' '}
-                      garantie(s) utilisent cette méthode
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+        </div>
 
       {/* Dialog pour modifier une garantie */}
       <Dialog open={isEditGuaranteeDialogOpen} onOpenChange={setIsEditGuaranteeDialogOpen}>

@@ -40,6 +40,11 @@ export const InsurerDashboardPage: React.FC = () => {
   const [topOffers, setTopOffers] = useState<any[]>([]);
   const [insurerId, setInsurerId] = useState<string | null>(null);
   const [isLoadingSetup, setIsLoadingSetup] = useState(true);
+  const [quickStats, setQuickStats] = useState({
+    pendingQuotes: 0,
+    approvedQuotes: 0,
+    newOffers: 0,
+  });
 
   // Only call the hook when insurerId is available
   const { clients, totalRevenue, averageConversionRate } = useClientCommunication(
@@ -96,19 +101,146 @@ export const InsurerDashboardPage: React.FC = () => {
   }, [isLoadingSetup, insurerId]);
 
   const loadDashboardData = async () => {
+    if (!insurerId) return;
+
     try {
-      // Charger les devis récents depuis l'API
-      const quotesResponse = await fetch('/api/insurer/quotes/recent');
-      if (quotesResponse.ok) {
-        const quotesData = await quotesResponse.json();
-        setRecentQuotes(quotesData);
+      // Charger les offres récentes de l'assureur avec les informations des devis
+      const { data: offersData, error: offersError } = await supabase
+        .from('quote_offers')
+        .select(`
+          id,
+          created_at,
+          status,
+          price,
+          quotes:quote_id (
+            id,
+            created_at,
+            status,
+            personal_data,
+            vehicle_data
+          )
+        `)
+        .eq('insurer_id', insurerId)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (offersError) {
+        logger.error('Erreur lors du chargement des offres:', offersError);
+      } else if (offersData) {
+        // Transform offers data into quotes display format
+        const transformedQuotes = offersData
+          .filter(offer => offer.quotes) // Filter out offers without quote data
+          .map(offer => {
+            const quote = offer.quotes!;
+            const personalData = quote.personal_data as any || {};
+            const vehicleData = quote.vehicle_data as any || {};
+
+            // Extract customer name from personal_data
+            const firstName = personalData.firstName || personalData.first_name || '';
+            const lastName = personalData.lastName || personalData.last_name || '';
+            const customerName = `${firstName} ${lastName}`.trim() || 'Client inconnu';
+
+            // Extract vehicle info from vehicle_data
+            const brand = vehicleData.brand || '';
+            const model = vehicleData.model || '';
+            const vehicleName = `${brand} ${model}`.trim() || 'Véhicule inconnu';
+
+            return {
+              id: quote.id,
+              customer: customerName,
+              vehicle: vehicleName,
+              date: new Date(quote.created_at).toLocaleDateString('fr-FR'),
+              amount: offer.price ? `${offer.price.toLocaleString('fr-FR')} FCFA` : 'N/A',
+              status: offer.status || 'pending'
+            };
+          });
+        setRecentQuotes(transformedQuotes);
       }
 
-      // Charger les meilleures offres depuis l'API
-      const offersResponse = await fetch('/api/insurer/offers/top');
-      if (offersResponse.ok) {
-        const offersData = await offersResponse.json();
-        setTopOffers(offersData);
+      // Charger les meilleures performances par offre d'assurance
+      const { data: allOffersData, error: allOffersError } = await supabase
+        .from('quote_offers')
+        .select(`
+          status,
+          price,
+          insurance_offers!inner (
+            id,
+            name
+          )
+        `)
+        .eq('insurer_id', insurerId);
+
+      if (allOffersError) {
+        logger.error('Erreur lors du chargement des performances des offres:', allOffersError);
+      } else if (allOffersData && allOffersData.length > 0) {
+        // Grouper les données par offre
+        const offerStats = new Map<string, {
+          name: string;
+          customers: number;
+          approved: number;
+          totalRevenue: number;
+        }>();
+
+        allOffersData.forEach(item => {
+          const offerId = item.insurance_offers.id;
+          const offerName = item.insurance_offers.name;
+
+          if (!offerStats.has(offerId)) {
+            offerStats.set(offerId, {
+              name: offerName,
+              customers: 0,
+              approved: 0,
+              totalRevenue: 0
+            });
+          }
+
+          const stats = offerStats.get(offerId)!;
+          stats.customers++;
+          if (item.status === 'APPROVED') {
+            stats.approved++;
+            stats.totalRevenue += item.price || 0;
+          }
+        });
+
+        // Convertir en tableau et calculer les taux de conversion
+        const topOffersArray = Array.from(offerStats.values())
+          .map(stats => ({
+            name: stats.name,
+            customers: stats.customers,
+            conversion: stats.customers > 0 ? Math.round((stats.approved / stats.customers) * 100) : 0,
+            revenue: stats.totalRevenue > 0
+              ? stats.totalRevenue >= 1000000
+                ? `${(stats.totalRevenue / 1000000).toFixed(1)}M FCFA`
+                : `${(stats.totalRevenue / 1000).toFixed(0)}K FCFA`
+              : '0 FCFA'
+          }))
+          .sort((a, b) => b.customers - a.customers) // Trier par nombre de clients
+          .slice(0, 5); // Top 5
+
+        setTopOffers(topOffersArray);
+
+        // Calculer les statistiques rapides depuis les données réelles
+        const pendingQuotes = allOffersData.filter(item => item.status === 'PENDING').length;
+        const approvedQuotes = allOffersData.filter(item => item.status === 'APPROVED').length;
+
+        // Compter les nouvelles offres (créées dans les 7 derniers jours)
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+        // Récupérer les offres d'assurance créées récemment
+        const { data: recentInsuranceOffers, error: insuranceOffersError } = await supabase
+          .from('insurance_offers')
+          .select('id')
+          .eq('insurer_id', insurerId)
+          .gte('created_at', sevenDaysAgo.toISOString());
+
+        const newOffers = recentInsuranceOffers?.length || 0;
+
+        setQuickStats({
+          pendingQuotes,
+          approvedQuotes,
+          newOffers,
+        });
       }
     } catch (error) {
       logger.error('Erreur lors du chargement des données du tableau de bord:', error);
@@ -188,11 +320,11 @@ export const InsurerDashboardPage: React.FC = () => {
           </TabsList>
 
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={() => navigate('/assureur/analytics')}>
               <BarChart3 className="h-4 w-4 mr-2" />
               Analytics détaillés
             </Button>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={() => navigate('/assureur/campagnes')}>
               <MessageCircle className="h-4 w-4 mr-2" />
               Campagnes
             </Button>
@@ -218,7 +350,12 @@ export const InsurerDashboardPage: React.FC = () => {
                   </div>
                   {stat.action && (
                     <div className="mt-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button variant="outline" size="sm" className="w-full">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        onClick={() => navigate(stat.action.url)}
+                      >
                         {stat.action.text}
                       </Button>
                     </div>
@@ -235,11 +372,16 @@ export const InsurerDashboardPage: React.FC = () => {
             <CardTitle className="flex items-center justify-between">
               <span>Devis récents</span>
               <div className="flex space-x-2">
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" onClick={() => {
+                  // TODO: Implement export functionality
+                  logger.info('Export quotes clicked');
+                }}>
                   <Download className="h-3 w-3 mr-1" />
                   Exporter
                 </Button>
-                <Button variant="outline" size="sm">Voir tout</Button>
+                <Button variant="outline" size="sm" onClick={() => navigate('/assureur/devis')}>
+                  Voir tout
+                </Button>
               </div>
             </CardTitle>
           </CardHeader>
@@ -304,9 +446,9 @@ export const InsurerDashboardPage: React.FC = () => {
               </div>
               <div className="flex-1">
                 <p className="font-medium">Devis en attente</p>
-                <p className="text-2xl font-bold text-blue-600">12</p>
+                <p className="text-2xl font-bold text-blue-600">{quickStats.pendingQuotes}</p>
               </div>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={() => navigate('/assureur/devis?status=pending')}>
                 Voir
               </Button>
             </div>
@@ -321,9 +463,9 @@ export const InsurerDashboardPage: React.FC = () => {
               </div>
               <div className="flex-1">
                 <p className="font-medium">Devis approuvés</p>
-                <p className="text-2xl font-bold text-green-600">144</p>
+                <p className="text-2xl font-bold text-green-600">{quickStats.approvedQuotes}</p>
               </div>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={() => navigate('/assureur/devis?status=approved')}>
                 Voir
               </Button>
             </div>
@@ -338,9 +480,9 @@ export const InsurerDashboardPage: React.FC = () => {
               </div>
               <div className="flex-1">
                 <p className="font-medium">Nouvelles offres</p>
-                <p className="text-2xl font-bold text-purple-600">3</p>
+                <p className="text-2xl font-bold text-purple-600">{quickStats.newOffers}</p>
               </div>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={() => navigate('/assureur/offers/create')}>
                 Créer
               </Button>
             </div>
@@ -361,7 +503,7 @@ export const InsurerDashboardPage: React.FC = () => {
                     Votre taux de conversion a baissé de 5% cette semaine. Considérez revoir vos offres.
                   </p>
                 </div>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" onClick={() => navigate('/assureur/analytics')}>
                   Analyser
                 </Button>
               </div>
@@ -401,7 +543,7 @@ export const InsurerDashboardPage: React.FC = () => {
             <Card className="lg:col-span-3 p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold">Activité récente des clients</h3>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" onClick={() => navigate('/assureur/clients')}>
                   <Activity className="h-4 w-4 mr-2" />
                   Voir tout
                 </Button>
@@ -492,7 +634,7 @@ export const InsurerDashboardPage: React.FC = () => {
             <Card className="lg:col-span-2 p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold">Insights performance</h3>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" onClick={() => navigate('/assureur/analytics')}>
                   <Target className="h-4 w-4 mr-2" />
                   Analytics détaillés
                 </Button>
@@ -553,7 +695,7 @@ export const InsurerDashboardPage: React.FC = () => {
                 <p className="text-sm text-blue-700 mb-3">
                   Configurez la relance automatique pour les devis expirants
                 </p>
-                <Button variant="outline" size="sm" className="w-full">
+                <Button variant="outline" size="sm" className="w-full" onClick={() => navigate('/assureur/parametres?tab=automation')}>
                   Configurer
                 </Button>
               </div>
@@ -565,7 +707,7 @@ export const InsurerDashboardPage: React.FC = () => {
                 <p className="text-sm text-green-700 mb-3">
                   5 prospects à contacter par téléphone cette semaine
                 </p>
-                <Button variant="outline" size="sm" className="w-full">
+                <Button variant="outline" size="sm" className="w-full" onClick={() => navigate('/assureur/clients?filter=prospects')}>
                   Voir la liste
                 </Button>
               </div>
@@ -577,7 +719,7 @@ export const InsurerDashboardPage: React.FC = () => {
                 <p className="text-sm text-purple-700 mb-3">
                   2 offres sous-performantes à revoir
                 </p>
-                <Button variant="outline" size="sm" className="w-full">
+                <Button variant="outline" size="sm" className="w-full" onClick={() => navigate('/assureur/analytics')}>
                   Analyser
                 </Button>
               </div>
