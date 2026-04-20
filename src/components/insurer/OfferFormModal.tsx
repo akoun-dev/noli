@@ -88,7 +88,6 @@ export const OfferFormModal: React.FC<OfferFormModalProps> = ({
     },
   });
 
-  // Load guarantees and packages
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -108,7 +107,6 @@ export const OfferFormModal: React.FC<OfferFormModalProps> = ({
     loadData();
   }, []);
 
-  // Sync package selection with guarantees
   useEffect(() => {
     if (offerType === 'PACK' && selectedPackageId) {
       const pkg = packages.find(p => p.id === selectedPackageId);
@@ -119,7 +117,6 @@ export const OfferFormModal: React.FC<OfferFormModalProps> = ({
     }
   }, [selectedPackageId, offerType, packages, guarantees]);
 
-  // Keep coverage names in sync with selected guarantees
   useEffect(() => {
     if (offerType === 'TAILOR_MADE') {
       const names = guarantees.filter(g => selectedGuaranteeIds.includes(g.id)).map(g => g.name);
@@ -127,7 +124,6 @@ export const OfferFormModal: React.FC<OfferFormModalProps> = ({
     }
   }, [selectedGuaranteeIds, guarantees, offerType, form]);
 
-  // Auto-calculate price based on selected guarantees
   useEffect(() => {
     if (offerType === 'TAILOR_MADE' && selectedGuaranteeIds.length > 0) {
       const totalPrice = guarantees
@@ -147,7 +143,6 @@ export const OfferFormModal: React.FC<OfferFormModalProps> = ({
     const names = guarantees.filter(g => guaranteeIds.includes(g.id)).map(g => g.name);
     form.setValue('coverage', names.join(', '));
 
-    // Calculate price for package
     const pkg = packages.find(p => p.id === selectedPackageId);
     if (pkg) {
       form.setValue('price', pkg.basePrice || 0);
@@ -179,7 +174,6 @@ export const OfferFormModal: React.FC<OfferFormModalProps> = ({
       const pkg = packages.find(p => p.id === selectedPackageId);
       return pkg ? pkg.totalPrice : 0;
     } else {
-      // Calculer le prix correctement en utilisant getGuaranteePrice qui gère les garanties FREE
       return guarantees
         .filter(g => selectedGuaranteeIds.includes(g.id))
         .reduce((sum, guarantee) => {
@@ -191,37 +185,37 @@ export const OfferFormModal: React.FC<OfferFormModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
+      <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto p-2 sm:p-6">
+        <DialogHeader className="sm:space-y-1 space-y-2 px-2 sm:px-0 pt-2 sm:pt-0">
+          <DialogTitle className="text-xl sm:text-2xl">
             {initialData ? 'Modifier l\'offre' : 'Créer une nouvelle offre'}
           </DialogTitle>
-          <DialogDescription>
-            Définissez les détails de votre offre d'assurance. Sélectionnez des garanties individuelles ou un package prédéfini.
+          <DialogDescription className="text-sm sm:text-base">
+            Définissez les détails de votre offre d'assurance.
           </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-3 sm:space-y-6 px-2 sm:px-0 pb-2 sm:pb-0">
 
             {/* Basic Information */}
             <Card className="border border-gray-200 shadow-sm">
-              <CardHeader className="pb-3 bg-gray-50/50">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Shield className="h-5 w-5 text-blue-600" />
+              <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6 bg-gray-50/50">
+                <CardTitle className="text-sm sm:text-base flex items-center gap-2">
+                  <Shield className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
                   Informations de base
                 </CardTitle>
-                <CardDescription className="text-sm">
+                <CardDescription className="text-xs sm:text-sm">
                   Informations générales sur l'offre
                 </CardDescription>
               </CardHeader>
-              <CardContent className="pt-4 space-y-4">
+              <CardContent className="pt-2 sm:pt-4 px-3 sm:px-6 space-y-3 sm:space-y-4">
                 <FormField
                   control={form.control}
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Nom de l'offre *</FormLabel>
+                      <FormLabel className="text-sm">Nom de l'offre *</FormLabel>
                       <FormControl>
                         <Input placeholder="Ex: Assurance Tiers Simple" {...field} />
                       </FormControl>
@@ -235,11 +229,11 @@ export const OfferFormModal: React.FC<OfferFormModalProps> = ({
                   name="description"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Description *</FormLabel>
+                      <FormLabel className="text-sm">Description *</FormLabel>
                       <FormControl>
                         <Textarea
                           placeholder="Description détaillée de l'offre..."
-                          className="min-h-[80px]"
+                          className="min-h-[70px] sm:min-h-[80px]"
                           {...field}
                         />
                       </FormControl>
@@ -252,19 +246,19 @@ export const OfferFormModal: React.FC<OfferFormModalProps> = ({
 
             {/* Offer Type and Guarantees/Package Selection */}
             <Card className="border border-gray-200 shadow-sm">
-              <CardHeader className="pb-3 bg-gray-50/50">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Calculator className="h-5 w-5 text-blue-600" />
+              <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6 bg-gray-50/50">
+                <CardTitle className="text-sm sm:text-base flex items-center gap-2">
+                  <Calculator className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
                   Type d'offre et Garanties
                 </CardTitle>
-                <CardDescription className="text-sm">
+                <CardDescription className="text-xs sm:text-sm">
                   Choisissez un package prédéfini ou créez une offre sur mesure
                 </CardDescription>
               </CardHeader>
-              <CardContent className="pt-4 space-y-4">
-                <div className="space-y-3">
-                  <Label>Type d'offre</Label>
-                  <div className="flex flex-wrap gap-4">
+              <CardContent className="pt-2 sm:pt-4 px-3 sm:px-6 space-y-3 sm:space-y-4">
+                <div className="space-y-2 sm:space-y-3">
+                  <Label className="text-sm">Type d'offre</Label>
+                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
                     <label className="flex items-center space-x-2 cursor-pointer">
                       <input
                         type="radio"
@@ -277,7 +271,7 @@ export const OfferFormModal: React.FC<OfferFormModalProps> = ({
                         }}
                         className="w-4 h-4"
                       />
-                      <span>Sur mesure (sélectionnez vos garanties)</span>
+                      <span className="text-sm">Sur mesure</span>
                     </label>
                     <label className="flex items-center space-x-2 cursor-pointer">
                       <input
@@ -288,13 +282,13 @@ export const OfferFormModal: React.FC<OfferFormModalProps> = ({
                         onChange={() => setOfferType('PACK')}
                         className="w-4 h-4"
                       />
-                      <span>Package prédéfini</span>
+                      <span className="text-sm">Package prédéfini</span>
                     </label>
                   </div>
 
                   {offerType === 'PACK' && (
                     <div>
-                      <Label htmlFor="package">Package *</Label>
+                      <Label htmlFor="package" className="text-sm">Package *</Label>
                       <Select value={selectedPackageId} onValueChange={handlePackageChange}>
                         <SelectTrigger>
                           <SelectValue placeholder="Sélectionner un package" />
@@ -303,7 +297,7 @@ export const OfferFormModal: React.FC<OfferFormModalProps> = ({
                           {packages.filter(p => p.isActive).map(pkg => (
                             <SelectItem key={`package-${pkg.id}`} value={pkg.id}>
                               <div>
-                                <div className="font-medium">{pkg.name}</div>
+                                <div className="font-medium text-sm">{pkg.name}</div>
                                 <div className="text-xs text-muted-foreground">
                                   {pkg.description} - {pkg.basePrice?.toLocaleString() || '0'} FCFA
                                 </div>
@@ -317,32 +311,32 @@ export const OfferFormModal: React.FC<OfferFormModalProps> = ({
                 </div>
 
                 <div className="space-y-2">
-                  <Label>
-                    Garanties {offerType === 'PACK' ? '(incluses dans le package)' : '(sélectionnez celles à inclure)'}
+                  <Label className="text-sm">
+                    Garanties {offerType === 'PACK' ? '(incluses)' : '(à sélectionner)'}
                   </Label>
                   {loadingGuarantees ? (
-                    <div className="text-sm text-muted-foreground">Chargement des garanties...</div>
+                    <div className="text-sm text-muted-foreground py-2">Chargement...</div>
                   ) : (
                     <>
-                      <div className="border rounded-lg p-3 max-h-56 overflow-auto">
+                      <div className="border rounded-lg p-2 sm:p-3 max-h-56 overflow-auto">
                         {filteredGuarantees.length === 0 && (
-                          <div className="text-sm text-muted-foreground">
+                          <div className="text-sm text-muted-foreground py-2">
                             Aucune garantie disponible.
                           </div>
                         )}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-2">
                           {filteredGuarantees.map(g => {
                             const checked = selectedGuaranteeIds.includes(g.id);
                             const disabled = offerType === 'PACK';
                             return (
                               <label
                                 key={`guarantee-${g.id}`}
-                                className={`flex items-center justify-between p-2 rounded border cursor-pointer ${
+                                className={`flex items-center justify-between p-1.5 sm:p-2 rounded border cursor-pointer ${
                                   checked ? 'bg-blue-50 border-blue-200' :
                                   disabled ? 'bg-gray-50 border-gray-200' : 'bg-white hover:bg-gray-50'
                                 } ${disabled ? 'opacity-60' : ''}`}
                               >
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0">
                                   <input
                                     type="checkbox"
                                     checked={checked}
@@ -356,19 +350,19 @@ export const OfferFormModal: React.FC<OfferFormModalProps> = ({
                                         );
                                       }
                                     }}
-                                    className="w-4 h-4"
+                                    className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0"
                                   />
-                                  <div className="flex-1">
-                                    <div className="text-sm font-medium">{g.name}</div>
-                                    <div className="text-xs text-muted-foreground">{g.description}</div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="text-xs sm:text-sm font-medium truncate">{g.name}</div>
+                                    <div className="text-[10px] sm:text-xs text-muted-foreground truncate">{g.description}</div>
                                   </div>
                                 </div>
-                                <div className="text-xs font-medium text-right">
+                                <div className="text-[10px] sm:text-xs font-medium text-right shrink-0">
                                   {g.calculationMethod === 'FIXED_AMOUNT' && g.rate ?
                                     `+ ${g.rate.toLocaleString()} FCFA` :
                                     g.calculationMethod === 'RATE_ON_SI' || g.calculationMethod === 'RATE_ON_NEW_VALUE' ?
                                       `+ ${g.rate}%` :
-                                      'Variable'
+                                      ''
                                   }
                                 </div>
                               </label>
@@ -376,18 +370,18 @@ export const OfferFormModal: React.FC<OfferFormModalProps> = ({
                           })}
                         </div>
                       </div>
-                      <div className="text-sm text-muted-foreground">
+                      <div className="text-xs sm:text-sm text-muted-foreground py-1">
                         {offerType === 'PACK' && selectedPackageId ? (
                           <>
-                            <span>Prix du package: <span className="font-semibold text-blue-600">
+                            <span>Prix: <span className="font-semibold text-blue-600">
                               {pricing.toLocaleString()} FCFA
                             </span></span>
-                            <div className="text-xs text-blue-600 mt-1">
-                              {packages.find(p => p.id === selectedPackageId)?.guarantees.length} garanties incluses
+                            <div className="text-[10px] sm:text-xs text-blue-600 mt-0.5">
+                              {packages.find(p => p.id === selectedPackageId)?.guarantees.length} garanties
                             </div>
                           </>
                         ) : (
-                          <span>Prix estimé avec garanties: <span className="font-semibold text-blue-600">
+                          <span>Prix estimé: <span className="font-semibold text-blue-600">
                             {pricing.toLocaleString()} FCFA
                           </span></span>
                         )}
@@ -396,17 +390,17 @@ export const OfferFormModal: React.FC<OfferFormModalProps> = ({
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
                   <FormField
                     control={form.control}
                     name="price"
                     render={({ field }) => (
                       <FormItem>
                         <div className="flex items-center justify-between">
-                          <FormLabel>Prix (FCFA) *</FormLabel>
+                          <FormLabel className="text-sm">Prix (FCFA) *</FormLabel>
                           {offerType === 'TAILOR_MADE' && selectedGuaranteeIds.length > 0 && (
-                            <span className="text-xs text-muted-foreground">
-                              Calculé automatiquement
+                            <span className="text-[10px] sm:text-xs text-muted-foreground">
+                              Auto
                             </span>
                           )}
                         </div>
@@ -417,19 +411,18 @@ export const OfferFormModal: React.FC<OfferFormModalProps> = ({
                               placeholder="50000"
                               {...field}
                               onChange={(e) => field.onChange(Number(e.target.value))}
-                              className={offerType === 'TAILOR_MADE' && selectedGuaranteeIds.length > 0 ? 'pr-16' : ''}
+                              className={offerType === 'TAILOR_MADE' && selectedGuaranteeIds.length > 0 ? 'pr-12 sm:pr-16' : ''}
                             />
                           </FormControl>
                           {offerType === 'TAILOR_MADE' && selectedGuaranteeIds.length > 0 && (
-                            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-muted-foreground">
-                              <Calculator className="h-4 w-4" />
-                              <span className="text-xs">Auto</span>
+                            <div className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 flex items-center gap-0.5 sm:gap-1 text-muted-foreground">
+                              <Calculator className="h-3 w-3 sm:h-4 sm:w-4" />
                             </div>
                           )}
                         </div>
                         {offerType === 'TAILOR_MADE' && selectedGuaranteeIds.length > 0 && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Basé sur {selectedGuaranteeIds.length} garantie{selectedGuaranteeIds.length > 1 ? 's' : ''} sélectionnée{selectedGuaranteeIds.length > 1 ? 's' : ''}
+                          <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
+                            Basé sur {selectedGuaranteeIds.length} garantie{selectedGuaranteeIds.length > 1 ? 's' : ''}
                           </p>
                         )}
                         <FormMessage />
@@ -442,7 +435,7 @@ export const OfferFormModal: React.FC<OfferFormModalProps> = ({
                     name="duration"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Durée (mois) *</FormLabel>
+                        <FormLabel className="text-sm">Durée (mois) *</FormLabel>
                         <FormControl>
                           <Input
                             type="number"
@@ -457,13 +450,13 @@ export const OfferFormModal: React.FC<OfferFormModalProps> = ({
                   />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
                   <FormField
                     control={form.control}
                     name="deductible"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Franchise (FCFA)</FormLabel>
+                        <FormLabel className="text-sm">Franchise (FCFA)</FormLabel>
                         <FormControl>
                           <Input
                             type="number"
@@ -482,7 +475,7 @@ export const OfferFormModal: React.FC<OfferFormModalProps> = ({
                     name="maxCoverage"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Plafond de couverture (FCFA)</FormLabel>
+                        <FormLabel className="text-sm">Plafond (FCFA)</FormLabel>
                         <FormControl>
                           <Input
                             type="number"
@@ -502,11 +495,11 @@ export const OfferFormModal: React.FC<OfferFormModalProps> = ({
                   name="coverage"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Détails de la couverture *</FormLabel>
+                      <FormLabel className="text-sm">Détails couverture *</FormLabel>
                       <FormControl>
                         <Textarea
-                          placeholder="Résumé des garanties incluses..."
-                          className="min-h-[80px]"
+                          placeholder="Résumé des garanties..."
+                          className="min-h-[60px] sm:min-h-[80px]"
                           {...field}
                         />
                       </FormControl>
@@ -519,23 +512,23 @@ export const OfferFormModal: React.FC<OfferFormModalProps> = ({
 
             {/* Conditions */}
             <Card className="border border-gray-200 shadow-sm">
-              <CardHeader className="pb-3 bg-gray-50/50">
-                <CardTitle className="text-base">Conditions spéciales</CardTitle>
-                <CardDescription className="text-sm">
+              <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6 bg-gray-50/50">
+                <CardTitle className="text-sm sm:text-base">Conditions spéciales</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">
                   Conditions d'éligibilité et restrictions
                 </CardDescription>
               </CardHeader>
-              <CardContent className="pt-4">
+              <CardContent className="pt-2 sm:pt-4 px-3 sm:px-6">
                 <FormField
                   control={form.control}
                   name="conditions"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Conditions et restrictions</FormLabel>
+                      <FormLabel className="text-sm">Conditions</FormLabel>
                       <FormControl>
                         <Textarea
-                          placeholder="Conditions d'éligibilité, restrictions, etc..."
-                          className="min-h-[80px]"
+                          placeholder="Conditions d'éligibilité..."
+                          className="min-h-[60px] sm:min-h-[80px]"
                           {...field}
                         />
                       </FormControl>
@@ -546,20 +539,12 @@ export const OfferFormModal: React.FC<OfferFormModalProps> = ({
               </CardContent>
             </Card>
 
-            <DialogFooter className="gap-2">
-              <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
+            <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-2 px-2 sm:px-0 pb-2 sm:pb-0">
+              <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting} className="w-full sm:w-auto">
                 Annuler
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <>
-                    Enregistrement...
-                  </>
-                ) : (
-                  <>
-                    {initialData ? 'Mettre à jour' : 'Créer l\'offre'}
-                  </>
-                )}
+              <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
+                {isSubmitting ? 'Enregistrement...' : initialData ? 'Mettre à jour' : 'Créer l\'offre'}
               </Button>
             </DialogFooter>
           </form>
