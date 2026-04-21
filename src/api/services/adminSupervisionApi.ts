@@ -56,6 +56,7 @@ export interface Insurer {
   conversionRate: number;
   phone?: string;
   address?: string;
+  logoUrl?: string;
 }
 
 // Types offres
@@ -211,7 +212,15 @@ const extractCount = ({ count, error }: { count: number | null; error: any }): n
 export class AdminSupervisionApi {
   private readonly baseUrl = '/admin/supervision';
 
-  private mapProfileToInsurer(profile: any): Insurer {
+  private mapProfileToInsurer(profile: any, insurerLogosMap: Record<string, string> = {}): Insurer {
+    // Pour les assureurs, utiliser le logo de la table insurers si disponible (injecté via insurer_logo_url), sinon avatar_url du profile
+    const getLogoOrAvatar = () => {
+      if (profile.insurer_logo_url) {
+        return profile.insurer_logo_url;
+      }
+      return profile.avatar_url;
+    };
+
     return {
       id: profile.id,
       name: profile.name || profile.company_name || '',
@@ -222,6 +231,7 @@ export class AdminSupervisionApi {
       conversionRate: profile.conversion_rate || 0,
       phone: profile.phone || '',
       address: profile.address || '',
+      logoUrl: getLogoOrAvatar(),
     };
   }
 
@@ -285,7 +295,7 @@ export class AdminSupervisionApi {
       // Get data and count
       const { data, error, count } = await supabase
         .from('profiles')
-        .select('*', { count: 'exact' })
+        .select('*, avatar_url', { count: 'exact' })
         .range(from, to)
         .order('created_at', { ascending: false });
 
@@ -637,7 +647,7 @@ export class AdminSupervisionApi {
     try {
       let query = supabase
         .from('profiles')
-        .select('*');
+        .select('*, avatar_url');
 
       // Filtres par role - toujours INSURER
       query = query.eq('role', 'INSURER');
@@ -666,7 +676,7 @@ export class AdminSupervisionApi {
       // Get data and count
       const { data, error, count } = await supabase
         .from('profiles')
-        .select('*', { count: 'exact' })
+        .select('*, avatar_url', { count: 'exact' })
         .range(from, to)
         .order('created_at', { ascending: false });
 
@@ -683,6 +693,26 @@ export class AdminSupervisionApi {
       const total = count || 0;
       const totalPages = Math.ceil(total / limit);
 
+      // Récupérer les logos des assureurs séparément
+      const insurerIds = insurers.map((i: any) => i.id);
+      let insurerLogosMap: Record<string, string> = {};
+
+      if (insurerIds.length > 0) {
+        const { data: insurersData } = await supabase
+          .from('insurers')
+          .select('id, logo_url')
+          .in('id', insurerIds);
+
+        if (insurersData) {
+          insurerLogosMap = insurersData.reduce((acc, insurer) => {
+            if (insurer.logo_url) {
+              acc[insurer.id] = insurer.logo_url;
+            }
+            return acc;
+          }, {} as Record<string, string>);
+        }
+      }
+
       return {
         success: true,
         data: {
@@ -696,6 +726,7 @@ export class AdminSupervisionApi {
             conversionRate: insurer.conversion_rate || 0,
             phone: insurer.phone || '',
             address: insurer.address || '',
+            logoUrl: insurerLogosMap[insurer.id] || insurer.avatar_url,
           })),
           pagination: {
             page,

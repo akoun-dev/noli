@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   User,
   Mail,
@@ -34,7 +34,9 @@ import {
   AlertTriangle,
   QrCode,
   Loader2,
+  X,
 } from 'lucide-react'
+import { avatarUploadService } from '@/services/avatarUploadService'
 import { Button } from '@/components/ui/button'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Input } from '@/components/ui/input'
@@ -76,6 +78,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { toast } from 'sonner'
 import { useUser } from '@/contexts/UserContext'
 import { useAuth } from '@/contexts/AuthContext'
+import { logger } from '@/lib/logger'
 
 interface UserProfile {
   id: string
@@ -164,6 +167,9 @@ const UserProfilePage = () => {
   const [isSettingUp2FA, setIsSettingUp2FA] = useState(false)
   const [isUpdatingLocation, setIsUpdatingLocation] = useState(false)
   const [isDeletingAccount, setIsDeletingAccount] = useState(false)
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
+  const [showAvatarDialog, setShowAvatarDialog] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -352,10 +358,56 @@ const UserProfilePage = () => {
     }
   }
 
-  const handleAvatarUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file) {
-      toast.success('Photo de profil téléchargée avec succès')
+  const handleAvatarUpload = async (file: File) => {
+    if (!authUser?.id) return
+
+    // Validate file
+    const validation = avatarUploadService.validateAvatar(file)
+    if (!validation.valid) {
+      toast.error(validation.error || 'Fichier invalide')
+      return
+    }
+
+    setIsUploadingAvatar(true)
+    try {
+      const result = await avatarUploadService.uploadAvatar(authUser.id, file)
+
+      // Update local state
+      if (profile) {
+        // Force refetch of profile
+        window.location.reload()
+      } else {
+        // Update authUser avatar if available
+        if (authUser) {
+          authUser.avatar = result.url
+        }
+      }
+
+      toast.success('Photo de profil mise à jour avec succès')
+      setShowAvatarDialog(false)
+    } catch (error: any) {
+      logger.error('Error uploading avatar:', error)
+      toast.error(error.message || 'Erreur lors du téléchargement de la photo')
+    } finally {
+      setIsUploadingAvatar(false)
+    }
+  }
+
+  const handleRemoveAvatar = async () => {
+    if (!authUser?.id || !currentUser.avatar) return
+
+    setIsUploadingAvatar(true)
+    try {
+      await avatarUploadService.deleteAvatar(authUser.id, currentUser.avatar)
+
+      // Force refetch to update UI
+      window.location.reload()
+      toast.success('Photo de profil supprimée')
+    } catch (error: any) {
+      logger.error('Error removing avatar:', error)
+      toast.error('Erreur lors de la suppression de la photo')
+    } finally {
+      setIsUploadingAvatar(false)
     }
   }
 
@@ -629,20 +681,28 @@ const UserProfilePage = () => {
         <CardHeader>
           <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4'>
             <div className='flex items-center space-x-4'>
-              <div className='relative'>
+              <div className='relative group cursor-pointer' onClick={() => setShowAvatarDialog(true)}>
                 <Avatar className='w-16 h-16 sm:w-20 sm:h-20'>
                   <AvatarImage src={currentUser.avatar} alt={currentUser.firstName} />
                   <AvatarFallback className='text-sm sm:text-lg'>
                     {getInitials(currentUser.firstName, currentUser.lastName)}
                   </AvatarFallback>
                 </Avatar>
-                <Button
-                  size='sm'
-                  className='absolute -bottom-2 -right-2 rounded-full w-6 h-6 sm:w-8 sm:h-8 p-0'
-                  variant='outline'
-                >
-                  <Camera className='h-3 w-3 sm:h-4 sm:w-4' />
-                </Button>
+                <div className='absolute inset-0 bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center'>
+                  <Camera className='h-4 w-4 sm:h-5 sm:w-5 text-white' />
+                </div>
+                {currentUser.avatar && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleRemoveAvatar()
+                    }}
+                    className='absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity'
+                    title='Supprimer la photo'
+                  >
+                    <X className='h-3 w-3' />
+                  </button>
+                )}
               </div>
               <div className='flex-1'>
                 <div className='flex items-center space-x-2'>
@@ -1511,6 +1571,93 @@ const UserProfilePage = () => {
               ) : (
                 'Mettre à jour'
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Avatar Upload Dialog */}
+      <Dialog open={showAvatarDialog} onOpenChange={setShowAvatarDialog}>
+        <DialogContent className='sm:max-w-[425px]'>
+          <DialogHeader>
+            <DialogTitle>Photo de profil</DialogTitle>
+            <DialogDescription>
+              Choisissez une nouvelle photo pour votre profil
+            </DialogDescription>
+          </DialogHeader>
+          <div className='space-y-4 py-4'>
+            <div className='flex flex-col items-center gap-4'>
+              {/* Preview */}
+              <div className='relative'>
+                <Avatar className='w-32 h-32'>
+                  <AvatarImage src={currentUser.avatar} alt={currentUser.firstName} />
+                  <AvatarFallback className='text-3xl'>
+                    {getInitials(currentUser.firstName, currentUser.lastName)}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
+
+              {/* Upload Options */}
+              <div className='flex gap-2 w-full'>
+                <input
+                  ref={fileInputRef}
+                  type='file'
+                  accept='image/jpeg,image/jpg,image/png,image/webp'
+                  className='hidden'
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) {
+                      handleAvatarUpload(file)
+                    }
+                  }}
+                />
+                <Button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploadingAvatar}
+                  className='flex-1'
+                >
+                  {isUploadingAvatar ? (
+                    <>
+                      <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                      Téléchargement...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className='mr-2 h-4 w-4' />
+                      Télécharger
+                    </>
+                  )}
+                </Button>
+                {currentUser.avatar && (
+                  <Button
+                    variant='outline'
+                    onClick={handleRemoveAvatar}
+                    disabled={isUploadingAvatar}
+                  >
+                    {isUploadingAvatar ? (
+                      <Loader2 className='h-4 w-4 animate-spin' />
+                    ) : (
+                      <Trash2 className='h-4 w-4' />
+                    )}
+                  </Button>
+                )}
+              </div>
+
+              {/* Requirements */}
+              <div className='text-xs text-muted-foreground space-y-1 text-center'>
+                <p>Formats acceptés: JPG, PNG, WebP</p>
+                <p>Taille maximale: 5MB</p>
+                <p>Ratio recommandé: 1:1 (carré)</p>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant='outline'
+              onClick={() => setShowAvatarDialog(false)}
+              disabled={isUploadingAvatar}
+            >
+              Annuler
             </Button>
           </DialogFooter>
         </DialogContent>

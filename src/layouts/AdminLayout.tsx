@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -146,18 +147,21 @@ export const AdminLayout: React.FC = () => {
                     <Button
                       variant='ghost'
                       size='sm'
-                      className='gap-2'
+                      className='gap-2 h-10 px-2'
                       aria-label='Menu utilisateur'
                     >
                       <div className='hidden sm:block text-left'>
                         <p className='text-sm font-medium'>{user?.firstName} {user?.lastName}</p>
                         <p className='text-xs text-muted-foreground'>Administrateur</p>
                       </div>
-                      <div className='h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center'>
-                        <span className='text-sm font-semibold text-primary'>
+                      <Avatar className='h-8 w-8'>
+                        {user?.avatar && (
+                          <AvatarImage src={user.avatar} alt={`${user?.firstName} ${user?.lastName}`} />
+                        )}
+                        <AvatarFallback className='bg-primary/10 text-primary text-xs font-semibold'>
                           {user?.firstName?.[0]}{user?.lastName?.[0]}
-                        </span>
-                      </div>
+                        </AvatarFallback>
+                      </Avatar>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align='end' className='w-56'>

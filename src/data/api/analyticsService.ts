@@ -690,131 +690,90 @@ const supabaseAnalyticsService = {
   },
 };
 
-// Mock data pour le fallback
-const mockPlatformStats: PlatformStats = {
-  totalUsers: 1247,
-  totalInsurers: 28,
-  totalQuotes: 3847,
-  totalPolicies: 892,
-  conversionRate: 23.2,
-  monthlyGrowth: 12.5,
-  revenue: 28475000,
-  activeUsers: 892,
+// Default empty values pour le fallback (pas de données mock)
+const emptyPlatformStats: PlatformStats = {
+  totalUsers: 0,
+  totalInsurers: 0,
+  totalQuotes: 0,
+  totalPolicies: 0,
+  conversionRate: 0,
+  monthlyGrowth: 0,
+  revenue: 0,
+  activeUsers: 0,
 };
 
-const mockActivityData: ActivityData[] = [
-  { date: '2024-01-18', newUsers: 12, newQuotes: 45, newPolicies: 8, newPayments: 15 },
-  { date: '2024-01-17', newUsers: 8, newQuotes: 38, newPolicies: 6, newPayments: 12 },
-  { date: '2024-01-16', newUsers: 15, newQuotes: 52, newPolicies: 11, newPayments: 18 },
-];
+const emptyActivityData: ActivityData[] = [];
 
-const mockTopInsurers: TopInsurer[] = [
-  { id: '1', name: 'NSIA Assurance', quotes: 487, policies: 142, revenue: 8450000, conversionRate: 29.2, averagePolicyValue: 59507 },
-  { id: '2', name: 'SUNU Assurances', quotes: 392, policies: 98, revenue: 6230000, conversionRate: 25.0, averagePolicyValue: 63571 },
-  { id: '3', name: 'AXA Côte d\'Ivoire', quotes: 276, policies: 67, revenue: 4120000, conversionRate: 24.3, averagePolicyValue: 61493 },
-];
+const emptyTopInsurers: TopInsurer[] = [];
 
-const mockSystemHealth: SystemHealth = {
-  uptime: 99.8,
-  responseTime: 145,
-  memoryUsage: 67,
-  storageUsage: 43,
+const emptySystemHealth: SystemHealth = {
+  uptime: 0,
+  responseTime: 0,
+  memoryUsage: 0,
+  storageUsage: 0,
   alerts: [],
-  activeConnections: 28,
-  databaseSize: 156,
+  activeConnections: 0,
+  databaseSize: 0,
 };
 
-const mockUserDemographics: UserDemographics = {
-  byAge: [
-    { range: '18-25', count: 287 },
-    { range: '26-35', count: 456 },
-    { range: '36-45', count: 312 },
-    { range: '46-55', count: 156 },
-    { range: '56+', count: 36 },
-  ],
-  byLocation: [
-    { city: 'Abidjan', count: 748 },
-    { city: 'Bouaké', count: 187 },
-    { city: 'San Pedro', count: 156 },
-    { city: 'Yamoussoukro', count: 98 },
-    { city: 'Autres', count: 58 },
-  ],
-  byDevice: [
-    { device: 'Mobile', count: 873 },
-    { device: 'Desktop', count: 312 },
-    { device: 'Tablet', count: 62 },
-  ],
-  byRole: [
-    { role: 'Utilisateur', count: 1247 },
-    { role: 'Assureur', count: 28 },
-    { role: 'Admin', count: 5 },
-  ],
+const emptyUserDemographics: UserDemographics = {
+  byAge: [],
+  byLocation: [],
+  byDevice: [],
+  byRole: [],
 };
 
-const mockQuoteAnalytics: QuoteAnalytics = {
-  averageProcessingTime: 2.8,
-  completionRate: 23.2,
-  averageValue: 67890,
-  byStatus: [
-    { status: 'PENDING', count: 1847 },
-    { status: 'APPROVED', count: 892 },
-    { status: 'REJECTED', count: 567 },
-    { status: 'EXPIRED', count: 541 },
-  ],
-  byInsurer: [
-    { insurer: 'NSIA Assurance', count: 487 },
-    { insurer: 'SUNU Assurances', count: 392 },
-    { insurer: 'AXA Côte d\'Ivoire', count: 276 },
-  ],
-  byCategory: [
-    { category: 'Auto', count: 3247 },
-    { category: 'Moto', count: 456 },
-    { category: 'Habitat', count: 144 },
-  ],
-  timeToApprove: 2.1,
-  rejectionRate: 14.7,
+const emptyQuoteAnalytics: QuoteAnalytics = {
+  averageProcessingTime: 0,
+  completionRate: 0,
+  averageValue: 0,
+  byStatus: [],
+  byInsurer: [],
+  byCategory: [],
+  timeToApprove: 0,
+  rejectionRate: 0,
 };
 
 // Service avec fallback
 export const analyticsService = {
   fetchPlatformStats: (filters?: AnalyticsFilters) =>
     FallbackService.withFallback({
-      mockData: () => mockPlatformStats,
+      mockData: () => emptyPlatformStats,
       apiCall: () => supabaseAnalyticsService.fetchPlatformStats(filters),
       errorMessage: 'Service de statistiques de la plateforme indisponible',
     }),
 
   fetchActivityData: (period: '7d' | '30d' | '90d' = '7d', filters?: AnalyticsFilters) =>
     FallbackService.withFallback({
-      mockData: () => mockActivityData.slice(0, period === '7d' ? 7 : period === '30d' ? 30 : 90),
+      mockData: () => emptyActivityData,
       apiCall: () => supabaseAnalyticsService.fetchActivityData(period, filters),
       errorMessage: 'Service de données d\'activité indisponible',
     }),
 
   fetchTopInsurers: (limit: number = 10, filters?: AnalyticsFilters) =>
     FallbackService.withFallback({
-      mockData: () => mockTopInsurers.slice(0, limit),
+      mockData: () => emptyTopInsurers,
       apiCall: () => supabaseAnalyticsService.fetchTopInsurers(limit, filters),
       errorMessage: 'Service des meilleurs assureurs indisponible',
     }),
 
   fetchSystemHealth: () =>
     FallbackService.withFallback({
-      mockData: () => mockSystemHealth,
+      mockData: () => emptySystemHealth,
       apiCall: () => supabaseAnalyticsService.fetchSystemHealth(),
       errorMessage: 'Service de santé du système indisponible',
     }),
 
   fetchUserDemographics: (filters?: AnalyticsFilters) =>
     FallbackService.withFallback({
-      mockData: () => mockUserDemographics,
+      mockData: () => emptyUserDemographics,
       apiCall: () => supabaseAnalyticsService.fetchUserDemographics(filters),
       errorMessage: 'Service de données démographiques indisponible',
     }),
 
   fetchQuoteAnalytics: (filters?: AnalyticsFilters) =>
     FallbackService.withFallback({
-      mockData: () => mockQuoteAnalytics,
+      mockData: () => emptyQuoteAnalytics,
       apiCall: () => supabaseAnalyticsService.fetchQuoteAnalytics(filters),
       errorMessage: 'Service d\'analytics des devis indisponible',
     }),
@@ -828,7 +787,7 @@ export const analyticsService = {
       mockData: async () => {
         const date = new Date().toISOString().split('T')[0];
         let csvContent = `RAPPORT ${reportType.toUpperCase()} - NOLI ASSURANCE\n\nGénéré le: ${date}\n\n`;
-        csvContent += 'Note: Ceci est un rapport de démonstration\n';
+        csvContent += 'Note: Aucune donnée disponible\n';
         return new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
       },
       apiCall: () => supabaseAnalyticsService.exportAnalyticsReport(reportType, period, filters),

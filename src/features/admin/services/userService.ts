@@ -19,6 +19,7 @@ export interface User {
   profileCompleted: boolean;
   quotesCount: number;
   conversionRate: number;
+  avatarUrl?: string;
 }
 
 export interface CreateUserRequest {
@@ -61,6 +62,14 @@ const mapProfileToUser = (profile: any): User => {
   const status = isActive ? 'active' :
     profile.role === 'INSURER' && !profile.is_active ? 'pending' : 'inactive';
 
+  // Pour les assureurs, utiliser le logo de la table insurers si disponible (injecté via insurer_logo_url), sinon avatar_url du profile
+  const getAvatarOrLogo = () => {
+    if (profile.role === 'INSURER' && profile.insurer_logo_url) {
+      return profile.insurer_logo_url;
+    }
+    return profile.avatar_url;
+  };
+
   return {
     id: profile.id,
     firstName: profile.first_name,
@@ -75,7 +84,8 @@ const mapProfileToUser = (profile: any): User => {
     lastLogin: profile.last_login || profile.created_at,
     profileCompleted: !!(profile.first_name && profile.last_name && profile.phone),
     quotesCount: 0, // Sera calculé séparément
-    conversionRate: 0 // Sera calculé séparément
+    conversionRate: 0, // Sera calculé séparément
+    avatarUrl: getAvatarOrLogo(),
   };
 };
 
@@ -84,7 +94,7 @@ export const fetchUsers = async (filters?: UserFilters): Promise<User[]> => {
   try {
     let query = supabase
       .from('profiles')
-      .select('*')
+      .select('*, avatar_url')
       .order('created_at', { ascending: false });
 
     // Appliquer les filtres
@@ -118,10 +128,35 @@ export const fetchUsers = async (filters?: UserFilters): Promise<User[]> => {
       throw error;
     }
 
+    // Récupérer les logos des assureurs séparément
+    const insurerIds = profiles.filter(p => p.role === 'INSURER').map(p => p.id);
+    let insurerLogosMap: Record<string, string> = {};
+
+    if (insurerIds.length > 0) {
+      const { data: insurersData } = await supabase
+        .from('insurers')
+        .select('id, logo_url')
+        .in('id', insurerIds);
+
+      if (insurersData) {
+        insurerLogosMap = insurersData.reduce((acc, insurer) => {
+          if (insurer.logo_url) {
+            acc[insurer.id] = insurer.logo_url;
+          }
+          return acc;
+        }, {} as Record<string, string>);
+      }
+    }
+
     // Convertir les profils en utilisateurs et ajouter les statistiques
     const users = await Promise.all(
       profiles.map(async (profile) => {
-        const user = mapProfileToUser(profile);
+        // Injecter le logo de l'assureur si disponible
+        const profileWithLogo = {
+          ...profile,
+          insurer_logo_url: insurerLogosMap[profile.id] || null
+        };
+        const user = mapProfileToUser(profileWithLogo);
 
         // Récupérer le nombre de quotes pour cet utilisateur
         const { count: quotesCount } = await supabase

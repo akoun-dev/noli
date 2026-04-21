@@ -97,14 +97,14 @@ BEGIN
 
   -- Count recent critical issues from validations
   SELECT
-    COALESCE(SUM(critical_issues), 0)
+    COALESCE(SUM(admin_data_validations.critical_issues), 0)
   INTO v_critical_errors
   FROM public.admin_data_validations
   WHERE validation_date > NOW() - INTERVAL '7 days';
 
   -- Count recent warnings from validations
   SELECT
-    COALESCE(SUM(warnings), 0)
+    COALESCE(SUM(admin_data_validations.warnings), 0)
   INTO v_warnings
   FROM public.admin_data_validations
   WHERE validation_date > NOW() - INTERVAL '7 days';

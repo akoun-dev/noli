@@ -83,93 +83,13 @@ export const CampaignManager: React.FC = () => {
   }, []);
 
   const loadCampaigns = () => {
-    // Simuler le chargement des campagnes
-    const mockCampaigns: Campaign[] = [
-      {
-        id: 'campaign-1',
-        name: 'Suivi des devis expirants',
-        description: 'Relance automatique des clients avec des devis expirant dans 7 jours',
-        type: 'email',
-        status: 'active',
-        templateId: 'template-2',
-        targetAudience: {
-          criteria: {
-            status: ['prospect'],
-          },
-        },
-        scheduling: {
-          isRecurring: true,
-          recurringPattern: 'daily',
-        },
-        performance: {
-          sent: 245,
-          delivered: 238,
-          read: 156,
-          clicked: 89,
-          converted: 34,
-          failed: 7,
-        },
-        createdAt: new Date('2024-01-15'),
-        createdBy: 'Marie Konaté',
-      },
-      {
-        id: 'campaign-2',
-        name: 'Promotion spéciale Tous Risques',
-        description: 'Campagne promotionnelle pour l\'offre Tous Risques avec 15% de réduction',
-        type: 'mixed',
-        status: 'scheduled',
-        templateId: 'template-1',
-        targetAudience: {
-          clientIds: ['client-1', 'client-3'],
-        },
-        scheduling: {
-          sendAt: new Date(Date.now() + 86400000), // Demain
-        },
-        performance: {
-          sent: 0,
-          delivered: 0,
-          read: 0,
-          clicked: 0,
-          converted: 0,
-          failed: 0,
-        },
-        createdAt: new Date('2024-01-18'),
-        createdBy: 'Yao Bamba',
-      },
-      {
-        id: 'campaign-3',
-        name: 'Bienvenue nouveaux clients',
-        description: 'Série de bienvenue pour les nouveaux clients inscrits',
-        type: 'whatsapp',
-        status: 'completed',
-        templateId: 'template-3',
-        targetAudience: {
-          criteria: {
-            registrationDateRange: {
-              start: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-              end: new Date(),
-            },
-          },
-        },
-        scheduling: {
-          isRecurring: true,
-          recurringPattern: 'daily',
-        },
-        performance: {
-          sent: 89,
-          delivered: 87,
-          read: 76,
-          clicked: 45,
-          converted: 23,
-          failed: 2,
-        },
-        createdAt: new Date('2024-01-10'),
-        createdBy: 'Aminata Touré',
-        modifiedAt: new Date('2024-01-16'),
-      },
-    ];
+    // TODO: Implémenter le chargement réel des campagnes depuis la base de données
+    // const { data: campaigns } = await supabase
+    //   .from('campaigns')
+    //   .select('*')
+    //   .order('created_at', { ascending: false })
 
-    setCampaigns(mockCampaigns);
+    setCampaigns([]);
   };
 
   const filteredCampaigns = campaigns.filter(campaign => {

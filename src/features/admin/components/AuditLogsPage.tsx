@@ -15,6 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { auditService } from '../services/auditService';
 import { AuditLog, AuditLogFilters, AuditAction, AuditLogExport } from '@/types/admin';
 import {
@@ -491,17 +492,27 @@ export function AuditLogsPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {statistics.topUsers.map((user: any, index: number) => (
-                      <div key={user.email} className="flex justify-between items-center">
-                        <div className="flex items-center gap-3">
-                          <span className="text-sm font-medium text-muted-foreground">
-                            #{index + 1}
-                          </span>
-                          <span className="text-sm">{user.email}</span>
+                    {statistics.topUsers.map((user: any, index: number) => {
+                      const initials = user.email ? user.email.substring(0, 2).toUpperCase() : 'NA'
+
+                      return (
+                        <div key={user.email} className="flex justify-between items-center">
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={user.avatar_url} alt={user.email} />
+                              <AvatarFallback className="text-xs bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400">
+                                {initials}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="text-sm font-medium text-muted-foreground">
+                              #{index + 1}
+                            </span>
+                            <span className="text-sm">{user.email}</span>
+                          </div>
+                          <Badge variant="secondary">{user.count} actions</Badge>
                         </div>
-                        <Badge variant="secondary">{user.count} actions</Badge>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 </CardContent>
               </Card>

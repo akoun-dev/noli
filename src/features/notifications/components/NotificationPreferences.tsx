@@ -1,10 +1,17 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Save, Bell, Mail, MessageSquare, Smartphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { useNotifications } from '../hooks/useNotifications';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 interface NotificationPreferencesProps {
   isOpen: boolean;
@@ -18,6 +25,13 @@ export const NotificationPreferences: React.FC<NotificationPreferencesProps> = (
   const { preferences, updatePreferences, isSupported } = useNotifications();
   const [localPreferences, setLocalPreferences] = useState(preferences);
 
+  // Reset local preferences when dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      setLocalPreferences(preferences);
+    }
+  }, [isOpen, preferences]);
+
   const handleSave = () => {
     updatePreferences(localPreferences);
     onClose();
@@ -28,33 +42,27 @@ export const NotificationPreferences: React.FC<NotificationPreferencesProps> = (
     onClose();
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold">Préférences de notification</h2>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleCancel}
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Préférences de notification</DialogTitle>
+          <DialogDescription>
+            Choisissez comment vous souhaitez être notifié
+          </DialogDescription>
+        </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="space-y-6 py-4">
           {/* Canaux de notification */}
           <div>
             <h3 className="text-sm font-medium mb-4 flex items-center gap-2">
               <Bell className="h-4 w-4" />
               Canaux de notification
             </h3>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="push-notifications" className="text-sm font-medium">
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div className="space-y-0.5 flex-1">
+                  <Label htmlFor="push-notifications" className="text-sm font-medium cursor-pointer">
                     Notifications push
                   </Label>
                   <p className="text-xs text-muted-foreground">
@@ -71,9 +79,9 @@ export const NotificationPreferences: React.FC<NotificationPreferencesProps> = (
                 />
               </div>
 
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="email-notifications" className="text-sm font-medium flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div className="space-y-0.5 flex-1">
+                  <Label htmlFor="email-notifications" className="text-sm font-medium flex items-center gap-2 cursor-pointer">
                     <Mail className="h-4 w-4" />
                     Email
                   </Label>
@@ -90,9 +98,9 @@ export const NotificationPreferences: React.FC<NotificationPreferencesProps> = (
                 />
               </div>
 
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="whatsapp-notifications" className="text-sm font-medium flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div className="space-y-0.5 flex-1">
+                  <Label htmlFor="whatsapp-notifications" className="text-sm font-medium flex items-center gap-2 cursor-pointer">
                     <MessageSquare className="h-4 w-4" />
                     WhatsApp
                   </Label>
@@ -112,15 +120,15 @@ export const NotificationPreferences: React.FC<NotificationPreferencesProps> = (
           </div>
 
           {/* Types de notifications */}
-          <div>
+          <div className="border-t pt-4">
             <h3 className="text-sm font-medium mb-4 flex items-center gap-2">
               <Smartphone className="h-4 w-4" />
               Types de notifications
             </h3>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="quote-notifications" className="text-sm font-medium">
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div className="space-y-0.5 flex-1">
+                  <Label htmlFor="quote-notifications" className="text-sm font-medium cursor-pointer">
                     Devis et comparaisons
                   </Label>
                   <p className="text-xs text-muted-foreground">
@@ -136,9 +144,9 @@ export const NotificationPreferences: React.FC<NotificationPreferencesProps> = (
                 />
               </div>
 
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="policy-notifications" className="text-sm font-medium">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div className="space-y-0.5 flex-1">
+                  <Label htmlFor="policy-notifications" className="text-sm font-medium cursor-pointer">
                     Contrats d'assurance
                   </Label>
                   <p className="text-xs text-muted-foreground">
@@ -154,9 +162,9 @@ export const NotificationPreferences: React.FC<NotificationPreferencesProps> = (
                 />
               </div>
 
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="payment-notifications" className="text-sm font-medium">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div className="space-y-0.5 flex-1">
+                  <Label htmlFor="payment-notifications" className="text-sm font-medium cursor-pointer">
                     Paiements
                   </Label>
                   <p className="text-xs text-muted-foreground">
@@ -172,9 +180,9 @@ export const NotificationPreferences: React.FC<NotificationPreferencesProps> = (
                 />
               </div>
 
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="promotion-notifications" className="text-sm font-medium">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div className="space-y-0.5 flex-1">
+                  <Label htmlFor="promotion-notifications" className="text-sm font-medium cursor-pointer">
                     Promotions et offres
                   </Label>
                   <p className="text-xs text-muted-foreground">
@@ -193,31 +201,31 @@ export const NotificationPreferences: React.FC<NotificationPreferencesProps> = (
           </div>
 
           {!isSupported && (
-            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <p className="text-sm text-yellow-800">
+            <div className="p-3 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-900/50 rounded-lg">
+              <p className="text-sm text-yellow-800 dark:text-yellow-200">
                 ⚠️ Les notifications push ne sont pas supportées par ce navigateur.
               </p>
             </div>
           )}
         </div>
 
-        <div className="flex gap-2 mt-6">
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
           <Button
             variant="outline"
             onClick={handleCancel}
-            className="flex-1"
+            className="w-full sm:flex-1"
           >
             Annuler
           </Button>
           <Button
             onClick={handleSave}
-            className="flex-1"
+            className="w-full sm:flex-1"
           >
             <Save className="h-4 w-4 mr-2" />
             Enregistrer
           </Button>
         </div>
-      </Card>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };

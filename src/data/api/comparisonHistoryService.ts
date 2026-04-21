@@ -451,90 +451,24 @@ const supabaseComparisonHistoryService = {
   },
 };
 
-// Mock data pour le fallback
-const mockComparisonHistory: ComparisonHistory[] = [
-  {
-    id: '1',
-    user_id: 'mock-user-1',
-    comparison_data: {
-      title: 'Comparaison assurance Toyota Yaris',
-      description: 'Recherche pour véhicule personnel',
-      vehicleInfo: {
-        make: 'Toyota',
-        model: 'Yaris',
-        year: 2020,
-        category: 'Voiture',
-        value: 4500000
-      },
-      driverInfo: {
-        age: 32,
-        licenseYears: 8,
-        accidentHistory: 0
-      },
-      preferences: {
-        coverageType: 'Tous risques',
-        budgetRange: { min: 80000, max: 150000 },
-        deductible: 50000,
-        additionalOptions: ['Assistance 24/7', 'Véhicule de remplacement']
-      },
-      results: {
-        totalOffers: 12,
-        bestOffer: {
-          insurer: 'NSIA Assurance',
-          price: 95000,
-          coverage: 'Tous risques'
-        },
-        priceRange: { min: 85000, max: 145000 },
-        averagePrice: 115000,
-        comparisonDate: '2024-01-20T10:30:00Z'
-      },
-      savedOffers: [
-        {
-          id: '1',
-          offerId: 'offer_123',
-          insurer: 'NSIA Assurance',
-          price: 95000,
-          coverage: 'Tous risques',
-          deductible: 50000,
-          additionalBenefits: ['Assistance 24/7', 'Protection juridique'],
-          isFavorite: true,
-          selected: true,
-          savedAt: '2024-01-20T10:35:00Z'
-        }
-      ]
-    },
-    status: 'completed',
-    comparison_date: '2024-01-20T10:30:00Z',
-    is_shared: false,
-    created_at: '2024-01-20T10:00:00Z',
-    updated_at: '2024-01-20T10:35:00Z'
-  }
-];
+// Default empty values pour le fallback (pas de données mock)
+const emptyComparisonHistory: ComparisonHistory[] = [];
 
-const mockStats: ComparisonStats = {
-  totalComparisons: 15,
-  averageOffersPerComparison: 10.5,
-  averageSavings: 25000,
-  popularInsurers: [
-    { insurer: 'NSIA Assurance', count: 8 },
-    { insurer: 'SUNU Assurances', count: 6 }
-  ],
-  priceTrends: [
-    { date: '2024-01-01', averagePrice: 120000 },
-    { date: '2024-01-08', averagePrice: 125000 }
-  ],
-  completionRate: 85,
-  favoriteCoverageTypes: [
-    { type: 'Tous risques', count: 8 },
-    { type: 'Tiers +', count: 5 }
-  ]
+const emptyStats: ComparisonStats = {
+  totalComparisons: 0,
+  averageOffersPerComparison: 0,
+  averageSavings: 0,
+  popularInsurers: [],
+  priceTrends: [],
+  completionRate: 0,
+  favoriteCoverageTypes: []
 };
 
 // Service avec fallback
 export const comparisonHistoryService = {
   fetchComparisonHistory: (userId: string, filters?: ComparisonHistoryFilters) =>
     FallbackService.withFallback({
-      mockData: () => mockComparisonHistory.filter(h => h.user_id === userId),
+      mockData: () => emptyComparisonHistory,
       apiCall: () => supabaseComparisonHistoryService.fetchComparisonHistory(userId, filters),
       errorMessage: 'Service d\'historique de comparaison indisponible',
     }),
@@ -542,9 +476,7 @@ export const comparisonHistoryService = {
   fetchComparisonDetails: (historyId: string) =>
     FallbackService.withFallback({
       mockData: () => {
-        const comparison = mockComparisonHistory.find(c => c.id === historyId);
-        if (!comparison) throw new Error('Comparaison non trouvée');
-        return comparison;
+        throw new Error('Comparaison non trouvée');
       },
       apiCall: () => supabaseComparisonHistoryService.fetchComparisonDetails(historyId),
       errorMessage: 'Service de détails de comparaison indisponible',
@@ -555,11 +487,10 @@ export const comparisonHistoryService = {
       mockData: () => {
         const newComparison: ComparisonHistory = {
           ...comparisonData,
-          id: `mock_${Date.now()}`,
+          id: `temp_${Date.now()}`,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         };
-        mockComparisonHistory.unshift(newComparison);
         return newComparison;
       },
       apiCall: () => supabaseComparisonHistoryService.saveComparisonHistory(comparisonData),
@@ -569,15 +500,7 @@ export const comparisonHistoryService = {
   updateComparisonHistory: (historyId: string, updates: Partial<ComparisonHistory>) =>
     FallbackService.withFallback({
       mockData: () => {
-        const index = mockComparisonHistory.findIndex(c => c.id === historyId);
-        if (index === -1) throw new Error('Comparaison non trouvée');
-
-        mockComparisonHistory[index] = {
-          ...mockComparisonHistory[index],
-          ...updates,
-          updated_at: new Date().toISOString(),
-        };
-        return mockComparisonHistory[index];
+        throw new Error('Comparaison non trouvée');
       },
       apiCall: () => supabaseComparisonHistoryService.updateComparisonHistory(historyId, updates),
       errorMessage: 'Service de mise à jour de comparaison indisponible',
@@ -586,11 +509,7 @@ export const comparisonHistoryService = {
   deleteComparisonHistory: (historyId: string) =>
     FallbackService.withFallback({
       mockData: () => {
-        const index = mockComparisonHistory.findIndex(c => c.id === historyId);
-        if (index === -1) throw new Error('Comparaison non trouvée');
-
-        mockComparisonHistory[index].status = 'archived';
-        mockComparisonHistory[index].updated_at = new Date().toISOString();
+        // No-op for mock
       },
       apiCall: () => supabaseComparisonHistoryService.deleteComparisonHistory(historyId),
       errorMessage: 'Service de suppression de comparaison indisponible',
@@ -599,17 +518,7 @@ export const comparisonHistoryService = {
   shareComparisonHistory: (historyId: string) =>
     FallbackService.withFallback({
       mockData: () => {
-        const comparison = mockComparisonHistory.find(c => c.id === historyId);
-        if (!comparison) throw new Error('Comparaison non trouvée');
-
-        const shareToken = `share_mock_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        const shareUrl = `${window.location.origin}/shared/comparison/${shareToken}`;
-
-        comparison.is_shared = true;
-        comparison.share_token = shareToken;
-        comparison.updated_at = new Date().toISOString();
-
-        return { shareToken, shareUrl };
+        throw new Error('Comparaison non trouvée');
       },
       apiCall: () => supabaseComparisonHistoryService.shareComparisonHistory(historyId),
       errorMessage: 'Service de partage de comparaison indisponible',
@@ -618,9 +527,7 @@ export const comparisonHistoryService = {
   fetchSharedComparison: (shareToken: string) =>
     FallbackService.withFallback({
       mockData: () => {
-        const comparison = mockComparisonHistory.find(c => c.share_token === shareToken && c.is_shared);
-        if (!comparison) throw new Error('Comparaison partagée non trouvée');
-        return comparison;
+        throw new Error('Comparaison partagée non trouvée');
       },
       apiCall: () => supabaseComparisonHistoryService.fetchSharedComparison(shareToken),
       errorMessage: 'Service de comparaison partagée indisponible',
@@ -629,11 +536,7 @@ export const comparisonHistoryService = {
   updateSavedOffers: (historyId: string, savedOffers: ComparisonHistory['comparison_data']['savedOffers']) =>
     FallbackService.withFallback({
       mockData: () => {
-        const comparison = mockComparisonHistory.find(c => c.id === historyId);
-        if (comparison) {
-          comparison.comparison_data.savedOffers = savedOffers;
-          comparison.updated_at = new Date().toISOString();
-        }
+        // No-op for mock
       },
       apiCall: () => supabaseComparisonHistoryService.updateSavedOffers(historyId, savedOffers),
       errorMessage: 'Service de mise à jour des offres sauvegardées indisponible',
@@ -641,7 +544,7 @@ export const comparisonHistoryService = {
 
   fetchComparisonStats: (userId: string) =>
     FallbackService.withFallback({
-      mockData: () => mockStats,
+      mockData: () => emptyStats,
       apiCall: () => supabaseComparisonHistoryService.fetchComparisonStats(userId),
       errorMessage: 'Service de statistiques de comparaison indisponible',
     }),
@@ -649,22 +552,7 @@ export const comparisonHistoryService = {
   exportComparisonHistory: (userId: string, filters?: ComparisonHistoryFilters) =>
     FallbackService.withFallback({
       mockData: async () => {
-        const history = mockComparisonHistory.filter(h => h.user_id === userId);
-
-        // Créer le contenu CSV
-        const headers = ['Date', 'Titre', 'Véhicule', 'Type de couverture', 'Statut'];
-        const rows = history.map(comparison => [
-          new Date(comparison.created_at).toLocaleDateString('fr-FR'),
-          comparison.comparison_data?.title || '',
-          `${comparison.comparison_data?.vehicleInfo?.make || ''} ${comparison.comparison_data?.vehicleInfo?.model || ''}`,
-          comparison.comparison_data?.preferences?.coverageType || '',
-          comparison.status
-        ]);
-
-        const csvContent = [headers, ...rows]
-          .map(row => row.map(cell => `"${cell}"`).join(','))
-          .join('\n');
-
+        const csvContent = 'Aucune donnée disponible\n';
         return new Blob([csvContent], { type: 'text/csv' });
       },
       apiCall: () => supabaseComparisonHistoryService.exportComparisonHistory(userId, filters),

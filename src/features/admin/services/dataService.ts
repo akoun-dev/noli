@@ -42,7 +42,7 @@ export const dataService = {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, first_name, last_name, email, phone, role, is_active, created_at, updated_at')
+        .select('id, first_name, last_name, email, phone, role, is_active, created_at, updated_at, avatar_url')
         .order('created_at', { ascending: false })
         .range(offset, limit);
 
@@ -65,7 +65,7 @@ export const dataService = {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, first_name, last_name, email, phone, role, is_active, created_at, updated_at')
+        .select('id, first_name, last_name, email, phone, role, is_active, created_at, updated_at, avatar_url')
         .eq('id', userId)
         .single();
 
@@ -159,7 +159,7 @@ export const dataService = {
         // Récupérer les profils pour les détails
         const { data: profiles, error } = await supabase
           .from('profiles')
-          .select('id, first_name, last_name, email, phone, role')
+          .select('id, first_name, last_name, email, phone, role, avatar_url')
           .in('id', ...profileIds);
 
         if (error) {
@@ -175,8 +175,9 @@ export const dataService = {
           email: p.email,
           phone: p.phone,
           role: p.role,
+          avatar_url: p.avatar_url,
           is_active: p.is_active
-        }));
+        })));
 
         // Assigner les profils aux devis correspondants
         const quotesWithProfiles = quotes.map(quote => ({

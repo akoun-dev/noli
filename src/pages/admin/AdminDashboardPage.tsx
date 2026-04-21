@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   Users,
   Shield,
@@ -542,6 +543,12 @@ export const AdminDashboardPage: React.FC = () => {
                         <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-semibold">
                           {index + 1}
                         </div>
+                        <Avatar className="h-8 w-8 flex-shrink-0">
+                          <AvatarImage src={insurer.logoUrl} alt={insurer.name} />
+                          <AvatarFallback className="bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400 text-xs">
+                            {insurer.name.substring(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium truncate">{insurer.name}</p>
                           <p className="text-xs text-muted-foreground">

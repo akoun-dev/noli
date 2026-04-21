@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { UserBreadcrumb } from '@/components/common/BreadcrumbRenderer'
+import { Badge } from '@/components/ui/badge'
 import {
   FileText,
   Shield,
@@ -12,8 +13,15 @@ import {
   AlertCircle,
   Plus,
   Loader2,
+  FolderOpen,
+  MessageCircle,
+  BarChart3,
+  ArrowRight,
+  Calendar,
+  CreditCard,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
+import { useUser } from '@/contexts/UserContext'
 import quoteService from '@/data/api/offerService'
 import { logger } from '@/lib/logger'
 
@@ -43,6 +51,8 @@ interface Policy {
 
 export const UserDashboardPage: React.FC = () => {
   const { user } = useAuth()
+  const { currentUser } = useUser()
+  const navigate = useNavigate()
   const [quotes, setQuotes] = useState<Quote[]>([])
   const [policies, setPolicies] = useState<Policy[]>([])
   const [loading, setLoading] = useState(true)
@@ -95,28 +105,63 @@ export const UserDashboardPage: React.FC = () => {
 
   const quickStats = [
     {
-      label: 'Devis générés',
-      value: quotes.length.toString(),
+      label: 'Devis',
+      value: quotes.length,
       icon: FileText,
-      color: 'text-blue-600',
+      color: 'text-blue-500',
+      bgColor: 'bg-blue-50 dark:bg-blue-950',
     },
     {
-      label: 'Contrats actifs',
-      value: policies.length.toString(),
+      label: 'Contrats',
+      value: policies.length,
       icon: Shield,
-      color: 'text-green-600',
+      color: 'text-green-500',
+      bgColor: 'bg-green-50 dark:bg-green-950',
     },
     {
-      label: 'Économies réalisées',
-      value: `${Math.round(quotes.reduce((sum, q) => sum + q.price.annual, 0) * 0.1).toLocaleString()} FCFA`,
+      label: 'En attente',
+      value: quotes.filter(q => q.status === 'pending').length,
+      icon: Clock,
+      color: 'text-amber-500',
+      bgColor: 'bg-amber-50 dark:bg-amber-950',
+    },
+    {
+      label: 'Économies',
+      value: `${Math.round(quotes.reduce((sum, q) => sum + q.price.annual, 0) * 0.1 / 1000)}k FCFA`,
       icon: TrendingUp,
-      color: 'text-purple-600',
+      color: 'text-purple-500',
+      bgColor: 'bg-purple-50 dark:bg-purple-950',
+    },
+  ]
+
+  const quickActions = [
+    {
+      label: 'Nouveau devis',
+      icon: Plus,
+      description: 'Comparateur',
+      onClick: () => navigate('/comparer'),
+      color: 'bg-[#1B464D] hover:bg-[#164047]',
     },
     {
-      label: 'Comparaisons',
-      value: quotes.length.toString(),
-      icon: Car,
-      color: 'text-orange-600',
+      label: 'Mes documents',
+      icon: FolderOpen,
+      description: 'Contrats & factures',
+      onClick: () => navigate('/documents'),
+      color: 'bg-emerald-600 hover:bg-emerald-700',
+    },
+    {
+      label: 'Assistance',
+      icon: MessageCircle,
+      description: 'Chat en direct',
+      onClick: () => {/* Chat widget is always visible */},
+      color: 'bg-blue-600 hover:bg-blue-700',
+    },
+    {
+      label: 'Mes statistiques',
+      icon: BarChart3,
+      description: 'Analytiques',
+      onClick: () => navigate('/tableau-de-bord'),
+      color: 'bg-purple-600 hover:bg-purple-700',
     },
   ]
 
@@ -125,32 +170,28 @@ export const UserDashboardPage: React.FC = () => {
       case 'approved':
       case 'active':
         return (
-          <span className='inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'>
+          <Badge variant='default' className='bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900 dark:text-green-200'>
             <CheckCircle className='h-3 w-3 mr-1' />
             {status === 'approved' ? 'Approuvé' : 'Actif'}
-          </span>
+          </Badge>
         )
       case 'pending':
         return (
-          <span className='inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'>
+          <Badge variant='secondary' className='bg-amber-100 text-amber-700 hover:bg-amber-100 dark:bg-amber-900 dark:text-amber-200'>
             <Clock className='h-3 w-3 mr-1' />
             En attente
-          </span>
+          </Badge>
         )
       case 'rejected':
       case 'expired':
         return (
-          <span className='inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'>
+          <Badge variant='destructive'>
             <AlertCircle className='h-3 w-3 mr-1' />
             {status === 'rejected' ? 'Rejeté' : 'Expiré'}
-          </span>
+          </Badge>
         )
       default:
-        return (
-          <span className='inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'>
-            {status}
-          </span>
-        )
+        return <Badge variant='outline'>{status}</Badge>
     }
   }
 
@@ -158,7 +199,7 @@ export const UserDashboardPage: React.FC = () => {
     return (
       <div className='flex items-center justify-center min-h-[400px]'>
         <div className='text-center'>
-          <Loader2 className='w-8 h-8 animate-spin mx-auto mb-4 text-primary' />
+          <Loader2 className='w-12 h-12 animate-spin mx-auto mb-4 text-[#1B464D]' />
           <p className='text-muted-foreground'>Chargement du tableau de bord...</p>
         </div>
       </div>
@@ -170,9 +211,12 @@ export const UserDashboardPage: React.FC = () => {
       <div className='flex items-center justify-center min-h-[400px]'>
         <Card className='p-8 max-w-md'>
           <div className='text-center'>
+            <AlertCircle className='w-12 h-12 text-destructive mx-auto mb-4' />
             <h2 className='text-2xl font-bold mb-4'>Erreur</h2>
             <p className='text-muted-foreground mb-6'>{error}</p>
-            <Button onClick={loadData}>Réessayer</Button>
+            <Button onClick={loadData} className='bg-[#1B464D] hover:bg-[#164047]'>
+              Réessayer
+            </Button>
           </div>
         </Card>
       </div>
@@ -180,87 +224,123 @@ export const UserDashboardPage: React.FC = () => {
   }
 
   return (
-    <div className='space-y-4 sm:space-y-6'>
-      {/* Breadcrumb */}
-      <UserBreadcrumb className='mb-4' />
+    <div className='space-y-6'>
+      {/* Welcome Banner */}
+      <div className='relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#1B464D] via-[#164047] to-[#0F2E33] text-white p-6 sm:p-8 shadow-xl'>
+        <div className='absolute top-0 right-0 w-64 h-64 bg-[#DEEF4A]/10 rounded-full -translate-y-1/2 translate-x-1/2' />
+        <div className='absolute bottom-0 left-0 w-48 h-48 bg-[#DEEF4A]/5 rounded-full translate-y-1/2 -translate-x-1/2' />
 
-      {/* Welcome Section */}
-      <div className='bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg p-4 sm:p-6'>
-        <h1 className='text-xl sm:text-2xl lg:text-3xl font-bold mb-2'>
-          Bienvenue sur votre espace!
-        </h1>
-        <p className='text-blue-100 text-sm sm:text-base mb-4'>
-          Gérez vos assurances et suivez vos demandes
-        </p>
-        <Button className='bg-white text-blue-600 hover:bg-gray-100 w-full sm:w-auto'>
-          <Plus className='h-4 w-4 mr-2' />
-          <span className='hidden sm:inline'>Nouvelle comparaison</span>
-          <span className='sm:hidden'>Comparer</span>
-        </Button>
+        <div className='relative z-10'>
+          <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4'>
+            <div>
+              <h1 className='text-2xl sm:text-3xl font-bold mb-2'>
+                Bonjour{currentUser?.firstName ? `, ${currentUser.firstName}` : ''} 👋
+              </h1>
+              <p className='text-blue-100 text-sm sm:text-base'>
+                Bienvenue sur votre espace Noli Assurance
+              </p>
+            </div>
+            <Button
+              onClick={() => navigate('/comparer')}
+              className='bg-[#DEEF4A] text-[#1B464D] hover:bg-[#D4E53F] font-semibold shadow-lg self-start sm:self-auto'
+            >
+              <Plus className='h-4 w-4 mr-2' />
+              Nouvelle comparaison
+            </Button>
+          </div>
+        </div>
       </div>
 
       {/* Quick Stats */}
-      <div className='grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6'>
+      <div className='grid grid-cols-2 lg:grid-cols-4 gap-4'>
         {quickStats.map((stat, index) => (
-          <Card key={index}>
-            <CardContent className='p-3 sm:p-4 lg:p-6'>
-              <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4'>
-                <div className='text-center sm:text-left'>
-                  <p className='text-xs sm:text-sm font-medium text-muted-foreground'>
-                    {stat.label}
-                  </p>
-                  <p className='text-lg sm:text-xl lg:text-2xl font-bold text-foreground'>
-                    {stat.value}
-                  </p>
-                </div>
-                <stat.icon
-                  className={`h-6 w-6 sm:h-8 sm:w-8 ${stat.color} flex-shrink-0 mx-auto sm:mx-0`}
-                />
+          <Card key={index} className='overflow-hidden hover:shadow-md transition-shadow'>
+            <CardContent className='p-4'>
+              <div className={`${stat.bgColor} rounded-lg p-3 mb-3`}>
+                <stat.icon className={`h-6 w-6 ${stat.color}`} />
               </div>
+              <p className='text-2xl font-bold text-foreground'>{stat.value}</p>
+              <p className='text-sm text-muted-foreground'>{stat.label}</p>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      <div className='grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6'>
+      {/* Quick Actions */}
+      <Card>
+        <CardHeader>
+          <CardTitle className='text-lg'>Actions rapides</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className='grid grid-cols-2 lg:grid-cols-4 gap-3'>
+            {quickActions.map((action, index) => (
+              <button
+                key={index}
+                onClick={action.onClick}
+                className='flex flex-col items-center gap-3 p-4 rounded-lg border bg-card hover:bg-accent transition-colors text-left'
+              >
+                <div className={`${action.color} p-3 rounded-full text-white`}>
+                  <action.icon className='h-5 w-5' />
+                </div>
+                <div className='flex-1 text-center w-full'>
+                  <p className='font-semibold text-sm'>{action.label}</p>
+                  <p className='text-xs text-muted-foreground'>{action.description}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className='grid grid-cols-1 xl:grid-cols-2 gap-6'>
         {/* Recent Quotes */}
         <Card>
-          <CardHeader className='pb-3 sm:pb-4'>
-            <CardTitle className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4'>
-              <span className='text-lg sm:text-xl'>Devis récents</span>
-              <Button variant='outline' size='sm' className='w-full sm:w-auto'>
-                Voir tout
-              </Button>
-            </CardTitle>
+          <CardHeader className='flex flex-row items-center justify-between pb-4'>
+            <CardTitle className='text-lg'>Devis récents</CardTitle>
+            <Button
+              variant='ghost'
+              size='sm'
+              onClick={() => navigate('/mes-devis')}
+              className='text-[#1B464D] hover:text-[#164047]'
+            >
+              Voir tout
+              <ArrowRight className='h-4 w-4 ml-1' />
+            </Button>
           </CardHeader>
           <CardContent>
             {quotes.length === 0 ? (
               <div className='text-center py-8'>
-                <FileText className='h-12 w-12 text-muted-foreground mx-auto mb-4' />
-                <p className='text-muted-foreground'>Aucun devis pour le moment</p>
-                <Button className='mt-4'>
+                <div className='bg-muted rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center'>
+                  <FileText className='h-8 w-8 text-muted-foreground' />
+                </div>
+                <p className='text-muted-foreground mb-2'>Aucun devis pour le moment</p>
+                <p className='text-sm text-muted-foreground mb-4'>
+                  Commencez par comparer les offres
+                </p>
+                <Button
+                  onClick={() => navigate('/comparer')}
+                  className='bg-[#1B464D] hover:bg-[#164047]'
+                >
                   <Plus className='h-4 w-4 mr-2' />
                   Créer un devis
                 </Button>
               </div>
             ) : (
-              <div className='space-y-4'>
+              <div className='space-y-3'>
                 {quotes.slice(0, 3).map((quote) => (
                   <div
                     key={quote.id}
-                    className='flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg'
+                    className='flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer'
+                    onClick={() => navigate(`/mes-devis`)}
                   >
                     <div className='flex-1 min-w-0'>
-                      <p className='text-sm font-medium text-gray-900 dark:text-gray-100 truncate'>
-                        {quote.offerName}
-                      </p>
-                      <p className='text-xs text-gray-500 dark:text-gray-400'>
-                        {quote.insurerName} •{' '}
-                        {new Date(quote.createdAt).toLocaleDateString('fr-FR')}
+                      <p className='text-sm font-medium truncate'>{quote.offerName}</p>
+                      <p className='text-xs text-muted-foreground'>
+                        {quote.insurerName} • {new Date(quote.createdAt).toLocaleDateString('fr-FR')}
                       </p>
                     </div>
                     <div className='flex items-center gap-2'>
-                      <span className='text-sm font-semibold text-gray-900 dark:text-gray-100'>
+                      <span className='text-sm font-semibold'>
                         {quote.price.annual.toLocaleString()} FCFA
                       </span>
                       {getStatusBadge(quote.status)}
@@ -274,41 +354,46 @@ export const UserDashboardPage: React.FC = () => {
 
         {/* Active Policies */}
         <Card>
-          <CardHeader className='pb-3 sm:pb-4'>
-            <CardTitle className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4'>
-              <span className='text-lg sm:text-xl'>Contrats actifs</span>
-              <Button variant='outline' size='sm' className='w-full sm:w-auto'>
-                Voir tout
-              </Button>
-            </CardTitle>
+          <CardHeader className='flex flex-row items-center justify-between pb-4'>
+            <CardTitle className='text-lg'>Contrats actifs</CardTitle>
+            <Button
+              variant='ghost'
+              size='sm'
+              onClick={() => navigate('/mes-contrats')}
+              className='text-[#1B464D] hover:text-[#164047]'
+            >
+              Voir tout
+              <ArrowRight className='h-4 w-4 ml-1' />
+            </Button>
           </CardHeader>
           <CardContent>
             {policies.length === 0 ? (
               <div className='text-center py-8'>
-                <Shield className='h-12 w-12 text-muted-foreground mx-auto mb-4' />
-                <p className='text-muted-foreground'>Aucun contrat actif</p>
-                <p className='text-xs text-muted-foreground mt-2'>
+                <div className='bg-muted rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center'>
+                  <Shield className='h-8 w-8 text-muted-foreground' />
+                </div>
+                <p className='text-muted-foreground mb-2'>Aucun contrat actif</p>
+                <p className='text-xs text-muted-foreground'>
                   Acceptez un devis pour activer votre couverture
                 </p>
               </div>
             ) : (
-              <div className='space-y-4'>
+              <div className='space-y-3'>
                 {policies.slice(0, 3).map((policy) => (
                   <div
                     key={policy.id}
-                    className='flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg'
+                    className='flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer'
+                    onClick={() => navigate(`/mes-contrats`)}
                   >
                     <div className='flex-1 min-w-0'>
-                      <p className='text-sm font-medium text-gray-900 dark:text-gray-100 truncate'>
-                        {policy.offerName}
-                      </p>
-                      <p className='text-xs text-gray-500 dark:text-gray-400'>
-                        {policy.insurerName} • Expire le{' '}
-                        {new Date(policy.endDate).toLocaleDateString('fr-FR')}
+                      <p className='text-sm font-medium truncate'>{policy.offerName}</p>
+                      <p className='text-xs text-muted-foreground flex items-center gap-1'>
+                        <Calendar className='h-3 w-3' />
+                        {policy.insurerName} • Expire le {new Date(policy.endDate).toLocaleDateString('fr-FR')}
                       </p>
                     </div>
                     <div className='flex items-center gap-2'>
-                      <span className='text-sm font-semibold text-gray-900 dark:text-gray-100'>
+                      <span className='text-sm font-semibold'>
                         {policy.price.toLocaleString()} FCFA/an
                       </span>
                       {getStatusBadge(policy.status)}
@@ -321,32 +406,34 @@ export const UserDashboardPage: React.FC = () => {
         </Card>
       </div>
 
-      {/* Quick Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Actions rapides</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4'>
-            <Button className='h-auto p-4 flex flex-col gap-2' variant='outline'>
-              <Plus className='h-6 w-6' />
-              <span>Nouveau devis</span>
-            </Button>
-            <Button className='h-auto p-4 flex flex-col gap-2' variant='outline'>
-              <FileText className='h-6 w-6' />
-              <span>Mes documents</span>
-            </Button>
-            <Button className='h-auto p-4 flex flex-col gap-2' variant='outline'>
-              <Shield className='h-6 w-6' />
-              <span>Assistance</span>
-            </Button>
-            <Button className='h-auto p-4 flex flex-col gap-2' variant='outline'>
-              <TrendingUp className='h-6 w-6' />
-              <span>Statistiques</span>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Empty State Promo */}
+      {quotes.length === 0 && policies.length === 0 && (
+        <Card className='bg-gradient-to-br from-blue-50 to-emerald-50 dark:from-blue-950 dark:to-emerald-950 border-blue-200 dark:border-blue-800'>
+          <CardContent className='p-6'>
+            <div className='flex flex-col sm:flex-row items-center gap-6'>
+              <div className='flex-shrink-0'>
+                <div className='bg-[#1B464D] rounded-full p-4'>
+                  <Car className='h-8 w-8 text-[#DEEF4A]' />
+                </div>
+              </div>
+              <div className='flex-1 text-center sm:text-left'>
+                <h3 className='text-lg font-semibold mb-2'>Comparez et économisez</h3>
+                <p className='text-sm text-muted-foreground mb-4'>
+                  Obtenez les meilleures offres d'assurance auto en quelques minutes.
+                  Comparez gratuitement les assureurs et trouvez l'offre qui vous convient.
+                </p>
+                <Button
+                  onClick={() => navigate('/comparer')}
+                  className='bg-[#1B464D] hover:bg-[#164047]'
+                >
+                  <Plus className='h-4 w-4 mr-2' />
+                  Commencer ma comparaison
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

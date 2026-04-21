@@ -29,6 +29,7 @@ export interface TopInsurer {
   policies: number
   revenue: number
   conversionRate: number
+  logoUrl?: string
 }
 
 export interface SystemHealth {
@@ -346,7 +347,7 @@ export const fetchTopInsurers = async (): Promise<TopInsurer[]> => {
     // Récupérer les assureurs actifs
     const { data: insurers, error } = await supabase
       .from('profiles')
-      .select('id, company_name, email')
+      .select('id, company_name, email, avatar_url')
       .eq('role', 'INSURER')
       .eq('is_active', true)
 
@@ -374,6 +375,7 @@ export const fetchTopInsurers = async (): Promise<TopInsurer[]> => {
           policies: offersCount || 0,
           revenue: 0,
           conversionRate: 0,
+          logoUrl: insurer.avatar_url,
         }
       })
     )

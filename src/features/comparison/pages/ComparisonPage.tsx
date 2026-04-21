@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { Shield } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { Card } from "@/components/ui/card";
-import { ComparisonBreadcrumb } from "@/components/common/BreadcrumbRenderer";
 import { CompareProvider, useCompare } from "../services/ComparisonContext";
 import Stepper from "../components/Stepper";
 import Step1Personal from "../components/Step1Personal";
@@ -83,11 +82,6 @@ const CompareForm = () => {
             </div>
           </Link>
         </div>
-      </div>
-
-      {/* Breadcrumb */}
-      <div className="container mx-auto px-4 py-4">
-        <ComparisonBreadcrumb />
       </div>
 
       {/* Stepper */}

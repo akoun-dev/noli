@@ -167,7 +167,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
           const { data, error } = await supabase
             .from('profiles')
-            .select('*')
+            .select(`
+              *,
+              insurer_accounts (
+                insurer_id,
+                insurers (
+                  logo_url
+                )
+              )
+            `)
             .eq('id', userId)
             .maybeSingle()
 
@@ -212,6 +220,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
           logger.info('Profile loaded successfully', { userId, email: data.email })
 
+          // Pour les assureurs, utiliser le logo depuis la table insurers
+          let insurerLogo = null
+          if (Array.isArray(data.insurer_accounts) && data.insurer_accounts.length > 0) {
+            const insurerData = data.insurer_accounts[0]?.insurers
+            if (insurerData) {
+              // Si logo_url existe, l'utiliser, sinon générer l'URL par défaut
+              insurerLogo = insurerData.logo_url
+              if (!insurerLogo && data.insurer_accounts[0]?.insurer_id) {
+                const insurerId = data.insurer_accounts[0].insurer_id
+                const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+                insurerLogo = `${supabaseUrl}/storage/v1/object/public/insurer-logos/${insurerId}.png`
+              }
+            }
+          }
+
+          const avatarUrl = data.role === 'INSURER'
+            ? (insurerLogo || data.avatar_url || '')
+            : (data.avatar_url || '')
+
           return {
             id: data.id,
             email: data.email || sessionUser.email || '',
@@ -220,7 +247,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             companyName: data.company_name || '',
             role: (data.role || sessionUser.user_metadata?.role || 'USER') as 'USER' | 'INSURER' | 'ADMIN',
             phone: data.phone || '',
-            avatar: data.avatar_url || '',
+            avatar: avatarUrl,
             createdAt: data.created_at ? new Date(data.created_at) : new Date(sessionUser.created_at),
             updatedAt: data.updated_at ? new Date(data.updated_at) : new Date(),
             address: data.address || '',

@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Plus,
   Edit,
@@ -53,6 +54,7 @@ interface Quote {
     last_name: string;
     email: string;
     phone: string;
+    avatar_url?: string;
   };
   vehicle_info: {
     brand: string;
@@ -167,7 +169,7 @@ export const AdminDevisPage: React.FC = () => {
       if (userIds.length > 0) {
         const { data: profilesResult } = await supabase
           .from('profiles')
-          .select('id, first_name, last_name, email, phone');
+          .select('id, first_name, last_name, email, phone, avatar_url');
         profilesData = profilesResult || [];
       }
 
@@ -234,7 +236,8 @@ export const AdminDevisPage: React.FC = () => {
             first_name: personal?.firstName || profile?.first_name || '',
             last_name: personal?.lastName || profile?.last_name || '',
             email: personal?.email || profile?.email || '',
-            phone: personal?.phone || profile?.phone || ''
+            phone: personal?.phone || profile?.phone || '',
+            avatar_url: profile?.avatar_url
           },
           vehicle_info: {
             brand: vehicle?.brand || '',
@@ -829,10 +832,18 @@ export const AdminDevisPage: React.FC = () => {
                             </div>
                           </td>
                           <td className="p-2 sm:p-4">
-                            <div>
-                              <div className="font-medium text-sm">{quote.user_profile.first_name} {quote.user_profile.last_name}</div>
-                              <div className="text-xs text-muted-foreground">{quote.user_profile.email}</div>
-                              <div className="text-xs text-muted-foreground sm:hidden">{quote.vehicle_info.brand} {quote.vehicle_info.model}</div>
+                            <div className="flex items-center gap-3">
+                              <Avatar className="h-8 w-8 flex-shrink-0">
+                                <AvatarImage src={quote.user_profile.avatar_url} alt={`${quote.user_profile.first_name} ${quote.user_profile.last_name}`} />
+                                <AvatarFallback className="text-xs bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400">
+                                  {quote.user_profile.first_name[0]}{quote.user_profile.last_name[0]}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <div className="font-medium text-sm">{quote.user_profile.first_name} {quote.user_profile.last_name}</div>
+                                <div className="text-xs text-muted-foreground">{quote.user_profile.email}</div>
+                                <div className="text-xs text-muted-foreground sm:hidden">{quote.vehicle_info.brand} {quote.vehicle_info.model}</div>
+                              </div>
                             </div>
                           </td>
                           <td className="p-2 sm:p-4">
@@ -1244,15 +1255,23 @@ const QuoteDetails: React.FC<{ quote: Quote }> = ({ quote }) => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
         <div>
-          <h4 className="font-semibold mb-2 flex items-center">
+          <h4 className="font-semibold mb-3 flex items-center">
             <User className="h-4 w-4 mr-2" />
             Informations client
           </h4>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Nom:</span>
-              <span className="font-medium">{quote.user_profile.first_name} {quote.user_profile.last_name}</span>
+          <div className="flex items-start gap-3 mb-4">
+            <Avatar className="h-12 w-12">
+              <AvatarImage src={quote.user_profile.avatar_url} alt={`${quote.user_profile.first_name} ${quote.user_profile.last_name}`} />
+              <AvatarFallback className="bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400">
+                {quote.user_profile.first_name[0]}{quote.user_profile.last_name[0]}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <div className="font-medium">{quote.user_profile.first_name} {quote.user_profile.last_name}</div>
+              <div className="text-sm text-muted-foreground">{quote.user_profile.email}</div>
             </div>
+          </div>
+          <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Email:</span>
               <span className="font-medium">{quote.user_profile.email}</span>

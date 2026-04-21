@@ -547,13 +547,12 @@ export const InsurerSettingsPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
-      {/* Header */}
-      <div className="border-b bg-background/80 backdrop-blur-lg sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
+      {/* Page Actions Bar */}
+      <div className="border-b bg-background/80 backdrop-blur-lg">
+        <div className="px-4 py-3">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">Paramètres</h1>
-              <p className="text-sm text-muted-foreground mt-1">Gérez votre compte assureur</p>
+              <p className="text-sm text-muted-foreground">Gérez votre compte assureur</p>
             </div>
             <div className="flex items-center gap-3">
               {hasUnsavedChanges && (
@@ -569,7 +568,7 @@ export const InsurerSettingsPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-8">
+      <div className="px-4 py-6">
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Sidebar Navigation */}
           <aside className="lg:w-72 flex-shrink-0">

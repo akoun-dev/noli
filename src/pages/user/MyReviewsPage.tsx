@@ -93,7 +93,8 @@ export default function MyReviewsPage() {
     cons: '',
   })
 
-  // Fetch reviews from database - using policies as temporary storage since reviews table doesn't exist yet
+  // Fetch reviews from database
+  // TODO: Créer la table reviews et implémenter la logique de récupération
   const {
     data: reviews = [],
     isLoading,
@@ -104,60 +105,20 @@ export default function MyReviewsPage() {
       if (!user?.id) return []
 
       try {
-        // Simplified query to avoid infinite loading
-        const { data: policies, error } = await supabase
-          .from('policies')
-          .select('id, insurer_id, created_at, updated_at')
-          .eq('user_id', user.id)
+        // TODO: Remplacer par la vraie requête vers la table reviews
+        // const { data: reviews, error } = await supabase
+        //   .from('reviews')
+        //   .select('*, insurers(id, name, logo_url)')
+        //   .eq('user_id', user.id)
+        //   .order('created_at', { ascending: false })
 
-        if (error) {
-          logger.error('Error fetching reviews:', error)
-          return [] // Return empty array instead of throwing
-        }
+        // if (error) throw error
 
-        // Generate mock reviews based on policies
-        const mockReviews: Review[] =
-          policies?.map((policy, index) => ({
-            id: `review-${policy.id}`,
-            insurer_id: policy.insurer_id,
-            insurer_name: 'Assureur Test', // Simplified for now
-            insurer_logo: '/logos/default.png', // Simplified for now
-            rating: index % 2 === 0 ? 4 : 3,
-            title:
-              index % 2 === 0
-                ? 'Excellent service client'
-                : 'Service correct mais peut mieux faire',
-            content:
-              index % 2 === 0
-                ? "J'ai été très satisfait de la rapidité de traitement de mon dossier. L'équipe a été très professionnelle et disponible."
-                : "L'assurance couvre bien les besoins de base mais j'ai trouvé quelques difficultés dans la communication.",
-            pros:
-              index % 2 === 0
-                ? 'Service client réactif, Tarifs compétitifs, Processus simple'
-                : 'Bonne couverture de base, Prix raisonnable',
-            cons:
-              index % 2 === 0
-                ? 'Délais de remboursement un peu longs'
-                : 'Communication parfois difficile, Délais de réponse longs',
-            response_text:
-              index % 2 === 0
-                ? 'Merci pour votre retour ! Nous sommes ravis de votre satisfaction et travaillons à améliorer nos délais de remboursement.'
-                : undefined,
-            responded_at: index % 2 === 0 ? new Date().toISOString() : undefined,
-            status: index % 2 === 0 ? 'approved' : 'pending',
-            helpful_count: index % 2 === 0 ? 12 : 3,
-            report_count: 0,
-            is_verified: index % 2 === 0,
-            created_at: policy.created_at,
-            updated_at: policy.updated_at,
-            policy_id: policy.id,
-            quote_id: policy.quote_id,
-          })) || []
-
-        return mockReviews
+        // Pour l'instant, retourner un tableau vide
+        return []
       } catch (err) {
         logger.error('Error fetching reviews:', err)
-        return [] // Return empty array instead of throwing to prevent infinite loading
+        return []
       }
     },
     enabled: !!user?.id,

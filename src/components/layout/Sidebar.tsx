@@ -95,7 +95,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       { name: 'Mes Avis', href: '/mes-avis', icon: Star },
       { name: 'Paiements', href: '/paiements', icon: CreditCard },
       { name: 'Historique', href: '/historique-comparaisons', icon: History },
-      { name: 'Notifications', href: '/notifications', icon: Bell, badge: '2' },
+      { name: 'Notifications', href: '/notifications', icon: Bell },
       { name: 'Mon Profil', href: '/profil', icon: Users },
     ],
     INSURER: [

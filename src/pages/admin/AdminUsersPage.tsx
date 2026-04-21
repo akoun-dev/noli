@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -242,6 +242,7 @@ const UserGridCard: React.FC<UserGridCardProps> = ({
 
           {/* Avatar */}
           <Avatar className="h-12 w-12 flex-shrink-0">
+            <AvatarImage src={user.avatarUrl} alt={getDisplayName()} />
             <AvatarFallback className={`${
               user.role === 'ADMIN'
                 ? 'bg-purple-100 text-purple-800 dark:bg-purple-500/20 dark:text-purple-400'
@@ -461,6 +462,7 @@ const UserListItem: React.FC<UserListItemProps> = ({
 
         {/* Avatar */}
         <Avatar className="h-12 w-12 flex-shrink-0">
+          <AvatarImage src={user.avatarUrl} alt={getDisplayName()} />
           <AvatarFallback className={`${
             user.role === 'ADMIN'
               ? 'bg-purple-100 text-purple-800 dark:bg-purple-500/20 dark:text-purple-400'
@@ -758,9 +760,12 @@ const UserDetails: React.FC<{ user: User }> = ({ user }) => {
   return (
     <div className="space-y-6">
       <div className="flex items-center space-x-4">
-        <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-medium text-xl">
-          {getInitials()}
-        </div>
+        <Avatar className="w-16 h-16">
+          <AvatarImage src={user.avatarUrl} alt={getDisplayName()} />
+          <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-medium text-xl">
+            {getInitials()}
+          </AvatarFallback>
+        </Avatar>
         <div>
           <h3 className="text-lg font-semibold">{getDisplayName()}</h3>
           <p className="text-gray-600 dark:text-gray-400">{user.email}</p>

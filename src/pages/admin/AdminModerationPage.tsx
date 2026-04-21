@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Flag,
   ThumbsUp,
@@ -408,9 +409,12 @@ export const AdminModerationPage: React.FC = () => {
                     <div key={review.id} className="p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50">
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center font-medium text-blue-600 dark:text-blue-400">
-                            {review.user.avatar}
-                          </div>
+                          <Avatar className="h-10 w-10">
+                            <AvatarImage src={review.user.avatar} alt={review.user.name} />
+                            <AvatarFallback className="bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">
+                              {review.user.name.substring(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
                           <div>
                             <h4 className="font-medium">{review.user.name}</h4>
                             <p className="text-sm text-gray-500 dark:text-gray-400">{review.user.email}</p>
@@ -897,9 +901,12 @@ const ReviewDetails: React.FC<{ review: Review; onClose: () => void }> = ({ revi
   return (
     <div className="space-y-4">
       <div className="flex items-center space-x-3">
-        <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center font-medium text-blue-600 dark:text-blue-400">
-          {review.user.avatar}
-        </div>
+        <Avatar className="h-12 w-12">
+          <AvatarImage src={review.user.avatar} alt={review.user.name} />
+          <AvatarFallback className="bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">
+            {review.user.name.substring(0, 2).toUpperCase()}
+          </AvatarFallback>
+        </Avatar>
         <div>
           <h3 className="font-medium">{review.user.name}</h3>
           <p className="text-sm text-gray-500 dark:text-gray-400">{review.user.email}</p>

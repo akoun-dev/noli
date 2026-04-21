@@ -198,7 +198,7 @@ class AdminDataService {
         case 'users':
           const { data: usersData, error: usersError } = await supabase
             .from('profiles')
-            .select('id, first_name, last_name, email, phone');
+            .select('id, first_name, last_name, email, phone, avatar_url');
 
           if (usersError) throw usersError;
 
@@ -425,7 +425,7 @@ class AdminDataService {
         case 'users':
           const { data: usersData } = await supabase
             .from('profiles')
-            .select('id, first_name, last_name, email, phone, created_at');
+            .select('id, first_name, last_name, email, phone, created_at, avatar_url');
           data = usersData || [];
           fileName = 'users_export';
           break;
@@ -457,7 +457,7 @@ class AdminDataService {
         case 'all':
           // Export all entities (not recommended for large datasets)
           const [users, insurers, offers, quotes] = await Promise.all([
-            supabase.from('profiles').select('id, first_name, last_name, email, created_at'),
+            supabase.from('profiles').select('id, first_name, last_name, email, created_at, avatar_url'),
             supabase.from('insurers').select('*'),
             supabase.from('insurance_offers').select('*'),
             supabase.from('quotes').select('*')

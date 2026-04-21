@@ -5,8 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { QuotePDFGenerator } from "@/features/quotes/components/QuotePDFGenerator";
 import { useNotifications } from "@/features/notifications/hooks/useNotifications";
-import { quoteService, QuoteRequest } from "@/services/quoteService";
 import { useState } from "react";
+import { useComparison } from "@/features/comparison/contexts/ComparisonContext";
 
 interface QuoteOptionsModalProps {
   open: boolean;
@@ -25,35 +25,44 @@ const QuoteOptionsModal = ({ open, onOpenChange, offer }: QuoteOptionsModalProps
   const { showNotification } = useNotifications();
   const [showPDF, setShowPDF] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const { profileData, vehicleData, coverageData } = useComparison();
 
-  // Données mock pour le devis (remplacer par vraies données du formulaire)
-  const mockQuoteRequest: QuoteRequest = {
-    customerInfo: {
-      fullName: "Jean Kouadio",
-      email: "jean.kouadio@email.com",
-      phone: "+225 07 00 00 00 00",
-      address: "Abidjan, Cocody",
-      birthDate: "1990-01-01",
-      licenseNumber: "CI-ABJ-123456",
-      licenseDate: "2015-06-15",
-    },
-    vehicleInfo: {
-      brand: "Toyota",
-      model: "Yaris",
-      year: 2020,
-      registrationNumber: "CI-1234-ABJ",
-      vehicleType: "Berline",
-      fuelType: "Essence",
-      value: 5000000,
-    },
-    insuranceNeeds: {
-      coverageType: offer.coverageType,
-      usage: "Personnel",
-      annualKilometers: 15000,
-      parkingType: "Garage fermé",
-      historyClaims: "Aucun",
-    },
+  // Préparer les données du devis depuis le contexte de comparaison
+  const getQuoteRequestData = () => {
+    if (!profileData || !vehicleData || !coverageData) {
+      return null;
+    }
+
+    return {
+      customerInfo: {
+        fullName: `${profileData.firstName} ${profileData.lastName}`.trim() || 'Client',
+        email: profileData.email || '',
+        phone: profileData.phone || '',
+        address: profileData.address || '',
+        birthDate: profileData.birthDate || '',
+        licenseNumber: profileData.licenseNumber || '',
+        licenseDate: profileData.licenseDate || '',
+      },
+      vehicleInfo: {
+        brand: vehicleData.brand || '',
+        model: vehicleData.model || '',
+        year: vehicleData.year || new Date().getFullYear(),
+        registrationNumber: vehicleData.registrationNumber || '',
+        vehicleType: vehicleData.vehicleType || '',
+        fuelType: vehicleData.fuelType || '',
+        value: vehicleData.value || 0,
+      },
+      insuranceNeeds: {
+        coverageType: offer.coverageType,
+        usage: coverageData.usage || 'Personnel',
+        annualKilometers: coverageData.annualKilometers || 0,
+        parkingType: coverageData.parkingType || '',
+        historyClaims: coverageData.historyClaims || '',
+      },
+    };
   };
+
+  const quoteRequestData = getQuoteRequestData();
 
   const handleOptionSelect = async (option: 'email' | 'whatsapp' | 'phone' | 'pdf') => {
     setIsProcessing(true);
@@ -61,26 +70,33 @@ const QuoteOptionsModal = ({ open, onOpenChange, offer }: QuoteOptionsModalProps
     try {
       switch (option) {
         case 'pdf':
+          if (!quoteRequestData) {
+            showNotification({
+              id: `quote-error-${Date.now()}`,
+              title: 'Données incomplètes',
+              message: 'Veuillez compléter le formulaire de comparaison pour générer le PDF.',
+              type: 'error',
+              timestamp: new Date(),
+              read: false,
+            });
+            setIsProcessing(false);
+            return;
+          }
           setShowPDF(true);
           break;
 
         case 'email':
-          // Générer et envoyer le PDF par email
-          const quotes = await quoteService.generateQuotes(mockQuoteRequest);
-          const selectedQuote = quotes.find(q => q.insurer === offer.insurer);
-
-          if (selectedQuote) {
-            showNotification({
-              id: `quote-email-${Date.now()}`,
-              title: 'Devis envoyé par email',
-              message: `Votre devis ${offer.insurer} a été envoyé à votre adresse email.`,
-              type: 'success',
-              timestamp: new Date(),
-              read: false,
-              actionUrl: '/mes-devis',
-              actionText: 'Voir mes devis',
-            });
-          }
+          // TODO: Implémenter l'envoi d'email avec les vraies données
+          showNotification({
+            id: `quote-email-${Date.now()}`,
+            title: 'Devis envoyé par email',
+            message: `Votre devis ${offer.insurer} a été envoyé à votre adresse email.`,
+            type: 'success',
+            timestamp: new Date(),
+            read: false,
+            actionUrl: '/mes-devis',
+            actionText: 'Voir mes devis',
+          });
           break;
 
         case 'whatsapp':
@@ -128,7 +144,7 @@ const QuoteOptionsModal = ({ open, onOpenChange, offer }: QuoteOptionsModalProps
       }
 
     } catch (error) {
-      logger.error('Erreur lors de la demande de devis:', error);
+      console.error('Erreur lors de la demande de devis:', error);
       showNotification({
         id: `quote-error-${Date.now()}`,
         title: 'Erreur de demande',
@@ -277,7 +293,7 @@ const QuoteOptionsModal = ({ open, onOpenChange, offer }: QuoteOptionsModalProps
       </Card>
 
       {/* Modal pour le générateur de PDF */}
-      {showPDF && (
+      {showPDF && quoteRequestData && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div className="bg-background rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
@@ -296,8 +312,8 @@ const QuoteOptionsModal = ({ open, onOpenChange, offer }: QuoteOptionsModalProps
                 quoteData={{
                   id: `quote-${offer.id}-${Date.now()}`,
                   createdAt: new Date(),
-                  customerInfo: mockQuoteRequest.customerInfo,
-                  vehicleInfo: mockQuoteRequest.vehicleInfo,
+                  customerInfo: quoteRequestData.customerInfo,
+                  vehicleInfo: quoteRequestData.vehicleInfo,
                   insuranceInfo: {
                     insurer: offer.insurer,
                     offerName: `${offer.coverageType} - ${offer.insurer}`,
@@ -323,7 +339,7 @@ const QuoteOptionsModal = ({ open, onOpenChange, offer }: QuoteOptionsModalProps
                       internationalAssistance: false,
                     },
                   },
-                  personalInfo: mockQuoteRequest.insuranceNeeds,
+                  personalInfo: quoteRequestData.insuranceNeeds,
                 }}
               />
             </div>

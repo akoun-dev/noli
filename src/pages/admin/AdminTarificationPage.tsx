@@ -2739,9 +2739,9 @@ export const AdminTarificationPage: React.FC = () => {
       {/* Header */}
       <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4'>
         <div>
-          <h1 className='text-2xl sm:text-3xl font-bold tracking-tight'>Tarification & Garanties</h1>
+          <h1 className='text-2xl sm:text-3xl font-bold tracking-tight'>Garanties</h1>
           <p className='text-muted-foreground text-sm sm:text-base'>
-            Gérez les garanties et grilles de tarification
+            Gérez les garanties
           </p>
         </div>
         <div className='flex items-center gap-2'>

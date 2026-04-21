@@ -30,7 +30,8 @@ export const fetchPendingApprovals = async (): Promise<PendingApproval[]> => {
         first_name,
         last_name,
         created_at,
-        phone
+        phone,
+        avatar_url
       `
       )
       .eq('role', 'INSURER')
@@ -73,7 +74,7 @@ export const fetchPendingApprovals = async (): Promise<PendingApproval[]> => {
       const insurerIds = [...new Set(draftOffers.map((offer) => offer.insurer_id))]
       const { data: insurerProfiles } = await supabase
         .from('profiles')
-        .select('id, company_name')
+        .select('id, company_name, avatar_url')
         .in('id', insurerIds)
 
       draftOffers.forEach((offer) => {
@@ -105,7 +106,8 @@ export const fetchPendingApprovals = async (): Promise<PendingApproval[]> => {
         email,
         first_name,
         last_name,
-        created_at
+        created_at,
+        avatar_url
       `
       )
       .eq('role', 'USER')

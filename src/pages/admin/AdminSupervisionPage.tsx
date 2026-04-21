@@ -126,21 +126,38 @@ interface UserCardProps {
 }
 
 const UserCard: React.FC<UserCardProps> = ({ user, onToggleStatus }) => {
-  const initials = `${user.firstName[0]}${user.lastName[0]}`.toUpperCase()
+  const getInitials = () => {
+    return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase()
+  }
+
+  const getAvatarColor = () => {
+    switch (user.role) {
+      case 'ADMIN':
+        return 'bg-purple-100 text-purple-800 dark:bg-purple-500/20 dark:text-purple-400'
+      case 'INSURER':
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400'
+      default:
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-500/20 dark:text-gray-400'
+    }
+  }
+
+  const getDisplayName = () => {
+    return `${user.firstName} ${user.lastName}`.trim()
+  }
 
   return (
     <Card className="hover:shadow-md transition-all duration-200">
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
           <Avatar className="h-10 w-10">
-            <AvatarImage src={user.avatar} />
-            <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
-              {initials}
+            <AvatarImage src={user.avatar} alt={getDisplayName()} />
+            <AvatarFallback className={`text-sm font-semibold ${getAvatarColor()}`}>
+              {getInitials()}
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <p className="font-medium text-sm truncate">{user.firstName} {user.lastName}</p>
+              <p className="font-medium text-sm truncate">{getDisplayName()}</p>
               {user.status === 'active' ? (
                 <CheckCircle className="h-3 w-3 text-green-600 flex-shrink-0" />
               ) : (
@@ -206,9 +223,12 @@ const InsurerCard: React.FC<InsurerCardProps> = ({ insurer, onApprove }) => {
     }`}>
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
-          <div className="h-10 w-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-            <Shield className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-          </div>
+          <Avatar className="h-10 w-10 flex-shrink-0">
+            <AvatarImage src={insurer.logoUrl} alt={insurer.name} />
+            <AvatarFallback className="bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
+              <Shield className="h-5 w-5" />
+            </AvatarFallback>
+          </Avatar>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <p className="font-medium text-sm truncate">{insurer.name}</p>
@@ -625,22 +645,38 @@ export const AdminSupervisionPage: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {users.slice(0, 5).map(user => (
-                    <div key={user.id} className="flex items-center gap-3 p-3 rounded-lg border">
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback className="text-xs">
-                          {user.firstName[0]}{user.lastName[0]}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">{user.firstName} {user.lastName}</p>
-                        <p className="text-xs text-muted-foreground">{user.email}</p>
+                  {users.slice(0, 5).map(user => {
+                    const getInitials = () => `${user.firstName[0]}${user.lastName[0]}`.toUpperCase()
+                    const getAvatarColor = () => {
+                      switch (user.role) {
+                        case 'ADMIN':
+                          return 'bg-purple-100 text-purple-800 dark:bg-purple-500/20 dark:text-purple-400'
+                        case 'INSURER':
+                          return 'bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400'
+                        default:
+                          return 'bg-gray-100 text-gray-800 dark:bg-gray-500/20 dark:text-gray-400'
+                      }
+                    }
+                    const getDisplayName = () => `${user.firstName} ${user.lastName}`.trim()
+
+                    return (
+                      <div key={user.id} className="flex items-center gap-3 p-3 rounded-lg border">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={user.avatar} alt={getDisplayName()} />
+                          <AvatarFallback className={`text-xs ${getAvatarColor()}`}>
+                            {getInitials()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">{getDisplayName()}</p>
+                          <p className="text-xs text-muted-foreground">{user.email}</p>
+                        </div>
+                        <Badge variant="outline" className="text-xs">
+                          {user.role === 'ADMIN' ? 'Admin' : user.role === 'INSURER' ? 'Assureur' : 'User'}
+                        </Badge>
                       </div>
-                      <Badge variant="outline" className="text-xs">
-                        {user.role === 'ADMIN' ? 'Admin' : user.role === 'INSURER' ? 'Assureur' : 'User'}
-                      </Badge>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </CardContent>
             </Card>

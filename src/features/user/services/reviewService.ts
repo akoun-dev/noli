@@ -50,56 +50,24 @@ class ReviewService {
 
   /**
    * Get all reviews for a user
-   * Note: For now, generates mock reviews based on user policies
+   * TODO: Implémenter quand la table reviews sera créée
    */
   async getUserReviews(userId: string): Promise<Review[]> {
     try {
-      // Since reviews table doesn't exist yet, generate mock reviews based on policies
-      const { data: policies, error } = await supabase
-        .from('policies')
-        .select(
-          `
-          *,
-          insurers (
-            id,
-            name,
-            logo_url
-          )
-        `
-        )
-        .eq('user_id', userId)
+      // TODO: Remplacer par la vraie requête quand la table reviews existe
+      // const { data: reviews, error } = await supabase
+      //   .from('reviews')
+      //   .select('*, insurers(id, name, logo_url)')
+      //   .eq('user_id', userId)
+      //   .order('created_at', { ascending: false })
 
-      if (error) throw error
+      // if (error) throw error
 
-      // Generate mock reviews based on policies
-      const mockReviews: Review[] =
-        policies?.map((policy, index) => ({
-          id: `review-${policy.id}`,
-          userId,
-          insurerId: policy.insurer_id,
-          insurerName: policy.insurers?.name || 'Assureur inconnu',
-          insurerLogo: policy.insurers?.logo_url,
-          rating: this.generateRandomRating(),
-          title: this.generateReviewTitle(index),
-          content: this.generateReviewContent(index),
-          pros: this.generateReviewPros(index),
-          cons: this.generateReviewCons(index),
-          responseText: index % 2 === 0 ? this.generateResponse() : undefined,
-          respondedAt: index % 2 === 0 ? new Date().toISOString() : undefined,
-          status: index % 2 === 0 ? 'approved' : 'pending',
-          helpfulCount: index % 2 === 0 ? 12 : 3,
-          reportCount: 0,
-          isVerified: index % 2 === 0,
-          createdAt: policy.created_at,
-          updatedAt: policy.updated_at,
-          quoteId: policy.quote_id,
-          policyId: policy.id,
-        })) || []
-
-      return mockReviews
+      // Pour l'instant, retourner un tableau vide
+      return []
     } catch (err) {
       logger.error('Error fetching user reviews:', err)
-      throw err
+      return []
     }
   }
 
@@ -310,57 +278,6 @@ class ReviewService {
       logger.error('Error reporting review:', err)
       throw err
     }
-  }
-
-  // Helper methods for generating mock data
-  private generateRandomRating(): number {
-    const ratings = [3, 4, 4, 5, 5, 5]
-    return ratings[Math.floor(Math.random() * ratings.length)]
-  }
-
-  private generateReviewTitle(index: number): string {
-    const titles = [
-      'Excellent service client',
-      'Service correct mais peut mieux faire',
-      'Très satisfait de mon assurance',
-      'Rapport qualité-prix intéressant',
-      'Professionnalisme remarquable',
-    ]
-    return titles[index % titles.length]
-  }
-
-  private generateReviewContent(index: number): string {
-    const contents = [
-      "J'ai été très satisfait de la rapidité de traitement de mon dossier. L'équipe a été très professionnelle et disponible.",
-      "L'assurance couvre bien les besoins de base mais j'ai trouvé quelques difficultés dans la communication.",
-      'Service impeccable, tarifs compétitifs et processus simple. Je recommande vivement.',
-      'Bonne couverture mais les délais de traitement pourraient être améliorés.',
-    ]
-    return contents[index % contents.length]
-  }
-
-  private generateReviewPros(index: number): string {
-    const pros = [
-      'Service client réactif, Tarifs compétitifs, Processus simple',
-      'Bonne couverture de base, Prix raisonnable',
-      'Professionnalisme, Rapidité, Disponibilité',
-      'Tarifs attractifs, Couverture complète',
-    ]
-    return pros[index % pros.length]
-  }
-
-  private generateReviewCons(index: number): string {
-    const cons = [
-      'Délais de remboursement un peu longs',
-      'Communication parfois difficile, Délais de réponse longs',
-      'Documentation un peu complexe',
-      'Manque de flexibilité dans certaines options',
-    ]
-    return cons[index % cons.length]
-  }
-
-  private generateResponse(): string {
-    return 'Merci pour votre retour ! Nous sommes ravis de votre satisfaction et travaillons à améliorer nos services.'
   }
 }
 
