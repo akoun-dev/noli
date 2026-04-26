@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { QuotePDFGenerator } from "@/features/quotes/components/QuotePDFGenerator";
 import { useNotifications } from "@/features/notifications/hooks/useNotifications";
 import { useState } from "react";
-import { useComparison } from "@/features/comparison/contexts/ComparisonContext";
+import { useCompare } from "@/features/comparison/services/ComparisonContext";
 
 interface QuoteOptionsModalProps {
   open: boolean;
@@ -25,39 +25,39 @@ const QuoteOptionsModal = ({ open, onOpenChange, offer }: QuoteOptionsModalProps
   const { showNotification } = useNotifications();
   const [showPDF, setShowPDF] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const { profileData, vehicleData, coverageData } = useComparison();
+  const { formData } = useCompare();
 
   // Préparer les données du devis depuis le contexte de comparaison
   const getQuoteRequestData = () => {
-    if (!profileData || !vehicleData || !coverageData) {
+    if (!formData.personalInfo || !formData.vehicleInfo || !formData.insuranceNeeds) {
       return null;
     }
 
     return {
       customerInfo: {
-        fullName: `${profileData.firstName} ${profileData.lastName}`.trim() || 'Client',
-        email: profileData.email || '',
-        phone: profileData.phone || '',
-        address: profileData.address || '',
-        birthDate: profileData.birthDate || '',
-        licenseNumber: profileData.licenseNumber || '',
-        licenseDate: profileData.licenseDate || '',
+        fullName: `${formData.personalInfo.firstName} ${formData.personalInfo.lastName}`.trim() || 'Client',
+        email: formData.personalInfo.email || '',
+        phone: formData.personalInfo.phone || '',
+        address: formData.personalInfo.address || '',
+        birthDate: formData.personalInfo.birthDate || '',
+        licenseNumber: formData.personalInfo.licenseNumber || '',
+        licenseDate: formData.personalInfo.licenseDate || '',
       },
       vehicleInfo: {
-        brand: vehicleData.brand || '',
-        model: vehicleData.model || '',
-        year: vehicleData.year || new Date().getFullYear(),
-        registrationNumber: vehicleData.registrationNumber || '',
-        vehicleType: vehicleData.vehicleType || '',
-        fuelType: vehicleData.fuelType || '',
-        value: vehicleData.value || 0,
+        brand: formData.vehicleInfo.brand || '',
+        model: formData.vehicleInfo.model || '',
+        year: formData.vehicleInfo.year || new Date().getFullYear(),
+        registrationNumber: formData.vehicleInfo.registrationNumber || '',
+        vehicleType: formData.vehicleInfo.vehicleType || '',
+        fuelType: formData.vehicleInfo.fuelType || '',
+        value: formData.vehicleInfo.value || 0,
       },
       insuranceNeeds: {
         coverageType: offer.coverageType,
-        usage: coverageData.usage || 'Personnel',
-        annualKilometers: coverageData.annualKilometers || 0,
-        parkingType: coverageData.parkingType || '',
-        historyClaims: coverageData.historyClaims || '',
+        usage: formData.insuranceNeeds.usage || 'Personnel',
+        annualKilometers: formData.insuranceNeeds.annualKilometers || 0,
+        parkingType: formData.insuranceNeeds.parkingType || '',
+        historyClaims: formData.insuranceNeeds.historyClaims || '',
       },
     };
   };

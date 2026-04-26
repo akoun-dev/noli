@@ -28,6 +28,7 @@ import {
   useSystemHealth,
   useExportAnalyticsReport,
 } from '@/features/admin/services/analyticsService'
+import { useNavigate } from 'react-router-dom'
 import {
   usePendingApprovals,
   useApproveInsurer,
@@ -249,6 +250,7 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({ activities, formatTime }) =
 }
 
 export const AdminDashboardPage: React.FC = () => {
+  const navigate = useNavigate()
   const { isLoading: authLoading, isAuthenticated, user } = useAuth()
   const shouldFetch = !authLoading && isAuthenticated && user?.role === 'ADMIN'
 
@@ -501,19 +503,19 @@ export const AdminDashboardPage: React.FC = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-2 gap-2">
-              <Button variant="outline" size="sm" className="h-auto flex-col py-3 gap-1">
+              <Button variant="outline" size="sm" className="h-auto flex-col py-3 gap-1" onClick={() => navigate('/admin/utilisateurs')}>
                 <Users className="h-4 w-4" />
                 <span className="text-xs">Utilisateurs</span>
               </Button>
-              <Button variant="outline" size="sm" className="h-auto flex-col py-3 gap-1">
+              <Button variant="outline" size="sm" className="h-auto flex-col py-3 gap-1" onClick={() => navigate('/admin/assureurs')}>
                 <Shield className="h-4 w-4" />
                 <span className="text-xs">Assureurs</span>
               </Button>
-              <Button variant="outline" size="sm" className="h-auto flex-col py-3 gap-1">
+              <Button variant="outline" size="sm" className="h-auto flex-col py-3 gap-1" onClick={() => navigate('/admin/devis')}>
                 <FileText className="h-4 w-4" />
                 <span className="text-xs">Devis</span>
               </Button>
-              <Button variant="outline" size="sm" className="h-auto flex-col py-3 gap-1">
+              <Button variant="outline" size="sm" className="h-auto flex-col py-3 gap-1" onClick={() => navigate('/admin/donnees')}>
                 <Database className="h-4 w-4" />
                 <span className="text-xs">Données</span>
               </Button>

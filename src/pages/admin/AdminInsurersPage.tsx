@@ -285,18 +285,16 @@ const AdminInsurersPage = () => {
             )}
             Exporter
           </Button>
+          <Button onClick={() => handleOpenDialog('create')}>
+            <Plus className='h-4 w-4 mr-2' />
+            Ajouter un assureur
+          </Button>
           <Dialog
             open={activeDialog === 'create'}
             onOpenChange={(open) => {
               if (!open) handleCloseDialog()
             }}
           >
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className='h-4 w-4 mr-2' />
-                Ajouter un assureur
-              </Button>
-            </DialogTrigger>
             <DialogContent className='responsive-modal-lg'>
               <DialogHeader>
                 <DialogTitle>Ajouter un nouvel assureur</DialogTitle>

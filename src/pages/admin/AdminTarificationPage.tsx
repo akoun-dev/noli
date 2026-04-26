@@ -3508,9 +3508,6 @@ export const AdminTarificationPage: React.FC = () => {
                                   ) : null
                                 })()}
                                 <div className='flex flex-wrap gap-2 mb-2'>
-                                  <Badge variant='outline' className='text-xs'>
-                                    {guarantee.category}
-                                  </Badge>
                                   <Badge 
                                     variant={guarantee.isActive ? 'default' : 'secondary'}
                                     className={`text-xs ${guarantee.isActive ? 'bg-green-100 text-green-800 dark:bg-green-500/20 dark:text-green-400' : 'bg-red-100 text-red-800 dark:bg-red-500/20 dark:text-red-400'}`}

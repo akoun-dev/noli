@@ -302,58 +302,56 @@ export const InsurerDashboardPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <Tabs defaultValue="overview" className="space-y-6">
-        <div className="flex items-center justify-between">
-          <TabsList>
-            <TabsTrigger value="overview">Vue d'ensemble</TabsTrigger>
-            <TabsTrigger value="clients">Clients</TabsTrigger>
-            <TabsTrigger value="alerts">
+    <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
+      <Tabs defaultValue="overview" className="space-y-4 sm:space-y-6">
+        {/* Tabs Header - Mobile Optimized */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+          <TabsList className="w-full sm:w-auto overflow-x-auto flex-nowrap">
+            <TabsTrigger value="overview" className="flex-shrink-0 text-xs sm:text-sm">Vue d'ensemble</TabsTrigger>
+            <TabsTrigger value="clients" className="flex-shrink-0 text-xs sm:text-sm">Clients</TabsTrigger>
+            <TabsTrigger value="alerts" className="flex-shrink-0 text-xs sm:text-sm relative">
               Alertes
               {unreadAlerts > 0 && (
-                <Badge variant="destructive" className="ml-2 h-5 w-5 p-0 flex items-center justify-center text-xs">
+                <Badge variant="destructive" className="ml-1 sm:ml-2 h-4 w-4 sm:h-5 sm:w-5 p-0 flex items-center justify-center text-[10px] sm:text-xs absolute -top-1 -right-1 sm:static">
                   {unreadAlerts}
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            <TabsTrigger value="analytics" className="flex-shrink-0 text-xs sm:text-sm">Analytics</TabsTrigger>
           </TabsList>
 
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => navigate('/assureur/analytics')}>
-              <BarChart3 className="h-4 w-4 mr-2" />
-              Analytics détaillés
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => navigate('/assureur/campagnes')}>
-              <MessageCircle className="h-4 w-4 mr-2" />
-              Campagnes
+          <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto">
+            <Button variant="outline" size="sm" className="flex-1 sm:flex-none text-xs" onClick={() => navigate('/assureur/analytics')}>
+              <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Analytics détaillés</span>
+              <span className="sm:hidden">Analytics</span>
             </Button>
           </div>
         </div>
 
-        <TabsContent value="overview" className="space-y-6">
-          {/* Performance Overview */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <TabsContent value="overview" className="space-y-4 sm:space-y-6">
+          {/* Performance Overview - Mobile Optimized */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
             {stats.map((stat, index) => (
               <Card key={index} className="relative overflow-hidden group">
-                <CardContent className="p-6">
+                <CardContent className="p-3 sm:p-4 md:p-6">
                   <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
-                      <p className="text-2xl font-bold text-foreground">{stat.value}</p>
-                      <p className="text-xs text-green-600 flex items-center">
-                        <TrendingUp className="h-3 w-3 mr-1" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] sm:text-xs md:text-sm font-medium text-muted-foreground truncate">{stat.label}</p>
+                      <p className="text-lg sm:text-xl md:text-2xl font-bold text-foreground truncate">{stat.value}</p>
+                      <p className="text-[10px] sm:text-xs text-green-600 flex items-center">
+                        <TrendingUp className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
                         {stat.change}
                       </p>
                     </div>
-                    <stat.icon className={`h-8 w-8 ${stat.color}`} />
+                    <stat.icon className={`h-5 w-5 sm:h-6 sm:w-6 md:h-8 md:w-8 ${stat.color} flex-shrink-0 ml-1 sm:ml-2`} />
                   </div>
                   {stat.action && (
-                    <div className="mt-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="mt-2 sm:mt-3 md:mt-4 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Button
                         variant="outline"
                         size="sm"
-                        className="w-full"
+                        className="w-full text-[10px] sm:text-xs"
                         onClick={() => navigate(stat.action.url)}
                       >
                         {stat.action.text}
@@ -365,41 +363,41 @@ export const InsurerDashboardPage: React.FC = () => {
             ))}
           </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Recent Quotes */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span>Devis récents</span>
+          <CardHeader className="p-3 sm:p-4 md:p-6">
+            <CardTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 text-base sm:text-lg">
+              <span className="text-sm sm:text-base">Devis récents</span>
               <div className="flex space-x-2">
-                <Button variant="outline" size="sm" onClick={() => {
-                  // TODO: Implement export functionality
+                <Button variant="outline" size="sm" className="text-xs" onClick={() => {
                   logger.info('Export quotes clicked');
                 }}>
                   <Download className="h-3 w-3 mr-1" />
-                  Exporter
+                  <span className="hidden sm:inline">Exporter</span>
+                  <span className="sm:hidden">Exp</span>
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => navigate('/assureur/devis')}>
+                <Button variant="outline" size="sm" className="text-xs" onClick={() => navigate('/assureur/devis')}>
                   Voir tout
                 </Button>
               </div>
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
+          <CardContent className="p-2 sm:p-4 md:p-6">
+            <div className="space-y-2 sm:space-y-3 md:space-y-4">
               {recentQuotes.map((quote) => (
-                <div key={quote.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent">
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between">
-                      <p className="font-medium">{quote.customer}</p>
+                <div key={quote.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-2 sm:p-3 border rounded-lg hover:bg-accent gap-2">
+                  <div className="flex-1 min-w-0 w-full sm:w-auto">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="font-medium text-sm truncate">{quote.customer}</p>
                       {getStatusBadge(quote.status)}
                     </div>
-                    <p className="text-sm text-muted-foreground">{quote.vehicle}</p>
-                    <p className="text-xs text-muted-foreground/70">{quote.date}</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground truncate">{quote.vehicle}</p>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground/70">{quote.date}</p>
                   </div>
-                  <div className="text-right ml-4">
-                    <p className="font-medium">{quote.amount}</p>
-                    <Button variant="ghost" size="sm">
+                  <div className="flex items-center justify-between w-full sm:w-auto sm:text-right sm:ml-4 gap-2">
+                    <p className="font-medium text-sm">{quote.amount}</p>
+                    <Button variant="ghost" size="sm" className="h-7 w-7 sm:h-8 sm:w-8 p-0">
                       <Eye className="h-3 w-3" />
                     </Button>
                   </div>
@@ -411,23 +409,23 @@ export const InsurerDashboardPage: React.FC = () => {
 
         {/* Top Performing Offers */}
         <Card>
-          <CardHeader>
-            <CardTitle>Offres les plus performantes</CardTitle>
+          <CardHeader className="p-3 sm:p-4 md:p-6">
+            <CardTitle className="text-sm sm:text-base md:text-lg">Offres les plus performantes</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
+          <CardContent className="p-2 sm:p-4 md:p-6">
+            <div className="space-y-2 sm:space-y-3 md:space-y-4">
               {topOffers.map((offer, index) => (
-                <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex-1">
-                    <p className="font-medium">{offer.name}</p>
-                    <div className="flex space-x-4 text-sm text-muted-foreground mt-1">
-                      <span>{offer.customers} clients</span>
-                      <span>{offer.conversion} conversion</span>
+                <div key={index} className="flex items-center justify-between p-2 sm:p-3 border rounded-lg">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm truncate">{offer.name}</p>
+                    <div className="flex space-x-2 sm:space-x-4 text-[10px] sm:text-xs md:text-sm text-muted-foreground mt-1">
+                      <span>{offer.customers} cl.</span>
+                      <span>{offer.conversion}%</span>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-medium">{offer.revenue}</p>
-                    <div className="text-xs text-green-600">Top {index + 1}</div>
+                  <div className="text-right ml-2 sm:ml-4 flex-shrink-0">
+                    <p className="font-medium text-xs sm:text-sm">{offer.revenue}</p>
+                    <div className="text-[10px] sm:text-xs text-green-600">Top {index + 1}</div>
                   </div>
                 </div>
               ))}
@@ -437,18 +435,18 @@ export const InsurerDashboardPage: React.FC = () => {
       </div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
         <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-4">
-              <div className="bg-blue-100 p-3 rounded-lg">
-                <FileText className="h-6 w-6 text-blue-600" />
+          <CardContent className="p-3 sm:p-4 md:p-6">
+            <div className="flex items-center space-x-3 sm:space-x-4">
+              <div className="bg-blue-100 p-2 sm:p-3 rounded-lg flex-shrink-0">
+                <FileText className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-blue-600" />
               </div>
-              <div className="flex-1">
-                <p className="font-medium">Devis en attente</p>
-                <p className="text-2xl font-bold text-blue-600">{quickStats.pendingQuotes}</p>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-xs sm:text-sm">Devis en attente</p>
+                <p className="text-xl sm:text-2xl font-bold text-blue-600">{quickStats.pendingQuotes}</p>
               </div>
-              <Button variant="outline" size="sm" onClick={() => navigate('/assureur/devis?status=pending')}>
+              <Button variant="outline" size="sm" className="text-xs flex-shrink-0" onClick={() => navigate('/assureur/devis?status=pending')}>
                 Voir
               </Button>
             </div>
@@ -456,16 +454,16 @@ export const InsurerDashboardPage: React.FC = () => {
         </Card>
 
         <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-4">
-              <div className="bg-green-100 p-3 rounded-lg">
-                <CheckCircle className="h-6 w-6 text-green-600" />
+          <CardContent className="p-3 sm:p-4 md:p-6">
+            <div className="flex items-center space-x-3 sm:space-x-4">
+              <div className="bg-green-100 p-2 sm:p-3 rounded-lg flex-shrink-0">
+                <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-green-600" />
               </div>
-              <div className="flex-1">
-                <p className="font-medium">Devis approuvés</p>
-                <p className="text-2xl font-bold text-green-600">{quickStats.approvedQuotes}</p>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-xs sm:text-sm">Devis approuvés</p>
+                <p className="text-xl sm:text-2xl font-bold text-green-600">{quickStats.approvedQuotes}</p>
               </div>
-              <Button variant="outline" size="sm" onClick={() => navigate('/assureur/devis?status=approved')}>
+              <Button variant="outline" size="sm" className="text-xs flex-shrink-0" onClick={() => navigate('/assureur/devis?status=approved')}>
                 Voir
               </Button>
             </div>
@@ -473,16 +471,16 @@ export const InsurerDashboardPage: React.FC = () => {
         </Card>
 
         <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-4">
-              <div className="bg-purple-100 p-3 rounded-lg">
-                <Car className="h-6 w-6 text-purple-600" />
+          <CardContent className="p-3 sm:p-4 md:p-6">
+            <div className="flex items-center space-x-3 sm:space-x-4">
+              <div className="bg-purple-100 p-2 sm:p-3 rounded-lg flex-shrink-0">
+                <Car className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-purple-600" />
               </div>
-              <div className="flex-1">
-                <p className="font-medium">Nouvelles offres</p>
-                <p className="text-2xl font-bold text-purple-600">{quickStats.newOffers}</p>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-xs sm:text-sm">Nouvelles offres</p>
+                <p className="text-xl sm:text-2xl font-bold text-purple-600">{quickStats.newOffers}</p>
               </div>
-              <Button variant="outline" size="sm" onClick={() => navigate('/assureur/offers/create')}>
+              <Button variant="outline" size="sm" className="text-xs flex-shrink-0" onClick={() => navigate('/assureur/offers/create')}>
                 Créer
               </Button>
             </div>
@@ -492,18 +490,18 @@ export const InsurerDashboardPage: React.FC = () => {
 
           {/* Alert for Low Performance */}
           <Card className="border-orange-200 bg-orange-50">
-            <CardContent className="p-4">
-              <div className="flex items-center">
-                <AlertTriangle className="h-5 w-5 text-orange-600 mr-2" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-orange-800">
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+                <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-orange-800">
                     Attention: Taux de conversion en baisse
                   </p>
-                  <p className="text-xs text-orange-600">
+                  <p className="text-[10px] sm:text-xs text-orange-600">
                     Votre taux de conversion a baissé de 5% cette semaine. Considérez revoir vos offres.
                   </p>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => navigate('/assureur/analytics')}>
+                <Button variant="outline" size="sm" className="text-xs flex-shrink-0" onClick={() => navigate('/assureur/analytics')}>
                   Analyser
                 </Button>
               </div>
@@ -511,68 +509,70 @@ export const InsurerDashboardPage: React.FC = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="clients" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <TabsContent value="clients" className="space-y-4 sm:space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
             {/* Client Stats */}
-            <Card className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold">Vue d'ensemble</h3>
-                <Users className="h-5 w-5 text-blue-600" />
+            <Card className="p-3 sm:p-4 md:p-6">
+              <div className="flex items-center justify-between mb-3 sm:mb-4">
+                <h3 className="font-semibold text-sm sm:text-base">Vue d'ensemble</h3>
+                <Users className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
               </div>
-              <div className="space-y-3">
+              <div className="space-y-2 sm:space-y-3">
                 <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Total clients</span>
-                  <span className="font-medium">{clients.length}</span>
+                  <span className="text-xs sm:text-sm text-muted-foreground">Total clients</span>
+                  <span className="font-medium text-sm">{clients.length}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Actifs</span>
-                  <span className="font-medium text-green-600">{activeClients}</span>
+                  <span className="text-xs sm:text-sm text-muted-foreground">Actifs</span>
+                  <span className="font-medium text-green-600 text-sm">{activeClients}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Prospects</span>
-                  <span className="font-medium text-orange-600">{clients.filter(c => c.status === 'prospect').length}</span>
+                  <span className="text-xs sm:text-sm text-muted-foreground">Prospects</span>
+                  <span className="font-medium text-orange-600 text-sm">{clients.filter(c => c.status === 'prospect').length}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Conversion moyenne</span>
-                  <span className="font-medium">{Math.round(averageConversionRate * 100)}%</span>
+                  <span className="text-xs sm:text-sm text-muted-foreground">Conversion moyenne</span>
+                  <span className="font-medium text-sm">{Math.round(averageConversionRate * 100)}%</span>
                 </div>
               </div>
             </Card>
 
             {/* Recent Activity */}
-            <Card className="lg:col-span-3 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold">Activité récente des clients</h3>
-                <Button variant="outline" size="sm" onClick={() => navigate('/assureur/clients')}>
-                  <Activity className="h-4 w-4 mr-2" />
+            <Card className="lg:col-span-3 p-3 sm:p-4 md:p-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-3 sm:mb-4 gap-2">
+                <h3 className="font-semibold text-sm sm:text-base">Activité récente des clients</h3>
+                <Button variant="outline" size="sm" className="text-xs" onClick={() => navigate('/assureur/clients')}>
+                  <Activity className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                   Voir tout
                 </Button>
               </div>
-              <div className="space-y-3">
+              <div className="space-y-2 sm:space-y-3">
                 {clients.slice(0, 5).map((client) => (
-                  <div key={client.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                        <UserPlus className="h-5 w-5 text-primary" />
+                  <div key={client.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-2 sm:p-3 border rounded-lg hover:bg-accent gap-2">
+                    <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
+                        <UserPlus className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                       </div>
-                      <div>
-                        <p className="font-medium">{client.name}</p>
-                        <p className="text-sm text-muted-foreground">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-sm truncate">{client.name}</p>
+                        <p className="text-xs sm:text-sm text-muted-foreground">
                           {client.totalQuotes} devis • {client.convertedQuotes} convertis
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant={client.status === 'active' ? 'default' : 'secondary'}>
+                    <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
+                      <Badge variant={client.status === 'active' ? 'default' : 'secondary'} className="text-[10px] sm:text-xs">
                         {client.status === 'active' ? 'Actif' : 'Prospect'}
                       </Badge>
                       <Button
                         variant="outline"
                         size="sm"
+                        className="text-xs flex-shrink-0"
                         onClick={() => setSelectedClient(client)}
                       >
-                        <MessageCircle className="h-4 w-4 mr-1" />
-                        Contacter
+                        <MessageCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                        <span className="hidden sm:inline">Contacter</span>
+                        <span className="sm:hidden">Contact</span>
                       </Button>
                     </div>
                   </div>
@@ -582,12 +582,13 @@ export const InsurerDashboardPage: React.FC = () => {
           </div>
 
           {selectedClient && (
-            <Card className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold">Communication avec {selectedClient.name}</h3>
+            <Card className="p-3 sm:p-4 md:p-6">
+              <div className="flex items-center justify-between mb-3 sm:mb-4">
+                <h3 className="font-semibold text-sm sm:text-base">Communication avec {selectedClient.name}</h3>
                 <Button
                   variant="outline"
                   size="sm"
+                  className="text-xs"
                   onClick={() => setSelectedClient(null)}
                 >
                   Fermer
@@ -598,32 +599,32 @@ export const InsurerDashboardPage: React.FC = () => {
           )}
         </TabsContent>
 
-        <TabsContent value="alerts" className="space-y-6">
+        <TabsContent value="alerts" className="space-y-4 sm:space-y-6">
           <InsurerAlertPanel />
         </TabsContent>
 
-        <TabsContent value="analytics" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <TabsContent value="analytics" className="space-y-4 sm:space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
             {/* Quick Stats */}
-            <Card className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold">Performance rapide</h3>
-                <BarChart3 className="h-5 w-5 text-purple-600" />
+            <Card className="p-3 sm:p-4 md:p-6">
+              <div className="flex items-center justify-between mb-3 sm:mb-4">
+                <h3 className="font-semibold text-sm sm:text-base">Performance rapide</h3>
+                <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
               </div>
-              <div className="space-y-3">
+              <div className="space-y-2 sm:space-y-3">
                 <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Taux conversion</span>
-                  <span className="font-medium text-green-600">{Math.round(averageConversionRate * 100)}%</span>
+                  <span className="text-xs sm:text-sm text-muted-foreground">Taux conversion</span>
+                  <span className="font-medium text-green-600 text-sm">{Math.round(averageConversionRate * 100)}%</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Revenu moyen/client</span>
-                  <span className="font-medium">
-                    {clients.length > 0 ? Math.round(totalRevenue / clients.length).toLocaleString('fr-FR') : 0} FCFA
+                  <span className="text-xs sm:text-sm text-muted-foreground">Revenu moyen/client</span>
+                  <span className="font-medium text-xs sm:text-sm text-right">
+                    {clients.length > 0 ? Math.round(totalRevenue / clients.length).toLocaleString('fr-FR') : 0} F
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Devis/client</span>
-                  <span className="font-medium">
+                  <span className="text-xs sm:text-sm text-muted-foreground">Devis/client</span>
+                  <span className="font-medium text-sm">
                     {clients.length > 0 ? Math.round(clients.reduce((sum, c) => sum + c.totalQuotes, 0) / clients.length) : 0}
                   </span>
                 </div>
@@ -631,49 +632,50 @@ export const InsurerDashboardPage: React.FC = () => {
             </Card>
 
             {/* Performance Insights */}
-            <Card className="lg:col-span-2 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold">Insights performance</h3>
-                <Button variant="outline" size="sm" onClick={() => navigate('/assureur/analytics')}>
-                  <Target className="h-4 w-4 mr-2" />
-                  Analytics détaillés
+            <Card className="lg:col-span-2 p-3 sm:p-4 md:p-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-3 sm:mb-4 gap-2">
+                <h3 className="font-semibold text-sm sm:text-base">Insights performance</h3>
+                <Button variant="outline" size="sm" className="text-xs" onClick={() => navigate('/assureur/analytics')}>
+                  <Target className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Analytics détaillés</span>
+                  <span className="sm:hidden">Analytics</span>
                 </Button>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-4 border rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <TrendingUp className="h-4 w-4 text-green-600" />
-                    <span className="font-medium">Conversion en hausse</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 md:gap-4">
+                <div className="p-3 sm:p-4 border rounded-lg">
+                  <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
+                    <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-600 flex-shrink-0" />
+                    <span className="font-medium text-xs sm:text-sm">Conversion en hausse</span>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    Votre taux de conversion a augmenté de 5% cette semaine grâce aux nouvelles campagnes de relance.
+                  <p className="text-[10px] sm:text-xs md:text-sm text-muted-foreground">
+                    Taux de conversion +5% cette semaine grâce aux nouvelles campagnes de relance.
                   </p>
                 </div>
-                <div className="p-4 border rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Users className="h-4 w-4 text-blue-600" />
-                    <span className="font-medium">Nouveaux prospects</span>
+                <div className="p-3 sm:p-4 border rounded-lg">
+                  <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
+                    <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-blue-600 flex-shrink-0" />
+                    <span className="font-medium text-xs sm:text-sm">Nouveaux prospects</span>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    15 nouveaux prospects cette semaine, principalement via les recommandations.
+                  <p className="text-[10px] sm:text-xs md:text-sm text-muted-foreground">
+                    15 nouveaux prospects cette semaine, principalement via recommandations.
                   </p>
                 </div>
-                <div className="p-4 border rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <DollarSign className="h-4 w-4 text-purple-600" />
-                    <span className="font-medium">Revenu record</span>
+                <div className="p-3 sm:p-4 border rounded-lg">
+                  <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
+                    <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-purple-600 flex-shrink-0" />
+                    <span className="font-medium text-xs sm:text-sm">Revenu record</span>
                   </div>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-[10px] sm:text-xs md:text-sm text-muted-foreground">
                     CA mensuel record de {totalRevenue.toLocaleString('fr-FR')} FCFA.
                   </p>
                 </div>
-                <div className="p-4 border rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <MessageCircle className="h-4 w-4 text-orange-600" />
-                    <span className="font-medium">Engagement client</span>
+                <div className="p-3 sm:p-4 border rounded-lg">
+                  <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
+                    <MessageCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-orange-600 flex-shrink-0" />
+                    <span className="font-medium text-xs sm:text-sm">Engagement client</span>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    Temps de réponse moyen de 2.5 heures, en dessous de la moyenne du secteur.
+                  <p className="text-[10px] sm:text-xs md:text-sm text-muted-foreground">
+                    Temps de réponse moyen de 2.5h, en dessous de la moyenne du secteur.
                   </p>
                 </div>
               </div>
@@ -681,45 +683,45 @@ export const InsurerDashboardPage: React.FC = () => {
           </div>
 
           {/* Action Items */}
-          <Card className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold">Actions recommandées</h3>
-              <CheckCircle className="h-5 w-5 text-green-600" />
+          <Card className="p-3 sm:p-4 md:p-6">
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <h3 className="font-semibold text-sm sm:text-base">Actions recommandées</h3>
+              <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div className="p-4 border border-blue-200 bg-blue-50 rounded-lg">
-                <div className="flex items-center gap-2 mb-2">
-                  <Mail className="h-4 w-4 text-blue-600" />
-                  <span className="font-medium text-blue-800">Relance automatique</span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+              <div className="p-3 sm:p-4 border border-blue-200 bg-blue-50 rounded-lg">
+                <div className="flex items-center gap-1.5 sm:gap-2 mb-2">
+                  <Mail className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-blue-600 flex-shrink-0" />
+                  <span className="font-medium text-blue-800 text-xs sm:text-sm">Relance automatique</span>
                 </div>
-                <p className="text-sm text-blue-700 mb-3">
+                <p className="text-[10px] sm:text-xs md:text-sm text-blue-700 mb-2 sm:mb-3">
                   Configurez la relance automatique pour les devis expirants
                 </p>
-                <Button variant="outline" size="sm" className="w-full" onClick={() => navigate('/assureur/parametres?tab=automation')}>
+                <Button variant="outline" size="sm" className="w-full text-[10px] sm:text-xs" onClick={() => navigate('/assureur/parametres?tab=automation')}>
                   Configurer
                 </Button>
               </div>
-              <div className="p-4 border border-green-200 bg-green-50 rounded-lg">
-                <div className="flex items-center gap-2 mb-2">
-                  <Phone className="h-4 w-4 text-green-600" />
-                  <span className="font-medium text-green-800">Appels stratégiques</span>
+              <div className="p-3 sm:p-4 border border-green-200 bg-green-50 rounded-lg">
+                <div className="flex items-center gap-1.5 sm:gap-2 mb-2">
+                  <Phone className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-600 flex-shrink-0" />
+                  <span className="font-medium text-green-800 text-xs sm:text-sm">Appels stratégiques</span>
                 </div>
-                <p className="text-sm text-green-700 mb-3">
+                <p className="text-[10px] sm:text-xs md:text-sm text-green-700 mb-2 sm:mb-3">
                   5 prospects à contacter par téléphone cette semaine
                 </p>
-                <Button variant="outline" size="sm" className="w-full" onClick={() => navigate('/assureur/clients?filter=prospects')}>
+                <Button variant="outline" size="sm" className="w-full text-[10px] sm:text-xs" onClick={() => navigate('/assureur/clients?filter=prospects')}>
                   Voir la liste
                 </Button>
               </div>
-              <div className="p-4 border border-purple-200 bg-purple-50 rounded-lg">
-                <div className="flex items-center gap-2 mb-2">
-                  <BarChart3 className="h-4 w-4 text-purple-600" />
-                  <span className="font-medium text-purple-800">Optimisation offres</span>
+              <div className="p-3 sm:p-4 border border-purple-200 bg-purple-50 rounded-lg sm:col-span-2 lg:col-span-1">
+                <div className="flex items-center gap-1.5 sm:gap-2 mb-2">
+                  <BarChart3 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-purple-600 flex-shrink-0" />
+                  <span className="font-medium text-purple-800 text-xs sm:text-sm">Optimisation offres</span>
                 </div>
-                <p className="text-sm text-purple-700 mb-3">
+                <p className="text-[10px] sm:text-xs md:text-sm text-purple-700 mb-2 sm:mb-3">
                   2 offres sous-performantes à revoir
                 </p>
-                <Button variant="outline" size="sm" className="w-full" onClick={() => navigate('/assureur/analytics')}>
+                <Button variant="outline" size="sm" className="w-full text-[10px] sm:text-xs" onClick={() => navigate('/assureur/analytics')}>
                   Analyser
                 </Button>
               </div>
