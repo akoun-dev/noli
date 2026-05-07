@@ -201,21 +201,22 @@ export function RoleManagementPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">Gestion des Rôles</h1>
-          <p className="text-muted-foreground text-sm sm:text-base">
-            Administration des rôles et permissions du système
-          </p>
-        </div>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              Nouveau Rôle
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="responsive-modal-lg max-h-[80vh] overflow-y-auto">
+       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+         <div>
+           <h1 className="text-2xl sm:text-3xl font-bold">Gestion des Rôles</h1>
+           <p className="text-muted-foreground text-sm sm:text-base">
+             Administration des rôles et permissions du système
+           </p>
+         </div>
+         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+           <DialogTrigger asChild>
+             <Button size="sm" className="w-full sm:w-auto">
+               <Plus className="w-4 h-4 sm:mr-2" />
+               <span className="hidden sm:inline">Nouveau Rôle</span>
+               <span className="sm:hidden">Nouveau</span>
+             </Button>
+           </DialogTrigger>
+          <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Créer un nouveau rôle</DialogTitle>
               <DialogDescription>
@@ -245,57 +246,57 @@ export function RoleManagementPage() {
               </div>
 
               <div>
-                <div className="flex justify-between items-center mb-4">
-                  <Label>Permissions</Label>
-                  <Select value="all" onValueChange={setFilterCategory}>
-                    <SelectTrigger className="w-48">
-                      <SelectValue placeholder="Filtrer par catégorie" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Toutes les catégories</SelectItem>
-                      {permissionCategories.map(cat => (
-                        <SelectItem key={cat.category} value={cat.category}>
-                          {cat.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-4">
+                   <Label className="shrink-0">Permissions</Label>
+                   <Select value={filterCategory} onValueChange={setFilterCategory}>
+                     <SelectTrigger className="w-full sm:w-48">
+                       <SelectValue placeholder="Filtrer par catégorie" />
+                     </SelectTrigger>
+                     <SelectContent>
+                       <SelectItem value="all">Toutes les catégories</SelectItem>
+                       {permissionCategories.map(cat => (
+                         <SelectItem key={cat.category} value={cat.category}>
+                           {cat.label}
+                         </SelectItem>
+                       ))}
+                     </SelectContent>
+                   </Select>
+                 </div>
 
-                <div className="space-y-4 max-h-64 overflow-y-auto">
-                  {groupedPermissions.map(group => (
-                    <div key={group.category}>
-                      <h4 className="font-medium text-sm text-muted-foreground mb-2">
-                        {group.label}
-                      </h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
-                        {group.permissions.map(permission => (
-                          <div key={permission.id} className="flex items-center space-x-2">
-                            <Checkbox
-                              id={`new-${permission.id}`}
-                              checked={newRole.permissionIds.includes(permission.id)}
-                              onCheckedChange={() => togglePermission(permission.id)}
-                            />
-                            <Label
-                              htmlFor={`new-${permission.id}`}
-                              className="text-sm cursor-pointer"
-                              title={permission.description}
-                            >
-                              {permission.name}
-                            </Label>
-                          </div>
-                        ))}
-                      </div>
+              <div className="space-y-4 max-h-64 overflow-y-auto">
+                {groupedPermissions.map(group => (
+                  <div key={group.category}>
+                    <h4 className="font-medium text-xs sm:text-sm text-muted-foreground mb-2">
+                      {group.label}
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                      {group.permissions.map(permission => (
+                        <div key={permission.id} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`new-${permission.id}`}
+                            checked={newRole.permissionIds.includes(permission.id)}
+                            onCheckedChange={() => togglePermission(permission.id)}
+                          />
+                          <Label
+                            htmlFor={`new-${permission.id}`}
+                            className="text-xs sm:text-sm cursor-pointer truncate"
+                            title={permission.description}
+                          >
+                            {permission.name}
+                          </Label>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
+              </div>
               </div>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+            <DialogFooter className="flex flex-col sm:flex-row gap-2">
+              <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)} className="w-full sm:w-auto">
                 Annuler
               </Button>
-              <Button onClick={handleCreateRole}>
+              <Button onClick={handleCreateRole} className="w-full sm:w-auto">
                 Créer le rôle
               </Button>
             </DialogFooter>
@@ -379,7 +380,8 @@ export function RoleManagementPage() {
                 />
               </div>
 
-              <div className="responsive-table-wrapper">
+              <div className="overflow-x-auto -mx-4 sm:mx-0">
+                <div className="min-w-[700px] sm:min-w-0">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -598,16 +600,10 @@ export function RoleManagementPage() {
       </Tabs>
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="responsive-modal-lg max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Modifier le rôle</DialogTitle>
-            <DialogDescription>
-              Mettez à jour le rôle et ses permissions
-            </DialogDescription>
-          </DialogHeader>
-          {selectedRole && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] overflow-y-auto">
+           {selectedRole && (
+             <div className="space-y-4">
+               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="edit-role-name">Nom du rôle</Label>
                   <Input
@@ -658,14 +654,14 @@ export function RoleManagementPage() {
               </div>
             </div>
           )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-              Annuler
-            </Button>
-            <Button onClick={handleUpdateRole}>
-              Mettre à jour
-            </Button>
-          </DialogFooter>
+            <DialogFooter className="flex flex-col sm:flex-row gap-2">
+              <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="w-full sm:w-auto">
+                Annuler
+              </Button>
+              <Button onClick={handleUpdateRole} className="w-full sm:w-auto">
+                Mettre à jour
+              </Button>
+            </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

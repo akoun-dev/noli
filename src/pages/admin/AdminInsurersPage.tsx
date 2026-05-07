@@ -271,43 +271,43 @@ const AdminInsurersPage = () => {
 
 
       {/* Header */}
-      <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4'>
-        <div>
-          <h1 className='text-2xl font-bold'>Gestion des Assureurs</h1>
-          <p className='text-muted-foreground'>Gérez tous les assureurs de la plateforme</p>
-        </div>
-        <div className='flex flex-col sm:flex-row gap-2'>
-          <Button variant='outline' onClick={handleExport} disabled={exportInsurers.isPending}>
-            {exportInsurers.isPending ? (
-              <Loader2 className='h-4 w-4 mr-2 animate-spin' />
-            ) : (
-              <RefreshCw className='h-4 w-4 mr-2' />
-            )}
-            Exporter
-          </Button>
-          <Button onClick={() => handleOpenDialog('create')}>
-            <Plus className='h-4 w-4 mr-2' />
-            Ajouter un assureur
-          </Button>
-          <Dialog
-            open={activeDialog === 'create'}
-            onOpenChange={(open) => {
-              if (!open) handleCloseDialog()
-            }}
-          >
-            <DialogContent className='responsive-modal-lg'>
-              <DialogHeader>
-                <DialogTitle>Ajouter un nouvel assureur</DialogTitle>
-              </DialogHeader>
-              <InsurerForm
-                onSubmit={handleCreateInsurer}
-                isLoading={createInsurer.isPending}
-                error={mutationError}
-              />
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
+       <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4'>
+         <div>
+           <h1 className='text-2xl font-bold'>Gestion des Assureurs</h1>
+           <p className='text-muted-foreground'>Gérez tous les assureurs de la plateforme</p>
+         </div>
+         <div className='flex flex-wrap items-center gap-2'>
+           <Button variant='outline' onClick={handleExport} disabled={exportInsurers.isPending} size="sm">
+             {exportInsurers.isPending ? (
+               <Loader2 className='h-4 w-4 sm:mr-2 animate-spin' />
+             ) : (
+               <RefreshCw className='h-4 w-4 sm:mr-2' />
+             )}
+             <span className="hidden sm:inline">Exporter</span>
+           </Button>
+           <Button onClick={() => handleOpenDialog('create')} size="sm">
+             <Plus className='h-4 w-4 sm:mr-2' />
+             <span className="hidden sm:inline">Ajouter un assureur</span>
+           </Button>
+           <Dialog
+             open={activeDialog === 'create'}
+             onOpenChange={(open) => {
+               if (!open) handleCloseDialog()
+             }}
+           >
+             <DialogContent className='max-w-2xl w-[95vw]'>
+               <DialogHeader>
+                 <DialogTitle>Ajouter un nouvel assureur</DialogTitle>
+               </DialogHeader>
+               <InsurerForm
+                 onSubmit={handleCreateInsurer}
+                 isLoading={createInsurer.isPending}
+                 error={mutationError}
+               />
+             </DialogContent>
+           </Dialog>
+         </div>
+       </div>
 
       {/* Hero Stats Section */}
       <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4'>
@@ -354,122 +354,126 @@ const AdminInsurersPage = () => {
         )}
       </div>
 
-      {/* Alert Banner - Pending Insurers */}
-      {stats && stats.pending > 0 && (
-        <Card className='border-l-4 border-l-yellow-400 bg-gradient-to-r from-yellow-50 to-white dark:from-yellow-950/20 dark:to-card'>
-          <CardContent className='p-4'>
-            <div className='flex items-center justify-between'>
-              <div className='flex items-center gap-3'>
-                <div className='h-10 w-10 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center'>
-                  <Clock className='h-5 w-5 text-yellow-600 dark:text-yellow-400' />
-                </div>
-                <div>
-                  <p className='font-semibold text-yellow-900 dark:text-yellow-100'>
-                    {stats.pending} assureur{stats.pending > 1 ? 's' : ''} en attente de validation
-                  </p>
-                  <p className='text-sm text-yellow-700 dark:text-yellow-300'>
-                    Approuvez les demandes pour activer les comptes
-                  </p>
-                </div>
-              </div>
-              <Button
-                variant='outline'
-                size='sm'
-                onClick={() => setStatusFilter('pending')}
-                className='border-yellow-300 dark:border-yellow-700'
-              >
-                Voir
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+       {/* Alert Banner - Pending Insurers */}
+       {stats && stats.pending > 0 && (
+         <Card className='border-l-4 border-l-yellow-400 bg-gradient-to-r from-yellow-50 to-white dark:from-yellow-950/20 dark:to-card'>
+           <CardContent className='p-4'>
+             <div className='flex flex-col sm:flex-row sm:items-center gap-3'>
+               <div className='flex items-center gap-3 flex-1'>
+                 <div className='h-10 w-10 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center shrink-0'>
+                   <Clock className='h-5 w-5 text-yellow-600 dark:text-yellow-400' />
+                 </div>
+                 <div className='min-w-0'>
+                   <p className='font-semibold text-yellow-900 dark:text-yellow-100'>
+                     {stats.pending} assureur{stats.pending > 1 ? 's' : ''} en attente de validation
+                   </p>
+                   <p className='text-sm text-yellow-700 dark:text-yellow-300'>
+                     Approuvez les demandes pour activer les comptes
+                   </p>
+                 </div>
+               </div>
+               <Button
+                 variant='outline'
+                 size='sm'
+                 onClick={() => setStatusFilter('pending')}
+                 className='border-yellow-300 dark:border-yellow-700 w-full sm:w-auto'
+               >
+                 Voir
+               </Button>
+             </div>
+           </CardContent>
+         </Card>
+       )}
 
-      {/* Filters Section */}
-      <Card>
-        <CardContent className='p-4'>
-          <div className='flex flex-col sm:flex-row gap-4'>
-            {/* Search */}
-            <div className='flex-1'>
-              <div className='relative'>
-                <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground' />
-                <Input
-                  placeholder='Rechercher par nom, email...'
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className='pl-10'
-                />
-              </div>
-            </div>
+       {/* Filters Section */}
+       <Card>
+         <CardContent className='p-4'>
+           <div className='flex flex-col gap-4'>
+             {/* Search and Filters Row */}
+             <div className='flex flex-col sm:flex-row gap-2'>
+               <div className='relative flex-1'>
+                 <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground' />
+                 <Input
+                   placeholder='Rechercher par nom, email...'
+                   value={searchTerm}
+                   onChange={(e) => setSearchTerm(e.target.value)}
+                   className='pl-10'
+                 />
+               </div>
 
-            {/* Status Filter */}
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className='w-full sm:w-[180px]'>
-                <SelectValue placeholder='Statut' />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='all'>Tous les statuts</SelectItem>
-                <SelectItem value='active'>Actifs</SelectItem>
-                <SelectItem value='pending'>En attente</SelectItem>
-                <SelectItem value='inactive'>Inactifs</SelectItem>
-                <SelectItem value='suspended'>Suspendus</SelectItem>
-              </SelectContent>
-            </Select>
+               <div className='flex flex-wrap gap-2'>
+                 <Select value={statusFilter} onValueChange={setStatusFilter}>
+                   <SelectTrigger className='w-full sm:w-[180px]'>
+                     <SelectValue placeholder='Statut' />
+                   </SelectTrigger>
+                   <SelectContent>
+                     <SelectItem value='all'>Tous les statuts</SelectItem>
+                     <SelectItem value='active'>Actifs</SelectItem>
+                     <SelectItem value='pending'>En attente</SelectItem>
+                     <SelectItem value='inactive'>Inactifs</SelectItem>
+                     <SelectItem value='suspended'>Suspendus</SelectItem>
+                   </SelectContent>
+                 </Select>
 
-            {/* Bulk Actions */}
-            {selectedInsurers.length > 0 && (
-              <Button
-                variant='default'
-                size='sm'
-                onClick={handleBulkApprove}
-                className='bg-green-600 hover:bg-green-700'
-              >
-                <CheckCircle className='h-4 w-4 mr-2' />
-                Approuver ({selectedInsurers.length})
-              </Button>
-            )}
+                 {/* Bulk Actions */}
+                 {selectedInsurers.length > 0 && (
+                   <Button
+                     variant='default'
+                     size='sm'
+                     onClick={handleBulkApprove}
+                     className='bg-green-600 hover:bg-green-700'
+                   >
+                     <CheckCircle className='h-4 w-4 mr-2' />
+                     <span className='hidden sm:inline'>Approuver ({selectedInsurers.length})</span>
+                     <span className='sm:hidden'>Appr. ({selectedInsurers.length})</span>
+                   </Button>
+                 )}
+               </div>
+             </div>
 
-            {/* View Toggle */}
-            <div className='flex bg-muted rounded-lg p-1'>
-              <Button
-                variant={viewMode === 'grid' ? 'default' : 'ghost'}
-                size='sm'
-                onClick={() => setViewMode('grid')}
-              >
-                <Grid3X3 className='h-4 w-4' />
-              </Button>
-              <Button
-                variant={viewMode === 'list' ? 'default' : 'ghost'}
-                size='sm'
-                onClick={() => setViewMode('list')}
-              >
-                <List className='h-4 w-4' />
-              </Button>
-            </div>
-          </div>
+             {/* View Toggle */}
+             <div className='flex items-center justify-between'>
+               <div className='flex bg-muted rounded-lg p-1'>
+                 <Button
+                   variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                   size='sm'
+                   onClick={() => setViewMode('grid')}
+                 >
+                   <Grid3X3 className='h-4 w-4' />
+                 </Button>
+                 <Button
+                   variant={viewMode === 'list' ? 'default' : 'ghost'}
+                   size='sm'
+                   onClick={() => setViewMode('list')}
+                 >
+                   <List className='h-4 w-4' />
+                 </Button>
+               </div>
 
-          {/* Selection Info */}
-          {selectedInsurers.length > 0 && (
-            <div className='mt-3 flex items-center gap-2 text-sm text-muted-foreground'>
-              <Checkbox
-                checked={selectedInsurers.length === filteredInsurers.length}
-                onCheckedChange={handleSelectAll}
-              />
-              <span>
-                {selectedInsurers.length} sur {filteredInsurers.length} sélectionné(s)
-              </span>
-              <Button
-                variant='link'
-                size='sm'
-                className='h-auto p-0 ml-auto'
-                onClick={() => setSelectedInsurers([])}
-              >
-                Désélectionner
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+               {/* Selection Info */}
+               {selectedInsurers.length > 0 && (
+                 <div className='flex items-center gap-2 text-sm text-muted-foreground'>
+                   <Checkbox
+                     checked={selectedInsurers.length === filteredInsurers.length}
+                     onCheckedChange={handleSelectAll}
+                   />
+                   <span className='truncate'>
+                     {selectedInsurers.length}/{filteredInsurers.length} sélectionné(s)
+                   </span>
+                   <Button
+                     variant='link'
+                     size='sm'
+                     className='h-auto p-0 shrink-0'
+                     onClick={() => setSelectedInsurers([])}
+                   >
+                     Désél.
+                   </Button>
+                 </div>
+               )}
+             </div>
+           </div>
+         </CardContent>
+       </Card>
 
       {/* Insurers Grid/List */}
       {isLoading ? (
@@ -543,68 +547,69 @@ const AdminInsurersPage = () => {
         </div>
       )}
 
-      {/* View Insurer Dialog */}
-      <Dialog open={activeDialog === 'view'} onOpenChange={handleCloseDialog}>
-        <DialogContent className='responsive-modal-lg'>
-          <DialogHeader>
-            <DialogTitle>Détails de l'assureur</DialogTitle>
-          </DialogHeader>
-          {selectedInsurer && <InsurerDetails insurer={selectedInsurer} />}
-        </DialogContent>
-      </Dialog>
+       {/* View Insurer Dialog */}
+       <Dialog open={activeDialog === 'view'} onOpenChange={handleCloseDialog}>
+         <DialogContent className='max-w-2xl w-[95vw]'>
+           <DialogHeader>
+             <DialogTitle>Détails de l'assureur</DialogTitle>
+           </DialogHeader>
+           {selectedInsurer && <InsurerDetails insurer={selectedInsurer} />}
+         </DialogContent>
+       </Dialog>
 
-      {/* Edit Insurer Dialog */}
-      <Dialog open={activeDialog === 'edit'} onOpenChange={handleCloseDialog}>
-        <DialogContent className='responsive-modal-lg'>
-          <DialogHeader>
-            <DialogTitle>Modifier l'assureur</DialogTitle>
-          </DialogHeader>
-          {selectedInsurer && (
-            <InsurerForm
-              insurer={selectedInsurer}
-              onSubmit={handleUpdateInsurer}
-              isLoading={updateInsurer.isPending}
-              onCancel={handleCloseDialog}
-              error={mutationError}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+       {/* Edit Insurer Dialog */}
+       <Dialog open={activeDialog === 'edit'} onOpenChange={handleCloseDialog}>
+         <DialogContent className='max-w-2xl w-[95vw]'>
+           <DialogHeader>
+             <DialogTitle>Modifier l'assureur</DialogTitle>
+           </DialogHeader>
+           {selectedInsurer && (
+             <InsurerForm
+               insurer={selectedInsurer}
+               onSubmit={handleUpdateInsurer}
+               isLoading={updateInsurer.isPending}
+               onCancel={handleCloseDialog}
+               error={mutationError}
+             />
+           )}
+         </DialogContent>
+       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={activeDialog === 'delete'} onOpenChange={handleCloseDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirmer la suppression</DialogTitle>
-          </DialogHeader>
-          <div className='space-y-4'>
-            <p>
-              Êtes-vous sûr de vouloir supprimer l'assureur{' '}
-              <strong>{selectedInsurer?.companyName}</strong> ?
-            </p>
-            <p className='text-sm text-red-600 dark:text-red-400'>Cette action est irréversible.</p>
-            <DialogFooter>
-              <Button variant='outline' onClick={handleCloseDialog}>
-                Annuler
-              </Button>
-              <Button
-                variant='destructive'
-                onClick={handleDeleteInsurer}
-                disabled={deleteInsurer.isPending}
-              >
-                {deleteInsurer.isPending ? (
-                  <>
-                    <Loader2 className='h-4 w-4 mr-2 animate-spin' />
-                    Suppression...
-                  </>
-                ) : (
-                  'Supprimer'
-                )}
-              </Button>
-            </DialogFooter>
-          </div>
-        </DialogContent>
-      </Dialog>
+       {/* Delete Confirmation Dialog */}
+       <Dialog open={activeDialog === 'delete'} onOpenChange={handleCloseDialog}>
+         <DialogContent>
+           <DialogHeader>
+             <DialogTitle>Confirmer la suppression</DialogTitle>
+           </DialogHeader>
+           <div className='space-y-4'>
+             <p className="truncate">
+               Êtes-vous sûr de vouloir supprimer l'assureur{' '}
+               <strong>{selectedInsurer?.companyName}</strong> ?
+             </p>
+             <p className='text-sm text-red-600 dark:text-red-400'>Cette action est irréversible.</p>
+             <DialogFooter className="flex flex-col sm:flex-row gap-2">
+               <Button variant='outline' onClick={handleCloseDialog} className="w-full sm:w-auto">
+                 Annuler
+               </Button>
+               <Button
+                 variant='destructive'
+                 onClick={handleDeleteInsurer}
+                 disabled={deleteInsurer.isPending}
+                 className="w-full sm:w-auto"
+               >
+                 {deleteInsurer.isPending ? (
+                   <>
+                     <Loader2 className='h-4 w-4 mr-2 animate-spin' />
+                     Suppression...
+                   </>
+                 ) : (
+                   'Supprimer'
+                 )}
+               </Button>
+             </DialogFooter>
+           </div>
+         </DialogContent>
+       </Dialog>
     </div>
   )
 }
@@ -1095,25 +1100,25 @@ const InsurerForm: React.FC<{
         </Select>
       </div>
 
-      <div className='flex flex-col sm:flex-row sm:justify-end gap-2'>
-        {onCancel && (
-          <Button type='button' variant='outline' onClick={onCancel}>
-            Annuler
-          </Button>
-        )}
-        <Button type='submit' disabled={isLoading}>
-          {isLoading ? (
-            <>
-              <Loader2 className='h-4 w-4 mr-2 animate-spin' />
-              {insurer ? 'Mise à jour...' : 'Création...'}
-            </>
-          ) : insurer ? (
-            'Mettre à jour'
-          ) : (
-            'Créer'
-          )}
-        </Button>
-      </div>
+       <div className='flex flex-col sm:flex-row sm:justify-end gap-2'>
+         {onCancel && (
+           <Button type='button' variant='outline' onClick={onCancel} className="w-full sm:w-auto">
+             Annuler
+           </Button>
+         )}
+         <Button type='submit' disabled={isLoading} className="w-full sm:w-auto">
+           {isLoading ? (
+             <>
+               <Loader2 className='h-4 w-4 mr-2 animate-spin' />
+               {insurer ? 'Mise à jour...' : 'Création...'}
+             </>
+           ) : insurer ? (
+             'Mettre à jour'
+           ) : (
+             'Créer'
+           )}
+         </Button>
+       </div>
     </form>
   )
 }

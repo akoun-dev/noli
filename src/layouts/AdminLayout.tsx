@@ -111,74 +111,74 @@ export const AdminLayout: React.FC = () => {
                 >
                   <Menu className='h-6 w-6' />
                 </button>
-                <div>
-                  <div className='flex items-center gap-2'>
-                    <h1 className='text-lg sm:text-xl font-bold text-foreground'>
-                      {getPageTitle()}
-                    </h1>
-                    <Badge variant='outline' className='hidden sm:inline-flex'>
-                      Admin
-                    </Badge>
-                  </div>
-                  {pendingInsurersCount > 0 && (
-                    <p className='text-xs text-muted-foreground mt-0.5 flex items-center gap-1'>
-                      <AlertTriangle className='h-3 w-3 text-yellow-500' />
-                      {pendingInsurersCount} action{pendingInsurersCount > 1 ? 's' : ''} requise{pendingInsurersCount > 1 ? 's' : ''}
-                    </p>
-                  )}
-                </div>
+                <div className='min-w-0'>
+                   <div className='flex items-center gap-2'>
+                     <h1 className='text-lg sm:text-xl font-bold text-foreground truncate'>
+                       {getPageTitle()}
+                     </h1>
+                     <Badge variant='outline' className='hidden sm:inline-flex shrink-0'>
+                       Admin
+                     </Badge>
+                   </div>
+                   {pendingInsurersCount > 0 && (
+                     <p className='text-xs text-muted-foreground mt-0.5 flex items-center gap-1 truncate'>
+                       <AlertTriangle className='h-3 w-3 text-yellow-500 shrink-0' />
+                       {pendingInsurersCount} action{pendingInsurersCount > 1 ? 's' : ''} requise{pendingInsurersCount > 1 ? 's' : ''}
+                     </p>
+                   )}
+                 </div>
               </div>
 
               {/* Right: Notifications + User menu */}
-              <div className='flex items-center gap-2 sm:gap-3'>
-                {pendingInsurersCount > 0 && (
-                  <button
-                    onClick={() => {/* Navigate to insurers */}}
-                    className='relative p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent'
-                    aria-label={`Notifications: ${pendingInsurersCount} nouvelles actions`}
-                  >
-                    <Bell className='h-5 w-5' />
-                    <span className='absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full' />
-                  </button>
-                )}
-                <ThemeToggle />
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant='ghost'
-                      size='sm'
-                      className='gap-2 h-10 px-2'
-                      aria-label='Menu utilisateur'
-                    >
-                      <div className='hidden sm:block text-left'>
-                        <p className='text-sm font-medium'>{user?.firstName} {user?.lastName}</p>
-                        <p className='text-xs text-muted-foreground'>Administrateur</p>
-                      </div>
-                      <Avatar className='h-8 w-8'>
-                        {user?.avatar && (
-                          <AvatarImage src={user.avatar} alt={`${user?.firstName} ${user?.lastName}`} />
-                        )}
-                        <AvatarFallback className='bg-primary/10 text-primary text-xs font-semibold'>
-                          {user?.firstName?.[0]}{user?.lastName?.[0]}
-                        </AvatarFallback>
-                      </Avatar>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align='end' className='w-56'>
-                    <DropdownMenuItem onClick={() => {/* Navigate to profile */}}>
-                      Mon profil
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => {/* Navigate to settings */}}>
-                      Paramètres
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleLogout} className='text-destructive'>
-                      <LogOut className='h-4 w-4 mr-2' />
-                      Déconnexion
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+               <div className='flex items-center gap-1.5 sm:gap-3 shrink-0'>
+                 {pendingInsurersCount > 0 && (
+                   <button
+                     onClick={() => {/* Navigate to insurers */}}
+                     className='relative p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent'
+                     aria-label={`Notifications: ${pendingInsurersCount} nouvelles actions`}
+                   >
+                     <Bell className='h-5 w-5' />
+                     <span className='absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full' />
+                   </button>
+                 )}
+                 <ThemeToggle />
+                 <DropdownMenu>
+                   <DropdownMenuTrigger asChild>
+                     <Button
+                       variant='ghost'
+                       size='sm'
+                       className='gap-2 h-10 px-2'
+                       aria-label='Menu utilisateur'
+                     >
+                       <div className='hidden sm:block text-left'>
+                         <p className='text-sm font-medium truncate max-w-[120px]'>{user?.firstName} {user?.lastName}</p>
+                         <p className='text-xs text-muted-foreground'>Administrateur</p>
+                       </div>
+                       <Avatar className='h-8 w-8'>
+                         {user?.avatar && (
+                           <AvatarImage src={user.avatar} alt={`${user?.firstName} ${user?.lastName}`} />
+                         )}
+                         <AvatarFallback className='bg-primary/10 text-primary text-xs font-semibold'>
+                           {user?.firstName?.[0]}{user?.lastName?.[0]}
+                         </AvatarFallback>
+                       </Avatar>
+                     </Button>
+                   </DropdownMenuTrigger>
+                   <DropdownMenuContent align='end' className='w-56'>
+                     <DropdownMenuItem onClick={() => {/* Navigate to profile */}}>
+                       Mon profil
+                     </DropdownMenuItem>
+                     <DropdownMenuItem onClick={() => {/* Navigate to settings */}}>
+                       Paramètres
+                     </DropdownMenuItem>
+                     <DropdownMenuSeparator />
+                     <DropdownMenuItem onClick={handleLogout} className='text-destructive'>
+                       <LogOut className='h-4 w-4 mr-2' />
+                       Déconnexion
+                     </DropdownMenuItem>
+                   </DropdownMenuContent>
+                 </DropdownMenu>
+               </div>
             </div>
           </header>
 

@@ -522,22 +522,22 @@ export const AdminSupervisionPage: React.FC = () => {
     <div className="space-y-6">
       {/* Hero Section - Stats */}
       <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight">Supervision</h2>
-            <p className="text-muted-foreground">Vue d'ensemble de la plateforme</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={loadData}>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Actualiser
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleExport} disabled={exportLoading}>
-              <Download className="h-4 w-4 mr-2" />
-              {exportLoading ? 'Export...' : 'Exporter'}
-            </Button>
-          </div>
-        </div>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+           <div>
+             <h2 className="text-2xl font-bold tracking-tight">Supervision</h2>
+             <p className="text-muted-foreground">Vue d'ensemble de la plateforme</p>
+           </div>
+           <div className="flex items-center gap-2">
+             <Button variant="outline" size="sm" onClick={loadData}>
+               <RefreshCw className="h-4 w-4 sm:mr-2" />
+               <span className="hidden sm:inline">Actualiser</span>
+             </Button>
+             <Button variant="outline" size="sm" onClick={handleExport} disabled={exportLoading}>
+               <Download className="h-4 w-4 sm:mr-2" />
+               <span className="hidden sm:inline">{exportLoading ? 'Export...' : 'Exporter'}</span>
+             </Button>
+           </div>
+         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
@@ -574,31 +574,33 @@ export const AdminSupervisionPage: React.FC = () => {
       {/* Alert Banner - Pending Insurers */}
       {stats?.insurers?.pending > 0 && (
         <Card className="border-yellow-200 dark:border-yellow-900/50 bg-gradient-to-r from-yellow-50 to-white dark:from-yellow-950/20">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-yellow-100 dark:bg-yellow-900/30">
-                <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
-              </div>
-              <div className="flex-1">
-                <p className="font-medium text-sm">
-                  {stats.insurers.pending} assureur{stats.insurers.pending > 1 ? 's' : ''} en attente de validation
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Approuvez les demandes pour activer les comptes
-                </p>
-              </div>
-              <Button size="sm" onClick={() => setActiveTab('insurers')}>
-                Voir
-                <ArrowUpRight className="h-4 w-4 ml-1" />
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+           <CardContent className="p-4">
+             <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+               <div className="flex items-center gap-3 flex-1">
+                 <div className="p-2 rounded-lg bg-yellow-100 dark:bg-yellow-900/30 shrink-0">
+                   <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+                 </div>
+                 <div className="min-w-0">
+                   <p className="font-medium text-sm">
+                     {stats.insurers.pending} assureur{stats.insurers.pending > 1 ? 's' : ''} en attente de validation
+                   </p>
+                   <p className="text-xs text-muted-foreground">
+                     Approuvez les demandes pour activer les comptes
+                   </p>
+                 </div>
+               </div>
+               <Button size="sm" onClick={() => setActiveTab('insurers')} className="w-full sm:w-auto">
+                 Voir
+                 <ArrowUpRight className="h-4 w-4 ml-1" />
+               </Button>
+             </div>
+           </CardContent>
+         </Card>
       )}
 
       {/* Main Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4 lg:w-auto">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:w-auto">
           <TabsTrigger value="overview">Vue d'ensemble</TabsTrigger>
           <TabsTrigger value="users">
             Utilisateurs

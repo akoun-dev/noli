@@ -322,20 +322,20 @@ export const GuaranteeForm: React.FC<GuaranteeFormProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className='max-w-2xl w-[95vw] max-h-[90vh] overflow-y-auto'>
-        <DialogHeader className='space-y-2 sm:space-y-3'>
-          <DialogTitle className='flex items-center gap-2 text-lg sm:text-xl'>
-            <Shield className='h-5 w-5' />
-            {mode === 'create' ? 'Nouvelle garantie' : 'Modifier la garantie'}
-          </DialogTitle>
-          <DialogDescription className='text-sm'>
-            {mode === 'create'
-              ? 'Créez une nouvelle garantie pour vos produits d\'assurance'
-              : 'Modifiez les informations de cette garantie'}
-          </DialogDescription>
-        </DialogHeader>
+       <DialogContent className='max-w-2xl w-[95vw] max-h-[90vh] overflow-y-auto'>
+         <DialogHeader className='space-y-2'>
+           <DialogTitle className='flex items-center gap-2 text-base sm:text-xl'>
+             <Shield className='h-4 w-4 sm:h-5 sm:w-5 shrink-0' />
+             <span className="truncate">{mode === 'create' ? 'Nouvelle garantie' : 'Modifier la garantie'}</span>
+           </DialogTitle>
+           <DialogDescription className='text-xs sm:text-sm'>
+             {mode === 'create'
+               ? 'Créez une nouvelle garantie pour vos produits d\'assurance'
+               : 'Modifiez les informations de cette garantie'}
+           </DialogDescription>
+         </DialogHeader>
 
-        <div className='space-y-4 sm:space-y-6 py-4'>
+         <div className='space-y-4 py-4'>
           {/* Informations de base */}
           <div className='space-y-3 sm:space-y-4'>
             <h3 className='font-medium flex items-center gap-2 text-sm sm:text-base'>
@@ -358,25 +358,23 @@ export const GuaranteeForm: React.FC<GuaranteeFormProps> = ({
               {errors.name && <p className='text-xs sm:text-sm text-red-500'>{errors.name}</p>}
             </div>
 
-            {/* Code + Génération automatique */}
-            <div className='space-y-2'>
-              <div className='flex items-center justify-between gap-2'>
-                <Label htmlFor='code' className='text-sm'>
-                  Code <span className='text-red-500'>*</span>
-                </Label>
-                <Button
-                  type='button'
-                  variant='outline'
-                  size='sm'
-                  onClick={generateCode}
-                  disabled={!formData.name}
-                  className='text-xs'
-                >
-                  <Sparkles className='h-3 w-3 mr-1 sm:mr-2' />
-                  <span className='hidden sm:inline'>Générer</span>
-                  <span className='sm:hidden'> Gén</span>
-                </Button>
-              </div>
+             {/* Code + Génération automatique */}
+             <div className='space-y-2'>
+               <div className='flex items-center justify-between gap-2'>
+                 <Label htmlFor='code' className='text-sm'>
+                   Code <span className='text-red-500'>*</span>
+                 </Label>
+                 <Button
+                   type='button'
+                   variant='outline'
+                   size='sm'
+                   onClick={generateCode}
+                   disabled={!formData.name}
+                 >
+                   <Sparkles className='h-3 w-3 mr-1 sm:mr-2' />
+                   <span className='hidden sm:inline text-xs'>Générer</span>
+                 </Button>
+               </div>
               <Input
                 id='code'
                 value={formData.code}
@@ -392,71 +390,28 @@ export const GuaranteeForm: React.FC<GuaranteeFormProps> = ({
               <Label className='text-sm'>
                 Catégorie <span className='text-red-500'>*</span>
               </Label>
-              <div className='grid grid-cols-2 sm:grid-cols-3 gap-2'>
-                {categories.map((cat) => (
-                  <button
-                    key={cat.value}
-                    type='button'
-                    onClick={() => updateField('category', cat.value)}
-                    className={cn(
-                      'flex flex-col items-center gap-1 p-2 sm:p-3 rounded-lg border-2 transition-colors',
-                      formData.category === cat.value
-                        ? 'border-primary bg-primary/5'
-                        : 'border-gray-200 hover:border-gray-300'
-                    )}
-                  >
-                    <span className='text-xl sm:text-2xl'>{cat.icon}</span>
-                    <span className='text-[10px] sm:text-xs font-medium'>{cat.label}</span>
-                  </button>
-                ))}
-              </div>
+               <div className='grid grid-cols-3 sm:grid-cols-6 gap-2'>
+                 {categories.map((cat) => (
+                   <button
+                     key={cat.value}
+                     type='button'
+                     onClick={() => updateField('category', cat.value)}
+                     className={cn(
+                       'flex flex-col items-center gap-1 p-2 rounded-lg border-2 transition-colors',
+                       formData.category === cat.value
+                         ? 'border-primary bg-primary/5'
+                         : 'border-gray-200 hover:border-gray-300'
+                     )}
+                   >
+                     <span className='text-xl'>{cat.icon}</span>
+                     <span className='text-[10px] font-medium truncate'>{cat.label}</span>
+                   </button>
+                 ))}
+               </div>
               {errors.category && <p className='text-xs sm:text-sm text-red-500'>{errors.category}</p>}
             </div>
-                  size='sm'
-                  onClick={generateCode}
-                  disabled={!formData.name}
-                >
-                  <Sparkles className='h-4 w-4 mr-2' />
-                  Générer
-                </Button>
-              </div>
-              <Input
-                id='code'
-                value={formData.code}
-                onChange={(e) => updateField('code', e.target.value.toUpperCase())}
-                placeholder='Ex: AUTO_ASS_0KM'
-                className={cn('font-mono', errors.code && 'border-red-500')}
-              />
-              {errors.code && <p className='text-sm text-red-500'>{errors.code}</p>}
-            </div>
-
-            {/* Catégorie */}
-            <div className='space-y-2'>
-              <Label>
-                Catégorie <span className='text-red-500'>*</span>
-              </Label>
-              <div className='grid grid-cols-3 gap-2'>
-                {categories.map((cat) => (
-                  <button
-                    key={cat.value}
-                    type='button'
-                    onClick={() => updateField('category', cat.value)}
-                    className={cn(
-                      'flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-colors',
-                      formData.category === cat.value
-                        ? 'border-primary bg-primary/5'
-                        : 'border-gray-200 hover:border-gray-300'
-                    )}
-                  >
-                    <span className='text-2xl'>{cat.icon}</span>
-                    <span className='text-xs font-medium'>{cat.label}</span>
-                  </button>
-                ))}
-              </div>
-              {errors.category && <p className='text-sm text-red-500'>{errors.category}</p>}
-            </div>
-
-            {/* Description */}
+             
+             {/* Description */}
             <div className='space-y-2'>
               <Label htmlFor='description' className='text-sm'>Description</Label>
               <Textarea
@@ -527,32 +482,32 @@ export const GuaranteeForm: React.FC<GuaranteeFormProps> = ({
               Méthode de calcul <span className='text-red-500'>*</span>
             </h3>
 
-            <div className='space-y-2'>
-              {calculationMethods.map((method) => (
-                <button
-                  key={method.value}
-                  type='button'
-                  onClick={() => updateField('calculationMethod', method.value as CalculationMethodType)}
-                  className={cn(
-                    'w-full p-4 rounded-lg border-2 transition-colors text-left',
-                    formData.calculationMethod === method.value
-                      ? 'border-primary bg-primary/5'
-                      : 'border-gray-200 hover:border-gray-300'
-                  )}
-                >
-                  <div className='flex items-start gap-3'>
-                    <span className='text-2xl'>{method.icon}</span>
-                    <div>
-                      <div className='font-medium'>{method.label}</div>
-                      <div className='text-sm text-muted-foreground'>{method.description}</div>
-                    </div>
-                  </div>
-                </button>
-              ))}
-              {errors.calculationMethod && (
-                <p className='text-sm text-red-500'>{errors.calculationMethod}</p>
-              )}
-            </div>
+             <div className='space-y-2'>
+               {calculationMethods.map((method) => (
+                 <button
+                   key={method.value}
+                   type='button'
+                   onClick={() => updateField('calculationMethod', method.value as CalculationMethodType)}
+                   className={cn(
+                     'w-full p-3 sm:p-4 rounded-lg border-2 transition-colors text-left',
+                     formData.calculationMethod === method.value
+                       ? 'border-primary bg-primary/5'
+                       : 'border-gray-200 hover:border-gray-300'
+                   )}
+                 >
+                   <div className='flex items-start gap-2 sm:gap-3'>
+                     <span className='text-xl sm:text-2xl shrink-0'>{method.icon}</span>
+                     <div className='min-w-0'>
+                       <div className='font-medium text-sm sm:text-base'>{method.label}</div>
+                       <div className='text-xs sm:text-sm text-muted-foreground'>{method.description}</div>
+                     </div>
+                   </div>
+                 </button>
+               ))}
+               {errors.calculationMethod && (
+                 <p className='text-xs sm:text-sm text-red-500'>{errors.calculationMethod}</p>
+               )}
+             </div>
 
             {/* Champs spécifiques selon la méthode */}
             {formData.calculationMethod === 'FIXED_AMOUNT' && (
@@ -638,21 +593,24 @@ export const GuaranteeForm: React.FC<GuaranteeFormProps> = ({
           )}
         </div>
 
-        <DialogFooter>
-          <Button variant='outline' onClick={onClose} disabled={isSubmitting}>
-            Annuler
-          </Button>
-          <Button onClick={handleSubmit} disabled={isSubmitting}>
-            {isSubmitting ? (
-              'Enregistrement...'
-            ) : (
-              <>
-                <Save className='h-4 w-4 mr-2' />
-                {mode === 'create' ? 'Créer' : 'Mettre à jour'}
-              </>
-            )}
-          </Button>
-        </DialogFooter>
+         <DialogFooter className="flex flex-col sm:flex-row gap-2">
+           <Button variant='outline' onClick={onClose} disabled={isSubmitting} className="w-full sm:w-auto">
+             Annuler
+           </Button>
+           <Button onClick={handleSubmit} disabled={isSubmitting} className="w-full sm:w-auto">
+             {isSubmitting ? (
+               <>
+                 <Loader2 className='h-4 w-4 mr-2 animate-spin' />
+                 Enregistrement...
+               </>
+             ) : (
+               <>
+                 <Save className='h-4 w-4 mr-2' />
+                 {mode === 'create' ? 'Créer' : 'Mettre à jour'}
+               </>
+             )}
+           </Button>
+         </DialogFooter>
       </DialogContent>
     </Dialog>
   )

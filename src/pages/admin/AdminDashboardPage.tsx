@@ -298,22 +298,22 @@ export const AdminDashboardPage: React.FC = () => {
     <div className="space-y-6">
       {/* Hero Section - KPIs */}
       <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight">Vue d'ensemble</h2>
-            <p className="text-muted-foreground">Métriques clés de la plateforme</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => refetchStats()}>
-              <Activity className="h-4 w-4 mr-2" />
-              Actualiser
-            </Button>
-            <Button variant="outline" size="sm">
-              <Download className="h-4 w-4 mr-2" />
-              Exporter
-            </Button>
-          </div>
-        </div>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+           <div>
+             <h2 className="text-2xl font-bold tracking-tight">Vue d'ensemble</h2>
+             <p className="text-muted-foreground">Métriques clés de la plateforme</p>
+           </div>
+           <div className="flex items-center gap-2">
+             <Button variant="outline" size="sm" onClick={() => refetchStats()}>
+               <Activity className="h-4 w-4 sm:mr-2" />
+               <span className="hidden sm:inline">Actualiser</span>
+             </Button>
+             <Button variant="outline" size="sm">
+               <Download className="h-4 w-4 sm:mr-2" />
+               <span className="hidden sm:inline">Exporter</span>
+             </Button>
+           </div>
+         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
@@ -361,24 +361,24 @@ export const AdminDashboardPage: React.FC = () => {
           {(pendingApprovals?.length ?? 0) > 0 && (
             <Card className="border-orange-200 dark:border-orange-900/50 bg-gradient-to-br from-orange-50 to-white dark:from-orange-950/20 dark:to-card">
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="p-2 rounded-lg bg-orange-100 dark:bg-orange-900/30">
-                      <AlertTriangle className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg">Actions requises</CardTitle>
-                      <p className="text-sm text-muted-foreground">
-                        {pendingApprovals?.length || 0} élément{pendingApprovals?.length > 1 ? 's' : ''} en attente
-                      </p>
-                    </div>
-                  </div>
-                  <Button variant="outline" size="sm">
-                    Voir tout
-                    <ArrowUpRight className="h-4 w-4 ml-1" />
-                  </Button>
-                </div>
-              </CardHeader>
+                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                   <div className="flex items-center gap-2">
+                     <div className="p-2 rounded-lg bg-orange-100 dark:bg-orange-900/30 shrink-0">
+                       <AlertTriangle className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                     </div>
+                     <div className="min-w-0">
+                       <CardTitle className="text-lg">Actions requises</CardTitle>
+                       <p className="text-sm text-muted-foreground">
+                         {pendingApprovals?.length || 0} élément{pendingApprovals?.length > 1 ? 's' : ''} en attente
+                       </p>
+                     </div>
+                   </div>
+                   <Button variant="outline" size="sm" className="shrink-0 w-full sm:w-auto">
+                     Voir tout
+                     <ArrowUpRight className="h-4 w-4 ml-1" />
+                   </Button>
+                 </div>
+               </CardHeader>
               <CardContent className="space-y-3">
                 {approvalsLoading ? (
                   <div className="space-y-3">

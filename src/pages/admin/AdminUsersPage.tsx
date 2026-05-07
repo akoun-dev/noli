@@ -896,34 +896,34 @@ export const AdminUsersPage: React.FC = () => {
 
 
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Gestion des Utilisateurs</h1>
-          <p className="text-muted-foreground">
-            {filteredUsers.length} utilisateur{filteredUsers.length > 1 ? 's' : ''}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleExportUsers}>
-            <Download className="h-4 w-4 mr-2" />
-            Exporter
-          </Button>
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button size="sm">
-                <Plus className="h-4 w-4 mr-2" />
-                Ajouter
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px]">
-              <DialogHeader>
-                <DialogTitle>Ajouter un utilisateur</DialogTitle>
-              </DialogHeader>
-              <UserForm />
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
+       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+         <div>
+           <h1 className="text-2xl font-bold tracking-tight">Gestion des Utilisateurs</h1>
+           <p className="text-muted-foreground">
+             {filteredUsers.length} utilisateur{filteredUsers.length > 1 ? 's' : ''}
+           </p>
+         </div>
+         <div className="flex items-center gap-2 shrink-0">
+           <Button variant="outline" size="sm" onClick={handleExportUsers}>
+             <Download className="h-4 w-4 sm:mr-2" />
+             <span className="hidden sm:inline">Exporter</span>
+           </Button>
+           <Dialog>
+             <DialogTrigger asChild>
+               <Button size="sm">
+                 <Plus className="h-4 w-4 sm:mr-2" />
+                 <span className="hidden sm:inline">Ajouter</span>
+               </Button>
+             </DialogTrigger>
+             <DialogContent className="sm:max-w-[500px]">
+               <DialogHeader>
+                 <DialogTitle>Ajouter un utilisateur</DialogTitle>
+               </DialogHeader>
+               <UserForm />
+             </DialogContent>
+           </Dialog>
+         </div>
+       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -961,132 +961,132 @@ export const AdminUsersPage: React.FC = () => {
         />
       </div>
 
-      {/* Filters and Actions */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-col gap-4">
-            {/* Search and Filters */}
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                <Input
-                  placeholder="Rechercher par nom, email..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              <div className="flex gap-2">
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-full sm:w-40">
-                    <SelectValue placeholder="Statut" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Tous</SelectItem>
-                    <SelectItem value="active">Actifs</SelectItem>
-                    <SelectItem value="inactive">Inactifs</SelectItem>
-                    <SelectItem value="pending">En attente</SelectItem>
-                    <SelectItem value="suspended">Suspendus</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select value={roleFilter} onValueChange={setRoleFilter}>
-                  <SelectTrigger className="w-full sm:w-40">
-                    <SelectValue placeholder="Rôle" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Tous</SelectItem>
-                    <SelectItem value="USER">Utilisateurs</SelectItem>
-                    <SelectItem value="INSURER">Assureurs</SelectItem>
-                    <SelectItem value="ADMIN">Admins</SelectItem>
-                  </SelectContent>
-                </Select>
-                </div>
-
-                {/* View Toggle & Bulk Actions */}
-                <div className="flex items-center gap-2">
-                {/* View Toggle */}
-                <div className="flex bg-muted rounded-lg p-1">
-                  <Button
-                    variant={viewMode === 'grid' ? 'default' : 'ghost'}
-                    size="sm"
-                    className="h-8 px-3"
-                    onClick={() => setViewMode('grid')}
-                  >
-                    <svg
-                      className="h-4 w-4"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <rect x="3" y="3" width="7" height="7" />
-                      <rect x="14" y="3" width="7" height="7" />
-                      <rect x="14" y="14" width="7" height="7" />
-                      <rect x="3" y="14" width="7" height="7" />
-                    </svg>
-                  </Button>
-                  <Button
-                    variant={viewMode === 'list' ? 'default' : 'ghost'}
-                    size="sm"
-                    className="h-8 px-3"
-                    onClick={() => setViewMode('list')}
-                  >
-                    <svg
-                      className="h-4 w-4"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <line x1="8" y1="6" x2="21" y2="6" />
-                      <line x1="8" y1="12" x2="21" y2="12" />
-                      <line x1="8" y1="18" x2="21" y2="18" />
-                      <line x1="3" y1="6" x2="21" y2="6" />
-                      <line x1="3" y1="12" x2="21" y2="12" />
-                      <line x1="3" y1="18" x2="21" y2="18" />
-                    </svg>
-                  </Button>
-                </div>
-
-                {/* Bulk Actions */}
-                {selectedUsers.length > 0 && (
-                  <>
-                    <span className="text-sm text-muted-foreground">
-                      {selectedUsers.length} sélectionné{selectedUsers.length > 1 ? 's' : ''}
-                    </span>
-                    <Select onValueChange={(value) => handleBulkAction(value)}>
-                      <SelectTrigger className="w-40">
-                        <SelectValue placeholder="Actions" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="activate">Activer</SelectItem>
-                        <SelectItem value="suspend">Suspendre</SelectItem>
-                        <SelectItem value="delete">Supprimer</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* Results count */}
-            <div className="flex items-center justify-between border-t pt-4">
-              <p className="text-sm text-muted-foreground">
-                {filteredUsers.length} utilisateur{filteredUsers.length > 1 ? 's' : ''}
-              </p>
-              {selectedUsers.length > 0 && (
-                <Button variant="ghost" size="sm" onClick={() => setSelectedUsers([])}>
-                  Effacer la sélection
-                </Button>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+       {/* Filters and Actions */}
+       <Card>
+         <CardContent className="p-4">
+           <div className="flex flex-col gap-4">
+             {/* Search and Filters */}
+             <div className="flex flex-col sm:flex-row gap-3">
+               <div className="relative flex-1">
+                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                 <Input
+                   placeholder="Rechercher par nom, email..."
+                   value={searchTerm}
+                   onChange={(e) => setSearchTerm(e.target.value)}
+                   className="pl-10"
+                 />
+               </div>
+               <div className="flex flex-wrap gap-2">
+                 <Select value={statusFilter} onValueChange={setStatusFilter}>
+                   <SelectTrigger className="w-full sm:w-40">
+                     <SelectValue placeholder="Statut" />
+                   </SelectTrigger>
+                   <SelectContent>
+                     <SelectItem value="all">Tous</SelectItem>
+                     <SelectItem value="active">Actifs</SelectItem>
+                     <SelectItem value="inactive">Inactifs</SelectItem>
+                     <SelectItem value="pending">En attente</SelectItem>
+                     <SelectItem value="suspended">Suspendus</SelectItem>
+                   </SelectContent>
+                 </Select>
+                 <Select value={roleFilter} onValueChange={setRoleFilter}>
+                   <SelectTrigger className="w-full sm:w-40">
+                     <SelectValue placeholder="Rôle" />
+                   </SelectTrigger>
+                   <SelectContent>
+                     <SelectItem value="all">Tous</SelectItem>
+                     <SelectItem value="USER">Utilisateurs</SelectItem>
+                     <SelectItem value="INSURER">Assureurs</SelectItem>
+                     <SelectItem value="ADMIN">Admins</SelectItem>
+                   </SelectContent>
+                 </Select>
+                 </div>
+                 
+                 {/* View Toggle & Bulk Actions */}
+                 <div className="flex items-center flex-wrap gap-2">
+                 {/* View Toggle */}
+                 <div className="flex bg-muted rounded-lg p-1">
+                   <Button
+                     variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                     size="sm"
+                     className="h-8 px-3"
+                     onClick={() => setViewMode('grid')}
+                   >
+                     <svg
+                       className="h-4 w-4"
+                       viewBox="0 0 24 24"
+                       fill="none"
+                       stroke="currentColor"
+                       strokeWidth="2"
+                       strokeLinecap="round"
+                       strokeLinejoin="round"
+                     >
+                       <rect x="3" y="3" width="7" height="7" />
+                       <rect x="14" y="3" width="7" height="7" />
+                       <rect x="14" y="14" width="7" height="7" />
+                       <rect x="3" y="14" width="7" height="7" />
+                     </svg>
+                   </Button>
+                   <Button
+                     variant={viewMode === 'list' ? 'default' : 'ghost'}
+                     size="sm"
+                     className="h-8 px-3"
+                     onClick={() => setViewMode('list')}
+                   >
+                     <svg
+                       className="h-4 w-4"
+                       viewBox="0 0 24 24"
+                       fill="none"
+                       stroke="currentColor"
+                       strokeWidth="2"
+                       strokeLinecap="round"
+                       strokeLinejoin="round"
+                     >
+                       <line x1="8" y1="6" x2="21" y2="6" />
+                       <line x1="8" y1="12" x2="21" y2="12" />
+                       <line x1="8" y1="18" x2="21" y2="18" />
+                       <line x1="3" y1="6" x2="21" y2="6" />
+                       <line x1="3" y1="12" x2="21" y2="12" />
+                       <line x1="3" y1="18" x2="21" y2="18" />
+                     </svg>
+                   </Button>
+                 </div>
+                 
+                 {/* Bulk Actions */}
+                 {selectedUsers.length > 0 && (
+                   <>
+                     <span className="text-sm text-muted-foreground shrink-0">
+                       {selectedUsers.length} sélectionné{selectedUsers.length > 1 ? 's' : ''}
+                     </span>
+                     <Select onValueChange={(value) => handleBulkAction(value)}>
+                       <SelectTrigger className="w-full sm:w-40">
+                         <SelectValue placeholder="Actions" />
+                       </SelectTrigger>
+                       <SelectContent>
+                         <SelectItem value="activate">Activer</SelectItem>
+                         <SelectItem value="suspend">Suspendre</SelectItem>
+                         <SelectItem value="delete">Supprimer</SelectItem>
+                       </SelectContent>
+                     </Select>
+                   </>
+                 )}
+               </div>
+             </div>
+             
+             {/* Results count */}
+             <div className="flex items-center justify-between border-t pt-4">
+               <p className="text-sm text-muted-foreground truncate">
+                 {filteredUsers.length} utilisateur{filteredUsers.length > 1 ? 's' : ''}
+               </p>
+               {selectedUsers.length > 0 && (
+                 <Button variant="ghost" size="sm" onClick={() => setSelectedUsers([])} className="shrink-0">
+                   Effacer
+                 </Button>
+               )}
+             </div>
+           </div>
+         </CardContent>
+       </Card>
 
       {/* Users Display */}
       {usersLoading ? (
@@ -1210,48 +1210,49 @@ export const AdminUsersPage: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirmer la suppression</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <p>
-              Êtes-vous sûr de vouloir supprimer l'utilisateur{' '}
-              <strong>
-                {selectedUser?.firstName} {selectedUser?.lastName}
-              </strong>
-              ?
-            </p>
-            <p className="text-sm text-red-600 dark:text-red-400">Cette action est irréversible.</p>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
-                Annuler
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={() => {
-                  if (selectedUser) {
-                    deleteUser.mutate(selectedUser.id)
-                    setShowDeleteDialog(false)
-                  }
-                }}
-                disabled={deleteUser.isPending}
-              >
-                {deleteUser.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Suppression...
-                  </>
-                ) : (
-                  'Supprimer'
-                )}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+       {/* Delete Confirmation Dialog */}
+       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+         <DialogContent>
+           <DialogHeader>
+             <DialogTitle>Confirmer la suppression</DialogTitle>
+           </DialogHeader>
+           <div className="space-y-4">
+             <p className="truncate">
+               Êtes-vous sûr de vouloir supprimer l'utilisateur{' '}
+               <strong>
+                 {selectedUser?.firstName} {selectedUser?.lastName}
+               </strong>
+               ?
+             </p>
+             <p className="text-sm text-red-600 dark:text-red-400">Cette action est irréversible.</p>
+             <div className="flex flex-col sm:flex-row justify-end gap-2">
+               <Button variant="outline" onClick={() => setShowDeleteDialog(false)} className="w-full sm:w-auto">
+                 Annuler
+               </Button>
+               <Button
+                 variant="destructive"
+                 onClick={() => {
+                   if (selectedUser) {
+                     deleteUser.mutate(selectedUser.id)
+                     setShowDeleteDialog(false)
+                   }
+                 }}
+                 disabled={deleteUser.isPending}
+                 className="w-full sm:w-auto"
+               >
+                 {deleteUser.isPending ? (
+                   <>
+                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                     Suppression...
+                   </>
+                 ) : (
+                   'Supprimer'
+                 )}
+               </Button>
+             </div>
+           </div>
+         </DialogContent>
+       </Dialog>
     </div>
   )
 }

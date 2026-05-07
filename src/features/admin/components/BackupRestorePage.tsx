@@ -256,22 +256,23 @@ export function BackupRestorePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">Sauvegarde et Restauration</h1>
-          <p className="text-muted-foreground text-sm sm:text-base">
-            Gestion des sauvegardes et restauration du système
-          </p>
-        </div>
-        <div className="flex flex-col sm:flex-row gap-2">
-          <Dialog open={isCreateBackupDialogOpen} onOpenChange={setIsCreateBackupDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Database className="w-4 h-4 mr-2" />
-                Nouvelle Sauvegarde
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="responsive-modal-lg">
+       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+         <div>
+           <h1 className="text-2xl sm:text-3xl font-bold">Sauvegarde et Restauration</h1>
+           <p className="text-muted-foreground text-sm sm:text-base">
+             Gestion des sauvegardes et restauration du système
+           </p>
+         </div>
+         <div className="flex flex-wrap items-center gap-2">
+           <Dialog open={isCreateBackupDialogOpen} onOpenChange={setIsCreateBackupDialogOpen}>
+             <DialogTrigger asChild>
+               <Button size="sm">
+                 <Database className="w-4 h-4 sm:mr-2" />
+                 <span className="hidden sm:inline">Nouvelle Sauvegarde</span>
+                 <span className="sm:hidden">Nouv. Sauv.</span>
+               </Button>
+             </DialogTrigger>
+             <DialogContent className="max-w-2xl w-[95vw]">
               <DialogHeader>
                 <DialogTitle>Créer une sauvegarde</DialogTitle>
                 <DialogDescription>
