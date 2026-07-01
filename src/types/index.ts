@@ -2,7 +2,9 @@ export type AppView =
   | "landing"
   | "compare"
   | "results"
-  | "dashboard";
+  | "dashboard"
+  | "about"
+  | "contact";
 
 export type AuthModal = "none" | "login" | "register" | "forgot";
 

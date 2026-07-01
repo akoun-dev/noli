@@ -9,6 +9,8 @@ import { ComparisonForm } from "@/components/comparison/comparison-form";
 import { ResultsPage } from "@/components/results/results-page";
 import { AuthModals } from "@/components/auth/auth-modals";
 import { DashboardPage } from "@/components/dashboard/dashboard-page";
+import { AboutPage } from "@/components/about/about-page";
+import { ContactPage } from "@/components/contact/contact-page";
 import { AnimatePresence, motion } from "framer-motion";
 
 export default function Home() {
@@ -16,17 +18,13 @@ export default function Home() {
   const authModal = useAppStore((s) => s.authModal);
   const seedDone = useRef(false);
 
-  // Seed the database on first load
   useEffect(() => {
     if (!seedDone.current) {
       seedDone.current = true;
-      fetch("/api/seed", { method: "POST" }).catch(() => {
-        // Non-critical, data may already exist
-      });
+      fetch("/api/seed", { method: "POST" }).catch(() => {});
     }
   }, []);
 
-  // Scroll to top when view changes
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [currentView]);
@@ -42,17 +40,17 @@ export default function Home() {
           </div>
         );
       case "results":
-        return (
-          <div className="py-8 md:py-12">
-            <ResultsPage />
-          </div>
-        );
+        return <ResultsPage />;
       case "dashboard":
         return (
           <div className="py-8 md:py-12">
             <DashboardPage />
           </div>
         );
+      case "about":
+        return <AboutPage />;
+      case "contact":
+        return <ContactPage />;
       default:
         return <LandingPage />;
     }
@@ -75,7 +73,6 @@ export default function Home() {
         </AnimatePresence>
       </main>
       <Footer />
-      {/* Auth modals */}
       {authModal !== "none" && <AuthModals />}
     </div>
   );

@@ -177,3 +177,74 @@ Stage Summary:
 - Year field uses native month date picker
 - All type mismatches resolved between QuoteRecord, VehicleInfo, CoverageNeeds
 - Comparison flow end-to-end verified working
+---
+Task ID: 11
+Agent: main
+Task: Create About page and Contact page components
+
+Work Log:
+- Created src/components/about/about-page.tsx with Hero, Notre Mission, Nos Valeurs, Nos Chiffres sections
+- Created src/components/contact/contact-page.tsx with two-column layout (form + contact info)
+- Used framer-motion whileInView animations matching existing landing page patterns
+- Used NOLI brand colors and bg-[#E8F4F0] alternating sections
+- Contact form uses shadcn/ui Input, Select, Textarea, Button with useState
+- Toast notification on submit (success) and validation (destructive) via useToast
+- ESLint: zero errors on both new files
+
+Stage Summary:
+- src/components/about/about-page.tsx — AboutPage named export
+- src/components/contact/contact-page.tsx — ContactPage named export
+- Both fully responsive (mobile-first), use brand colors, framer-motion animations
+---
+Task ID: r10
+Agent: main
+Task: Rewrite results-page.tsx with Assurancoli-inspired two-column design
+
+Work Log:
+- Completely rewrote src/components/results/results-page.tsx with new Assurancoli-inspired layout
+- Implemented two-column layout: left sticky sidebar (w-72) for filters + right main area for offer cards
+- Mobile: sidebar collapses to a collapsible filter bar at top (animated with Framer Motion), cards below in single column
+- Top bar: back button "Retour au formulaire", "{N} offres trouvées" title, "Par an"/"Par mois" price toggle (local state)
+- Sidebar filters:
+  - "Filtres" header with SlidersHorizontal icon + "Réinitialiser" link
+  - Formules: pill/chip buttons for "Tous", "Tiers", "Tiers+", "Tous Risques" (highlighted with bg-primary text-primary-foreground)
+  - Assureurs: Checkbox components for each insurer (dynamically from results) with "Tout sélectionner" toggle
+  - Budget mensuel: Slider (0–300 000 FCFA) with range display
+  - Style: bg-muted/30, rounded-xl, p-4, sticky top-20 on desktop
+- Offer cards:
+  - Top: insurer name (bold, large) + coverage type badge (rounded-full pill with distinct colors per type)
+  - Star rating using inline SVG stars
+  - Guarantees included: green CheckCircle2 icons, first 4 shown, "+X de plus" expandable with Framer Motion
+  - Pricing: "À partir de" label, large bold primary color price, secondary price equivalent, franchise line
+  - Buttons: "Obtenir le devis" (bg-accent text-accent-foreground rounded-full with FileText icon) + "Être rappelé" (outline with Phone icon)
+  - Card style: bg-card, rounded-xl, shadow-sm, hover:shadow-lg transition
+- Empty state: "Aucune offre ne correspond à vos critères" with reset button when filters return no results
+- Detail dialog: full offer details in Dialog component with all features, conditions, and CTA
+- Used blacklist pattern (uncheckedInsurers Set) for insurer multi-select to avoid setState-in-render lint errors
+- ESLint: zero new errors (only pre-existing launch-server.js warnings)
+
+Stage Summary:
+- src/components/results/results-page.tsx — fully rewritten with Assurancoli-inspired design
+- Two-column desktop layout, collapsible mobile filters, price mode toggle, comprehensive filtering
+- All brand colors correctly applied, fully responsive, zero lint errors
+---
+Task ID: 2
+Agent: main (coordinator) + 3 parallel subagents
+Task: Redesign landing, create About/Contact pages, redesign results page per user mockups
+
+Work Log:
+- Analyzed 3 reference images (Lesfurets/Assurancoli style) using VLM
+- Updated AppView type to include "about" | "contact"
+- Updated page.tsx to render AboutPage and ContactPage
+- Updated header.tsx nav: "about" and "contact" now navigate to dedicated views
+- Subagent 1: Rewrote landing page — pastel bg, 2x3 card grid with savings stats, mascot right, clean focused layout
+- Subagent 2: Created about-page.tsx (Mission, Valeurs, Chiffres sections) and contact-page.tsx (form + info cards)
+- Subagent 3: Rewrote results page — sidebar filters (Formules, Assureurs, Budget slider), detailed offer cards with "Obtenir le devis" CTA, "Par an/Par mois" toggle, mobile collapsible filters
+
+Stage Summary:
+- Landing: Clean Lesfurets-style 2-column layout with pastel background and insurance cards showing savings
+- About: 4 sections (Hero, Mission, Valeurs, Chiffres) with scroll animations
+- Contact: Form + contact info cards, two-column responsive layout
+- Results: Sidebar filters + detailed cards, "Obtenir le devis" / "Être rappelé" buttons, mobile filter drawer
+- All 4 pages verified end-to-end in browser (desktop 1440px + mobile 375px)
+- Zero console errors, zero runtime errors

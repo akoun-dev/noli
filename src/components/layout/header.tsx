@@ -68,11 +68,10 @@ export function Header() {
         setView("compare");
         break;
       case "about":
-        // Scroll to about section or just stay on landing
-        setView("landing");
+        setView("about");
         break;
       case "contact":
-        document.getElementById("footer")?.scrollIntoView({ behavior: "smooth" });
+        setView("contact");
         break;
     }
     setMobileOpen(false);

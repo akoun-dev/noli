@@ -1,34 +1,26 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
-  Star,
-  Check,
+  CheckCircle2,
   ChevronDown,
   ChevronUp,
+  FileText,
+  Filter,
+  Phone,
+  RotateCcw,
   SearchX,
-  Shield,
-  ShieldCheck,
-  ShieldAlert,
-  Zap,
-  MapPin,
+  SlidersHorizontal,
 } from "lucide-react";
 import { useAppStore } from "@/store/app-store";
-import type { InsurerOffer, SortOption } from "@/types";
+import type { InsurerOffer } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
 import {
   Dialog,
   DialogContent,
@@ -38,202 +30,360 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 
+/* ──────────────────────────── helpers ──────────────────────────── */
+
 const formatFCFA = (amount: number) =>
   new Intl.NumberFormat("fr-FR").format(amount) + " FCFA";
 
-const coverageBadge = (type: string) => {
-  const map: Record<string, { label: string; className: string; icon: React.ReactNode }> = {
-    Tiers: {
-      label: "Tiers",
-      className: "bg-muted text-muted-foreground border border-border",
-      icon: <Shield className="size-3" />,
-    },
-    "Tiers+": {
-      label: "Tiers+",
-      className: "bg-primary/15 text-primary border border-primary/20",
-      icon: <ShieldCheck className="size-3" />,
-    },
-    "Tous Risques": {
-      label: "Tous Risques",
-      className: "bg-accent/20 text-accent-foreground border border-accent/30",
-      icon: <ShieldAlert className="size-3" />,
-    },
-  };
-  return map[type] || {
-    label: type,
-    className: "bg-muted text-muted-foreground border border-border",
-    icon: <Shield className="size-3" />,
-  };
+const COVERAGE_OPTIONS = ["Tous", "Tiers", "Tiers+", "Tous Risques"] as const;
+
+const coverageBadgeStyle = (type: string) => {
+  switch (type) {
+    case "Tiers":
+      return "bg-muted/60 text-muted-foreground border-border";
+    case "Tiers+":
+      return "bg-secondary/15 text-secondary border-secondary/25";
+    case "Tous Risques":
+      return "bg-accent/20 text-accent-foreground border-accent/35";
+    default:
+      return "bg-muted/60 text-muted-foreground border-border";
+  }
 };
 
-const sortOptions: { value: SortOption; label: string }[] = [
-  { value: "price_asc", label: "Prix croissant" },
-  { value: "price_desc", label: "Prix d\u00e9croissant" },
-  { value: "rating_desc", label: "Meilleure note" },
-  { value: "name_asc", label: "Nom A-Z" },
-];
+/* ──────────────────────── sub-components ───────────────────────── */
 
 function StarRating({ rating }: { rating: number }) {
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-0.5">
       {Array.from({ length: 5 }).map((_, i) => (
-        <Star
+        <svg
           key={i}
           className={`size-3.5 ${
             i < Math.floor(rating)
-              ? "fill-accent text-accent"
+              ? "text-accent"
               : i < rating
-                ? "fill-accent/50 text-accent"
-                : "text-muted-foreground/30"
+                ? "text-accent/50"
+                : "text-muted/40"
           }`}
-        />
+          fill="currentColor"
+          viewBox="0 0 20 20"
+        >
+          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+        </svg>
       ))}
       <span className="text-xs text-muted-foreground ml-1">{rating}/5</span>
     </div>
   );
 }
 
+/* ──────── Sidebar Filters ──────── */
+
+function FiltersSidebar({
+  coverageFilter,
+  setCoverageFilter,
+  uncheckedInsurers,
+  toggleInsurer,
+  uniqueInsurers,
+  budgetMax,
+  setBudgetMax,
+  onReset,
+  totalOffers,
+}: {
+  coverageFilter: string;
+  setCoverageFilter: (v: string) => void;
+  uncheckedInsurers: Set<string>;
+  toggleInsurer: (name: string) => void;
+  onToggleAllInsurers: () => void;
+  uniqueInsurers: string[];
+  budgetMax: number;
+  setBudgetMax: (v: number) => void;
+  onReset: () => void;
+  totalOffers: number;
+}) {
+  const allChecked = uncheckedInsurers.size === 0;
+
+  return (
+    <aside className="bg-muted/30 rounded-xl p-4 lg:p-5 space-y-6 lg:sticky lg:top-20">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <SlidersHorizontal className="size-4 text-primary" />
+          <h2 className="font-semibold text-sm uppercase tracking-wide text-primary">
+            Filtres
+          </h2>
+          <span className="text-xs text-muted-foreground">({totalOffers})</span>
+        </div>
+        <button
+          onClick={onReset}
+          className="text-xs text-secondary hover:text-primary font-medium transition-colors flex items-center gap-1"
+        >
+          <RotateCcw className="size-3" />
+          Réinitialiser
+        </button>
+      </div>
+
+      <Separator />
+
+      {/* Formules */}
+      <div>
+        <h3 className="text-sm font-semibold mb-3 text-foreground">
+          Formules
+        </h3>
+        <div className="flex flex-wrap gap-2">
+          {COVERAGE_OPTIONS.map((opt) => (
+            <button
+              key={opt}
+              onClick={() =>
+                setCoverageFilter(opt === "Tous" ? "all" : opt)
+              }
+              className={`px-3.5 py-1.5 rounded-full text-sm font-medium transition-all duration-200 border ${
+                (opt === "Tous" && coverageFilter === "all") ||
+                coverageFilter === opt
+                  ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                  : "bg-background text-foreground border-border hover:border-primary/40 hover:bg-primary/5"
+              }`}
+            >
+              {opt}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* Assureurs */}
+      {uniqueInsurers.length > 0 && (
+        <div>
+          <h3 className="text-sm font-semibold mb-3 text-foreground">
+            Assureurs
+          </h3>
+          <div className="space-y-2.5 max-h-48 overflow-y-auto custom-scrollbar">
+            <label className="flex items-center gap-2.5 cursor-pointer group">
+              <Checkbox
+                checked={allChecked}
+                onCheckedChange={() => onToggleAllInsurers()}
+              />
+              <span className="text-sm text-foreground group-hover:text-primary transition-colors">
+                Tout sélectionner
+              </span>
+            </label>
+            {uniqueInsurers.map((name) => {
+              const isChecked = !uncheckedInsurers.has(name);
+              return (
+                <label
+                  key={name}
+                  className="flex items-center gap-2.5 cursor-pointer group"
+                >
+                  <Checkbox
+                    checked={isChecked}
+                    onCheckedChange={() => toggleInsurer(name)}
+                  />
+                  <span className="text-sm text-foreground group-hover:text-primary transition-colors">
+                    {name}
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      <Separator />
+
+      {/* Budget mensuel */}
+      <div>
+        <h3 className="text-sm font-semibold mb-3 text-foreground">
+          Budget mensuel
+        </h3>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>0 FCFA</span>
+            <span className="font-semibold text-sm text-primary">
+              {formatFCFA(budgetMax)}
+            </span>
+          </div>
+          <Slider
+            value={[budgetMax]}
+            onValueChange={([v]) => setBudgetMax(v)}
+            min={0}
+            max={300000}
+            step={5000}
+            className="w-full"
+          />
+          <p className="text-xs text-muted-foreground text-center">
+            0 FCFA — {formatFCFA(budgetMax)}
+          </p>
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+/* ──────── Offer Card ──────── */
+
 function OfferCard({
   offer,
+  priceMode,
   onViewDetails,
   onRequestQuote,
 }: {
   offer: InsurerOffer;
+  priceMode: "annual" | "monthly";
   onViewDetails: (offer: InsurerOffer) => void;
   onRequestQuote: (offer: InsurerOffer) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const badge = coverageBadge(offer.coverageType);
   const visibleFeatures = offer.features.slice(0, 4);
   const hiddenFeatures = offer.features.slice(4);
 
+  const mainPrice =
+    priceMode === "annual" ? offer.annualPrice : offer.monthlyPrice;
+  const secondaryPrice =
+    priceMode === "annual" ? offer.monthlyPrice : offer.annualPrice;
+  const mainLabel = priceMode === "annual" ? "/an" : "/mois";
+  const secondaryLabel = priceMode === "annual" ? "/mois" : "/an";
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
+      exit={{ opacity: 0, y: -10 }}
       transition={{ duration: 0.3 }}
       layout
     >
-      <Card className="card-shadow bg-card overflow-hidden hover:shadow-lg transition-shadow h-full flex flex-col">
-        <CardContent className="p-4 sm:p-6 flex flex-col flex-1 gap-4">
-          {/* Insurer info */}
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex flex-col gap-1">
-              <span className="text-sm font-medium text-muted-foreground">
-                {offer.insurerName}
-              </span>
-              <h3 className="text-lg font-bold">{offer.name}</h3>
+      <div className="bg-card rounded-xl p-5 shadow-sm hover:shadow-lg transition-shadow duration-300 flex flex-col gap-4 h-full">
+        {/* Top section: Insurer name + coverage badge */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex flex-col gap-1">
+            <h3 className="text-lg font-bold text-foreground leading-tight">
+              {offer.insurerName}
+            </h3>
+            <p className="text-sm text-muted-foreground">{offer.name}</p>
+          </div>
+          <Badge
+            variant="outline"
+            className={
+              coverageBadgeStyle(offer.coverageType) +
+              " rounded-full px-3 py-0.5 text-xs font-semibold shrink-0"
+            }
+          >
+            {offer.coverageType}
+          </Badge>
+        </div>
+
+        {/* Star rating */}
+        <StarRating rating={offer.insurerRating} />
+
+        <Separator />
+
+        {/* Guarantees included */}
+        <div>
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+            Garanties incluses
+          </h4>
+          <ul className="space-y-1.5">
+            {visibleFeatures.map((feature, idx) => (
+              <li key={idx} className="flex items-start gap-2 text-sm">
+                <CheckCircle2 className="size-4 text-green-600 mt-0.5 shrink-0" />
+                <span className="text-foreground/90">{feature}</span>
+              </li>
+            ))}
+          </ul>
+          {hiddenFeatures.length > 0 && (
+            <div className="mt-1.5">
+              <button
+                onClick={() => setExpanded(!expanded)}
+                className="text-sm text-secondary hover:text-primary font-medium flex items-center gap-1 transition-colors"
+              >
+                {expanded ? (
+                  <>
+                    <ChevronUp className="size-3.5" />
+                    Voir moins
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown className="size-3.5" />
+                    +{hiddenFeatures.length} de plus
+                  </>
+                )}
+              </button>
+              <AnimatePresence>
+                {expanded && (
+                  <motion.ul
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden space-y-1.5 mt-1.5"
+                  >
+                    {hiddenFeatures.map((feature, idx) => (
+                      <li
+                        key={idx}
+                        className="flex items-start gap-2 text-sm"
+                      >
+                        <CheckCircle2 className="size-4 text-green-600 mt-0.5 shrink-0" />
+                        <span className="text-foreground/90">
+                          {feature}
+                        </span>
+                      </li>
+                    ))}
+                  </motion.ul>
+                )}
+              </AnimatePresence>
             </div>
-            <Badge className={badge.className}>
-              {badge.icon}
-              {badge.label}
-            </Badge>
-          </div>
+          )}
+        </div>
 
-          <StarRating rating={offer.insurerRating} />
+        <Separator />
 
-          {/* Price */}
-          <div className="bg-accent/10 rounded-lg p-3 -mx-1">
-            <p className="text-2xl sm:text-3xl font-bold text-primary">
-              {formatFCFA(offer.monthlyPrice)}
-              <span className="text-sm font-normal text-muted-foreground">/mois</span>
-            </p>
-            <p className="text-sm text-muted-foreground">
-              {formatFCFA(offer.annualPrice)}/an
-            </p>
-          </div>
+        {/* Pricing section */}
+        <div className="bg-primary/5 rounded-lg p-4 -mx-1">
+          <p className="text-xs text-muted-foreground mb-1">À partir de</p>
+          <p className="text-2xl sm:text-3xl font-bold text-primary leading-tight">
+            {formatFCFA(mainPrice)}
+            <span className="text-sm font-normal text-muted-foreground">
+              {mainLabel}
+            </span>
+          </p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Soit{" "}
+            <span className="font-medium text-foreground">
+              {formatFCFA(secondaryPrice)}
+            </span>{" "}
+            {secondaryLabel}
+          </p>
+          <p className="text-xs text-muted-foreground mt-2">
+            Franchise :{" "}
+            <span className="font-medium text-foreground">
+              {formatFCFA(offer.deductible)}
+            </span>
+          </p>
+        </div>
 
-          {/* Details */}
-          <div className="space-y-1.5 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Franchise :</span>
-              <span className="font-medium">{formatFCFA(offer.deductible)}</span>
-            </div>
-            {offer.maxCoverage > 0 && (
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Couverture max :</span>
-                <span className="font-medium">
-                  {Math.round(offer.maxCoverage / 1_000_000)} M FCFA
-                </span>
-              </div>
-            )}
-          </div>
-
-          <Separator />
-
-          {/* Features */}
-          <div className="flex-1">
-            <ul className="space-y-1.5">
-              {visibleFeatures.map((feature, idx) => (
-                <li key={idx} className="flex items-start gap-2 text-sm">
-                  <Check className="size-4 text-primary mt-0.5 shrink-0" />
-                  <span>{feature}</span>
-                </li>
-              ))}
-            </ul>
-            {hiddenFeatures.length > 0 && (
-              <div className="mt-2">
-                <button
-                  onClick={() => setExpanded(!expanded)}
-                  className="text-sm text-primary hover:underline flex items-center gap-1 font-medium"
-                >
-                  {expanded ? (
-                    <>
-                      <ChevronUp className="size-3.5" />
-                      Voir moins
-                    </>
-                  ) : (
-                    <>
-                      <ChevronDown className="size-3.5" />
-                      +{hiddenFeatures.length} de plus
-                    </>
-                  )}
-                </button>
-                <AnimatePresence>
-                  {expanded && (
-                    <motion.ul
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="overflow-hidden space-y-1.5 mt-1.5"
-                    >
-                      {hiddenFeatures.map((feature, idx) => (
-                        <li key={idx} className="flex items-start gap-2 text-sm">
-                          <Check className="size-4 text-primary mt-0.5 shrink-0" />
-                          <span>{feature}</span>
-                        </li>
-                      ))}
-                    </motion.ul>
-                  )}
-                </AnimatePresence>
-              </div>
-            )}
-          </div>
-
-          {/* Actions */}
-          <div className="flex flex-col sm:flex-row gap-2 mt-auto pt-2">
-            <Button
-              variant="outline"
-              className="flex-1 border-primary text-primary hover:bg-primary/5 rounded-full"
-              onClick={() => onViewDetails(offer)}
-            >
-              Voir les d\u00e9tails
-            </Button>
-            <Button
-              className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 rounded-full"
-              onClick={() => onRequestQuote(offer)}
-            >
-              <Zap className="size-4" />
-              Demander un devis
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+        {/* Action buttons */}
+        <div className="flex flex-col sm:flex-row gap-2.5 mt-auto pt-1">
+          <Button
+            className="flex-1 bg-accent text-accent-foreground hover:bg-accent/90 rounded-full font-semibold shadow-sm"
+            onClick={() => onRequestQuote(offer)}
+          >
+            <FileText className="size-4 mr-2" />
+            Obtenir le devis
+          </Button>
+          <Button
+            variant="outline"
+            className="flex-1 rounded-full border-primary/30 text-primary hover:bg-primary/5 font-medium"
+            onClick={() => onViewDetails(offer)}
+          >
+            <Phone className="size-4 mr-2" />
+            Être rappelé
+          </Button>
+        </div>
+      </div>
     </motion.div>
   );
 }
+
+/* ──────── Detail Dialog ──────── */
 
 function OfferDetailDialog({
   offer,
@@ -247,41 +397,48 @@ function OfferDetailDialog({
   onRequestQuote: (offer: InsurerOffer) => void;
 }) {
   if (!offer) return null;
-  const badge = coverageBadge(offer.coverageType);
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl">{offer.name}</DialogTitle>
-          <DialogDescription>
-            {offer.insurerName} &middot; {offer.coverageType}
-          </DialogDescription>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <DialogTitle className="text-xl">{offer.name}</DialogTitle>
+              <DialogDescription className="mt-1">
+                {offer.insurerName} &middot; {offer.coverageType}
+              </DialogDescription>
+            </div>
+            <Badge
+              variant="outline"
+              className={
+                coverageBadgeStyle(offer.coverageType) +
+                " rounded-full px-3 py-0.5 text-xs font-semibold shrink-0"
+              }
+            >
+              {offer.coverageType}
+            </Badge>
+          </div>
         </DialogHeader>
 
-        <div className="space-y-6">
-          {/* Rating & Badge */}
-          <div className="flex items-center gap-4 flex-wrap">
-            <Badge className={badge.className}>
-              {badge.icon}
-              {badge.label}
-            </Badge>
-            <StarRating rating={offer.insurerRating} />
-          </div>
+        <div className="space-y-6 mt-2">
+          {/* Rating */}
+          <StarRating rating={offer.insurerRating} />
 
           {/* Pricing */}
-          <div className="bg-accent/10 rounded-lg p-4 space-y-2">
+          <div className="bg-primary/5 rounded-lg p-4 space-y-2">
+            <p className="text-xs text-muted-foreground">À partir de</p>
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-bold text-primary">
-                {formatFCFA(offer.monthlyPrice)}
-              </span>
-              <span className="text-muted-foreground">/mois</span>
-            </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-lg font-semibold">
                 {formatFCFA(offer.annualPrice)}
               </span>
               <span className="text-muted-foreground">/an</span>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-lg font-medium text-foreground">
+                {formatFCFA(offer.monthlyPrice)}
+              </span>
+              <span className="text-muted-foreground">/mois</span>
             </div>
             <Separator />
             <div className="grid grid-cols-2 gap-4 text-sm">
@@ -291,7 +448,9 @@ function OfferDetailDialog({
               </div>
               {offer.maxCoverage > 0 && (
                 <div>
-                  <span className="text-muted-foreground">Couverture max :</span>
+                  <span className="text-muted-foreground">
+                    Couverture max :
+                  </span>
                   <p className="font-medium">
                     {Math.round(offer.maxCoverage / 1_000_000)} M FCFA
                   </p>
@@ -303,7 +462,7 @@ function OfferDetailDialog({
           {/* Description */}
           {offer.description && (
             <div>
-              <h4 className="font-semibold mb-2">Description</h4>
+              <h4 className="font-semibold mb-2 text-sm">Description</h4>
               <p className="text-sm text-muted-foreground leading-relaxed">
                 {offer.description}
               </p>
@@ -312,11 +471,11 @@ function OfferDetailDialog({
 
           {/* Features */}
           <div>
-            <h4 className="font-semibold mb-3">Garanties incluses</h4>
+            <h4 className="font-semibold mb-3 text-sm">Garanties incluses</h4>
             <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {offer.features.map((feature, idx) => (
                 <li key={idx} className="flex items-start gap-2 text-sm">
-                  <Check className="size-4 text-primary mt-0.5 shrink-0" />
+                  <CheckCircle2 className="size-4 text-green-600 mt-0.5 shrink-0" />
                   <span>{feature}</span>
                 </li>
               ))}
@@ -326,8 +485,8 @@ function OfferDetailDialog({
           {/* Conditions */}
           {offer.conditions && (
             <div>
-              <h4 className="font-semibold mb-2">Conditions</h4>
-              <p className="text-sm text-muted-foreground leading-relaxed bg-muted/50 rounded-lg p-3">
+              <h4 className="font-semibold mb-2 text-sm">Conditions</h4>
+              <p className="text-sm text-muted-foreground leading-relaxed bg-muted/30 rounded-lg p-3">
                 {offer.conditions}
               </p>
             </div>
@@ -336,20 +495,46 @@ function OfferDetailDialog({
           {/* CTA */}
           <Button
             size="lg"
-            className="w-full bg-primary text-primary-foreground hover:bg-primary/90 rounded-full"
+            className="w-full bg-accent text-accent-foreground hover:bg-accent/90 rounded-full font-semibold shadow-sm"
             onClick={() => {
               onRequestQuote(offer);
               onClose();
             }}
           >
-            <Zap className="size-4" />
-            Demander ce devis
+            <FileText className="size-4 mr-2" />
+            Obtenir le devis
           </Button>
         </div>
       </DialogContent>
     </Dialog>
   );
 }
+
+/* ──────── Empty State (no results at all) ──────── */
+
+function EmptyResultsState({ onGoBack }: { onGoBack: () => void }) {
+  return (
+    <section className="min-h-[60vh] flex flex-col items-center justify-center text-center px-4 py-16">
+      <div className="rounded-full bg-muted/40 p-6 mb-6">
+        <SearchX className="size-12 text-muted-foreground" />
+      </div>
+      <h2 className="text-2xl font-bold mb-2">Aucune offre trouvée</h2>
+      <p className="text-muted-foreground mb-8 max-w-md">
+        Aucune offre ne correspond à vos critères. Essayez de modifier vos
+        paramètres de recherche.
+      </p>
+      <Button
+        className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full"
+        onClick={onGoBack}
+      >
+        <ArrowLeft className="size-4 mr-2" />
+        Modifier mes critères
+      </Button>
+    </section>
+  );
+}
+
+/* ══════════════════════════ MAIN ══════════════════════════ */
 
 export function ResultsPage() {
   const {
@@ -369,20 +554,58 @@ export function ResultsPage() {
   } = useAppStore();
   const { toast } = useToast();
 
+  /* ── local filter state ── */
+  // `uncheckedInsurers` is a blacklist: empty set = all insurers selected
+  const [uncheckedInsurers, setUncheckedInsurers] = useState<Set<string>>(
+    new Set()
+  );
+  const [coverageFilter, setCoverageFilter] = useState<string>("all");
+  const [budgetMax, setBudgetMax] = useState<number>(300000);
+  const [priceMode, setPriceMode] = useState<"annual" | "monthly">("annual");
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+
+  /* ── derived data ── */
   const uniqueInsurers = useMemo(() => {
     const names = [...new Set(comparisonResults.map((o) => o.insurerName))];
     return names.sort();
   }, [comparisonResults]);
 
+  // Compute effective checked insurers: all minus unchecked
+  const effectiveChecked = useMemo(() => {
+    const all = new Set(comparisonResults.map((o) => o.insurerName));
+    for (const name of uncheckedInsurers) {
+      all.delete(name);
+    }
+    return all;
+  }, [comparisonResults, uncheckedInsurers]);
+
+  const toggleInsurer = useCallback((name: string) => {
+    setUncheckedInsurers((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) {
+        next.delete(name);
+      } else {
+        next.add(name);
+      }
+      return next;
+    });
+  }, []);
+
   const filteredAndSorted = useMemo(() => {
     let results = [...comparisonResults];
 
-    // Filter
-    if (selectedInsurerFilter !== "all") {
-      results = results.filter(
-        (o) => o.insurerName === selectedInsurerFilter
-      );
+    // Coverage filter
+    if (coverageFilter !== "all") {
+      results = results.filter((o) => o.coverageType === coverageFilter);
     }
+
+    // Insurer filter: only show checked insurers
+    if (effectiveChecked.size > 0) {
+      results = results.filter((o) => effectiveChecked.has(o.insurerName));
+    }
+
+    // Budget filter (monthly price)
+    results = results.filter((o) => o.monthlyPrice <= budgetMax);
 
     // Sort
     switch (sortBy) {
@@ -401,15 +624,15 @@ export function ResultsPage() {
     }
 
     return results;
-  }, [comparisonResults, sortBy, selectedInsurerFilter]);
+  }, [comparisonResults, sortBy, coverageFilter, effectiveChecked, budgetMax]);
 
-  const handleRequestQuote = async (offer: InsurerOffer) => {
+  /* ── handlers ── */
+  const handleRequestQuote = (offer: InsurerOffer) => {
     toast({
-      title: "Devis envoy\u00e9",
-      description: `Votre demande de devis a \u00e9t\u00e9 envoy\u00e9e \u00e0 ${offer.insurerName}.`,
+      title: "Devis enregistré",
+      description: `Votre demande de devis pour ${offer.name} a été enregistrée.`,
     });
 
-    // Create a local quote record with actual form data
     const quote: import("@/types").QuoteRecord = {
       id: crypto.randomUUID(),
       reference: `DEV-${Date.now().toString(36).toUpperCase()}`,
@@ -417,7 +640,7 @@ export function ResultsPage() {
       personalInfo: { ...personalInfo },
       vehicleInfo: { ...vehicleInfo },
       coverageNeeds: { ...coverageNeeds },
-      proposedPrice: offer.monthlyPrice,
+      proposedPrice: offer.annualPrice,
       finalPrice: null,
       insurerName: offer.insurerName,
       offerName: offer.name,
@@ -431,131 +654,192 @@ export function ResultsPage() {
     setSelectedOffer(offer);
   };
 
-  // Empty state
+  const handleToggleAllInsurers = useCallback(() => {
+    if (uncheckedInsurers.size === 0) {
+      // All checked → uncheck all
+      setUncheckedInsurers(new Set(uniqueInsurers));
+    } else {
+      // Some unchecked → check all
+      setUncheckedInsurers(new Set());
+    }
+  }, [uncheckedInsurers, uniqueInsurers]);
+
+  const resetFilters = () => {
+    setCoverageFilter("all");
+    setUncheckedInsurers(new Set());
+    setBudgetMax(300000);
+    setSortBy("price_asc");
+    setSelectedInsurerFilter("all");
+  };
+
+  const activeFilterCount = [
+    coverageFilter !== "all",
+    uncheckedInsurers.size > 0,
+    budgetMax < 300000,
+  ].filter(Boolean).length;
+
+  /* ── empty state (no comparison results at all) ── */
   if (comparisonResults.length === 0) {
-    return (
-      <section className="min-h-[60vh] flex flex-col items-center justify-center text-center px-4 py-16">
-        <div className="rounded-full bg-muted p-6 mb-6">
-          <SearchX className="size-12 text-muted-foreground" />
-        </div>
-        <h2 className="text-2xl font-bold mb-2">Aucune offre trouv\u00e9e</h2>
-        <p className="text-muted-foreground mb-8 max-w-md">
-          Aucune offre ne correspond \u00e0 vos crit\u00e8res. Essayez de modifier vos
-          param\u00e8tres de recherche.
-        </p>
-        <Button
-          className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full"
-          onClick={() => setView("compare")}
-        >
-          <MapPin className="size-4" />
-          Modifier mes crit\u00e8res
-        </Button>
-      </section>
-    );
+    return <EmptyResultsState onGoBack={() => setView("compare")} />;
   }
 
+  /* ── main render ── */
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
-      {/* Back button */}
-      <Button
-        variant="ghost"
-        className="mb-4 -ml-2 text-muted-foreground hover:text-foreground"
-        onClick={() => setView("compare")}
-      >
-        <ArrowLeft className="size-4" />
-        Retour au formulaire
-      </Button>
+      {/* ── Top Bar ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
+        {/* Back button */}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="-ml-2 text-muted-foreground hover:text-foreground shrink-0"
+          onClick={() => setView("compare")}
+        >
+          <ArrowLeft className="size-4 mr-1.5" />
+          <span className="hidden sm:inline">Retour au formulaire</span>
+          <span className="sm:hidden">Retour</span>
+        </Button>
 
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold">
-          {filteredAndSorted.length} offre{filteredAndSorted.length !== 1 ? "s" : ""} trouv\u00e9e
+        {/* Title */}
+        <h1 className="text-xl sm:text-2xl font-bold text-foreground flex-1">
+          {filteredAndSorted.length} offre
+          {filteredAndSorted.length !== 1 ? "s" : ""} trouvée
           {filteredAndSorted.length !== 1 ? "s" : ""}
         </h1>
 
-        <div className="flex items-center gap-3">
-          <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Trier par" />
-            </SelectTrigger>
-            <SelectContent>
-              {sortOptions.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        {/* Price mode toggle */}
+        <div className="flex items-center bg-muted/30 rounded-full p-0.5 shrink-0 self-start sm:self-auto">
+          <button
+            onClick={() => setPriceMode("annual")}
+            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
+              priceMode === "annual"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Par an
+          </button>
+          <button
+            onClick={() => setPriceMode("monthly")}
+            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
+              priceMode === "monthly"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Par mois
+          </button>
         </div>
       </div>
 
-      {/* Insurer filter chips */}
-      <ScrollArea className="w-full mb-6" type="scroll">
-        <div className="flex gap-2 pb-2">
-          <button
-            onClick={() => setSelectedInsurerFilter("all")}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors border ${
-              selectedInsurerFilter === "all"
-                ? "bg-card text-primary border-primary"
-                : "bg-card text-foreground border-border hover:bg-muted"
-            }`}
-          >
-            Tous
-          </button>
-          {uniqueInsurers.map((name) => (
-            <button
-              key={name}
-              onClick={() => setSelectedInsurerFilter(name)}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors border ${
-                selectedInsurerFilter === name
-                  ? "bg-card text-primary border-primary"
-                  : "bg-card text-foreground border-border hover:bg-muted"
-              }`}
-            >
-              {name}
-            </button>
-          ))}
-        </div>
-      </ScrollArea>
-
-      {/* Offers grid */}
-      {filteredAndSorted.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
-          <AnimatePresence mode="popLayout">
-            {filteredAndSorted.map((offer) => (
-              <OfferCard
-                key={offer.id}
-                offer={offer}
-                onViewDetails={handleViewDetails}
-                onRequestQuote={handleRequestQuote}
-              />
-            ))}
-          </AnimatePresence>
-        </div>
-      ) : (
-        <div className="text-center py-16">
-          <div className="rounded-full bg-muted p-6 mb-4 inline-block">
-            <SearchX className="size-10 text-muted-foreground" />
+      {/* ── Mobile Filter Toggle ── */}
+      <div className="lg:hidden mb-4">
+        <Button
+          variant="outline"
+          className="w-full justify-between rounded-xl border-border"
+          onClick={() => setMobileFiltersOpen(!mobileFiltersOpen)}
+        >
+          <div className="flex items-center gap-2">
+            <Filter className="size-4" />
+            <span className="font-medium">Filtres</span>
+            {activeFilterCount > 0 && (
+              <Badge className="bg-primary text-primary-foreground rounded-full px-1.5 text-xs min-w-5 h-5 flex items-center justify-center">
+                {activeFilterCount}
+              </Badge>
+            )}
           </div>
-          <h3 className="text-lg font-semibold mb-2">
-            Aucune offre ne correspond \u00e0 vos crit\u00e8res
-          </h3>
-          <p className="text-muted-foreground mb-6">
-            Essayez de modifier le filtre ou les crit\u00e8res de tri.
-          </p>
-          <Button
-            variant="outline"
-            onClick={() => {
-              setSelectedInsurerFilter("all");
-              setSortBy("price_asc");
-            }}
-          >
-            R\u00e9initialiser les filtres
-          </Button>
-        </div>
-      )}
+          <ChevronDown
+            className={`size-4 text-muted-foreground transition-transform duration-200 ${
+              mobileFiltersOpen ? "rotate-180" : ""
+            }`}
+          />
+        </Button>
+      </div>
 
-      {/* Offer detail dialog */}
+      {/* ── Mobile Filters (collapsible) ── */}
+      <AnimatePresence>
+        {mobileFiltersOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            className="overflow-hidden lg:hidden mb-6"
+          >
+            <FiltersSidebar
+              coverageFilter={coverageFilter}
+              setCoverageFilter={setCoverageFilter}
+              uncheckedInsurers={uncheckedInsurers}
+              toggleInsurer={toggleInsurer}
+              onToggleAllInsurers={handleToggleAllInsurers}
+              uniqueInsurers={uniqueInsurers}
+              budgetMax={budgetMax}
+              setBudgetMax={setBudgetMax}
+              onReset={resetFilters}
+              totalOffers={comparisonResults.length}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Two-column layout ── */}
+      <div className="flex gap-6 items-start">
+        {/* Desktop Sidebar */}
+        <div className="hidden lg:block w-72 shrink-0">
+          <FiltersSidebar
+            coverageFilter={coverageFilter}
+            setCoverageFilter={setCoverageFilter}
+            uncheckedInsurers={uncheckedInsurers}
+            toggleInsurer={toggleInsurer}
+            onToggleAllInsurers={handleToggleAllInsurers}
+            uniqueInsurers={uniqueInsurers}
+            budgetMax={budgetMax}
+            setBudgetMax={setBudgetMax}
+            onReset={resetFilters}
+            totalOffers={comparisonResults.length}
+          />
+        </div>
+
+        {/* Main Content */}
+        <main className="flex-1 min-w-0 space-y-4">
+          {filteredAndSorted.length > 0 ? (
+            <AnimatePresence mode="popLayout">
+              {filteredAndSorted.map((offer) => (
+                <OfferCard
+                  key={offer.id}
+                  offer={offer}
+                  priceMode={priceMode}
+                  onViewDetails={handleViewDetails}
+                  onRequestQuote={handleRequestQuote}
+                />
+              ))}
+            </AnimatePresence>
+          ) : (
+            /* Filtered empty state */
+            <div className="text-center py-16">
+              <div className="rounded-full bg-muted/40 p-6 mb-4 inline-block">
+                <SearchX className="size-10 text-muted-foreground" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">
+                Aucune offre ne correspond à vos critères
+              </h3>
+              <p className="text-muted-foreground mb-6 text-sm">
+                Essayez d&rsquo;élargir vos filtres ou de modifier le budget.
+              </p>
+              <Button
+                variant="outline"
+                className="rounded-full"
+                onClick={resetFilters}
+              >
+                <RotateCcw className="size-4 mr-2" />
+                Réinitialiser les filtres
+              </Button>
+            </div>
+          )}
+        </main>
+      </div>
+
+      {/* Detail dialog */}
       <OfferDetailDialog
         offer={selectedOffer}
         open={selectedOffer !== null}
