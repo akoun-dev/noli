@@ -40,3 +40,21 @@ Stage Summary:
 - Sidebar now shows: Tableau de bord, Assureurs, Catégories Produits, Offres, Cat. Garanties, Garanties, Devis, Paramètres
 - API routes for insurance-packages remain intact (DB model preserved)
 - All existing features verified working via browser
+---
+Task ID: 3
+Agent: Main Agent
+Task: Show linked offers on insurer selection in offer creation form + w-full responsive fields
+
+Work Log:
+- Added `InsurerOfferPreview` interface and state (`insurerOffers`, `insurerOffersLoading`) to track existing offers for the selected insurer in the form
+- Added `useEffect` that fetches `/api/admin/insurance-offers?insurerId={id}` whenever `form.insurerId` changes
+- Replaced the insurer dropdown section with: dropdown + a scrollable list showing all linked offers (name, contract type badge, price, status)
+- Converted all form fields from grid layout (`grid-cols-2`, `grid-cols-3`) to stacked vertical layout with `w-full` on each field
+- Widened dialog to `sm:max-w-xl` to better accommodate the offers list
+- Browser verified on desktop: SAHAM Assurances selected → "Offres de cet assureur (3)" shows Sérénité, Équilibre, Économique with badges and prices
+- Browser verified on mobile (375px): Cards properly responsive, buttons touch-friendly
+
+Stage Summary:
+- Form now displays a clean list of existing insurer offers (name + type badge + price) when an insurer is selected
+- All form fields are `w-full` and vertically stacked for full responsiveness
+- No more JSON display — offers shown as formatted list items

@@ -49,6 +49,12 @@ const empty = {
   features: "[]" as string, isActive: true,
 };
 
+interface InsurerOfferPreview {
+  id: string; name: string; contractType: string;
+  priceMin: number | null; priceMax: number | null;
+  isActive: boolean; createdAt: string;
+}
+
 export function InsuranceOffersTab() {
   const { toast } = useToast();
   const [offers, setOffers] = useState<Offer[]>([]);
@@ -70,6 +76,10 @@ export function InsuranceOffersTab() {
   const [detailCoverages, setDetailCoverages] = useState<CoverageMini[]>([]);
   const [detailQuotesCount, setDetailQuotesCount] = useState(0);
 
+  // Form: existing offers for selected insurer
+  const [insurerOffers, setInsurerOffers] = useState<InsurerOfferPreview[]>([]);
+  const [insurerOffersLoading, setInsurerOffersLoading] = useState(false);
+
   const fetchData = useCallback(async () => {
     try {
       const params = new URLSearchParams();
@@ -83,6 +93,20 @@ export function InsuranceOffersTab() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
   useEffect(() => { fetch("/api/admin/insurers?active=true").then((r) => { if (r.ok) r.json().then(setInsurers); }); }, []);
+
+  // Fetch offers linked to the selected insurer in the form
+  useEffect(() => {
+    if (!form.insurerId) {
+      setInsurerOffers([]);
+      return;
+    }
+    setInsurerOffersLoading(true);
+    fetch(`/api/admin/insurance-offers?insurerId=${form.insurerId}`)
+      .then((r) => { if (r.ok) return r.json(); return []; })
+      .then((data) => setInsurerOffers(data))
+      .catch(() => setInsurerOffers([]))
+      .finally(() => setInsurerOffersLoading(false));
+  }, [form.insurerId]);
 
   const openCreate = () => { setEditing(null); setForm(empty); setFormOpen(true); };
   const openEdit = (o: Offer) => {
@@ -252,36 +276,95 @@ export function InsuranceOffersTab() {
 
       {/* Create/Edit Dialog */}
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editing ? "Modifier l'offre" : "Nouvelle offre"}</DialogTitle>
             <DialogDescription>Configurez les détails de l'offre.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="grid gap-2"><Label>Assureur *</Label>
+            <div className="w-full grid gap-2">
+              <Label>Assureur *</Label>
               <Select value={form.insurerId} onValueChange={(v) => setForm({ ...form, insurerId: v })}>
-                <SelectTrigger><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
+                <SelectTrigger className="w-full"><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
                 <SelectContent>{insurers.map((i) => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2"><Label>Nom *</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Économique" /></div>
-              <div className="grid gap-2"><Label>Type de contrat *</Label>
-                <Select value={form.contractType} onValueChange={(v) => setForm({ ...form, contractType: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent><SelectItem value="basic">Tiers Simple</SelectItem><SelectItem value="third_party_plus">Tiers+</SelectItem><SelectItem value="all_risks">Tous Risques</SelectItem></SelectContent>
-                </Select>
+
+            {/* Linked offers for selected insurer */}
+            {form.insurerId && (
+              <div className="w-full">
+                <div className="flex items-center justify-between mb-2">
+                  <Label className="text-sm text-muted-foreground">
+                    Offres de cet assureur ({insurerOffers.length})
+                  </Label>
+                  {insurerOffersLoading && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
+                </div>
+                <div className="max-h-48 overflow-y-auto rounded-lg border space-y-0">
+                  {insurerOffers.length === 0 && !insurerOffersLoading && (
+                    <p className="text-sm text-muted-foreground text-center py-3">Aucune offre existante pour cet assureur.</p>
+                  )}
+                  {insurerOffers.map((o) => (
+                    <div
+                      key={o.id}
+                      className={`flex items-center justify-between px-3 py-2 border-b last:border-b-0 ${editing?.id === o.id ? "bg-[#B9E54D]/10" : "hover:bg-muted/50"}`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-sm font-medium truncate">{o.name}</span>
+                        <Badge className={`text-[10px] shrink-0 ${ctColors[o.contractType] || ""}`}>{ctLabels[o.contractType] || o.contractType}</Badge>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {o.priceMin != null && (
+                          <span className="text-xs text-muted-foreground font-mono">{fmtPrice(o.priceMin)}</span>
+                        )}
+                        {!o.isActive && (
+                          <Badge variant="secondary" className="text-[10px]">Inactif</Badge>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
+            )}
+
+            <div className="w-full grid gap-2">
+              <Label>Nom *</Label>
+              <Input className="w-full" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Économique" />
             </div>
-            <div className="grid gap-2"><Label>Description</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} /></div>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="grid gap-2"><Label>Prix min (FCFA)</Label><Input type="number" value={form.priceMin ?? ""} onChange={(e) => setForm({ ...form, priceMin: e.target.value ? parseFloat(e.target.value) : null })} /></div>
-              <div className="grid gap-2"><Label>Prix max (FCFA)</Label><Input type="number" value={form.priceMax ?? ""} onChange={(e) => setForm({ ...form, priceMax: e.target.value ? parseFloat(e.target.value) : null })} /></div>
-              <div className="grid gap-2"><Label>Franchise (FCFA)</Label><Input type="number" value={form.deductible} onChange={(e) => setForm({ ...form, deductible: parseInt(e.target.value) || 0 })} /></div>
+            <div className="w-full grid gap-2">
+              <Label>Type de contrat *</Label>
+              <Select value={form.contractType} onValueChange={(v) => setForm({ ...form, contractType: v })}>
+                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                <SelectContent><SelectItem value="basic">Tiers Simple</SelectItem><SelectItem value="third_party_plus">Tiers+</SelectItem><SelectItem value="all_risks">Tous Risques</SelectItem></SelectContent>
+              </Select>
             </div>
-            <div className="grid gap-2"><Label>Capital garanti (FCFA)</Label><Input type="number" value={form.coverageAmount ?? ""} onChange={(e) => setForm({ ...form, coverageAmount: e.target.value ? parseFloat(e.target.value) : null })} /></div>
-            <div className="grid gap-2"><Label>Caractéristiques (JSON)</Label><Textarea value={form.features} onChange={(e) => setForm({ ...form, features: e.target.value })} rows={3} className="font-mono text-xs" placeholder='["RC", "Incendie", "Vol"]' /></div>
-            <div className="flex items-center justify-between"><Label>Active</Label><Switch checked={form.isActive} onCheckedChange={(v) => setForm({ ...form, isActive: v })} /></div>
+            <div className="w-full grid gap-2">
+              <Label>Description</Label>
+              <Textarea className="w-full" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} />
+            </div>
+            <div className="w-full grid gap-2">
+              <Label>Prix min (FCFA)</Label>
+              <Input className="w-full" type="number" value={form.priceMin ?? ""} onChange={(e) => setForm({ ...form, priceMin: e.target.value ? parseFloat(e.target.value) : null })} />
+            </div>
+            <div className="w-full grid gap-2">
+              <Label>Prix max (FCFA)</Label>
+              <Input className="w-full" type="number" value={form.priceMax ?? ""} onChange={(e) => setForm({ ...form, priceMax: e.target.value ? parseFloat(e.target.value) : null })} />
+            </div>
+            <div className="w-full grid gap-2">
+              <Label>Franchise (FCFA)</Label>
+              <Input className="w-full" type="number" value={form.deductible} onChange={(e) => setForm({ ...form, deductible: parseInt(e.target.value) || 0 })} />
+            </div>
+            <div className="w-full grid gap-2">
+              <Label>Capital garanti (FCFA)</Label>
+              <Input className="w-full" type="number" value={form.coverageAmount ?? ""} onChange={(e) => setForm({ ...form, coverageAmount: e.target.value ? parseFloat(e.target.value) : null })} />
+            </div>
+            <div className="w-full grid gap-2">
+              <Label>Caractéristiques (JSON)</Label>
+              <Textarea className="w-full font-mono text-xs" value={form.features} onChange={(e) => setForm({ ...form, features: e.target.value })} rows={3} placeholder='["RC", "Incendie", "Vol"]' />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label>Active</Label>
+              <Switch checked={form.isActive} onCheckedChange={(v) => setForm({ ...form, isActive: v })} />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setFormOpen(false)}>Annuler</Button>
