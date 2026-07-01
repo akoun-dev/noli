@@ -1,0 +1,74 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String?
+  name          String?
+  phone         String?
+  role          String    @default("USER")
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  quotes        Quote[]
+}
+
+model Insurer {
+  id            String    @id @default(cuid())
+  name          String
+  logo          String?
+  description   String?
+  phone         String?
+  email         String?
+  website       String?
+  rating        Float     @default(0)
+  isVerified    Boolean   @default(false)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  offers        Offer[]
+}
+
+model Offer {
+  id            String    @id @default(cuid())
+  insurerId     String
+  insurer       Insurer   @relation(fields: [insurerId], references: [id])
+  name          String
+  coverageType  String
+  description   String?
+  basePrice     Float
+  annualPrice   Float?
+  deductible    Float?
+  maxCoverage   Float?
+  features      String    @default("[]")
+  conditions    String?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  quotes        Quote[]
+}
+
+model Quote {
+  id              String   @id @default(cuid())
+  reference       String   @unique
+  userId          String?
+  user            User?    @relation(fields: [userId], references: [id])
+  offerId         String?
+  offer           Offer?   @relation(fields: [offerId], references: [id])
+  status          String   @default("pending")
+  personalInfo    String   @default("{}")
+  vehicleInfo     String   @default("{}")
+  coverageNeeds   String   @default("{}")
+  proposedPrice   Float?
+  finalPrice      Float?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
