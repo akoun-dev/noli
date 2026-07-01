@@ -16,8 +16,9 @@ import {
   CalendarDays,
   Car,
   Shield,
+  ShieldCheck,
+  ShieldAlert,
   SearchX,
-  ArrowRight,
   LogIn,
 } from "lucide-react";
 import { useAppStore } from "@/store/app-store";
@@ -58,16 +59,34 @@ const statusConfig: Record<
       "bg-blue-100 text-blue-800 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800",
   },
   approved: {
-    label: "Approuv\u00e9",
+    label: "Approuvé",
     className:
       "bg-emerald-100 text-emerald-800 border border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800",
   },
   rejected: {
-    label: "Rejet\u00e9",
+    label: "Rejeté",
     className:
       "bg-red-100 text-red-800 border border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800",
   },
 };
+
+function getCoverageLabel(coverageNeeds: QuoteRecord["coverageNeeds"]): string {
+  const cats = coverageNeeds.guaranteeCategories || [];
+  if (cats.length >= 6 || cats.includes("individuelle_conducteur")) return "Tous Risques";
+  if (cats.length >= 3 || cats.includes("incendie") || cats.includes("vol")) return "Tiers+";
+  return "Tiers";
+}
+
+function getCoverageBadge(type: string) {
+  switch (type) {
+    case "Tous Risques":
+      return <ShieldAlert className="size-3.5 text-orange-500" />;
+    case "Tiers+":
+      return <ShieldCheck className="size-3.5 text-primary" />;
+    default:
+      return <Shield className="size-3.5 text-muted-foreground" />;
+  }
+}
 
 function StatCard({
   icon: Icon,
@@ -111,6 +130,11 @@ function QuoteRow({ quote }: { quote: QuoteRecord }) {
     month: "short",
     year: "numeric",
   });
+  const coverageLabel = getCoverageLabel(quote.coverageNeeds);
+  const vehicleYear = quote.vehicleInfo.year?.split("-")[0];
+  const vehicleLabel = vehicleYear
+    ? `Auto ${vehicleYear}`
+    : "Auto";
 
   return (
     <TableRow>
@@ -124,17 +148,13 @@ function QuoteRow({ quote }: { quote: QuoteRecord }) {
       <TableCell>
         <span className="flex items-center gap-1.5 text-sm">
           <Car className="size-3.5 text-muted-foreground shrink-0" />
-          {quote.vehicleInfo.brand || "N/A"} {quote.vehicleInfo.model || ""}
+          {vehicleLabel}
         </span>
       </TableCell>
       <TableCell className="hidden md:table-cell">
         <span className="flex items-center gap-1.5 text-sm">
-          <Shield className="size-3.5 text-muted-foreground" />
-          {quote.coverageNeeds.coverageType === "tiers"
-            ? "Tiers"
-            : quote.coverageNeeds.coverageType === "tiers_plus"
-              ? "Tiers+"
-              : "Tous Risques"}
+          {getCoverageBadge(coverageLabel)}
+          {coverageLabel}
         </span>
       </TableCell>
       <TableCell className="font-medium text-sm">
@@ -154,6 +174,11 @@ function QuoteCard({ quote }: { quote: QuoteRecord }) {
     month: "short",
     year: "numeric",
   });
+  const coverageLabel = getCoverageLabel(quote.coverageNeeds);
+  const vehicleYear = quote.vehicleInfo.year?.split("-")[0];
+  const vehicleLabel = vehicleYear
+    ? `Auto ${vehicleYear}`
+    : "Auto";
 
   return (
     <Card className="card-shadow bg-card">
@@ -170,30 +195,22 @@ function QuoteCard({ quote }: { quote: QuoteRecord }) {
         <Separator />
         <div className="grid grid-cols-2 gap-2 text-sm">
           <div>
-            <p className="text-muted-foreground text-xs">V\u00e9hicule</p>
-            <p className="font-medium">
-              {quote.vehicleInfo.brand || "N/A"} {quote.vehicleInfo.model || ""}
-            </p>
+            <p className="text-muted-foreground text-xs">Véhicule</p>
+            <p className="font-medium">{vehicleLabel}</p>
           </div>
           <div>
             <p className="text-muted-foreground text-xs">Date</p>
             <p className="font-medium">{date}</p>
           </div>
           <div>
-            <p className="text-muted-foreground text-xs">Prix propos\u00e9</p>
+            <p className="text-muted-foreground text-xs">Prix proposé</p>
             <p className="font-medium text-primary">
               {formatFCFA(quote.proposedPrice)}
             </p>
           </div>
           <div>
             <p className="text-muted-foreground text-xs">Couverture</p>
-            <p className="font-medium">
-              {quote.coverageNeeds.coverageType === "tiers"
-                ? "Tiers"
-                : quote.coverageNeeds.coverageType === "tiers_plus"
-                  ? "Tiers+"
-                  : "Tous Risques"}
-            </p>
+            <p className="font-medium">{coverageLabel}</p>
           </div>
         </div>
       </CardContent>
@@ -202,7 +219,7 @@ function QuoteCard({ quote }: { quote: QuoteRecord }) {
 }
 
 export function DashboardPage() {
-  const { user, userQuotes, setView, setAuthModal } = useAppStore();
+  const { user, userQuotes, setView, setAuthModal, personalInfo } = useAppStore();
   const [profileOpen, setProfileOpen] = useState(false);
 
   const stats = useMemo(() => {
@@ -211,11 +228,10 @@ export function DashboardPage() {
       (q) => q.status === "pending" || q.status === "in_progress"
     ).length;
 
-    // Estimated savings: compare highest vs lowest price among approved/pending
     const pricedQuotes = userQuotes.filter((q) => q.proposedPrice > 0);
     let savings = 0;
     if (pricedQuotes.length >= 2) {
-      const prices = pricedQuotes.map((q) => q.annualPrice || q.proposedPrice * 12);
+      const prices = pricedQuotes.map((q) => q.proposedPrice * 12);
       const max = Math.max(...prices);
       const min = Math.min(...prices);
       savings = max - min;
@@ -233,8 +249,8 @@ export function DashboardPage() {
         </div>
         <h1 className="text-2xl sm:text-3xl font-bold mb-3">Tableau de bord</h1>
         <p className="text-muted-foreground mb-8 max-w-md mx-auto">
-          Connectez-vous pour acc\u00e9der \u00e0 votre espace personnel, suivre
-          vos demandes de devis et g\u00e9rer votre profil.
+          Connectez-vous pour accéder à votre espace personnel, suivre
+          vos demandes de devis et gérer votre profil.
         </p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Button
@@ -248,7 +264,7 @@ export function DashboardPage() {
             variant="outline"
             onClick={() => setAuthModal("register")}
           >
-            Cr\u00e9er un compte
+            Créer un compte
           </Button>
         </div>
       </section>
@@ -269,7 +285,7 @@ export function DashboardPage() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
         <StatCard
           icon={FileText}
-          label="Devis demand\u00e9s"
+          label="Devis demandés"
           value={stats.totalQuotes}
           sub="au total"
         />
@@ -281,7 +297,7 @@ export function DashboardPage() {
         />
         <StatCard
           icon={TrendingDown}
-          label="\u00c9conomies estim\u00e9es"
+          label="Économies estimées"
           value={stats.savings > 0 ? formatFCFA(stats.savings) : "—"}
           sub={
             stats.savings > 0
@@ -309,11 +325,11 @@ export function DashboardPage() {
                   <SearchX className="size-8 text-muted-foreground" />
                 </div>
                 <h3 className="font-semibold mb-1">
-                  Aucun devis demand\u00e9 pour le moment
+                  Aucun devis demandé pour le moment
                 </h3>
                 <p className="text-sm text-muted-foreground mb-6">
                   Commencez par comparer des offres d&apos;assurance pour voir vos devis
-                  appara\u00eetre ici.
+                  apparaître ici.
                 </p>
                 <Button
                   className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full"
@@ -330,9 +346,9 @@ export function DashboardPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>R\u00e9f\u00e9rence</TableHead>
+                        <TableHead>Référence</TableHead>
                         <TableHead>Date</TableHead>
-                        <TableHead>V\u00e9hicule</TableHead>
+                        <TableHead>Véhicule</TableHead>
                         <TableHead>Couverture</TableHead>
                         <TableHead>Prix</TableHead>
                         <TableHead>Statut</TableHead>
@@ -398,7 +414,7 @@ export function DashboardPage() {
                   <div>
                     <CardTitle className="text-base">Mon profil</CardTitle>
                     <p className="text-sm text-muted-foreground">
-                      G\u00e9rer vos informations personnelles
+                      Gérer vos informations personnelles
                     </p>
                   </div>
                 </div>
@@ -420,9 +436,11 @@ export function DashboardPage() {
                       <User className="size-4 text-muted-foreground" />
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">Nom</p>
+                      <p className="text-xs text-muted-foreground">Nom complet</p>
                       <p className="text-sm font-medium">
-                        {user.name || "Non renseign\u00e9"}
+                        {personalInfo.firstName && personalInfo.lastName
+                          ? `${personalInfo.firstName} ${personalInfo.lastName}`
+                          : user.name || "Non renseigné"}
                       </p>
                     </div>
                   </div>
@@ -434,7 +452,7 @@ export function DashboardPage() {
                     <div>
                       <p className="text-xs text-muted-foreground">Email</p>
                       <p className="text-sm font-medium">
-                        {user.email || "Non renseign\u00e9"}
+                        {user.email || personalInfo.email || "Non renseigné"}
                       </p>
                     </div>
                   </div>
@@ -444,11 +462,11 @@ export function DashboardPage() {
                       <Phone className="size-4 text-muted-foreground" />
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">
-                        T\u00e9l\u00e9phone
-                      </p>
+                      <p className="text-xs text-muted-foreground">Téléphone</p>
                       <p className="text-sm font-medium">
-                        Non renseign\u00e9
+                        {personalInfo.phone
+                          ? `+225 ${personalInfo.phone}`
+                          : "Non renseigné"}
                       </p>
                     </div>
                   </div>

@@ -9,7 +9,6 @@ import {
   Check,
   ChevronLeft,
   Loader2,
-  Phone,
   Mail,
   UserCheck,
   Users,
@@ -19,6 +18,7 @@ import {
   Lock,
   FlameKindling,
   ShieldCheck,
+  CheckCheck,
 } from "lucide-react";
 
 import { useAppStore } from "@/store/app-store";
@@ -46,9 +46,6 @@ const STEPS = [
 const FUEL_OPTIONS = [
   { value: "essence", label: "Essence" },
   { value: "diesel", label: "Diesel" },
-  { value: "hybride", label: "Hybride" },
-  { value: "electrique", label: "Électrique" },
-  { value: "gpl", label: "GPL" },
 ];
 
 const CV_OPTIONS = Array.from({ length: 12 }, (_, i) => ({
@@ -59,8 +56,6 @@ const CV_OPTIONS = Array.from({ length: 12 }, (_, i) => ({
 const SEAT_OPTIONS = [
   "2", "3", "4", "5", "6", "7", "8", "9+",
 ].map((v) => ({ value: v, label: v }));
-
-const YEARS = Array.from({ length: 26 }, (_, i) => String(2025 - i));
 
 const USAGE_OPTIONS = [
   { value: "personnel", label: "Personnel" },
@@ -191,6 +186,16 @@ export function ComparisonForm() {
     });
   };
 
+  const toggleAllCategories = () => {
+    const allIds = GUARANTEE_CATEGORIES.map((c) => c.id);
+    const current = coverageNeeds.guaranteeCategories || [];
+    if (current.length === allIds.length) {
+      setCoverageNeeds({ guaranteeCategories: [] });
+    } else {
+      setCoverageNeeds({ guaranteeCategories: allIds });
+    }
+  };
+
   const progressValue = (comparisonStep / 3) * 100;
 
   const FieldError = ({ field }: { field: string }) =>
@@ -199,8 +204,8 @@ export function ComparisonForm() {
     ) : null;
 
   return (
-    <div className="min-h-[70vh] flex flex-col items-center justify-start px-4 py-8">
-      <div className="w-full max-w-2xl">
+    <div className="min-h-[70vh] flex flex-col items-center justify-start px-4 sm:px-6 py-6 sm:py-8">
+      <div className="w-full max-w-2xl mx-auto">
         {/* Progress bar */}
         <div className="mb-8">
           <Progress value={progressValue} className="h-1.5" />
@@ -275,6 +280,7 @@ export function ComparisonForm() {
               <Step3
                 selected={coverageNeeds.guaranteeCategories || []}
                 onToggle={toggleCategory}
+                onToggleAll={toggleAllCategories}
                 error={errors.categories}
               />
             )}
@@ -286,10 +292,10 @@ export function ComparisonForm() {
           <Button
             variant="outline"
             onClick={goBack}
-            className="rounded-full px-6"
+            className="rounded-full px-4 sm:px-6"
           >
             <ChevronLeft className="w-4 h-4 mr-1" />
-            Retour
+            <span className="hidden sm:inline">Retour</span>
           </Button>
 
           {comparisonStep < 3 ? (
@@ -299,7 +305,7 @@ export function ComparisonForm() {
                 if (comparisonStep === 2 && !validateStep2()) return;
                 goNext();
               }}
-              className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full px-6"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full px-4 sm:px-6"
             >
               Étape suivante
             </Button>
@@ -307,12 +313,12 @@ export function ComparisonForm() {
             <Button
               onClick={handleSubmit}
               disabled={isComparing}
-              className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full px-6"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full px-4 sm:px-6"
             >
               {isComparing ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Comparaison...
+                  <span className="hidden sm:inline">Comparaison...</span>
                 </>
               ) : (
                 "Comparer mes offres"
@@ -338,7 +344,7 @@ function Step1({
   FieldError: ({ field }: { field: string }) => React.ReactNode | null;
 }) {
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-5 animate-fade-in">
       <div>
         <h2 className="font-[family-name:var(--font-space-grotesk)] text-xl font-bold text-foreground">
           Profil assuré
@@ -357,7 +363,7 @@ function Step1({
             value={personalInfo.lastName}
             onChange={(e) => setPersonalInfo({ lastName: e.target.value })}
             aria-invalid={!!errors.lastName}
-            className={errors.lastName ? "border-destructive" : ""}
+            className={`w-full ${errors.lastName ? "border-destructive" : ""}`}
           />
           <FieldError field="lastName" />
         </div>
@@ -369,7 +375,7 @@ function Step1({
             value={personalInfo.firstName}
             onChange={(e) => setPersonalInfo({ firstName: e.target.value })}
             aria-invalid={!!errors.firstName}
-            className={errors.firstName ? "border-destructive" : ""}
+            className={`w-full ${errors.firstName ? "border-destructive" : ""}`}
           />
           <FieldError field="firstName" />
         </div>
@@ -383,7 +389,7 @@ function Step1({
             id="email"
             type="email"
             placeholder="aboa.akoun40@gmail.com"
-            className="pl-10"
+            className="w-full pl-10"
             value={personalInfo.email}
             onChange={(e) => setPersonalInfo({ email: e.target.value })}
             aria-invalid={!!errors.email}
@@ -394,14 +400,14 @@ function Step1({
 
       <div className="space-y-2">
         <Label htmlFor="phone">Numéro de téléphone *</Label>
-        <div className="flex">
-          <div className="flex items-center bg-primary text-primary-foreground px-4 rounded-l-lg text-sm font-semibold shrink-0 border border-input border-r-0">
+        <div className="flex w-full">
+          <div className="flex items-center bg-primary text-primary-foreground px-3 sm:px-4 rounded-l-lg text-sm font-semibold shrink-0 border border-input border-r-0">
             🇨🇮 +225
           </div>
           <Input
             id="phone"
             placeholder="01 40 98 49 43"
-            className="rounded-l-none"
+            className="w-full rounded-l-none"
             value={personalInfo.phone}
             onChange={(e) => setPersonalInfo({ phone: e.target.value })}
             aria-invalid={!!errors.phone}
@@ -438,10 +444,8 @@ function Step2({
   errors: Record<string, string>;
   FieldError: ({ field }: { field: string }) => React.ReactNode | null;
 }) {
-  const currentYear = new Date().getFullYear();
-
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-5 animate-fade-in">
       <div>
         <h2 className="font-[family-name:var(--font-space-grotesk)] text-xl font-bold text-foreground">
           Informations véhicule
@@ -451,95 +455,85 @@ function Step2({
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="space-y-2">
-          <Label>Carburant *</Label>
-          <Select
-            value={vehicleInfo.fuelType}
-            onValueChange={(v) => setVehicleInfo({ fuelType: v })}
-          >
-            <SelectTrigger className={errors.fuelType ? "border-destructive" : ""}>
-              <SelectValue placeholder="Sélectionnez" />
-            </SelectTrigger>
-            <SelectContent>
-              {FUEL_OPTIONS.map((o) => (
-                <SelectItem key={o.value} value={o.value}>
-                  {o.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <FieldError field="fuelType" />
-        </div>
-
-        <div className="space-y-2">
-          <Label>Puissance fiscale *</Label>
-          <Select
-            value={vehicleInfo.fiscalPower}
-            onValueChange={(v) => setVehicleInfo({ fiscalPower: v })}
-          >
-            <SelectTrigger className={errors.fiscalPower ? "border-destructive" : ""}>
-              <SelectValue placeholder="Sélectionnez" />
-            </SelectTrigger>
-            <SelectContent>
-              {CV_OPTIONS.map((o) => (
-                <SelectItem key={o.value} value={o.value}>
-                  {o.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <FieldError field="fiscalPower" />
-        </div>
-
-        <div className="space-y-2">
-          <Label>Nombre de places *</Label>
-          <Select
-            value={vehicleInfo.seats}
-            onValueChange={(v) => setVehicleInfo({ seats: v })}
-          >
-            <SelectTrigger className={errors.seats ? "border-destructive" : ""}>
-              <SelectValue placeholder="Sélectionnez" />
-            </SelectTrigger>
-            <SelectContent>
-              {SEAT_OPTIONS.map((o) => (
-                <SelectItem key={o.value} value={o.value}>
-                  {o.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <FieldError field="seats" />
-        </div>
-      </div>
-
+      {/* Carburant */}
       <div className="space-y-2">
-        <Label>Année de mise en circulation *</Label>
+        <Label>Carburant *</Label>
         <Select
-          value={vehicleInfo.year}
-          onValueChange={(v) => setVehicleInfo({ year: v })}
+          value={vehicleInfo.fuelType}
+          onValueChange={(v) => setVehicleInfo({ fuelType: v })}
         >
-          <SelectTrigger className={errors.year ? "border-destructive" : ""}>
-            <SelectValue placeholder="Sélectionnez" />
+          <SelectTrigger className={`w-full ${errors.fuelType ? "border-destructive" : ""}`}>
+            <SelectValue placeholder="Sélectionnez le type de carburant" />
           </SelectTrigger>
           <SelectContent>
-            {YEARS.map((y) => (
-              <SelectItem key={y} value={y}>
-                <span className="flex items-center gap-2">
-                  {y}
-                  {parseInt(y) === currentYear && (
-                    <span className="text-primary text-xs font-medium">
-                      (cette année)
-                    </span>
-                  )}
-                </span>
+            {FUEL_OPTIONS.map((o) => (
+              <SelectItem key={o.value} value={o.value}>
+                {o.label}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
+        <FieldError field="fuelType" />
+      </div>
+
+      {/* Puissance fiscale */}
+      <div className="space-y-2">
+        <Label>Puissance fiscale *</Label>
+        <Select
+          value={vehicleInfo.fiscalPower}
+          onValueChange={(v) => setVehicleInfo({ fiscalPower: v })}
+        >
+          <SelectTrigger className={`w-full ${errors.fiscalPower ? "border-destructive" : ""}`}>
+            <SelectValue placeholder="Sélectionnez la puissance fiscale" />
+          </SelectTrigger>
+          <SelectContent>
+            {CV_OPTIONS.map((o) => (
+              <SelectItem key={o.value} value={o.value}>
+                {o.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <FieldError field="fiscalPower" />
+      </div>
+
+      {/* Nombre de places */}
+      <div className="space-y-2">
+        <Label>Nombre de places *</Label>
+        <Select
+          value={vehicleInfo.seats}
+          onValueChange={(v) => setVehicleInfo({ seats: v })}
+        >
+          <SelectTrigger className={`w-full ${errors.seats ? "border-destructive" : ""}`}>
+            <SelectValue placeholder="Sélectionnez le nombre de places" />
+          </SelectTrigger>
+          <SelectContent>
+            {SEAT_OPTIONS.map((o) => (
+              <SelectItem key={o.value} value={o.value}>
+                {o.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <FieldError field="seats" />
+      </div>
+
+      {/* Année de mise en circulation — champ date (month) */}
+      <div className="space-y-2">
+        <Label htmlFor="circulationDate">Année de mise en circulation *</Label>
+        <Input
+          id="circulationDate"
+          type="month"
+          className={`w-full ${errors.year ? "border-destructive" : ""}`}
+          value={vehicleInfo.year}
+          onChange={(e) => setVehicleInfo({ year: e.target.value })}
+          aria-invalid={!!errors.year}
+          max={new Date().toISOString().slice(0, 7)}
+        />
         <FieldError field="year" />
       </div>
 
+      {/* Valeur neuve & actuelle — côte à côte sur desktop, empilés sur mobile */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="newValue">Valeur neuve (FCFA) *</Label>
@@ -551,7 +545,7 @@ function Step2({
               value={vehicleInfo.newValue}
               onChange={(e) => setVehicleInfo({ newValue: e.target.value })}
               aria-invalid={!!errors.newValue}
-              className="pr-16"
+              className="w-full pr-16"
             />
             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
               FCFA
@@ -570,7 +564,7 @@ function Step2({
               value={vehicleInfo.currentValue}
               onChange={(e) => setVehicleInfo({ currentValue: e.target.value })}
               aria-invalid={!!errors.currentValue}
-              className="pr-16"
+              className="w-full pr-16"
             />
             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
               FCFA
@@ -580,14 +574,15 @@ function Step2({
         </div>
       </div>
 
+      {/* Usage */}
       <div className="space-y-2">
         <Label>Usage du véhicule *</Label>
         <Select
           value={vehicleInfo.usage}
           onValueChange={(v) => setVehicleInfo({ usage: v })}
         >
-          <SelectTrigger className={errors.usage ? "border-destructive" : ""}>
-            <SelectValue placeholder="Sélectionnez" />
+          <SelectTrigger className={`w-full ${errors.usage ? "border-destructive" : ""}`}>
+            <SelectValue placeholder="Sélectionnez l'usage du véhicule" />
           </SelectTrigger>
           <SelectContent>
             {USAGE_OPTIONS.map((o) => (
@@ -607,15 +602,20 @@ function Step2({
 function Step3({
   selected,
   onToggle,
+  onToggleAll,
   error,
 }: {
   selected: string[];
   onToggle: (id: string) => void;
+  onToggleAll: () => void;
   error?: string;
 }) {
+  const allIds = GUARANTEE_CATEGORIES.map((c) => c.id);
+  const allSelected = selected.length === allIds.length;
+
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex items-start justify-between">
+    <div className="space-y-5 animate-fade-in">
+      <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="font-[family-name:var(--font-space-grotesk)] text-xl font-bold text-foreground">
             Catégories de garanties
@@ -624,16 +624,30 @@ function Step3({
             Sélectionnez les catégories de garanties qui vous intéressent.
           </p>
         </div>
-        <span className="text-sm text-muted-foreground shrink-0 mt-1">
-          {selected.length} sélectionnée{selected.length !== 1 ? "s" : ""}
+        <span className="text-sm text-muted-foreground shrink-0 mt-1 whitespace-nowrap">
+          {selected.length}/{allIds.length}
         </span>
       </div>
+
+      {/* Toggle all */}
+      <button
+        type="button"
+        onClick={onToggleAll}
+        className={`flex items-center gap-2 w-full p-3 rounded-xl border-2 transition-all text-sm font-medium ${
+          allSelected
+            ? "border-primary bg-primary/5 text-primary"
+            : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
+        }`}
+      >
+        <CheckCheck className={`w-4 h-4 ${allSelected ? "text-primary" : ""}`} />
+        {allSelected ? "Tout désélectionner" : "Tout sélectionner"}
+      </button>
 
       {error && (
         <p className="text-sm text-destructive">{error}</p>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3">
         {GUARANTEE_CATEGORIES.map((cat, i) => {
           const isSelected = selected.includes(cat.id);
           const Icon = cat.icon;
@@ -643,12 +657,12 @@ function Step3({
               key={cat.id}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05 }}
+              transition={{ delay: i * 0.04 }}
               onClick={() => onToggle(cat.id)}
-              className={`flex items-center gap-4 p-4 rounded-xl border-2 transition-all text-left cursor-pointer bg-white ${
+              className={`flex items-center gap-4 w-full p-4 rounded-xl border-2 transition-all text-left cursor-pointer bg-card ${
                 isSelected
                   ? "border-primary bg-primary/5"
-                  : "border-transparent hover:border-border"
+                  : "border-border hover:border-primary/40"
               }`}
             >
               <div
@@ -665,7 +679,7 @@ function Step3({
                 />
               </div>
               <span
-                className={`text-sm font-medium transition-colors ${
+                className={`text-sm font-medium transition-colors flex-1 ${
                   isSelected ? "text-primary" : "text-foreground"
                 }`}
               >
@@ -674,11 +688,6 @@ function Step3({
               {isSelected && (
                 <ShieldCheck className="w-4 h-4 text-primary ml-auto shrink-0" />
               )}
-              <Checkbox
-                checked={isSelected}
-                className="sr-only"
-                tabIndex={-1}
-              />
             </motion.button>
           );
         })}

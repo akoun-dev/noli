@@ -18,9 +18,10 @@ function calculatePrice(
   else if (cv <= 11) price *= 1.25;
   else price *= 1.4;
 
-  // Vehicle age
+  // Vehicle age — year can be "2020" or "2020-06" (month input)
   const currentYear = new Date().getFullYear();
-  const vehicleAge = currentYear - parseInt(vehicle.year || String(currentYear));
+  const rawYear = vehicle.year?.split("-")[0] || String(currentYear);
+  const vehicleAge = currentYear - parseInt(rawYear);
   if (vehicleAge <= 1) price *= 1.05;
   else if (vehicleAge <= 3) price *= 1.0;
   else if (vehicleAge <= 5) price *= 1.1;

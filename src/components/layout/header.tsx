@@ -85,16 +85,13 @@ export function Header() {
 
   return (
     <header className="header-sticky sticky top-0 z-50 w-full border-b border-border/40">
-      <div className="mx-auto flex h-16 max-w-[1400px] items-center justify-between px-8">
+      <div className="mx-auto flex h-16 max-w-[1400px] items-center justify-between px-4 sm:px-8">
         {/* Logo */}
         <button
           onClick={() => handleNav("landing")}
-          className="flex items-center gap-1 transition-opacity hover:opacity-80"
+          className="flex items-center gap-1.5 transition-opacity hover:opacity-80"
         >
-          <span className="font-[family-name:var(--font-space-grotesk)] text-xl font-bold text-primary">
-            NOLI
-          </span>
-          <span className="inline-block h-2 w-2 rounded-full bg-accent" />
+          <img src="/img/noli-vertical.png" alt="NOLI Assurance" className="h-9 w-auto object-contain" />
         </button>
 
         {/* Desktop Navigation (center) */}
@@ -227,11 +224,8 @@ export function Header() {
             </SheetTrigger>
             <SheetContent side="right" className="w-full overflow-y-auto p-0 sm:max-w-sm">
               <SheetHeader className="border-b border-border/40 px-6 py-5">
-                <SheetTitle className="flex items-center gap-1 text-left">
-                  <span className="font-[family-name:var(--font-space-grotesk)] text-xl font-bold text-primary">
-                    NOLI
-                  </span>
-                  <span className="inline-block h-2 w-2 rounded-full bg-accent" />
+                <SheetTitle className="flex items-center gap-1.5 text-left">
+                  <img src="/img/noli-vertical.png" alt="NOLI Assurance" className="h-9 w-auto object-contain" />
                 </SheetTitle>
               </SheetHeader>
 

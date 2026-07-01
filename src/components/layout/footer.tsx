@@ -35,11 +35,8 @@ export function Footer() {
               viewport={{ once: true }}
               transition={{ duration: 0.4 }}
             >
-              <div className="mb-4 flex items-center gap-1">
-                <span className="font-[family-name:var(--font-space-grotesk)] text-2xl font-bold text-white">
-                  NOLI
-                </span>
-                <span className="inline-block h-2.5 w-2.5 rounded-full bg-accent" />
+              <div className="mb-4">
+                <img src="/img/noli-vertical.png" alt="NOLI Assurance" className="h-10 w-auto object-contain brightness-0 invert-0 dark:brightness-200" />
               </div>
               <p className="text-sm leading-relaxed text-secondary-foreground/60">
                 NOLI est votre plateforme de comparaison d&apos;assurances en

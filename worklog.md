@@ -154,3 +154,26 @@ Stage Summary:
 - src/components/layout/header.tsx
 - src/components/landing/landing-page.tsx
 - src/components/layout/footer.tsx
+---
+Task ID: 1
+Agent: main
+Task: Redesign landing page, fix type mismatches, adjust comparison form fields
+
+Work Log:
+- Rewrote landing-page.tsx with 6 complete sections: Hero, Insurance Cards, Comment ça marche, Pourquoi NOLI, Témoignages, CTA
+- Fixed QuoteRecord/VehicleInfo type mismatches in dashboard-page.tsx (removed references to non-existent brand/model fields)
+- Fixed results-page.tsx handleRequestQuote to use actual form data from store
+- Updated comparison-form.tsx: all fields w-full, carburant limited to Diesel/Essence only, year replaced with month date input (type="month")
+- Added "Tout sélectionner / Tout désélectionner" toggle in Step 3
+- Updated api/compare/route.ts to parse year from "YYYY-MM" format
+- Updated dashboard to display year from "YYYY-MM" format
+- Full browser verification: landing page, form step 1/2/3, results page, mobile & desktop viewports
+- Verified no console errors
+
+Stage Summary:
+- Landing page now has professional multi-section layout with animations
+- Form fields are all full-width with proper mobile responsiveness
+- Fuel dropdown shows only Essence and Diesel
+- Year field uses native month date picker
+- All type mismatches resolved between QuoteRecord, VehicleInfo, CoverageNeeds
+- Comparison flow end-to-end verified working

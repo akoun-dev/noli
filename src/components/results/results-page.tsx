@@ -363,6 +363,9 @@ export function ResultsPage() {
     setView,
     userQuotes,
     setUserQuotes,
+    personalInfo,
+    vehicleInfo,
+    coverageNeeds,
   } = useAppStore();
   const { toast } = useToast();
 
@@ -406,14 +409,14 @@ export function ResultsPage() {
       description: `Votre demande de devis a \u00e9t\u00e9 envoy\u00e9e \u00e0 ${offer.insurerName}.`,
     });
 
-    // Create a local quote record
+    // Create a local quote record with actual form data
     const quote: import("@/types").QuoteRecord = {
       id: crypto.randomUUID(),
       reference: `DEV-${Date.now().toString(36).toUpperCase()}`,
       status: "pending",
-      personalInfo: { firstName: "", lastName: "", email: "", phone: "", dateOfBirth: "", licenseDate: "", hasClaims: false, claimsCount: 0, usage: "personnel", annualMileage: "10000" },
-      vehicleInfo: { vehicleType: "", brand: "", model: "", year: "", fiscalPower: "", registration: "", newValue: "", currentValue: "", isImported: false },
-      coverageNeeds: { coverageType: "tiers", options: [], monthlyBudget: "", deductibleLevel: "medium" },
+      personalInfo: { ...personalInfo },
+      vehicleInfo: { ...vehicleInfo },
+      coverageNeeds: { ...coverageNeeds },
       proposedPrice: offer.monthlyPrice,
       finalPrice: null,
       insurerName: offer.insurerName,
