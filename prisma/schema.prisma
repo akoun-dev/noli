@@ -34,6 +34,7 @@ model Insurer {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   offers        Offer[]
+  guaranteeLinks InsurerGuarantee[]
 }
 
 model Offer {
@@ -53,19 +54,96 @@ model Offer {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   quotes        Quote[]
+  guaranteeLinks OfferGuarantee[]
+}
+
+model GuaranteeCategory {
+  id              String   @id @default(cuid())
+  name            String
+  slug            String   @unique
+  description     String?
+  icon            String?
+  sortOrder       Int      @default(0)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  guarantees      Guarantee[]
 }
 
 model Guarantee {
-  id          String   @id @default(cuid())
-  name        String
-  slug        String   @unique
-  description String?
-  icon        String?
-  category    String   @default("garantie")
-  sortOrder   Int      @default(0)
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id              String   @id @default(cuid())
+  name            String
+  slug            String   @unique
+  description     String?
+  icon            String?
+  categoryId      String?
+  category        GuaranteeCategory? @relation(fields: [categoryId], references: [id])
+  categoryLabel   String   @default("garantie")
+
+  // Calculation method: FREE, FIXED_AMOUNT, VARIABLE_BASED, MATRIX_BASED
+  calcMethod      String   @default("FIXED_AMOUNT")
+
+  // For FIXED_AMOUNT — montant fixe en FCFA
+  fixedPrice      Float?
+
+  // For VARIABLE_BASED — taux en pourcentage (ex: 0.42 pour 0.42%)
+  rate            Float?
+  // JSON: conditions de taux multiples
+  // ex: [{"condition":"VN <= 25000000","rate":1.10},{"condition":"VN > 25000000","rate":2.10}]
+  rateConditions  String?
+
+  // Capital couvert — JSON avec détails
+  // ex: {"corporel":"7 000 000 000 FCFA","materiel":"500 000 000 FCFA"}
+  capital         String?
+  // Franchise — JSON avec détails
+  // ex: {"percent":10,"min":255000,"description":"10% du sinistre, minimum 255 000 FCFA"}
+  franchise       String?
+
+  // Pour MATRIX_BASED — configuration de la matrice tarifaire
+  // JSON: grille ou formules de calcul
+  matrixConfig    String?
+
+  // Affichage
+  sortOrder       Int      @default(0)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations many-to-many
+  insurerLinks    InsurerGuarantee[]
+  offerLinks      OfferGuarantee[]
+}
+
+// Junction: Assureur ↔ Garantie
+// Un assureur peut activer/désactiver une garantie et éventuellement surcharger le tarif
+model InsurerGuarantee {
+  id              String    @id @default(cuid())
+  insurerId       String
+  insurer         Insurer   @relation(fields: [insurerId], references: [id])
+  guaranteeId     String
+  guarantee       Guarantee @relation(fields: [guaranteeId], references: [id])
+  isEnabled       Boolean   @default(true)
+  // Surcharge éventuelle du taux ou du prix fixe par l'assureur
+  customRate      Float?
+  customPrice     Float?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([insurerId, guaranteeId])
+}
+
+// Junction: Offre ↔ Garantie
+// Une offre inclut un ensemble de garanties
+model OfferGuarantee {
+  id              String    @id @default(cuid())
+  offerId         String
+  offer           Offer     @relation(fields: [offerId], references: [id])
+  guaranteeId     String
+  guarantee       Guarantee @relation(fields: [guaranteeId], references: [id])
+  isIncluded      Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+
+  @@unique([offerId, guaranteeId])
 }
 
 model Quote {

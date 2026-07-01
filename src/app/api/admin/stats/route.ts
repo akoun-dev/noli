@@ -11,6 +11,8 @@ export async function GET() {
       totalQuotes,
       pendingQuotes,
       totalGuarantees,
+      totalGuaranteeLinks,
+      totalOfferLinks,
       recentQuotes,
     ] = await Promise.all([
       db.insurer.count(),
@@ -20,6 +22,8 @@ export async function GET() {
       db.quote.count(),
       db.quote.count({ where: { status: "pending" } }),
       db.guarantee.count(),
+      db.insurerGuarantee.count(),
+      db.offerGuarantee.count(),
       db.quote.findMany({
         take: 5,
         orderBy: { createdAt: "desc" },
@@ -31,6 +35,13 @@ export async function GET() {
             include: {
               insurer: {
                 select: { id: true, name: true, logo: true },
+              },
+              guaranteeLinks: {
+                include: {
+                  guarantee: {
+                    select: { id: true, name: true },
+                  },
+                },
               },
             },
           },
@@ -59,12 +70,14 @@ export async function GET() {
       totalQuotes,
       pendingQuotes,
       totalGuarantees,
+      totalGuaranteeLinks,
+      totalOfferLinks,
       recentQuotes: recentQuotesParsed,
     });
   } catch (error) {
-    console.error("Error fetching stats:", error);
+    console.error("Erreur lors de la récupération des statistiques:", error);
     return NextResponse.json(
-      { error: "Failed to fetch stats" },
+      { error: "Erreur lors de la récupération des statistiques" },
       { status: 500 }
     );
   }

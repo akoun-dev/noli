@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useAppStore } from "@/store/app-store";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
@@ -17,14 +17,6 @@ import { AnimatePresence, motion } from "framer-motion";
 export default function Home() {
   const currentView = useAppStore((s) => s.currentView);
   const authModal = useAppStore((s) => s.authModal);
-  const seedDone = useRef(false);
-
-  useEffect(() => {
-    if (!seedDone.current) {
-      seedDone.current = true;
-      fetch("/api/seed", { method: "POST" }).catch(() => {});
-    }
-  }, []);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });

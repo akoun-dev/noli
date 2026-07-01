@@ -12,26 +12,51 @@ export async function GET(
       where: { id },
       include: {
         insurer: true,
+        guaranteeLinks: {
+          include: {
+            guarantee: true,
+          },
+          orderBy: { createdAt: "asc" },
+        },
       },
     });
 
     if (!offer) {
       return NextResponse.json(
-        { error: "Offer not found" },
+        { error: "Offre introuvable" },
         { status: 404 }
       );
     }
 
-    const offerWithParsedFeatures = {
+    // Parse features and guarantee JSON fields
+    const result = {
       ...offer,
       features: JSON.parse(offer.features),
+      guaranteeLinks: offer.guaranteeLinks.map((link) => ({
+        ...link,
+        guarantee: {
+          ...link.guarantee,
+          rateConditions: link.guarantee.rateConditions
+            ? JSON.parse(link.guarantee.rateConditions)
+            : null,
+          capital: link.guarantee.capital
+            ? JSON.parse(link.guarantee.capital)
+            : null,
+          franchise: link.guarantee.franchise
+            ? JSON.parse(link.guarantee.franchise)
+            : null,
+          matrixConfig: link.guarantee.matrixConfig
+            ? JSON.parse(link.guarantee.matrixConfig)
+            : null,
+        },
+      })),
     };
 
-    return NextResponse.json(offerWithParsedFeatures);
+    return NextResponse.json(result);
   } catch (error) {
-    console.error("Error fetching offer:", error);
+    console.error("Erreur lors de la récupération de l'offre:", error);
     return NextResponse.json(
-      { error: "Failed to fetch offer" },
+      { error: "Erreur lors de la récupération de l'offre" },
       { status: 500 }
     );
   }
@@ -48,47 +73,71 @@ export async function PUT(
     const existing = await db.offer.findUnique({ where: { id } });
     if (!existing) {
       return NextResponse.json(
-        { error: "Offer not found" },
+        { error: "Offre introuvable" },
         { status: 404 }
       );
     }
 
-    const features = Array.isArray(body.features)
-      ? JSON.stringify(body.features)
-      : undefined;
+    const data: Record<string, unknown> = {};
+    if (body.insurerId !== undefined) data.insurerId = body.insurerId;
+    if (body.name !== undefined) data.name = body.name;
+    if (body.coverageType !== undefined) data.coverageType = body.coverageType;
+    if (body.description !== undefined) data.description = body.description;
+    if (body.basePrice !== undefined) data.basePrice = body.basePrice;
+    if (body.annualPrice !== undefined) data.annualPrice = body.annualPrice;
+    if (body.deductible !== undefined) data.deductible = body.deductible;
+    if (body.maxCoverage !== undefined) data.maxCoverage = body.maxCoverage;
+    if (body.features !== undefined)
+      data.features = Array.isArray(body.features)
+        ? JSON.stringify(body.features)
+        : undefined;
+    if (body.conditions !== undefined) data.conditions = body.conditions;
+    if (body.isActive !== undefined) data.isActive = body.isActive;
 
     const offer = await db.offer.update({
       where: { id },
-      data: {
-        insurerId: body.insurerId,
-        name: body.name,
-        coverageType: body.coverageType,
-        description: body.description,
-        basePrice: body.basePrice,
-        annualPrice: body.annualPrice,
-        deductible: body.deductible,
-        maxCoverage: body.maxCoverage,
-        features,
-        conditions: body.conditions,
-        isActive: body.isActive,
-      },
+      data,
       include: {
         insurer: {
           select: { id: true, name: true, logo: true },
         },
+        guaranteeLinks: {
+          include: {
+            guarantee: true,
+          },
+          orderBy: { createdAt: "asc" },
+        },
       },
     });
 
-    const offerWithParsedFeatures = {
+    const offerParsed = {
       ...offer,
       features: JSON.parse(offer.features),
+      guaranteeLinks: offer.guaranteeLinks.map((link) => ({
+        ...link,
+        guarantee: {
+          ...link.guarantee,
+          rateConditions: link.guarantee.rateConditions
+            ? JSON.parse(link.guarantee.rateConditions)
+            : null,
+          capital: link.guarantee.capital
+            ? JSON.parse(link.guarantee.capital)
+            : null,
+          franchise: link.guarantee.franchise
+            ? JSON.parse(link.guarantee.franchise)
+            : null,
+          matrixConfig: link.guarantee.matrixConfig
+            ? JSON.parse(link.guarantee.matrixConfig)
+            : null,
+        },
+      })),
     };
 
-    return NextResponse.json(offerWithParsedFeatures);
+    return NextResponse.json(offerParsed);
   } catch (error) {
-    console.error("Error updating offer:", error);
+    console.error("Erreur lors de la mise à jour de l'offre:", error);
     return NextResponse.json(
-      { error: "Failed to update offer" },
+      { error: "Erreur lors de la mise à jour de l'offre" },
       { status: 500 }
     );
   }
@@ -104,7 +153,7 @@ export async function DELETE(
     const existing = await db.offer.findUnique({ where: { id } });
     if (!existing) {
       return NextResponse.json(
-        { error: "Offer not found" },
+        { error: "Offre introuvable" },
         { status: 404 }
       );
     }
@@ -113,11 +162,13 @@ export async function DELETE(
       where: { id },
     });
 
-    return NextResponse.json({ message: "Offer deleted successfully" });
+    return NextResponse.json({
+      message: "Offre supprimée avec succès",
+    });
   } catch (error) {
-    console.error("Error deleting offer:", error);
+    console.error("Erreur lors de la suppression de l'offre:", error);
     return NextResponse.json(
-      { error: "Failed to delete offer" },
+      { error: "Erreur lors de la suppression de l'offre" },
       { status: 500 }
     );
   }

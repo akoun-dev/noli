@@ -1,6 +1,41 @@
 import { db } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 
+function parseQuoteOffer(offer: {
+  features: string;
+  guaranteeLinks: Array<{
+    guarantee: {
+      rateConditions: string | null;
+      capital: string | null;
+      franchise: string | null;
+      matrixConfig: string | null;
+    };
+  }>;
+}) {
+  return {
+    ...offer,
+    features: JSON.parse(offer.features),
+    guaranteeLinks: offer.guaranteeLinks.map((link) => ({
+      ...link,
+      guarantee: {
+        ...link.guarantee,
+        rateConditions: link.guarantee.rateConditions
+          ? JSON.parse(link.guarantee.rateConditions)
+          : null,
+        capital: link.guarantee.capital
+          ? JSON.parse(link.guarantee.capital)
+          : null,
+        franchise: link.guarantee.franchise
+          ? JSON.parse(link.guarantee.franchise)
+          : null,
+        matrixConfig: link.guarantee.matrixConfig
+          ? JSON.parse(link.guarantee.matrixConfig)
+          : null,
+      },
+    })),
+  };
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -27,30 +62,36 @@ export async function GET(request: NextRequest) {
             insurer: {
               select: { id: true, name: true, logo: true },
             },
+            guaranteeLinks: {
+              include: {
+                guarantee: {
+                  select: { id: true, name: true },
+                },
+              },
+            },
           },
         },
       },
       orderBy: { createdAt: "desc" },
     });
 
-    const quotesWithParsedData = quotes.map((quote) => ({
+    const quotesParsed = quotes.map((quote) => ({
       ...quote,
       personalInfo: JSON.parse(quote.personalInfo),
       vehicleInfo: JSON.parse(quote.vehicleInfo),
       coverageNeeds: JSON.parse(quote.coverageNeeds),
       offer: quote.offer
-        ? {
-            ...quote.offer,
-            features: JSON.parse(quote.offer.features),
-          }
+        ? parseQuoteOffer(
+            quote.offer as unknown as Parameters<typeof parseQuoteOffer>[0]
+          )
         : null,
     }));
 
-    return NextResponse.json(quotesWithParsedData);
+    return NextResponse.json(quotesParsed);
   } catch (error) {
-    console.error("Error fetching quotes:", error);
+    console.error("Erreur lors de la récupération des devis:", error);
     return NextResponse.json(
-      { error: "Failed to fetch quotes" },
+      { error: "Erreur lors de la récupération des devis" },
       { status: 500 }
     );
   }
@@ -62,7 +103,7 @@ export async function PUT(request: NextRequest) {
 
     if (!body.id) {
       return NextResponse.json(
-        { error: "Quote id is required" },
+        { error: "L'identifiant du devis est obligatoire" },
         { status: 400 }
       );
     }
@@ -70,7 +111,7 @@ export async function PUT(request: NextRequest) {
     const existing = await db.quote.findUnique({ where: { id: body.id } });
     if (!existing) {
       return NextResponse.json(
-        { error: "Quote not found" },
+        { error: "Devis introuvable" },
         { status: 404 }
       );
     }
@@ -92,29 +133,35 @@ export async function PUT(request: NextRequest) {
             insurer: {
               select: { id: true, name: true, logo: true },
             },
+            guaranteeLinks: {
+              include: {
+                guarantee: {
+                  select: { id: true, name: true },
+                },
+              },
+            },
           },
         },
       },
     });
 
-    const quoteWithParsedData = {
+    const quoteParsed = {
       ...quote,
       personalInfo: JSON.parse(quote.personalInfo),
       vehicleInfo: JSON.parse(quote.vehicleInfo),
       coverageNeeds: JSON.parse(quote.coverageNeeds),
       offer: quote.offer
-        ? {
-            ...quote.offer,
-            features: JSON.parse(quote.offer.features),
-          }
+        ? parseQuoteOffer(
+            quote.offer as unknown as Parameters<typeof parseQuoteOffer>[0]
+          )
         : null,
     };
 
-    return NextResponse.json(quoteWithParsedData);
+    return NextResponse.json(quoteParsed);
   } catch (error) {
-    console.error("Error updating quote:", error);
+    console.error("Erreur lors de la mise à jour du devis:", error);
     return NextResponse.json(
-      { error: "Failed to update quote" },
+      { error: "Erreur lors de la mise à jour du devis" },
       { status: 500 }
     );
   }

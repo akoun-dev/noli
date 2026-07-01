@@ -302,3 +302,82 @@ Stage Summary:
 - 1 admin UI component (2190 lines)
 - Zero lint errors (only pre-existing launch-server.js)
 - Access via "Administration" link in footer
+---
+Task ID: 3-a
+Agent: full-stack-developer
+Task: Rewrite all admin API routes to support new Guarantee fields and junction tables
+
+Work Log:
+- Regenerated Prisma client after schema update (Guarantee calcMethod, fixedPrice, rate, rateConditions, capital, franchise, matrixConfig + InsurerGuarantee, OfferGuarantee junction tables)
+- Rewrote guarantees/route.ts: GET parses JSON fields (rateConditions, capital, franchise, matrixConfig), POST validates calcMethod, stringifies JSON fields on create
+- Rewrote guarantees/[id]/route.ts: GET parses JSON fields, PUT selectively updates only provided fields, DELETE cascade-deletes junction rows
+- Rewrote insurers/route.ts: GET _count now includes both offers and guaranteeLinks
+- Rewrote insurers/[id]/route.ts: GET includes guaranteeLinks with guarantee (parsed JSON) and offers (parsed features)
+- Created insurers/[id]/guarantees/route.ts: NEW PUT endpoint — validates insurer + guaranteeIds exist, deleteMany + createMany for bulk replace
+- Rewrote offers/route.ts: GET includes guaranteeLinks with guarantee (select id, name, icon, category), POST returns guaranteeLinks
+- Rewrote offers/[id]/route.ts: GET/PUT include guaranteeLinks with full guarantee (parsed JSON), DELETE cascade-deletes
+- Created offers/[id]/guarantees/route.ts: NEW PUT endpoint — validates offer + guaranteeIds, deleteMany + createMany for bulk replace
+- Rewrote quotes/route.ts: offer include now has guaranteeLinks with guarantee (select id, name) via parseQuoteOffer helper
+- Rewrote stats/route.ts: added totalGuaranteeLinks (InsurerGuarantee.count) and totalOfferLinks (OfferGuarantee.count)
+- All error messages in French
+
+Stage Summary:
+- 8 existing API route files rewritten
+- 2 new API route files created (insurers/[id]/guarantees, offers/[id]/guarantees)
+- Zero new lint errors (only pre-existing launch-server.js require warnings)
+---
+Task ID: 12-17
+Agent: main
+Task: Admin interface major enhancements — categories, settings, wizard, detail views
+
+Work Log:
+- Updated admin-page.tsx: added "Catégories" (Tag icon) and "Paramètres" (Settings icon) to sidebar, added imports and renderTab cases
+- Rewrote garanties-tab.tsx: complete 3-step wizard (max-w-3xl dialog) with step indicator (circles + connecting lines + green checkmarks):
+  - Step 1: Informations générales (name, description, icon, category dropdown from API, sortOrder, isActive) — NO slug field
+  - Step 2: Méthode de calcul — 4 card buttons (GRATUIT/MONTANT FIXE/BASÉ SUR UNE VARIABLE/BASÉ SUR UNE MATRICE) with colored borders, blue summary banner, FREE=green alert, FIXED_AMOUNT=input
+  - Step 3: Configuration avancée (VARIABLE_BASED: variable source, conditioned-by-VN checkbox with threshold + dual rates, single rate; MATRIX_BASED: puissance fiscale with Essence/Diesel tables side-by-side, or Formule entries; FIXED_AMOUNT: capital/franchise sections)
+  - Removed slug column from table, added Catégorie column showing category name
+- Created categories-tab.tsx: full CRUD for GuaranteeCategory with table (Nom, Description, Icône, Nb. garanties, Ordre, Statut, Actions), create/edit dialog, delete confirmation, search bar
+- Created settings-tab.tsx: two tabs (Utilisateurs + Configuration), users table with role/status/date, edit dialog (name, phone, role), config placeholder (NOLI Assurance, FCFA, Côte d'Ivoire)
+- Updated assureurs-tab.tsx: added Eye icon "Voir" detail dialog with stats row (3 cards), contact info, offers table, guarantee links table, edit button
+- Updated offres-tab.tsx: added Eye icon "Voir" detail dialog with pricing (4 cards), features list, conditions, included guarantees table, edit button
+- Created /api/admin/guarantee-categories/route.ts (GET with _count, POST with slug auto-generation)
+- Created /api/admin/guarantee-categories/[id]/route.ts (GET, PUT, DELETE)
+- Created /api/admin/users/route.ts (GET with _count quotes, PUT for role/isActive/name/phone)
+- ESLint: zero new errors (only pre-existing launch-server.js require warnings)
+- Dev server: all routes 200, no runtime errors
+
+Stage Summary:
+- 4 UI component files modified/created (admin-page, garanties-tab, categories-tab, settings-tab)
+- 2 UI component files enhanced (assureurs-tab, offres-tab with detail views)
+- 3 API route files created (guarantee-categories, guarantee-categories/[id], users)
+- Total ~143KB of new/modified code
+
+---
+Task ID: 10-19
+Agent: main (coordinator) + subagents
+Task: Major admin overhaul — guarantee categories, multi-step wizard, detail views, settings
+
+Work Log:
+- Added GuaranteeCategory model to Prisma schema (id, name, slug, description, icon, sortOrder, isActive)
+- Added categoryId + categoryLabel fields to Guarantee model
+- Reset DB, pushed schema, regenerated Prisma client
+- Created API routes: guarantee-categories (GET/POST), guarantee-categories/[id] (GET/PUT/DELETE), users (GET/PUT)
+- Updated guarantees API routes to include category relation and accept categoryId
+- Updated seed with 5 categories + linked all 21 guarantees
+- Rewrote admin-page.tsx: 7 sidebar tabs (Dashboard, Assureurs, Offres, Garanties, Catégories, Devis, Paramètres)
+- Rewrote garanties-tab.tsx: 3-step wizard matching reference design
+  - Step 1: General info (name, description, icon, category dropdown, sortOrder) — NO slug field
+  - Step 2: 4 card buttons for calc method (GRATUIT/MONTANT FIXE/VARIABLE/MATRICE)
+  - Step 3: Dynamic config (variable: threshold checkbox + dual rates; matrix: Essence/Diesel tables; fixed: single input)
+- Created categories-tab.tsx: Full CRUD for guarantee categories
+- Created settings-tab.tsx: Users management + Configuration tabs
+- Updated assureurs-tab.tsx: Added "Voir" detail view (stats, contact, offers table, guarantees table)
+- Updated offres-tab.tsx: Added "Voir" detail view (pricing, features, conditions, guarantees)
+
+Stage Summary:
+- 5 categories seeded (Obligatoire: 2, Garantie: 10, Assistance: 3, Protection: 2, Pack Pickup: 4)
+- 6 insurers, 18 offers, 21 guarantees, 126 insurer-guarantee links, 156 offer-guarantee links
+- Multi-step wizard matches reference screenshots exactly (card selection, conditional rates, matrix tables)
+- All API routes return 200, zero lint errors (except pre-existing launch-server.js)
+- Browser verified: all 7 admin tabs, wizard steps, insurer detail view

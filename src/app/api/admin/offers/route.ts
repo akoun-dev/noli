@@ -30,20 +30,27 @@ export async function GET(request: NextRequest) {
         insurer: {
           select: { id: true, name: true, logo: true },
         },
+        guaranteeLinks: {
+          include: {
+            guarantee: {
+              select: { id: true, name: true, icon: true, category: true },
+            },
+          },
+        },
       },
       orderBy: { createdAt: "desc" },
     });
 
-    const offersWithParsedFeatures = offers.map((offer) => ({
+    const offersParsed = offers.map((offer) => ({
       ...offer,
       features: JSON.parse(offer.features),
     }));
 
-    return NextResponse.json(offersWithParsedFeatures);
+    return NextResponse.json(offersParsed);
   } catch (error) {
-    console.error("Error fetching offers:", error);
+    console.error("Erreur lors de la récupération des offres:", error);
     return NextResponse.json(
-      { error: "Failed to fetch offers" },
+      { error: "Erreur lors de la récupération des offres" },
       { status: 500 }
     );
   }
@@ -53,9 +60,17 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    if (!body.insurerId || !body.name || !body.coverageType || body.basePrice === undefined) {
+    if (
+      !body.insurerId ||
+      !body.name ||
+      !body.coverageType ||
+      body.basePrice === undefined
+    ) {
       return NextResponse.json(
-        { error: "insurerId, name, coverageType, and basePrice are required" },
+        {
+          error:
+            "Les champs insurerId, name, coverageType et basePrice sont obligatoires",
+        },
         { status: 400 }
       );
     }
@@ -66,7 +81,7 @@ export async function POST(request: NextRequest) {
     });
     if (!insurer) {
       return NextResponse.json(
-        { error: "Insurer not found" },
+        { error: "Assureur introuvable" },
         { status: 400 }
       );
     }
@@ -93,19 +108,26 @@ export async function POST(request: NextRequest) {
         insurer: {
           select: { id: true, name: true, logo: true },
         },
+        guaranteeLinks: {
+          include: {
+            guarantee: {
+              select: { id: true, name: true, icon: true, category: true },
+            },
+          },
+        },
       },
     });
 
-    const offerWithParsedFeatures = {
+    const offerParsed = {
       ...offer,
       features: JSON.parse(offer.features),
     };
 
-    return NextResponse.json(offerWithParsedFeatures, { status: 201 });
+    return NextResponse.json(offerParsed, { status: 201 });
   } catch (error) {
-    console.error("Error creating offer:", error);
+    console.error("Erreur lors de la création de l'offre:", error);
     return NextResponse.json(
-      { error: "Failed to create offer" },
+      { error: "Erreur lors de la création de l'offre" },
       { status: 500 }
     );
   }

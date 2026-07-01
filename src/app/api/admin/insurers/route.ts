@@ -20,7 +20,10 @@ export async function GET(request: NextRequest) {
       where: Object.keys(where).length > 0 ? where : undefined,
       include: {
         _count: {
-          select: { offers: true },
+          select: {
+            offers: true,
+            guaranteeLinks: true,
+          },
         },
       },
       orderBy: { createdAt: "desc" },
@@ -28,9 +31,9 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(insurers);
   } catch (error) {
-    console.error("Error fetching insurers:", error);
+    console.error("Erreur lors de la récupération des assureurs:", error);
     return NextResponse.json(
-      { error: "Failed to fetch insurers" },
+      { error: "Erreur lors de la récupération des assureurs" },
       { status: 500 }
     );
   }
@@ -42,7 +45,7 @@ export async function POST(request: NextRequest) {
 
     if (!body.name) {
       return NextResponse.json(
-        { error: "Name is required" },
+        { error: "Le nom est obligatoire" },
         { status: 400 }
       );
     }
@@ -63,9 +66,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(insurer, { status: 201 });
   } catch (error) {
-    console.error("Error creating insurer:", error);
+    console.error("Erreur lors de la création de l'assureur:", error);
     return NextResponse.json(
-      { error: "Failed to create insurer" },
+      { error: "Erreur lors de la création de l'assureur" },
       { status: 500 }
     );
   }

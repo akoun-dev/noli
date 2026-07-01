@@ -14,30 +14,54 @@ export async function GET(
         offers: {
           orderBy: { createdAt: "desc" },
         },
+        guaranteeLinks: {
+          include: {
+            guarantee: true,
+          },
+          orderBy: { createdAt: "asc" },
+        },
       },
     });
 
     if (!insurer) {
       return NextResponse.json(
-        { error: "Insurer not found" },
+        { error: "Assureur introuvable" },
         { status: 404 }
       );
     }
 
-    // Parse features for each offer
-    const insurerWithParsedOffers = {
+    // Parse JSON fields for offers and guarantees
+    const result = {
       ...insurer,
       offers: insurer.offers.map((offer) => ({
         ...offer,
         features: JSON.parse(offer.features),
       })),
+      guaranteeLinks: insurer.guaranteeLinks.map((link) => ({
+        ...link,
+        guarantee: {
+          ...link.guarantee,
+          rateConditions: link.guarantee.rateConditions
+            ? JSON.parse(link.guarantee.rateConditions)
+            : null,
+          capital: link.guarantee.capital
+            ? JSON.parse(link.guarantee.capital)
+            : null,
+          franchise: link.guarantee.franchise
+            ? JSON.parse(link.guarantee.franchise)
+            : null,
+          matrixConfig: link.guarantee.matrixConfig
+            ? JSON.parse(link.guarantee.matrixConfig)
+            : null,
+        },
+      })),
     };
 
-    return NextResponse.json(insurerWithParsedOffers);
+    return NextResponse.json(result);
   } catch (error) {
-    console.error("Error fetching insurer:", error);
+    console.error("Erreur lors de la récupération de l'assureur:", error);
     return NextResponse.json(
-      { error: "Failed to fetch insurer" },
+      { error: "Erreur lors de la récupération de l'assureur" },
       { status: 500 }
     );
   }
@@ -54,31 +78,32 @@ export async function PUT(
     const existing = await db.insurer.findUnique({ where: { id } });
     if (!existing) {
       return NextResponse.json(
-        { error: "Insurer not found" },
+        { error: "Assureur introuvable" },
         { status: 404 }
       );
     }
 
+    const data: Record<string, unknown> = {};
+    if (body.name !== undefined) data.name = body.name;
+    if (body.logo !== undefined) data.logo = body.logo;
+    if (body.description !== undefined) data.description = body.description;
+    if (body.phone !== undefined) data.phone = body.phone;
+    if (body.email !== undefined) data.email = body.email;
+    if (body.website !== undefined) data.website = body.website;
+    if (body.rating !== undefined) data.rating = body.rating;
+    if (body.isVerified !== undefined) data.isVerified = body.isVerified;
+    if (body.isActive !== undefined) data.isActive = body.isActive;
+
     const insurer = await db.insurer.update({
       where: { id },
-      data: {
-        name: body.name,
-        logo: body.logo,
-        description: body.description,
-        phone: body.phone,
-        email: body.email,
-        website: body.website,
-        rating: body.rating,
-        isVerified: body.isVerified,
-        isActive: body.isActive,
-      },
+      data,
     });
 
     return NextResponse.json(insurer);
   } catch (error) {
-    console.error("Error updating insurer:", error);
+    console.error("Erreur lors de la mise à jour de l'assureur:", error);
     return NextResponse.json(
-      { error: "Failed to update insurer" },
+      { error: "Erreur lors de la mise à jour de l'assureur" },
       { status: 500 }
     );
   }
@@ -94,7 +119,7 @@ export async function DELETE(
     const existing = await db.insurer.findUnique({ where: { id } });
     if (!existing) {
       return NextResponse.json(
-        { error: "Insurer not found" },
+        { error: "Assureur introuvable" },
         { status: 404 }
       );
     }
@@ -103,11 +128,13 @@ export async function DELETE(
       where: { id },
     });
 
-    return NextResponse.json({ message: "Insurer deleted successfully" });
+    return NextResponse.json({
+      message: "Assureur supprimé avec succès",
+    });
   } catch (error) {
-    console.error("Error deleting insurer:", error);
+    console.error("Erreur lors de la suppression de l'assureur:", error);
     return NextResponse.json(
-      { error: "Failed to delete insurer" },
+      { error: "Erreur lors de la suppression de l'assureur" },
       { status: 500 }
     );
   }
