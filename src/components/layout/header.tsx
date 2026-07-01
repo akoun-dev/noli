@@ -34,7 +34,6 @@ import { useAppStore } from "@/store/app-store";
 
 const navItems = [
   { label: "ACCUEIL", action: "landing" as const },
-  { label: "COMMENT ÇA MARCHE", action: "compare" as const },
   { label: "À PROPOS", action: "about" as const },
   { label: "CONTACT", action: "contact" as const },
 ];

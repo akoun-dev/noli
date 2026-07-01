@@ -43,6 +43,10 @@ interface AppState {
   setUserQuotes: (quotes: QuoteRecord[]) => void;
   selectedOffer: InsurerOffer | null;
   setSelectedOffer: (offer: InsurerOffer | null) => void;
+  offersToCompare: InsurerOffer[];
+  setOffersToCompare: (offers: InsurerOffer[]) => void;
+ comparisonModalOpen: boolean;
+  setComparisonModalOpen: (v: boolean) => void;
   resetComparison: () => void;
 }
 
@@ -98,6 +102,10 @@ export const useAppStore = create<AppState>((set) => ({
   setUserQuotes: (quotes) => set({ userQuotes: quotes }),
   selectedOffer: null,
   setSelectedOffer: (offer) => set({ selectedOffer: offer }),
+  offersToCompare: [],
+  setOffersToCompare: (offers) => set({ offersToCompare: offers }),
+  comparisonModalOpen: false,
+  setComparisonModalOpen: (v) => set({ comparisonModalOpen: v }),
   resetComparison: () =>
     set({
       comparisonStep: 1,
@@ -109,5 +117,7 @@ export const useAppStore = create<AppState>((set) => ({
       sortBy: "price_asc",
       selectedInsurerFilter: "all",
       selectedOffer: null,
+      offersToCompare: [],
+      comparisonModalOpen: false,
     }),
 }));

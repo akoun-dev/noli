@@ -13,6 +13,12 @@ import {
   RotateCcw,
   SearchX,
   SlidersHorizontal,
+  Shield,
+  Plus,
+  X,
+  Trash2,
+  Check,
+  Info,
 } from "lucide-react";
 import { useAppStore } from "@/store/app-store";
 import type { InsurerOffer } from "@/types";
@@ -49,6 +55,8 @@ const coverageBadgeStyle = (type: string) => {
       return "bg-muted/60 text-muted-foreground border-border";
   }
 };
+
+const MAX_COMPARE = 4;
 
 /* ──────────────────────── sub-components ───────────────────────── */
 
@@ -88,6 +96,7 @@ function FiltersSidebar({
   setBudgetMax,
   onReset,
   totalOffers,
+  onToggleAllInsurers,
 }: {
   coverageFilter: string;
   setCoverageFilter: (v: string) => void;
@@ -219,6 +228,268 @@ function FiltersSidebar({
   );
 }
 
+/* ──────── Comparison Bar (sticky top) ──────── */
+
+function ComparisonBar({
+  offers,
+  onRemove,
+  onClear,
+  onCompare,
+  onOpen,
+}: {
+  offers: InsurerOffer[];
+  onRemove: (id: string) => void;
+  onClear: () => void;
+  onCompare: () => void;
+  onOpen: () => void;
+}) {
+  if (offers.length === 0) return null;
+
+  return (
+    <motion.div
+      initial={{ y: -60, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      exit={{ y: -60, opacity: 0 }}
+      transition={{ duration: 0.3, ease: "easeOut" }}
+      className="sticky top-16 z-40 bg-muted/80 backdrop-blur-md border-b border-border/60 shadow-sm"
+    >
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 py-3 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-sm font-semibold text-foreground">Comparer</span>
+          <span className="text-xs text-muted-foreground">
+            ({offers.length}/{MAX_COMPARE})
+          </span>
+        </div>
+
+        <div className="flex-1 flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 w-full sm:w-auto">
+          {offers.map((offer) => (
+            <span
+              key={offer.id}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-white border border-border/60 px-3 py-1.5 text-sm text-foreground shadow-sm shrink-0"
+            >
+              <Shield className="size-3.5 text-primary" />
+              {offer.insurerName}
+              <button
+                onClick={() => onRemove(offer.id)}
+                className="ml-1 text-muted-foreground hover:text-destructive transition-colors"
+                aria-label={`Retirer ${offer.insurerName}`}
+              >
+                <X className="size-3.5" />
+              </button>
+            </span>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0 ml-auto sm:ml-0">
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-lg text-sm font-medium"
+            onClick={onClear}
+          >
+            <Trash2 className="size-3.5 mr-1.5" />
+            Vider
+          </Button>
+          <Button
+            size="sm"
+            className="rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-semibold shadow-sm"
+            onClick={onOpen}
+            disabled={offers.length < 2}
+          >
+            <Shield className="size-3.5 mr-1.5" />
+            Comparer
+          </Button>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+/* ──────── Comparison Modal ──────── */
+
+function ComparisonModal({
+  offers,
+  open,
+  onClose,
+}: {
+  offers: InsurerOffer[];
+  open: boolean;
+  onClose: () => void;
+}) {
+  // Collect all unique features across all offers (before early return for hooks rules)
+  const allFeatures = useMemo(() => {
+    const featureSet = new Set<string>();
+    offers.forEach((o) => o.features.forEach((f) => featureSet.add(f)));
+    return Array.from(featureSet);
+  }, [offers]);
+
+  if (!open || offers.length < 2) return null;
+
+  const formatMonthlyPrice = (price: number) => {
+    const val = Math.round(price);
+    if (val % 1 !== 0) return new Intl.NumberFormat("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 3 }).format(val) + " FCFA";
+    return formatFCFA(val);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto p-0">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border/60 bg-muted/30 sticky top-0 z-10">
+          <DialogTitle className="text-lg font-bold text-foreground">
+            Comparer les garanties
+          </DialogTitle>
+          <DialogDescription className="sr-only">
+            Comparaison détaillée de {offers.length} offres d&apos;assurance
+          </DialogDescription>
+        </div>
+
+        {/* Comparison Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[500px]">
+            {/* Column Headers: Insurers */}
+            <thead>
+              <tr>
+                <th className="text-left p-4 w-48 bg-muted/30 sticky left-0 z-10 border-b border-border/60">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Critères
+                  </span>
+                </th>
+                {offers.map((offer) => (
+                  <th
+                    key={offer.id}
+                    className="text-center p-4 bg-muted/30 border-b border-border/60"
+                  >
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 border-2 border-primary/20">
+                        <Shield className="size-6 text-primary" />
+                      </div>
+                      <span className="text-sm font-bold text-foreground leading-tight">
+                        {offer.insurerName}
+                      </span>
+                      <span className="text-xs text-muted-foreground capitalize">
+                        {offer.coverageType.replace("_", " ")}
+                      </span>
+                    </div>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+
+            <tbody>
+              {/* Prix mensuel */}
+              <tr className="bg-white">
+                <td className="p-4 text-sm font-medium text-foreground sticky left-0 bg-white border-b border-border/30">
+                  Prix mensuel
+                </td>
+                {offers.map((offer) => (
+                  <td
+                    key={offer.id}
+                    className="p-4 text-center text-sm font-bold text-foreground border-b border-border/30"
+                  >
+                    {formatMonthlyPrice(offer.monthlyPrice)}
+                  </td>
+                ))}
+              </tr>
+
+              {/* Franchise */}
+              <tr className="bg-muted/20">
+                <td className="p-4 text-sm font-medium text-foreground sticky left-0 bg-muted/20 border-b border-border/30">
+                  Franchise
+                </td>
+                {offers.map((offer) => (
+                  <td
+                    key={offer.id}
+                    className="p-4 text-center text-sm text-foreground border-b border-border/30"
+                  >
+                    {formatFCFA(offer.deductible)}
+                  </td>
+                ))}
+              </tr>
+
+              {/* Note / Rating */}
+              <tr className="bg-white">
+                <td className="p-4 text-sm font-medium text-foreground sticky left-0 bg-white border-b border-border/30">
+                  Note assureur
+                </td>
+                {offers.map((offer) => (
+                  <td
+                    key={offer.id}
+                    className="p-4 text-center border-b border-border/30"
+                  >
+                    <div className="flex items-center justify-center">
+                      <StarRating rating={offer.insurerRating} />
+                    </div>
+                  </td>
+                ))}
+              </tr>
+
+              {/* Features */}
+              {allFeatures.map((feature, idx) => {
+                const isZebra = idx % 2 === 1;
+                return (
+                  <tr
+                    key={feature}
+                    className={isZebra ? "bg-muted/20" : "bg-white"}
+                  >
+                    <td
+                      className={`p-4 text-sm text-foreground sticky left-0 border-b border-border/30 ${
+                        isZebra ? "bg-muted/20" : "bg-white"
+                      }`}
+                    >
+                      {feature}
+                    </td>
+                    {offers.map((offer) => {
+                      const hasFeature = offer.features.includes(feature);
+                      return (
+                        <td
+                          key={offer.id}
+                          className="p-4 text-center border-b border-border/30"
+                        >
+                          {hasFeature ? (
+                            <div className="flex items-center justify-center">
+                              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
+                                <Check className="size-3.5 text-green-600 dark:text-green-400" />
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-center">
+                              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
+                                <X className="size-3.5 text-red-500 dark:text-red-400" />
+                              </div>
+                            </div>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
+
+              {/* Conditions */}
+              {offers.some((o) => o.conditions) && (
+                <tr className="bg-muted/20">
+                  <td className="p-4 text-sm font-medium text-foreground sticky left-0 bg-muted/20">
+                    Conditions
+                  </td>
+                  {offers.map((offer) => (
+                    <td
+                      key={offer.id}
+                      className="p-4 text-center text-xs text-muted-foreground max-w-[200px]"
+                    >
+                      <span className="line-clamp-2">{offer.conditions || "—"}</span>
+                    </td>
+                  ))}
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 /* ──────── Offer Card ──────── */
 
 function OfferCard({
@@ -226,11 +497,15 @@ function OfferCard({
   priceMode,
   onViewDetails,
   onRequestQuote,
+  onAddToCompare,
+  isCompared,
 }: {
   offer: InsurerOffer;
   priceMode: "annual" | "monthly";
   onViewDetails: (offer: InsurerOffer) => void;
   onRequestQuote: (offer: InsurerOffer) => void;
+  onAddToCompare: (offer: InsurerOffer) => void;
+  isCompared: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
   const visibleFeatures = offer.features.slice(0, 4);
@@ -363,19 +638,33 @@ function OfferCard({
         {/* Action buttons */}
         <div className="flex flex-col sm:flex-row gap-2.5 mt-auto pt-1">
           <Button
-            className="flex-1 bg-accent text-accent-foreground hover:bg-accent/90 rounded-full font-semibold shadow-sm"
-            onClick={() => onRequestQuote(offer)}
-          >
-            <FileText className="size-4 mr-2" />
-            Obtenir le devis
-          </Button>
-          <Button
-            variant="outline"
-            className="flex-1 rounded-full border-primary/30 text-primary hover:bg-primary/5 font-medium"
+            className="flex-1 bg-accent text-accent-foreground hover:bg-accent/90 rounded-lg font-semibold shadow-sm"
             onClick={() => onViewDetails(offer)}
           >
-            <Phone className="size-4 mr-2" />
-            Être rappelé
+            <Info className="size-4 mr-2" />
+            En savoir plus sur cette offre
+          </Button>
+          <Button
+            variant={isCompared ? "default" : "outline"}
+            className={`flex-1 rounded-lg font-medium transition-all duration-200 ${
+              isCompared
+                ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                : "border-primary/30 text-primary hover:bg-primary/5"
+            }`}
+            onClick={() => onAddToCompare(offer)}
+            disabled={!isCompared && false}
+          >
+            {isCompared ? (
+              <>
+                <Check className="size-4 mr-2" />
+                Sélectionné
+              </>
+            ) : (
+              <>
+                <Plus className="size-4 mr-2" />
+                Comparer
+              </>
+            )}
           </Button>
         </div>
       </div>
@@ -541,8 +830,6 @@ export function ResultsPage() {
     comparisonResults,
     sortBy,
     setSortBy,
-    selectedInsurerFilter,
-    setSelectedInsurerFilter,
     selectedOffer,
     setSelectedOffer,
     setView,
@@ -551,11 +838,14 @@ export function ResultsPage() {
     personalInfo,
     vehicleInfo,
     coverageNeeds,
+    offersToCompare,
+    setOffersToCompare,
+    comparisonModalOpen,
+    setComparisonModalOpen,
   } = useAppStore();
   const { toast } = useToast();
 
   /* ── local filter state ── */
-  // `uncheckedInsurers` is a blacklist: empty set = all insurers selected
   const [uncheckedInsurers, setUncheckedInsurers] = useState<Set<string>>(
     new Set()
   );
@@ -570,7 +860,6 @@ export function ResultsPage() {
     return names.sort();
   }, [comparisonResults]);
 
-  // Compute effective checked insurers: all minus unchecked
   const effectiveChecked = useMemo(() => {
     const all = new Set(comparisonResults.map((o) => o.insurerName));
     for (const name of uncheckedInsurers) {
@@ -594,20 +883,16 @@ export function ResultsPage() {
   const filteredAndSorted = useMemo(() => {
     let results = [...comparisonResults];
 
-    // Coverage filter
     if (coverageFilter !== "all") {
       results = results.filter((o) => o.coverageType === coverageFilter);
     }
 
-    // Insurer filter: only show checked insurers
     if (effectiveChecked.size > 0) {
       results = results.filter((o) => effectiveChecked.has(o.insurerName));
     }
 
-    // Budget filter (monthly price)
     results = results.filter((o) => o.monthlyPrice <= budgetMax);
 
-    // Sort
     switch (sortBy) {
       case "price_asc":
         results.sort((a, b) => a.monthlyPrice - b.monthlyPrice);
@@ -625,6 +910,47 @@ export function ResultsPage() {
 
     return results;
   }, [comparisonResults, sortBy, coverageFilter, effectiveChecked, budgetMax]);
+
+  /* ── comparison handlers ── */
+  const isOfferCompared = (offerId: string) =>
+    offersToCompare.some((o) => o.id === offerId);
+
+  const handleToggleCompare = useCallback(
+    (offer: InsurerOffer) => {
+      const alreadyCompared = offersToCompare.some((o) => o.id === offer.id);
+      if (alreadyCompared) {
+        setOffersToCompare(offersToCompare.filter((o) => o.id !== offer.id));
+      } else {
+        if (offersToCompare.length >= MAX_COMPARE) {
+          toast({
+            title: "Limite atteinte",
+            description: `Vous pouvez comparer au maximum ${MAX_COMPARE} offres à la fois.`,
+            variant: "destructive",
+          });
+          return;
+        }
+        setOffersToCompare([...offersToCompare, offer]);
+      }
+    },
+    [offersToCompare, setOffersToCompare, toast]
+  );
+
+  const handleRemoveCompare = useCallback(
+    (id: string) => {
+      setOffersToCompare(offersToCompare.filter((o) => o.id !== id));
+    },
+    [offersToCompare, setOffersToCompare]
+  );
+
+  const handleClearCompare = useCallback(() => {
+    setOffersToCompare([]);
+  }, [setOffersToCompare]);
+
+  const handleOpenComparison = useCallback(() => {
+    if (offersToCompare.length >= 2) {
+      setComparisonModalOpen(true);
+    }
+  }, [offersToCompare, setComparisonModalOpen]);
 
   /* ── handlers ── */
   const handleRequestQuote = (offer: InsurerOffer) => {
@@ -656,10 +982,8 @@ export function ResultsPage() {
 
   const handleToggleAllInsurers = useCallback(() => {
     if (uncheckedInsurers.size === 0) {
-      // All checked → uncheck all
       setUncheckedInsurers(new Set(uniqueInsurers));
     } else {
-      // Some unchecked → check all
       setUncheckedInsurers(new Set());
     }
   }, [uncheckedInsurers, uniqueInsurers]);
@@ -669,7 +993,6 @@ export function ResultsPage() {
     setUncheckedInsurers(new Set());
     setBudgetMax(300000);
     setSortBy("price_asc");
-    setSelectedInsurerFilter("all");
   };
 
   const activeFilterCount = [
@@ -685,87 +1008,119 @@ export function ResultsPage() {
 
   /* ── main render ── */
   return (
-    <section className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
-      {/* ── Top Bar ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
-        {/* Back button */}
-        <Button
-          variant="ghost"
-          size="sm"
-          className="-ml-2 text-muted-foreground hover:text-foreground shrink-0"
-          onClick={() => setView("compare")}
-        >
-          <ArrowLeft className="size-4 mr-1.5" />
-          <span className="hidden sm:inline">Retour au formulaire</span>
-          <span className="sm:hidden">Retour</span>
-        </Button>
-
-        {/* Title */}
-        <h1 className="text-xl sm:text-2xl font-bold text-foreground flex-1">
-          {filteredAndSorted.length} offre
-          {filteredAndSorted.length !== 1 ? "s" : ""} trouvée
-          {filteredAndSorted.length !== 1 ? "s" : ""}
-        </h1>
-
-        {/* Price mode toggle */}
-        <div className="flex items-center bg-muted/30 rounded-full p-0.5 shrink-0 self-start sm:self-auto">
-          <button
-            onClick={() => setPriceMode("annual")}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
-              priceMode === "annual"
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Par an
-          </button>
-          <button
-            onClick={() => setPriceMode("monthly")}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
-              priceMode === "monthly"
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Par mois
-          </button>
-        </div>
-      </div>
-
-      {/* ── Mobile Filter Toggle ── */}
-      <div className="lg:hidden mb-4">
-        <Button
-          variant="outline"
-          className="w-full justify-between rounded-xl border-border"
-          onClick={() => setMobileFiltersOpen(!mobileFiltersOpen)}
-        >
-          <div className="flex items-center gap-2">
-            <Filter className="size-4" />
-            <span className="font-medium">Filtres</span>
-            {activeFilterCount > 0 && (
-              <Badge className="bg-primary text-primary-foreground rounded-full px-1.5 text-xs min-w-5 h-5 flex items-center justify-center">
-                {activeFilterCount}
-              </Badge>
-            )}
-          </div>
-          <ChevronDown
-            className={`size-4 text-muted-foreground transition-transform duration-200 ${
-              mobileFiltersOpen ? "rotate-180" : ""
-            }`}
-          />
-        </Button>
-      </div>
-
-      {/* ── Mobile Filters (collapsible) ── */}
+    <div>
+      {/* ── Comparison Bar (sticky) ── */}
       <AnimatePresence>
-        {mobileFiltersOpen && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25 }}
-            className="overflow-hidden lg:hidden mb-6"
+        {offersToCompare.length > 0 && (
+          <ComparisonBar
+            offers={offersToCompare}
+            onRemove={handleRemoveCompare}
+            onClear={handleClearCompare}
+            onCompare={handleOpenComparison}
+            onOpen={handleOpenComparison}
+          />
+        )}
+      </AnimatePresence>
+
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+        {/* ── Top Bar ── */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="-ml-2 text-muted-foreground hover:text-foreground shrink-0"
+            onClick={() => setView("compare")}
           >
+            <ArrowLeft className="size-4 mr-1.5" />
+            <span className="hidden sm:inline">Retour au formulaire</span>
+            <span className="sm:hidden">Retour</span>
+          </Button>
+
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground flex-1">
+            {filteredAndSorted.length} offre
+            {filteredAndSorted.length !== 1 ? "s" : ""} trouvée
+            {filteredAndSorted.length !== 1 ? "s" : ""}
+          </h1>
+
+          {/* Price mode toggle */}
+          <div className="flex items-center bg-muted/30 rounded-full p-0.5 shrink-0 self-start sm:self-auto">
+            <button
+              onClick={() => setPriceMode("annual")}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
+                priceMode === "annual"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Par an
+            </button>
+            <button
+              onClick={() => setPriceMode("monthly")}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
+                priceMode === "monthly"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Par mois
+            </button>
+          </div>
+        </div>
+
+        {/* ── Mobile Filter Toggle ── */}
+        <div className="lg:hidden mb-4">
+          <Button
+            variant="outline"
+            className="w-full justify-between rounded-xl border-border"
+            onClick={() => setMobileFiltersOpen(!mobileFiltersOpen)}
+          >
+            <div className="flex items-center gap-2">
+              <Filter className="size-4" />
+              <span className="font-medium">Filtres</span>
+              {activeFilterCount > 0 && (
+                <Badge className="bg-primary text-primary-foreground rounded-full px-1.5 text-xs min-w-5 h-5 flex items-center justify-center">
+                  {activeFilterCount}
+                </Badge>
+              )}
+            </div>
+            <ChevronDown
+              className={`size-4 text-muted-foreground transition-transform duration-200 ${
+                mobileFiltersOpen ? "rotate-180" : ""
+              }`}
+            />
+          </Button>
+        </div>
+
+        {/* ── Mobile Filters (collapsible) ── */}
+        <AnimatePresence>
+          {mobileFiltersOpen && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              className="overflow-hidden lg:hidden mb-6"
+            >
+              <FiltersSidebar
+                coverageFilter={coverageFilter}
+                setCoverageFilter={setCoverageFilter}
+                uncheckedInsurers={uncheckedInsurers}
+                toggleInsurer={toggleInsurer}
+                onToggleAllInsurers={handleToggleAllInsurers}
+                uniqueInsurers={uniqueInsurers}
+                budgetMax={budgetMax}
+                setBudgetMax={setBudgetMax}
+                onReset={resetFilters}
+                totalOffers={comparisonResults.length}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ── Two-column layout ── */}
+        <div className="flex gap-6 items-start">
+          {/* Desktop Sidebar */}
+          <div className="hidden lg:block w-72 shrink-0">
             <FiltersSidebar
               coverageFilter={coverageFilter}
               setCoverageFilter={setCoverageFilter}
@@ -778,74 +1133,63 @@ export function ResultsPage() {
               onReset={resetFilters}
               totalOffers={comparisonResults.length}
             />
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </div>
 
-      {/* ── Two-column layout ── */}
-      <div className="flex gap-6 items-start">
-        {/* Desktop Sidebar */}
-        <div className="hidden lg:block w-72 shrink-0">
-          <FiltersSidebar
-            coverageFilter={coverageFilter}
-            setCoverageFilter={setCoverageFilter}
-            uncheckedInsurers={uncheckedInsurers}
-            toggleInsurer={toggleInsurer}
-            onToggleAllInsurers={handleToggleAllInsurers}
-            uniqueInsurers={uniqueInsurers}
-            budgetMax={budgetMax}
-            setBudgetMax={setBudgetMax}
-            onReset={resetFilters}
-            totalOffers={comparisonResults.length}
-          />
+          {/* Main Content */}
+          <main className="flex-1 min-w-0 space-y-4">
+            {filteredAndSorted.length > 0 ? (
+              <AnimatePresence mode="popLayout">
+                {filteredAndSorted.map((offer) => (
+                  <OfferCard
+                    key={offer.id}
+                    offer={offer}
+                    priceMode={priceMode}
+                    onViewDetails={handleViewDetails}
+                    onRequestQuote={handleRequestQuote}
+                    onAddToCompare={handleToggleCompare}
+                    isCompared={isOfferCompared(offer.id)}
+                  />
+                ))}
+              </AnimatePresence>
+            ) : (
+              <div className="text-center py-16">
+                <div className="rounded-full bg-muted/40 p-6 mb-4 inline-block">
+                  <SearchX className="size-10 text-muted-foreground" />
+                </div>
+                <h3 className="text-lg font-semibold mb-2">
+                  Aucune offre ne correspond à vos critères
+                </h3>
+                <p className="text-muted-foreground mb-6 text-sm">
+                  Essayez d&apos;élargir vos filtres ou de modifier le budget.
+                </p>
+                <Button
+                  variant="outline"
+                  className="rounded-full"
+                  onClick={resetFilters}
+                >
+                  <RotateCcw className="size-4 mr-2" />
+                  Réinitialiser les filtres
+                </Button>
+              </div>
+            )}
+          </main>
         </div>
 
-        {/* Main Content */}
-        <main className="flex-1 min-w-0 space-y-4">
-          {filteredAndSorted.length > 0 ? (
-            <AnimatePresence mode="popLayout">
-              {filteredAndSorted.map((offer) => (
-                <OfferCard
-                  key={offer.id}
-                  offer={offer}
-                  priceMode={priceMode}
-                  onViewDetails={handleViewDetails}
-                  onRequestQuote={handleRequestQuote}
-                />
-              ))}
-            </AnimatePresence>
-          ) : (
-            /* Filtered empty state */
-            <div className="text-center py-16">
-              <div className="rounded-full bg-muted/40 p-6 mb-4 inline-block">
-                <SearchX className="size-10 text-muted-foreground" />
-              </div>
-              <h3 className="text-lg font-semibold mb-2">
-                Aucune offre ne correspond à vos critères
-              </h3>
-              <p className="text-muted-foreground mb-6 text-sm">
-                Essayez d&rsquo;élargir vos filtres ou de modifier le budget.
-              </p>
-              <Button
-                variant="outline"
-                className="rounded-full"
-                onClick={resetFilters}
-              >
-                <RotateCcw className="size-4 mr-2" />
-                Réinitialiser les filtres
-              </Button>
-            </div>
-          )}
-        </main>
-      </div>
+        {/* Detail dialog */}
+        <OfferDetailDialog
+          offer={selectedOffer}
+          open={selectedOffer !== null}
+          onClose={() => setSelectedOffer(null)}
+          onRequestQuote={handleRequestQuote}
+        />
 
-      {/* Detail dialog */}
-      <OfferDetailDialog
-        offer={selectedOffer}
-        open={selectedOffer !== null}
-        onClose={() => setSelectedOffer(null)}
-        onRequestQuote={handleRequestQuote}
-      />
-    </section>
+        {/* Comparison modal */}
+        <ComparisonModal
+          offers={offersToCompare}
+          open={comparisonModalOpen}
+          onClose={() => setComparisonModalOpen(false)}
+        />
+      </section>
+    </div>
   );
 }

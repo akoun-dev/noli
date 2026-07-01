@@ -1,0 +1,28 @@
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "Header (with logo, navigation links, and buttons), Hero Section (with headline, subheadline, and insurance cards), Middle Section (white space), Dark Teal Section, Light Teal Section, White Section, Footer (dark teal with copyright and \"Propulsé par\" text)",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1782911573,
+  "id": "20260701211241e8f0babd20fa4386",
+  "model": "glm-4.6v",
+  "object": "chat.completion",
+  "request_id": "20260701211241e8f0babd20fa4386",
+  "usage": {
+    "completion_tokens": 61,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "prompt_tokens": 6103,
+    "prompt_tokens_details": {
+      "cached_tokens": 4
+    },
+    "total_tokens": 6164
+  }
+}

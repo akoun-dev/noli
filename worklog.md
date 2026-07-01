@@ -248,3 +248,28 @@ Stage Summary:
 - Results: Sidebar filters + detailed cards, "Obtenir le devis" / "Être rappelé" buttons, mobile filter drawer
 - All 4 pages verified end-to-end in browser (desktop 1440px + mobile 375px)
 - Zero console errors, zero runtime errors
+---
+Task ID: 1
+Agent: Main Agent
+Task: Add landing page sections, remove COMMENT ÇA MARCHE from nav, add comparison features to results page
+
+Work Log:
+- Analyzed 2 design reference images via VLM: results page with comparison bar + offer card buttons, comparison modal with guarantee table
+- Updated Zustand store (app-store.ts): added `offersToCompare`, `setOffersToCompare`, `comparisonModalOpen`, `setComparisonModalOpen` to state + resetComparison
+- Updated header (header.tsx): removed "COMMENT ÇA MARCHE" from navItems array
+- Rewrote landing page (landing-page.tsx): added 4 new sections:
+  - "Comment ça marche" - 3 steps with connector line (Remplissez, Comparez, Choisissez)
+  - "Pourquoi NOLI" - 4 advantage cards on dark bg (Transparence, Simplicité, Assureurs vérifiés, Économies)
+  - "Témoignages" - 3 testimonial cards with star ratings
+  - Final CTA - zebra mascot + "Comparer mes offres" button
+- Rewrote results page (results-page.tsx): 
+  - Added ComparisonBar component (sticky, shows insurer tags with X remove, "Vider" clear, "Comparer" button)
+  - Added ComparisonModal component (table with insurer columns, Prix mensuel/Franchise/features rows, green ✓ / red ✗ icons, shield headers, zebra striping)
+  - Updated OfferCard: replaced "Obtenir le devis" + "Être rappelé" with "En savoir plus sur cette offre" (accent) + "Comparer" (primary/selected toggle)
+  - Max 4 offers comparison limit with toast notification
+  - Fixed lint: moved useMemo before early return in ComparisonModal, inlined isOfferCompared in handleToggleCompare
+
+Stage Summary:
+- All 3 files modified: store, header, landing page, results page
+- Lint clean (only pre-existing launch-server.js require errors)
+- Browser verified: landing shows all sections, results page shows comparison bar + buttons + modal, 4-offer limit works with toast, zero console errors
