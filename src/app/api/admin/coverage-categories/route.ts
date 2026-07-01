@@ -25,12 +25,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { code, name, description, displayOrder, isActive } = body;
 
-    if (!code) {
-      return NextResponse.json(
-        { error: "Le code est requis" },
-        { status: 400 }
-      );
-    }
     if (!name) {
       return NextResponse.json(
         { error: "Le nom est requis" },
@@ -38,17 +32,36 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const existing = await db.coverageCategory.findUnique({ where: { code } });
-    if (existing) {
-      return NextResponse.json(
-        { error: "Une catégorie avec ce code existe déjà" },
-        { status: 400 }
-      );
+    // Auto-generate code from name (uppercase, spaces to underscores)
+    let genCode = code;
+    if (!genCode) {
+      genCode = name
+        .toUpperCase()
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^A-Z0-9]/g, "_")
+        .replace(/_+/g, "_")
+        .replace(/^_|_$/g, "");
+      if (!genCode) genCode = "CAT";
+      // Ensure uniqueness
+      let suffix = 1;
+      let unique = genCode;
+      while (await db.coverageCategory.findUnique({ where: { code: unique } })) {
+        unique = `${genCode}_${suffix++}`;
+      }
+      genCode = unique;
+    } else {
+      const existing = await db.coverageCategory.findUnique({ where: { code: genCode } });
+      if (existing) {
+        return NextResponse.json(
+          { error: "Une catégorie avec ce code existe déjà" },
+          { status: 400 }
+        );
+      }
     }
 
     const category = await db.coverageCategory.create({
       data: {
-        code,
+        code: genCode,
         name,
         description: description || null,
         displayOrder: displayOrder ?? 0,

@@ -400,7 +400,6 @@ export function InsuranceOffersTab() {
                               <div key={c.id} className="flex items-center justify-between rounded-lg border px-3 py-2">
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <span className="text-sm font-medium">{c.name}</span>
-                                  <span className="text-xs text-muted-foreground font-mono">({c.code})</span>
                                   {c.isMandatory && <Badge variant="default" className="text-[10px] px-1.5 py-0">Obligatoire</Badge>}
                                 </div>
                                 <div className="flex items-center gap-2">

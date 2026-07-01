@@ -42,12 +42,6 @@ export async function POST(request: NextRequest) {
     const { code, name, logoUrl, contactEmail, phone, website, isActive } =
       body;
 
-    if (!code) {
-      return NextResponse.json(
-        { error: "Le code est requis" },
-        { status: 400 }
-      );
-    }
     if (!name) {
       return NextResponse.json(
         { error: "Le nom est requis" },
@@ -55,17 +49,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const existing = await db.insurer.findUnique({ where: { code } });
-    if (existing) {
-      return NextResponse.json(
-        { error: "Un assureur avec ce code existe déjà" },
-        { status: 400 }
-      );
+    // Auto-generate code from name (first word, uppercase)
+    let genCode = code;
+    if (!genCode) {
+      genCode = name.split(/\s+/)[0].toUpperCase().replace(/[^A-Z0-9]/g, "");
+      if (!genCode) genCode = "INS";
+      // Ensure uniqueness
+      let suffix = 1;
+      let unique = genCode;
+      while (await db.insurer.findUnique({ where: { code: unique } })) {
+        unique = `${genCode}${suffix++}`;
+      }
+      genCode = unique;
+    } else {
+      const existing = await db.insurer.findUnique({ where: { code: genCode } });
+      if (existing) {
+        return NextResponse.json(
+          { error: "Un assureur avec ce code existe déjà" },
+          { status: 400 }
+        );
+      }
     }
 
     const insurer = await db.insurer.create({
       data: {
-        code,
+        code: genCode,
         name,
         logoUrl: logoUrl || null,
         contactEmail: contactEmail || null,

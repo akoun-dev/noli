@@ -42,7 +42,6 @@ interface InsurerDetail extends Omit<Insurer, "_count"> {
 }
 
 type FormData = {
-  code: string;
   name: string;
   contactEmail: string;
   phone: string;
@@ -50,7 +49,7 @@ type FormData = {
   isActive: boolean;
 };
 
-const emptyForm: FormData = { code: "", name: "", contactEmail: "", phone: "", website: "", isActive: true };
+const emptyForm: FormData = { name: "", contactEmail: "", phone: "", website: "", isActive: true };
 
 export function AssureursTab() {
   const { toast } = useToast();
@@ -85,7 +84,7 @@ export function AssureursTab() {
   const openCreate = () => { setEditing(null); setForm(emptyForm); setDialogOpen(true); };
   const openEdit = (item: Insurer) => {
     setEditing(item);
-    setForm({ code: item.code, name: item.name, contactEmail: item.contactEmail ?? "", phone: item.phone ?? "", website: item.website ?? "", isActive: item.isActive });
+    setForm({ name: item.name, contactEmail: item.contactEmail ?? "", phone: item.phone ?? "", website: item.website ?? "", isActive: item.isActive });
     setDialogOpen(true);
   };
 
@@ -105,8 +104,8 @@ export function AssureursTab() {
   };
 
   const handleSave = async () => {
-    if (!form.code.trim() || !form.name.trim()) {
-      toast({ title: "Erreur", description: "Le code et le nom sont requis", variant: "destructive" });
+    if (!form.name.trim()) {
+      toast({ title: "Erreur", description: "Le nom est requis", variant: "destructive" });
       return;
     }
     setSaving(true);
@@ -187,7 +186,6 @@ export function AssureursTab() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Code</TableHead>
                   <TableHead>Nom</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Téléphone</TableHead>
@@ -201,7 +199,6 @@ export function AssureursTab() {
               <TableBody>
                 {items.map((item) => (
                   <TableRow key={item.id}>
-                    <TableCell className="font-mono text-xs font-medium">{item.code}</TableCell>
                     <TableCell className="font-medium">{item.name}</TableCell>
                     <TableCell className="text-muted-foreground text-sm">{item.contactEmail ?? "—"}</TableCell>
                     <TableCell className="text-muted-foreground text-sm">{item.phone ?? "—"}</TableCell>
@@ -231,7 +228,6 @@ export function AssureursTab() {
                 <CardContent className="p-4 space-y-3">
                   <div className="flex items-start justify-between">
                     <div>
-                      <p className="font-mono text-xs text-muted-foreground">{item.code}</p>
                       <p className="font-semibold">{item.name}</p>
                     </div>
                     <Switch checked={item.isActive} onCheckedChange={() => toggleActive(item)} />
@@ -260,7 +256,6 @@ export function AssureursTab() {
             <DialogTitle>{editing ? "Modifier l'assureur" : "Nouvel assureur"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <div><Label htmlFor="code">Code *</Label><Input id="code" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })} placeholder="Ex: NOLIA" /></div>
             <div><Label htmlFor="name">Nom *</Label><Input id="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ex: NOLI Assurance" /></div>
             <div><Label htmlFor="contactEmail">Email</Label><Input id="contactEmail" type="email" value={form.contactEmail} onChange={(e) => setForm({ ...form, contactEmail: e.target.value })} /></div>
             <div><Label htmlFor="phone">Téléphone</Label><Input id="phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
@@ -283,7 +278,7 @@ export function AssureursTab() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Building2 className="h-5 w-5" />
-              {detailLoading ? <Skeleton className="h-6 w-48" /> : detailItem ? <>{detailItem.code} — {detailItem.name}</> : null}
+              {detailLoading ? <Skeleton className="h-6 w-48" /> : detailItem ? <>{detailItem.name}</> : null}
             </DialogTitle>
           </DialogHeader>
           {detailLoading ? (
@@ -346,7 +341,6 @@ export function AssureursTab() {
                         <div key={c.id} className="flex items-center justify-between rounded-lg border px-3 py-2">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-sm font-medium">{c.name}</span>
-                            <span className="text-xs text-muted-foreground">({c.code})</span>
                             {c.category && <Badge variant="outline" className="text-[10px] px-1.5 py-0">{c.category.name}</Badge>}
                             <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium ${c.calculationType === "FREE" ? "bg-emerald-100 text-emerald-800" : c.calculationType === "FIXED_AMOUNT" ? "bg-blue-100 text-blue-800" : c.calculationType === "VARIABLE_BASED" ? "bg-orange-100 text-orange-800" : c.calculationType === "MATRIX_BASED" ? "bg-purple-100 text-purple-800" : ""}`}>{c.calculationType === "FREE" ? "Gratuit" : c.calculationType === "FIXED_AMOUNT" ? "Fixe" : c.calculationType === "VARIABLE_BASED" ? "Variable" : c.calculationType === "MATRIX_BASED" ? "Matrice" : c.calculationType}</span>
                           </div>

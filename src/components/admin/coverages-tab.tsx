@@ -82,7 +82,6 @@ const calcLabel: Record<string, string> = {
 type CalculationType = "FREE" | "FIXED_AMOUNT" | "VARIABLE_BASED" | "MATRIX_BASED";
 
 interface Step1Data {
-  code: string;
   name: string;
   type: string;
   description: string;
@@ -94,7 +93,7 @@ interface Step1Data {
 }
 
 const emptyStep1: Step1Data = {
-  code: "", name: "", type: "", description: "", insurerId: "", categoryId: "",
+  name: "", type: "", description: "", insurerId: "", categoryId: "",
   isMandatory: false, displayOrder: "0", isActive: true,
 };
 
@@ -215,7 +214,6 @@ export function CoveragesTab() {
   const openEdit = (item: Coverage) => {
     setEditing(item);
     setStep1({
-      code: item.code,
       name: item.name,
       type: item.type,
       description: item.description ?? "",
@@ -260,7 +258,7 @@ export function CoveragesTab() {
   };
 
   const handleSave = async () => {
-    if (!step1.code.trim() || !step1.name.trim() || !step1.insurerId || !calcType) {
+    if (!step1.name.trim() || !step1.insurerId || !calcType) {
       toast({ title: "Erreur", description: "Veuillez remplir tous les champs requis", variant: "destructive" });
       return;
     }
@@ -484,7 +482,6 @@ export function CoveragesTab() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Code</TableHead>
                   <TableHead>Nom</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Assureur</TableHead>
@@ -502,7 +499,6 @@ export function CoveragesTab() {
                     className={`cursor-pointer ${selectedId === item.id ? "bg-muted/60" : ""}`}
                     onClick={() => handleRowClick(item.id)}
                   >
-                    <TableCell className="font-mono text-xs font-medium">{item.code}</TableCell>
                     <TableCell className="font-medium">{item.name}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{item.type}</TableCell>
                     <TableCell className="text-sm">{item.insurer.name}</TableCell>
@@ -538,7 +534,6 @@ export function CoveragesTab() {
                 <CardContent className="p-4 space-y-2">
                   <div className="flex items-start justify-between">
                     <div>
-                      <p className="font-mono text-xs text-muted-foreground">{item.code}</p>
                       <p className="font-semibold">{item.name}</p>
                       <p className="text-xs text-muted-foreground">{item.insurer.name}</p>
                     </div>
@@ -638,21 +633,15 @@ export function CoveragesTab() {
           <ScrollArea className="max-h-[60vh] pr-4">
             {step === 1 && (
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Code *</Label>
-                    <Input value={step1.code} onChange={(e) => setStep1({ ...step1, code: e.target.value, type: e.target.value || step1.type })} placeholder="Ex: RC" />
-                  </div>
-                  <div>
-                    <Label>Type</Label>
+                <div>
+                  <Label>Type</Label>
                     <Select value={step1.type} onValueChange={(v) => setStep1({ ...step1, type: v })}>
                       <SelectTrigger><SelectValue placeholder="Sélectionner" /></SelectTrigger>
                       <SelectContent>
-                        {Object.entries(codeSuggestions).map(([key, val]) => <SelectItem key={key} value={key}>{key}</SelectItem>)}
+                        {Object.keys(codeSuggestions).map((key) => <SelectItem key={key} value={key}>{key}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
-                </div>
                 <div><Label>Nom *</Label><Input value={step1.name} onChange={(e) => setStep1({ ...step1, name: e.target.value })} /></div>
                 <div><Label>Description</Label><Textarea value={step1.description} onChange={(e) => setStep1({ ...step1, description: e.target.value })} rows={2} /></div>
                 <div className="grid grid-cols-2 gap-4">
@@ -716,7 +705,7 @@ export function CoveragesTab() {
               <Button variant="outline" onClick={() => setStep(step - 1)}><ChevronLeft className="h-4 w-4 mr-1" />Précédent</Button>
             )}
             {step < 3 && (
-              <Button className="bg-[#B9E54D] text-black hover:bg-[#a5d044]" onClick={() => setStep(step + 1)} disabled={step === 1 && (!step1.code.trim() || !step1.name.trim() || !step1.insurerId)}>
+              <Button className="bg-[#B9E54D] text-black hover:bg-[#a5d044]" onClick={() => setStep(step + 1)} disabled={step === 1 && (!step1.name.trim() || !step1.insurerId)}>
                 Suivant<ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             )}

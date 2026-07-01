@@ -86,12 +86,6 @@ export async function POST(request: NextRequest) {
       metadata,
     } = body;
 
-    if (!code) {
-      return NextResponse.json(
-        { error: "Le code est requis" },
-        { status: 400 }
-      );
-    }
     if (!name) {
       return NextResponse.json(
         { error: "Le nom est requis" },
@@ -111,18 +105,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const existing = await db.coverage.findUnique({ where: { code } });
-    if (existing) {
-      return NextResponse.json(
-        { error: "Une garantie avec ce code existe déjà" },
-        { status: 400 }
-      );
+    // Auto-generate code: TYPE_INSURER_CODE
+    let genCode = code;
+    if (!genCode) {
+      const insurer = await db.insurer.findUnique({ where: { id: insurerId }, select: { code: true } });
+      const insCode = insurer?.code || "INS";
+      const typePrefix = (type || name).toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z0-9]/g, "").substring(0, 10);
+      genCode = `${typePrefix}_${insCode}`;
+      // Ensure uniqueness
+      let suffix = 1;
+      let unique = genCode;
+      while (await db.coverage.findUnique({ where: { code: unique } })) {
+        unique = `${genCode}_${suffix++}`;
+      }
+      genCode = unique;
+    } else {
+      const existing = await db.coverage.findUnique({ where: { code: genCode } });
+      if (existing) {
+        return NextResponse.json(
+          { error: "Une garantie avec ce code existe déjà" },
+          { status: 400 }
+        );
+      }
     }
 
     const coverage = await db.coverage.create({
       data: {
-        code,
-        type: type || code,
+        code: genCode,
+        type: type || genCode,
         name,
         description: description || null,
         calculationType,
