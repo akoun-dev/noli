@@ -2,7 +2,7 @@
 
 import { useAppStore } from "@/store/app-store";
 import {
-  LayoutDashboard, Building2, FileText, Shield, ShieldCheck, Package,
+  LayoutDashboard, Building2, FileText, Shield, ShieldCheck,
   Receipt, Settings, Layers, ArrowLeft, Menu,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,6 @@ import { InsuranceCategoriesTab } from "./insurance-categories-tab";
 import { InsuranceOffersTab } from "./insurance-offers-tab";
 import { CoverageCategoriesTab } from "./coverage-categories-tab";
 import { CoveragesTab } from "./coverages-tab";
-import { PackagesTab } from "./packages-tab";
 import { DevisTab } from "./devis-tab";
 import { SettingsTab } from "./settings-tab";
 
@@ -25,7 +24,6 @@ const sidebarItems = [
   { id: "insurance-offers", label: "Offres", icon: FileText },
   { id: "coverage-categories", label: "Cat. Garanties", icon: ShieldCheck },
   { id: "coverages", label: "Garanties", icon: Shield },
-  { id: "packages", label: "Packages", icon: Package },
   { id: "devis", label: "Devis", icon: Receipt },
   { id: "settings", label: "Paramètres", icon: Settings },
 ] as const;
@@ -85,7 +83,6 @@ export function AdminPage() {
       case "insurance-offers": return <InsuranceOffersTab />;
       case "coverage-categories": return <CoverageCategoriesTab />;
       case "coverages": return <CoveragesTab />;
-      case "packages": return <PackagesTab />;
       case "devis": return <DevisTab />;
       case "settings": return <SettingsTab />;
       default: return <DashboardTab />;
