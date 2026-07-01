@@ -2,33 +2,30 @@
 
 import { useAppStore } from "@/store/app-store";
 import {
-  LayoutDashboard,
-  Building2,
-  FileText,
-  ShieldCheck,
-  Receipt,
-  ArrowLeft,
-  Menu,
-  Tag,
-  Settings,
+  LayoutDashboard, Building2, FileText, Shield, ShieldCheck, Package,
+  Receipt, Settings, Layers, ArrowLeft, Menu,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
 import { DashboardTab } from "./dashboard-tab";
 import { AssureursTab } from "./assureurs-tab";
-import { OffresTab } from "./offres-tab";
-import { GarantiesTab } from "./garanties-tab";
+import { InsuranceCategoriesTab } from "./insurance-categories-tab";
+import { InsuranceOffersTab } from "./insurance-offers-tab";
+import { CoverageCategoriesTab } from "./coverage-categories-tab";
+import { CoveragesTab } from "./coverages-tab";
+import { PackagesTab } from "./packages-tab";
 import { DevisTab } from "./devis-tab";
-import { CategoriesTab } from "./categories-tab";
 import { SettingsTab } from "./settings-tab";
 
 const sidebarItems = [
   { id: "dashboard", label: "Tableau de bord", icon: LayoutDashboard },
   { id: "assureurs", label: "Assureurs", icon: Building2 },
-  { id: "offres", label: "Offres", icon: FileText },
-  { id: "garanties", label: "Garanties", icon: ShieldCheck },
-  { id: "categories", label: "Catégories", icon: Tag },
+  { id: "insurance-categories", label: "Catégories Produits", icon: Layers },
+  { id: "insurance-offers", label: "Offres", icon: FileText },
+  { id: "coverage-categories", label: "Cat. Garanties", icon: ShieldCheck },
+  { id: "coverages", label: "Garanties", icon: Shield },
+  { id: "packages", label: "Packages", icon: Package },
   { id: "devis", label: "Devis", icon: Receipt },
   { id: "settings", label: "Paramètres", icon: Settings },
 ] as const;
@@ -56,9 +53,7 @@ function SidebarContent({ activeTab, onSelect, onBack }: { activeTab: string; on
                 key={item.id}
                 onClick={() => onSelect(item.id)}
                 className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
-                  isActive
-                    ? "bg-[#B9E54D] text-black"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  isActive ? "bg-[#B9E54D] text-black" : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
               >
                 <Icon className="h-4 w-4" />
@@ -86,9 +81,11 @@ export function AdminPage() {
     switch (adminTab) {
       case "dashboard": return <DashboardTab />;
       case "assureurs": return <AssureursTab />;
-      case "offres": return <OffresTab />;
-      case "garanties": return <GarantiesTab />;
-      case "categories": return <CategoriesTab />;
+      case "insurance-categories": return <InsuranceCategoriesTab />;
+      case "insurance-offers": return <InsuranceOffersTab />;
+      case "coverage-categories": return <CoverageCategoriesTab />;
+      case "coverages": return <CoveragesTab />;
+      case "packages": return <PackagesTab />;
       case "devis": return <DevisTab />;
       case "settings": return <SettingsTab />;
       default: return <DashboardTab />;
@@ -97,17 +94,12 @@ export function AdminPage() {
 
   return (
     <div className="flex h-screen bg-background">
-      {/* Desktop sidebar */}
       <aside className="hidden lg:flex w-64 flex-col border-r bg-card">
         <SidebarContent activeTab={adminTab} onSelect={setAdminTab} onBack={() => setView("landing")} />
       </aside>
-
-      {/* Mobile sidebar */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-40 flex items-center gap-2 border-b bg-card px-4 py-3">
         <Sheet>
-          <SheetTrigger asChild>
-            <Button variant="ghost" size="icon"><Menu className="h-5 w-5" /></Button>
-          </SheetTrigger>
+          <SheetTrigger asChild><Button variant="ghost" size="icon"><Menu className="h-5 w-5" /></Button></SheetTrigger>
           <SheetContent side="left" className="w-64 p-0">
             <SheetHeader className="sr-only"><SheetTitle>Menu</SheetTitle></SheetHeader>
             <SidebarContent activeTab={adminTab} onSelect={(t) => { setAdminTab(t); }} onBack={() => setView("landing")} />
@@ -120,12 +112,8 @@ export function AdminPage() {
           <span className="font-bold text-sm">NOLI Admin</span>
         </div>
       </div>
-
-      {/* Main content */}
       <main className="flex-1 overflow-y-auto">
-        <div className="p-4 pt-16 lg:p-6 lg:pt-6 max-w-[1400px] mx-auto">
-          {renderTab()}
-        </div>
+        <div className="p-4 pt-16 lg:p-6 lg:pt-6 max-w-[1400px] mx-auto">{renderTab()}</div>
       </main>
     </div>
   );

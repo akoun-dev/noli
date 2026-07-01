@@ -3,624 +3,178 @@ import { NextResponse } from "next/server";
 
 export async function POST() {
   try {
-    const existingInsurers = await db.insurer.count();
-    if (existingInsurers > 0) {
-      return NextResponse.json({
-        message: "Base de données déjà initialisée",
-        count: existingInsurers,
-      });
+    if ((await db.insurer.count()) > 0) {
+      return NextResponse.json({ message: "Déjà initialisé" });
     }
 
-    // ── Assureurs ──────────────────────────────────────────────────
-    const insurersData = [
-      {
-        name: "NSIA Assurances",
-        description:
-          "Leader de l'assurance en Afrique de l'Ouest depuis 1995. NSIA Assurances offre des solutions complètes et personnalisées.",
-        phone: "+225 27 20 30 40 50",
-        email: "contact@nsia.ci",
-        website: "https://www.nsiabenin.com",
-        rating: 4.5,
-        isVerified: true,
-      },
-      {
-        name: "AXA Côte d'Ivoire",
-        description:
-          "Filiale du groupe AXA, l'un des leaders mondiaux de l'assurance et de la gestion d'actifs.",
-        phone: "+225 27 20 21 22 23",
-        email: "contact@axa.ci",
-        website: "https://www.axa.ci",
-        rating: 4.7,
-        isVerified: true,
-      },
-      {
-        name: "Allianz Côte d'Ivoire",
-        description:
-          "Allianz est l'un des plus grands fournisseurs de services d'assurance et d'assistance au monde.",
-        phone: "+225 27 20 31 32 33",
-        email: "service@allianz.ci",
-        website: "https://www.allianz.fr",
-        rating: 4.6,
-        isVerified: true,
-      },
-      {
-        name: "SUNU Assurances",
-        description:
-          "Groupe africain d'assurance présent dans 12 pays. SUNU Assurances est reconnu pour sa proximité client.",
-        phone: "+225 27 20 41 42 43",
-        email: "info@sunu.ci",
-        website: "https://www.sunu.com",
-        rating: 4.2,
-        isVerified: true,
-      },
-      {
-        name: "CNART Assurances",
-        description:
-          "Compagnie nationale d'assurance et de réassurance des transports. Spécialiste des risques automobiles.",
-        phone: "+225 27 20 51 52 53",
-        email: "contact@cnart.ci",
-        rating: 4.0,
-        isVerified: true,
-      },
-      {
-        name: "AGOU Assurances",
-        description:
-          "AGOU Assurances propose des solutions adaptées aux besoins des particuliers et entreprises ivoiriens.",
-        phone: "+225 27 20 61 62 63",
-        email: "contact@agou.ci",
-        rating: 3.8,
-        isVerified: true,
-      },
-    ];
+    // ── Insurance Categories ──────────────────────────────────
+    const autoCat = await db.insuranceCategory.create({
+      data: { name: "Assurance Auto", icon: "Car", description: "Assurance automobile tous risques" },
+    });
 
-    const createdInsurers: { id: string; name: string }[] = [];
-    for (const data of insurersData) {
-      const created = await db.insurer.create({ data });
-      createdInsurers.push({ id: created.id, name: created.name });
+    // ── Coverage Categories ────────────────────────────────────
+    const catData = [
+      { code: "RESPONSABILITE_CIVILE", name: "Responsabilité Civile", displayOrder: 1 },
+      { code: "DEFENSE_RECOURS", name: "Défense et Recours", displayOrder: 2 },
+      { code: "INDIVIDUELLE_CONDUCTEUR", name: "Individuelle Conducteur", displayOrder: 3 },
+      { code: "INDIVIDUELLE_PASSAGERS", name: "Individuelle Passagers", displayOrder: 4 },
+      { code: "INCENDIE", name: "Incendie", displayOrder: 5 },
+      { code: "VOL", name: "Vol", displayOrder: 6 },
+      { code: "BRIS_GLACES", name: "Bris de Glaces", displayOrder: 7 },
+      { code: "TIERCE_COMPLETE", name: "Tierce Complète", displayOrder: 8 },
+      { code: "TIERCE_COLLISION", name: "Tierce Collision", displayOrder: 9 },
+      { code: "ASSISTANCE", name: "Assistance", displayOrder: 10 },
+      { code: "AVANCE_RECOURS", name: "Avance sur Recours", displayOrder: 11 },
+      { code: "ACCESSOIRES", name: "Accessoires", displayOrder: 12 },
+    ];
+    const cats: { id: string; code: string }[] = [];
+    for (const c of catData) {
+      const created = await db.coverageCategory.create({ data: c });
+      cats.push({ id: created.id, code: created.code });
+    }
+    const catMap = new Map(cats.map((c) => [c.code, c.id]));
+
+    // ── Insurers ────────────────────────────────────────────────
+    const insurerData = [
+      { code: "GNA", name: "GNA Assurances", contactEmail: "contact@gna.ci", phone: "+225 27 20 30 40 50", website: "https://www.gna.ci", mult: 0.9 },
+      { code: "NSIA", name: "NSIA Assurances", contactEmail: "contact@nsia.ci", phone: "+225 27 20 30 40 51", website: "https://www.nsiabenin.com", mult: 0.95 },
+      { code: "NOLIA", name: "NOLIA Assurances", contactEmail: "contact@nolia.ci", phone: "+225 27 20 30 40 52", website: "https://www.nolia.ci", mult: 1.0 },
+      { code: "SUNU", name: "SUNU Assurances", contactEmail: "info@sunu.ci", phone: "+225 27 20 41 42 43", website: "https://www.sunu.com", mult: 1.1 },
+      { code: "SAHAM", name: "SAHAM Assurances", contactEmail: "contact@saham.ci", phone: "+225 27 20 51 52 53", website: "https://www.saham.com", mult: 1.15 },
+    ];
+    const insurers: { id: string; code: string; mult: number }[] = [];
+    for (const i of insurerData) {
+      const { mult: _, ...rest } = i;
+      const created = await db.insurer.create({ data: rest });
+      insurers.push({ id: created.id, code: created.code, mult: i.mult });
     }
 
-    // ── Offres ─────────────────────────────────────────────────────
-    const offerTemplates = [
-      {
-        name: "Auto Essentiel",
-        coverageType: "tiers",
-        description:
-          "Couverture responsabilité civile obligatoire avec assistance de base.",
-        features: [
-          "Responsabilité civile",
-          "Assistance dépannage 0-50km",
-          "Défense pénale",
-          "Protection juridique",
-        ],
-      },
-      {
-        name: "Auto Confort",
-        coverageType: "tiers_plus",
-        description:
-          "Couverture élargie incluant le vol, l'incendie et les bris de glace.",
-        features: [
-          "Responsabilité civile",
-          "Vol et tentative de vol",
-          "Incendie",
-          "Bris de glace",
-          "Assistance dépannage 0-100km",
-          "Défense pénale",
-          "Véhicule de courtoisie (3 jours)",
-        ],
-      },
-      {
-        name: "Auto Premium",
-        coverageType: "tous_risques",
-        description:
-          "Protection complète incluant tous les dommages, catastrophes naturelles et options avancées.",
-        features: [
-          "Responsabilité civile",
-          "Dommages tous accidents",
-          "Vol et tentative de vol",
-          "Incendie",
-          "Bris de glace",
-          "Catastrophes naturelles",
-          "Assistance dépannage illimitée",
-          "Véhicule de courtoisie (7 jours)",
-          "Protection du conducteur",
-          "Indemnisation valeur à neuf (1 an)",
-        ],
-      },
+    // ── Coverages (per insurer) ───────────────────────────────
+    const coverageTemplates = [
+      { code: "RC", type: "RC", name: "Responsabilité Civile", calcType: "MATRIX_BASED", catCode: "RESPONSABILITE_CIVILE", mandatory: true,
+        meta: { matrixType: "FISCAL_POWER", capital: { corporel: "7 000 000 000 FCFA", materiel: "500 000 000 FCFA" } } },
+      { code: "DR", type: "DR", name: "Défense & Recours", calcType: "FIXED_AMOUNT", catCode: "DEFENSE_RECOURS",
+        meta: { fixedAmount: 7950, capital: "1 000 000 FCFA" } },
+      { code: "IC_F1", type: "IC", name: "IC Formule 1", calcType: "MATRIX_BASED", catCode: "INDIVIDUELLE_CONDUCTEUR",
+        meta: { matrixType: "FORMULA", formulas: [{ name: "Formule 1", capitalDeces: 1000000, capitalInvalidite: 2000000, fraisMedicaux: 100000, primeFixe: 5500 }] } },
+      { code: "IC_F2", type: "IC", name: "IC Formule 2", calcType: "MATRIX_BASED", catCode: "INDIVIDUELLE_CONDUCTEUR",
+        meta: { matrixType: "FORMULA", formulas: [{ name: "Formule 2", capitalDeces: 3000000, capitalInvalidite: 6000000, fraisMedicaux: 400000, primeFixe: 8400 }] } },
+      { code: "IC_F3", type: "IC", name: "IC Formule 3", calcType: "MATRIX_BASED", catCode: "INDIVIDUELLE_CONDUCTEUR",
+        meta: { matrixType: "FORMULA", formulas: [{ name: "Formule 3", capitalDeces: 5000000, capitalInvalidite: 10000000, fraisMedicaux: 500000, primeFixe: 15900 }] } },
+      { code: "IPT", type: "IPT", name: "Individuelle Passagers", calcType: "MATRIX_BASED", catCode: "INDIVIDUELLE_PASSAGERS",
+        meta: { matrixType: "FORMULA", useSeats: true, formulas: [
+          { name: "Formule 1", capitalDeces: 1000000, capitalInvalidite: 2000000, fraisMedicaux: 100000, primeFixe: 5500 },
+          { name: "Formule 2", capitalDeces: 3000000, capitalInvalidite: 6000000, fraisMedicaux: 400000, primeFixe: 8400 },
+          { name: "Formule 3", capitalDeces: 5000000, capitalInvalidite: 10000000, fraisMedicaux: 500000, primeFixe: 15900 },
+        ] } },
+      { code: "INCENDIE", type: "INCENDIE", name: "Incendie", calcType: "VARIABLE_BASED", catCode: "INCENDIE",
+        meta: { variable: "VN", rate: 0.42, franchise: { percent: 5, min: 65000, description: "5% du sinistre, minimum 65 000 FCFA" } } },
+      { code: "VOL", type: "VOL", name: "Vol", calcType: "VARIABLE_BASED", catCode: "VOL",
+        meta: { variable: "VN", conditional: { threshold: 25000000, rateBelow: 1.1, rateAbove: 2.1 }, franchise: { percent: 10, min: 255000, description: "10% du sinistre, minimum 255 000 FCFA" } } },
+      { code: "VOL_ARME", type: "VOL_ARME", name: "Vol à mains armées", calcType: "VARIABLE_BASED", catCode: "VOL",
+        meta: { variable: "VN", conditional: { threshold: 25000000, rateBelow: 1.6, rateAbove: 2.2 }, franchise: { percent: 10, min: 255000 } } },
+      { code: "BDG", type: "BDG", name: "Bris de glaces", calcType: "VARIABLE_BASED", catCode: "BRIS_GLACES",
+        meta: { variable: "REPLACEMENT_VALUE", rate: 0.4 } },
+      { code: "EXT_BDG", type: "EXT_BDG", name: "Extension BDG toit ouvrant", calcType: "VARIABLE_BASED", catCode: "BRIS_GLACES",
+        meta: { variable: "REPLACEMENT_VALUE", rate: 0.42, incompatibleWith: "BDG" } },
+      { code: "TCM", type: "TCM", name: "Tierce Complète", calcType: "MATRIX_BASED", catCode: "TIERCE_COMPLETE",
+        meta: { matrixType: "TIERCE_COMPLETE" } },
+      { code: "TCL", type: "TCL", name: "Tierce Collision", calcType: "MATRIX_BASED", catCode: "TIERCE_COLLISION",
+        meta: { matrixType: "TIERCE_COLLISION" } },
+      { code: "ASSISTANCE", type: "ASSISTANCE", name: "Assistance", calcType: "FIXED_AMOUNT", catCode: "ASSISTANCE",
+        meta: { fixedAmount: 10000 } },
+      { code: "AVANCE_RECOURS", type: "AVANCE_RECOURS", name: "Avance sur recours", calcType: "FIXED_AMOUNT", catCode: "AVANCE_RECOURS",
+        meta: { fixedAmount: 15000, capital: "4 000 000 FCFA" } },
+      { code: "VOL_ACCESSOIRES", type: "VOL_ACCESSOIRES", name: "Vol des accessoires", calcType: "FIXED_AMOUNT", catCode: "ACCESSOIRES",
+        meta: { fixedAmount: 15000, capital: "250 000 FCFA", franchise: 20000 } },
+      { code: "RTI", type: "RTI", name: "Recours tiers Incendie", calcType: "FREE", catCode: "RESPONSABILITE_CIVILE",
+        meta: {} },
     ];
 
-    const basePrices = {
-      tiers: [15000, 18000, 16500, 14000, 13000, 15500],
-      tiers_plus: [35000, 42000, 38000, 32000, 30000, 34000],
-      tous_risques: [75000, 85000, 80000, 68000, 65000, 72000],
-    };
-    const deductibles = {
-      tiers: [0, 0, 0, 0, 0, 0],
-      tiers_plus: [50000, 75000, 60000, 50000, 40000, 55000],
-      tous_risques: [50000, 100000, 75000, 50000, 50000, 60000],
-    };
+    const rcPrices = { "1-2 CV": 68675, "3-4 CV": 75000, "5-7 CV": 85000, "8-10 CV": 95000, "11+ CV": 110000 };
+    const cvRanges = [
+      { range: "1-2 CV", min: 1, max: 2 }, { range: "3-4 CV", min: 3, max: 4 },
+      { range: "5-7 CV", min: 5, max: 7 }, { range: "8-10 CV", min: 8, max: 10 },
+      { range: "11+ CV", min: 11, max: 99 },
+    ];
 
-    const createdOffers: {
-      id: string;
-      insurerId: string;
-      coverageType: string;
-    }[] = [];
-
-    for (let i = 0; i < createdInsurers.length; i++) {
-      const insurer = createdInsurers[i];
-      for (let j = 0; j < offerTemplates.length; j++) {
-        const tpl = offerTemplates[j];
-        const type = tpl.coverageType as "tiers" | "tiers_plus" | "tous_risques";
-        const basePrice = basePrices[type][i];
-        const deductible = deductibles[type][i];
-
-        const offer = await db.offer.create({
+    for (const ins of insurers) {
+      for (const tmpl of coverageTemplates) {
+        const covCode = `${tmpl.code}_${ins.code}`;
+        await db.coverage.create({
           data: {
-            insurerId: insurer.id,
-            name: tpl.name,
-            coverageType: type,
-            description: tpl.description,
-            basePrice,
-            annualPrice: basePrice * 11,
-            deductible,
-            maxCoverage:
-              type === "tous_risques"
-                ? 50000000
-                : type === "tiers_plus"
-                  ? 10000000
-                  : 0,
-            features: JSON.stringify(tpl.features),
-            conditions:
-              type === "tous_risques"
-                ? "Franchise applicable selon l'ancienneté du véhicule. Véhicule de moins de 5 ans requis pour l'indemnisation valeur à neuf."
-                : type === "tiers_plus"
-                  ? "Le vol doit être déclaré dans les 48h. Le bris de glace est limité à 2 sinistres par an."
-                  : "Couverture conforme à l'article 1 de l'ordonnance n°59-27 du 6 janvier 1959.",
+            code: covCode, type: tmpl.type, name: tmpl.name,
+            description: `Garantie ${tmpl.name} — ${ins.name}`,
+            calculationType: tmpl.calcType,
+            categoryId: catMap.get(tmpl.catCode) || null,
+            insurerId: ins.id, isMandatory: tmpl.mandatory,
+            metadata: JSON.stringify(tmpl.meta),
+            displayOrder: coverageTemplates.indexOf(tmpl) + 1,
           },
         });
-        createdOffers.push({
-          id: offer.id,
-          insurerId: insurer.id,
-          coverageType: type,
+      }
+
+      // RC tariff rules
+      const rcCoverage = await db.coverage.findFirst({ where: { code: `RC_${ins.code}` } });
+      if (rcCoverage) {
+        for (const fuel of ["ESSENCE", "DIESEL"]) {
+          for (const cv of cvRanges) {
+            const basePrice = rcPrices[cv.range as keyof typeof rcPrices];
+            await db.coverageTariffRule.create({
+              data: {
+                coverageId: rcCoverage.id,
+                fuelType: fuel, minFiscalPower: cv.min, maxFiscalPower: cv.max,
+                fixedAmount: Math.round(basePrice * ins.mult),
+              },
+            });
+          }
+        }
+      }
+    }
+
+    // ── Insurance Offers (3 per insurer) ────────────────────────
+    const offerTemplates = [
+      { name: "Économique", contractType: "basic", features: ["RC", "Défense & Recours", "Assistance"], deductible: 0, basePrice: 25000 },
+      { name: "Équilibre", contractType: "third_party_plus", features: ["RC", "DR", "IC", "Incendie", "Vol", "Assistance"], deductible: 50000, basePrice: 65000 },
+      { name: "Sérénité", contractType: "all_risks", features: ["RC", "DR", "IC", "IPT", "Incendie", "Vol", "BDG", "TCM", "Assistance"], deductible: 50000, basePrice: 120000 },
+    ];
+
+    for (const ins of insurers) {
+      for (const tpl of offerTemplates) {
+        const price = Math.round(tpl.basePrice * ins.mult);
+        await db.insuranceOffer.create({
+          data: {
+            insurerId: ins.id, categoryId: autoCat.id, name: tpl.name,
+            description: `Offre ${tpl.name} — ${ins.name}`,
+            priceMin: Math.round(price * 0.9), priceMax: Math.round(price * 1.1),
+            deductible: tpl.deductible,
+            features: JSON.stringify(tpl.features),
+            contractType: tpl.contractType,
+          },
         });
       }
     }
 
-    // ── Catégories de garanties ──────────────────────────────────
-    const categoriesData = [
-      {
-        name: "Obligatoire",
-        slug: "obligatoire",
-        description: "Garanties obligatoires (RC et garanties liées)",
-        icon: "Shield",
-        sortOrder: 1,
-      },
-      {
-        name: "Garantie",
-        slug: "garantie",
-        description: "Garanties d'assurance standards",
-        icon: "ShieldCheck",
-        sortOrder: 2,
-      },
-      {
-        name: "Assistance",
-        slug: "assistance",
-        description: "Services d'assistance",
-        icon: "Phone",
-        sortOrder: 3,
-      },
-      {
-        name: "Protection",
-        slug: "protection",
-        description: "Protections individuelles (IC, IPT)",
-        icon: "UserCheck",
-        sortOrder: 4,
-      },
-      {
-        name: "Pack Pickup",
-        slug: "pack-pickup",
-        description: "Packs spécifiques aux pick-up",
-        icon: "Truck",
-        sortOrder: 5,
-      },
-    ];
-
-    const createdCategories: { id: string; slug: string }[] = [];
-    for (const data of categoriesData) {
-      const created = await db.guaranteeCategory.create({ data });
-      createdCategories.push({ id: created.id, slug: created.slug });
-    }
-
-    const categoryBySlug = new Map(
-      createdCategories.map((c) => [c.slug, c.id])
-    );
-
-    // Mapping from old category values to categoryId
-    const categoryMap: Record<string, string> = {
-      obligatoire: categoryBySlug.get("obligatoire")!,
-      garantie: categoryBySlug.get("garantie")!,
-      assistance: categoryBySlug.get("assistance")!,
-      protection: categoryBySlug.get("protection")!,
-      pack_pickup: categoryBySlug.get("pack-pickup")!,
-    };
-
-    // ── Garanties (21) ─────────────────────────────────────────────
-    const guaranteesData = [
-      {
-        name: "Responsabilité Civile (RC)",
-        slug: "responsabilite-civile",
-        description:
-          "Couverture des dommages causés aux tiers. Grille tarifaire par puissance fiscale et carburant.",
-        icon: "Shield",
-        categoryLabel: "obligatoire",
-        calcMethod: "MATRIX_BASED",
-        capital: JSON.stringify({
-          corporel: "7 000 000 000 FCFA",
-          materiel: "500 000 000 FCFA",
-        }),
-        sortOrder: 1,
-      },
-      {
-        name: "Recours des tiers Incendie",
-        slug: "recours-tiers-incendie",
-        description: "Recours contre le responsable d'un incendie. Inclus dans la RC.",
-        icon: "Flame",
-        categoryLabel: "obligatoire",
-        calcMethod: "FREE",
-        sortOrder: 2,
-      },
-      {
-        name: "Défense & Recours",
-        slug: "defense-recours",
-        description: "Prise en charge des frais de défense et recours.",
-        icon: "Scale",
-        categoryLabel: "assistance",
-        calcMethod: "FIXED_AMOUNT",
-        fixedPrice: 7950,
-        capital: JSON.stringify({ capital: "1 000 000 FCFA" }),
-        sortOrder: 3,
-      },
-      {
-        name: "Assistance",
-        slug: "assistance",
-        description: "Assistance dépannage et remorquage.",
-        icon: "Phone",
-        categoryLabel: "assistance",
-        calcMethod: "FIXED_AMOUNT",
-        fixedPrice: 10000,
-        sortOrder: 4,
-      },
-      {
-        name: "Avance sur recours",
-        slug: "avance-sur-recours",
-        description: "Avance de fonds en attendant le recours.",
-        icon: "Banknote",
-        categoryLabel: "assistance",
-        calcMethod: "FIXED_AMOUNT",
-        fixedPrice: 15000,
-        capital: JSON.stringify({ capital: "4 000 000 FCFA" }),
-        sortOrder: 5,
-      },
-      {
-        name: "Individuelle Conducteur (IC)",
-        slug: "individuelle-conducteur",
-        description:
-          "Protection corporelle du conducteur. Calcul par formule (1, 2 ou 3).",
-        icon: "User",
-        categoryLabel: "protection",
-        calcMethod: "MATRIX_BASED",
-        capital: JSON.stringify({
-          description: "Capital décès, invalidité et frais médicaux",
-        }),
-        sortOrder: 6,
-      },
-      {
-        name: "Individuelle Passagers (IPT)",
-        slug: "individuelle-passagers",
-        description:
-          "Protection des passagers du véhicule. Formule + nombre de places.",
-        icon: "Users",
-        categoryLabel: "protection",
-        calcMethod: "MATRIX_BASED",
-        capital: JSON.stringify({ description: "Selon la formule choisie" }),
-        sortOrder: 7,
-      },
-      {
-        name: "Incendie",
-        slug: "incendie",
-        description: "Couverture des dommages par incendie. Taux : 0,42 % de la Valeur Neuve.",
-        icon: "FlameKindling",
-        categoryLabel: "garantie",
-        calcMethod: "VARIABLE_BASED",
-        rate: 0.42,
-        franchise: JSON.stringify({
-          percent: 5,
-          min: 65000,
-          description: "5 % du sinistre, minimum 65 000 FCFA",
-        }),
-        sortOrder: 8,
-      },
-      {
-        name: "Vol",
-        slug: "vol",
-        description:
-          "Couverture en cas de vol ou tentative de vol. Taux variable selon la Valeur Neuve.",
-        icon: "Eye",
-        categoryLabel: "garantie",
-        calcMethod: "VARIABLE_BASED",
-        rateConditions: JSON.stringify([
-          { condition: "VN ≤ 25 000 000 FCFA", rate: 1.1 },
-          { condition: "VN > 25 000 000 FCFA", rate: 2.1 },
-        ]),
-        franchise: JSON.stringify({
-          percent: 10,
-          min: 255000,
-          description: "10 % du sinistre, minimum 255 000 FCFA",
-        }),
-        sortOrder: 9,
-      },
-      {
-        name: "Vol à mains armées",
-        slug: "vol-mains-armees",
-        description:
-          "Couverture spécifique pour le vol avec violence. Taux variable selon la Valeur Neuve.",
-        icon: "Siren",
-        categoryLabel: "garantie",
-        calcMethod: "VARIABLE_BASED",
-        rateConditions: JSON.stringify([
-          { condition: "VN ≤ 25 000 000 FCFA", rate: 1.6 },
-          { condition: "VN > 25 000 000 FCFA", rate: 2.2 },
-        ]),
-        franchise: JSON.stringify({
-          percent: 10,
-          min: 255000,
-          description: "10 % du sinistre, minimum 255 000 FCFA",
-        }),
-        sortOrder: 10,
-      },
-      {
-        name: "Vol des accessoires",
-        slug: "vol-accessoires",
-        description: "Couverture du vol d'accessoires du véhicule.",
-        icon: "Package",
-        categoryLabel: "garantie",
-        calcMethod: "FIXED_AMOUNT",
-        fixedPrice: 15000,
-        capital: JSON.stringify({ capital: "250 000 FCFA" }),
-        franchise: JSON.stringify({
-          percent: 0,
-          min: 20000,
-          description: "Franchise : 20 000 FCFA",
-        }),
-        sortOrder: 11,
-      },
-      {
-        name: "Bris de glaces",
-        slug: "bris-de-glaces",
-        description:
-          "Couverture des dommages aux vitres. Taux : 0,40 % de la valeur de remplacement.",
-        icon: "GlassWater",
-        categoryLabel: "garantie",
-        calcMethod: "VARIABLE_BASED",
-        rate: 0.4,
-        franchise: JSON.stringify({ description: "Selon contrat" }),
-        sortOrder: 12,
-      },
-      {
-        name: "Extension Bris de glaces (toit ouvrant)",
-        slug: "extension-bris-glaces-toit-ouvrant",
-        description:
-          "Extension de la garantie bris de glaces pour les toits ouvrants. Incompatible avec bris de glaces classique.",
-        icon: "Square",
-        categoryLabel: "garantie",
-        calcMethod: "VARIABLE_BASED",
-        rate: 0.42,
-        franchise: JSON.stringify({
-          description:
-            "Incompatible avec Bris de glaces classique",
-        }),
-        sortOrder: 13,
-      },
-      {
-        name: "Tierce Complète (TCM)",
-        slug: "tierce-complete-tcm",
-        description:
-          "Indemnisation des dommages au véhicule en cas de tiers identifiable. Catégorie + tranche VN + franchise.",
-        icon: "Car",
-        categoryLabel: "garantie",
-        calcMethod: "MATRIX_BASED",
-        capital: JSON.stringify({ description: "Selon franchise choisie" }),
-        sortOrder: 14,
-      },
-      {
-        name: "Tierce Collision (TCL)",
-        slug: "tierce-collision-tcl",
-        description:
-          "Indemnisation des dommages en cas de collision avec un tiers identifié. Catégorie + tranche VN + franchise.",
-        icon: "CarFront",
-        categoryLabel: "garantie",
-        calcMethod: "MATRIX_BASED",
-        capital: JSON.stringify({ description: "Selon franchise choisie" }),
-        sortOrder: 15,
-      },
-      {
-        name: "Tierce Complète plafonnée",
-        slug: "tierce-complete-plafonnee",
-        description:
-          "TCM avec plafond d'indemnisation. Taux : 8 %, 7 % ou 6 % selon la franchise.",
-        icon: "ShieldAlert",
-        categoryLabel: "garantie",
-        calcMethod: "VARIABLE_BASED",
-        rateConditions: JSON.stringify([
-          { condition: "Franchise 1M", rate: 8 },
-          { condition: "Franchise 2M", rate: 7 },
-          { condition: "Franchise 5M", rate: 6 },
-        ]),
-        capital: JSON.stringify({
-          plafonds: "1 000 000 à 5 000 000 FCFA",
-        }),
-        sortOrder: 16,
-      },
-      {
-        name: "Tierce Collision plafonnée",
-        slug: "tierce-collision-plafonnee",
-        description:
-          "TCL avec plafond d'indemnisation. Taux : 8 %, 7 % ou 6 % selon la franchise.",
-        icon: "AlertTriangle",
-        categoryLabel: "garantie",
-        calcMethod: "VARIABLE_BASED",
-        rateConditions: JSON.stringify([
-          { condition: "Franchise 1M", rate: 8 },
-          { condition: "Franchise 2M", rate: 7 },
-          { condition: "Franchise 5M", rate: 6 },
-        ]),
-        capital: JSON.stringify({
-          plafonds: "1 000 000 à 5 000 000 FCFA",
-        }),
-        sortOrder: 17,
-      },
-      {
-        name: "Pack Pickup Ivory",
-        slug: "pack-pickup-ivory",
-        description:
-          "Pack gratuit réservé aux pick-up de 3 tonnes ou moins.",
-        icon: "Truck",
-        categoryLabel: "pack_pickup",
-        calcMethod: "FREE",
-        capital: JSON.stringify({
-          description: "Réservé aux pick-up ≤ 3 tonnes",
-        }),
-        sortOrder: 18,
-      },
-      {
-        name: "Pack Pickup Bronze",
-        slug: "pack-pickup-bronze",
-        description: "Pack assurance pick-up niveau Bronze.",
-        icon: "Truck",
-        categoryLabel: "pack_pickup",
-        calcMethod: "FIXED_AMOUNT",
-        fixedPrice: 48000,
-        capital: JSON.stringify({
-          description: "Selon composition du pack",
-        }),
-        sortOrder: 19,
-      },
-      {
-        name: "Pack Pickup Silver",
-        slug: "pack-pickup-silver",
-        description: "Pack assurance pick-up niveau Silver.",
-        icon: "Truck",
-        categoryLabel: "pack_pickup",
-        calcMethod: "FIXED_AMOUNT",
-        fixedPrice: 65000,
-        capital: JSON.stringify({
-          description: "Selon composition du pack",
-        }),
-        sortOrder: 20,
-      },
-      {
-        name: "Pack Pickup Gold",
-        slug: "pack-pickup-gold",
-        description: "Pack assurance pick-up niveau Gold.",
-        icon: "Truck",
-        categoryLabel: "pack_pickup",
-        calcMethod: "FIXED_AMOUNT",
-        fixedPrice: 85000,
-        capital: JSON.stringify({
-          description: "Selon composition du pack",
-        }),
-        sortOrder: 21,
-      },
-    ];
-
-    const createdGuarantees: { id: string; name: string }[] = [];
-    for (const data of guaranteesData) {
-      const { categoryLabel, ...rest } = data;
-      const g = await db.guarantee.create({
-        data: {
-          ...rest,
-          categoryId: categoryMap[categoryLabel] || null,
-          categoryLabel,
-        },
-      });
-      createdGuarantees.push({ id: g.id, name: g.name });
-    }
-
-    // ── InsurerGuarantee links (all insurers → all guarantees) ─────
-    for (const insurer of createdInsurers) {
-      const links = createdGuarantees.map((g) => ({
-        insurerId: insurer.id,
-        guaranteeId: g.id,
-        isEnabled: true,
-      }));
-      await db.insurerGuarantee.createMany({ data: links });
-    }
-
-    // ── OfferGuarantee links ───────────────────────────────────────
-    const guaranteeBySlug = new Map(
-      createdGuarantees.map((g) => [g.name, g.id])
-    );
-
-    // Guarantees for "tiers" (Auto Essentiel)
-    const tiersGuarantees = [
-      "Responsabilité Civile (RC)",
-      "Recours des tiers Incendie",
-      "Défense & Recours",
-      "Assistance",
-    ];
-
-    // Guarantees for "tiers_plus" (Auto Confort) — extends tiers
-    const tiersPlusGuarantees = [
-      ...tiersGuarantees,
-      "Incendie",
-      "Vol",
-      "Bris de glaces",
-      "Individuelle Conducteur (IC)",
-    ];
-
-    // Guarantees for "tous_risques" (Auto Premium) — extends tiers_plus
-    const tousRisquesGuarantees = [
-      ...tiersPlusGuarantees,
-      "Vol à mains armées",
-      "Individuelle Passagers (IPT)",
-      "Avance sur recours",
-      "Vol des accessoires",
-      "Tierce Complète (TCM)",
-      "Tierce Collision (TCL)",
-    ];
-
-    for (const offer of createdOffers) {
-      let names: string[];
-      if (offer.coverageType === "tiers") names = tiersGuarantees;
-      else if (offer.coverageType === "tiers_plus")
-        names = tiersPlusGuarantees;
-      else names = tousRisquesGuarantees;
-
-      const links = names
-        .map((name) => {
-          const gId = guaranteeBySlug.get(name);
-          return gId
-            ? { offerId: offer.id, guaranteeId: gId, isIncluded: true }
-            : null;
-        })
-        .filter(Boolean) as { offerId: string; guaranteeId: string; isIncluded: boolean }[];
-
-      if (links.length > 0) {
-        await db.offerGuarantee.createMany({ data: links });
-      }
-    }
+    // ── Insurance Packages ─────────────────────────────────────
+    await db.insurancePackage.createMany({
+      data: [
+        { name: "Pack Pickup Ivory", description: "Pack gratuit réservé aux pick-up ≤ 3 tonnes", basePrice: 0 },
+        { name: "Pack Pickup Bronze", description: "Pack assurance pick-up niveau Bronze", basePrice: 48000 },
+        { name: "Pack Pickup Silver", description: "Pack assurance pick-up niveau Silver", basePrice: 65000 },
+        { name: "Pack Pickup Gold", description: "Pack assurance pick-up niveau Gold", basePrice: 85000 },
+      ],
+    });
 
     return NextResponse.json({
-      message: "Base de données initialisée avec succès",
-      categories: createdCategories.length,
-      insurers: createdInsurers.length,
-      offers: createdOffers.length,
-      guarantees: createdGuarantees.length,
+      message: "Base de données initialisée",
+      insurers: insurers.length,
+      coverageCategories: cats.length,
+      insuranceCategories: 1,
+      insuranceOffers: insurers.length * 3,
+      insurancePackages: 4,
     });
   } catch (error) {
-    console.error("Erreur lors de l'initialisation:", error);
-    return NextResponse.json(
-      { error: "Échec de l'initialisation" },
-      { status: 500 }
-    );
+    console.error("Erreur seed:", error);
+    return NextResponse.json({ error: "Échec de l'initialisation" }, { status: 500 });
   }
 }

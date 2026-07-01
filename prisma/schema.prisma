@@ -7,159 +7,207 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  password      String?
-  name          String?
-  phone         String?
-  role          String    @default("USER")
-  isActive      Boolean   @default(true)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  quotes        Quote[]
+// ── 1. PROFILS (Utilisateurs) ───────────────────────────────────
+model Profile {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  role        String   @default("USER") // USER, INSURER, ADMIN
+  firstName   String?
+  lastName    String?
+  phone       String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  quotes          Quote[]
+  insurerAccounts InsurerAccount[]
 }
 
+// ── 2. ASSUREURS ──────────────────────────────────────────────
 model Insurer {
-  id            String    @id @default(cuid())
-  name          String
-  logo          String?
-  description   String?
-  phone         String?
-  email         String?
-  website       String?
-  rating        Float     @default(0)
-  isVerified    Boolean   @default(false)
-  isActive      Boolean   @default(true)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  offers        Offer[]
-  guaranteeLinks InsurerGuarantee[]
+  id           String   @id @default(cuid())
+  code         String   @unique // NOLIA, SUNU, NSIA, GNA, SAHAM
+  name         String
+  logoUrl      String?
+  contactEmail String?
+  phone        String?
+  website      String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  accounts       InsurerAccount[]
+  offers         InsuranceOffer[]
+  coverages      Coverage[]
 }
 
-model Offer {
-  id            String    @id @default(cuid())
-  insurerId     String
-  insurer       Insurer   @relation(fields: [insurerId], references: [id])
-  name          String
-  coverageType  String
-  description   String?
-  basePrice     Float
-  annualPrice   Float?
-  deductible    Float?
-  maxCoverage   Float?
-  features      String    @default("[]")
-  conditions    String?
-  isActive      Boolean   @default(true)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  quotes        Quote[]
-  guaranteeLinks OfferGuarantee[]
+// Junction: Utilisateur ↔ Assureur (rôle INSURER)
+model InsurerAccount {
+  id         String   @id @default(cuid())
+  profileId  String
+  profile    Profile  @relation(fields: [profileId], references: [id])
+  insurerId  String
+  insurer    Insurer  @relation(fields: [insurerId], references: [id])
+  createdAt  DateTime @default(now())
+
+  @@unique([profileId, insurerId])
 }
 
-model GuaranteeCategory {
-  id              String   @id @default(cuid())
-  name            String
-  slug            String   @unique
-  description     String?
-  icon            String?
-  sortOrder       Int      @default(0)
-  isActive        Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  guarantees      Guarantee[]
+// ── 3. CATÉGORIES DE PRODUITS (Auto, Moto, etc.) ─────────────
+model InsuranceCategory {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  icon        String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  offers       InsuranceOffer[]
+  quotes       Quote[]
 }
 
-model Guarantee {
-  id              String   @id @default(cuid())
-  name            String
-  slug            String   @unique
-  description     String?
-  icon            String?
-  categoryId      String?
-  category        GuaranteeCategory? @relation(fields: [categoryId], references: [id])
-  categoryLabel   String   @default("garantie")
+// ── 4. CATÉGORIES DE GARANTIES (RC, Incendie, Vol...) ────────
+model CoverageCategory {
+  id           String   @id @default(cuid())
+  code         String   @unique // RESPONSABILITE_CIVILE, INCENDIE, etc.
+  name         String
+  description  String?
+  displayOrder Int      @default(0)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  // Calculation method: FREE, FIXED_AMOUNT, VARIABLE_BASED, MATRIX_BASED
-  calcMethod      String   @default("FIXED_AMOUNT")
-
-  // For FIXED_AMOUNT — montant fixe en FCFA
-  fixedPrice      Float?
-
-  // For VARIABLE_BASED — taux en pourcentage (ex: 0.42 pour 0.42%)
-  rate            Float?
-  // JSON: conditions de taux multiples
-  // ex: [{"condition":"VN <= 25000000","rate":1.10},{"condition":"VN > 25000000","rate":2.10}]
-  rateConditions  String?
-
-  // Capital couvert — JSON avec détails
-  // ex: {"corporel":"7 000 000 000 FCFA","materiel":"500 000 000 FCFA"}
-  capital         String?
-  // Franchise — JSON avec détails
-  // ex: {"percent":10,"min":255000,"description":"10% du sinistre, minimum 255 000 FCFA"}
-  franchise       String?
-
-  // Pour MATRIX_BASED — configuration de la matrice tarifaire
-  // JSON: grille ou formules de calcul
-  matrixConfig    String?
-
-  // Affichage
-  sortOrder       Int      @default(0)
-  isActive        Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  // Relations many-to-many
-  insurerLinks    InsurerGuarantee[]
-  offerLinks      OfferGuarantee[]
+  coverages Coverage[]
 }
 
-// Junction: Assureur ↔ Garantie
-// Un assureur peut activer/désactiver une garantie et éventuellement surcharger le tarif
-model InsurerGuarantee {
-  id              String    @id @default(cuid())
-  insurerId       String
-  insurer         Insurer   @relation(fields: [insurerId], references: [id])
-  guaranteeId     String
-  guarantee       Guarantee @relation(fields: [guaranteeId], references: [id])
-  isEnabled       Boolean   @default(true)
-  // Surcharge éventuelle du taux ou du prix fixe par l'assureur
-  customRate      Float?
-  customPrice     Float?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+// ── 5. GARANTIES (Coverages) ──────────────────────────────────
+model Coverage {
+  id             String   @id @default(cuid())
+  code           String   @unique
+  type           String   // RC, INCENDIE, VOL, etc.
+  name           String
+  description    String?
+  calculationType String   @default("FIXED_AMOUNT") // FREE, FIXED_AMOUNT, VARIABLE_BASED, MATRIX_BASED
+  categoryId     String?
+  category       CoverageCategory? @relation(fields: [categoryId], references: [id])
+  insurerId      String
+  insurer        Insurer  @relation(fields: [insurerId], references: [id])
+  isMandatory    Boolean  @default(false)
+  isActive       Boolean  @default(true)
+  displayOrder   Int      @default(0)
+  metadata       String   @default("{}") // JSON: config calcul (matrice, taux, franchises, etc.)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  @@unique([insurerId, guaranteeId])
+  tariffRules    CoverageTariffRule[]
+  packageLinks   PackageCoverage[]
+  quoteLines     QuoteCoverage[]
 }
 
-// Junction: Offre ↔ Garantie
-// Une offre inclut un ensemble de garanties
-model OfferGuarantee {
-  id              String    @id @default(cuid())
-  offerId         String
-  offer           Offer     @relation(fields: [offerId], references: [id])
-  guaranteeId     String
-  guarantee       Guarantee @relation(fields: [guaranteeId], references: [id])
-  isIncluded      Boolean   @default(true)
-  createdAt       DateTime  @default(now())
-
-  @@unique([offerId, guaranteeId])
+// ── 5b. RÈGLES DE TARIFICATION ────────────────────────────────
+model CoverageTariffRule {
+  id               String   @id @default(cuid())
+  coverageId       String
+  coverage         Coverage  @relation(fields: [coverageId], references: [id], onDelete: Cascade)
+  vehicleCategory  String?  // VP, VT, etc.
+  minFiscalPower   Int?
+  maxFiscalPower   Int?
+  minVehicleValue  Float?
+  maxVehicleValue  Float?
+  fuelType         String?  // ESSENCE, DIESEL
+  formulaName      String?  // Formule 1, 2, 3 (IC/IPT)
+  baseRate         Float?   // Taux en %
+  fixedAmount      Float?   // Montant fixe FCFA
+  minAmount        Float?
+  maxAmount        Float?
+  conditions       String   @default("{}") // JSON
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 
+// ── 6. OFFRES D'ASSURANCE ────────────────────────────────────
+model InsuranceOffer {
+  id             String   @id @default(cuid())
+  insurerId      String
+  insurer        Insurer  @relation(fields: [insurerId], references: [id])
+  categoryId     String?
+  category       InsuranceCategory? @relation(fields: [categoryId], references: [id])
+  name           String
+  description    String?
+  priceMin       Int?
+  priceMax       Int?
+  coverageAmount Int?
+  deductible     Int      @default(0)
+  features       String   @default("[]") // JSON string[]
+  contractType   String?  // basic, third_party_plus, all_risks
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  quotes Quote[]
+}
+
+// ── 7. PACKAGES ───────────────────────────────────────────────
+model InsurancePackage {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  basePrice   Int
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  coverageLinks PackageCoverage[]
+}
+
+// Junction: Package ↔ Coverage
+model PackageCoverage {
+  id          String   @id @default(cuid())
+  packageId  String
+  package    InsurancePackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  coverageId  String
+  coverage    Coverage  @relation(fields: [coverageId], references: [id], onDelete: Cascade)
+  isMandatory Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  @@unique([packageId, coverageId])
+}
+
+// ── 8. DEVIS ──────────────────────────────────────────────────
 model Quote {
-  id              String   @id @default(cuid())
-  reference       String   @unique
-  userId          String?
-  user            User?    @relation(fields: [userId], references: [id])
-  offerId         String?
-  offer           Offer?   @relation(fields: [offerId], references: [id])
-  status          String   @default("pending")
-  personalInfo    String   @default("{}")
-  vehicleInfo     String   @default("{}")
-  coverageNeeds   String   @default("{}")
-  proposedPrice   Float?
-  finalPrice      Float?
-  notes           String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id                    String   @id @default(cuid())
+  reference             String   @unique
+  userId                String?
+  user                  Profile? @relation(fields: [userId], references: [id])
+  categoryId            String?
+  category              InsuranceCategory? @relation(fields: [categoryId], references: [id])
+  offerId               String?
+  offer                 InsuranceOffer? @relation(fields: [offerId], references: [id])
+  status                String   @default("DRAFT") // DRAFT, PENDING, APPROVED, REJECTED
+  estimatedPrice        Int?
+  vehicleData           String   @default("{}") // JSON
+  personalData          String   @default("{}") // JSON
+  coverageRequirements  String   @default("{}") // JSON
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  coverageLines QuoteCoverage[]
+}
+
+// ── 9. LIGNES DE DEVIS ───────────────────────────────────────
+model QuoteCoverage {
+  id                     String   @id @default(cuid())
+  quoteId                String
+  quote                  Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  coverageId             String
+  coverage               Coverage  @relation(fields: [coverageId], references: [id])
+  tariffRuleId           String?
+  premiumAmount          Int
+  calculationParameters  String   @default("{}") // JSON
+  isIncluded             Boolean  @default(true)
+  isMandatory            Boolean  @default(false)
+  createdAt              DateTime @default(now())
+
+  @@unique([quoteId, coverageId])
 }

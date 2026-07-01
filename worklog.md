@@ -381,3 +381,38 @@ Stage Summary:
 - Multi-step wizard matches reference screenshots exactly (card selection, conditional rates, matrix tables)
 - All API routes return 200, zero lint errors (except pre-existing launch-server.js)
 - Browser verified: all 7 admin tabs, wizard steps, insurer detail view
+
+---
+Task ID: 23
+Agent: main
+Task: Rewrite all admin API routes for new Prisma schema (Coverages, CoverageCategories, InsuranceCategories, InsurancePackages, TariffRules, Profiles)
+
+Work Log:
+- Deleted all old admin API routes (previously used Guarantee/GuaranteeCategory models no longer in schema)
+- Created 16 new admin API route files aligned with current Prisma schema:
+  1. /api/admin/stats/route.ts — GET counts for all 9 entities (insurers, offers, coverages, coverageCategories, insuranceCategories, packages, quotes, profiles, tariffRules)
+  2. /api/admin/insurers/route.ts — GET (search, active filter, _count offers/coverages/accounts), POST (code unique, name required)
+  3. /api/admin/insurers/[id]/route.ts — GET (include offers, coverages with category, accounts with profile), PUT, DELETE
+  4. /api/admin/insurance-categories/route.ts — GET (_count offers/quotes), POST (name required)
+  5. /api/admin/insurance-categories/[id]/route.ts — GET/PUT/DELETE
+  6. /api/admin/coverage-categories/route.ts — GET (ordered by displayOrder, _count coverages), POST (code unique, name required)
+  7. /api/admin/coverage-categories/[id]/route.ts — GET/PUT/DELETE
+  8. /api/admin/coverages/route.ts — GET (insurer/category select, _count tariffRules, filters: insurerId, categoryId, calculationType, search; JSON.parse metadata), POST (code unique, name, calculationType, insurerId required; JSON.stringify metadata)
+  9. /api/admin/coverages/[id]/route.ts — GET (include insurer, category, tariffRules; parse metadata), PUT (stringify metadata), DELETE
+  10. /api/admin/coverages/[id]/tariff-rules/route.ts — GET (ordered by minFiscalPower), POST (coverageId from URL, all tariff fields)
+  11. /api/admin/insurance-offers/route.ts — GET (include insurer, category; parse features; filters: insurerId, contractType, search), POST (insurerId/name required; stringify features)
+  12. /api/admin/insurance-offers/[id]/route.ts — GET (parse features), PUT (stringify features), DELETE
+  13. /api/admin/insurance-packages/route.ts — GET (_count coverageLinks), POST (name/basePrice required)
+  14. /api/admin/insurance-packages/[id]/route.ts — GET (include coverageLinks with coverage select), PUT, DELETE
+  15. /api/admin/quotes/route.ts — GET (include user select, offer with insurer, category; parse vehicleData/personalData/coverageRequirements; filters: status, search), PUT (update status only, validate enum)
+  16. /api/admin/profiles/route.ts — GET (_count quotes; search filter), PUT (update firstName, lastName, phone, role, isActive; validate role enum)
+- All error messages in French
+- params typed as Promise<{ id: string }> with await
+- Lint: zero new errors (only pre-existing launch-server.js require warnings)
+
+Stage Summary:
+- 16 API route files created covering all 9 models in current Prisma schema
+- Full CRUD for insurers, insurance-categories, coverage-categories, coverages, insurance-offers, insurance-packages
+- GET/PUT for quotes (status management) and profiles (user management)
+- Nested tariff-rules route under coverages/[id]
+- JSON fields (metadata, features, vehicleData, personalData, coverageRequirements) properly parsed/stringified

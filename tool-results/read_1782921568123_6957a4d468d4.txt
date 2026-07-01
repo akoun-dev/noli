@@ -1,0 +1,541 @@
+     1→     1→"use client";
+     2→     2→
+     3→     3→import { useEffect, useState, useCallback } from "react";
+     4→     4→import { useToast } from "@/hooks/use-toast";
+     5→     5→import {
+     6→     6→  Plus, Pencil, Trash2, Search, Loader2, ShieldCheck, Star, MoreHorizontal, Eye, Phone, Mail, Globe,
+     7→     7→} from "lucide-react";
+     8→     8→import { Button } from "@/components/ui/button";
+     9→     9→import { Input } from "@/components/ui/input";
+    10→    10→import { Label } from "@/components/ui/label";
+    11→    11→import { Badge } from "@/components/ui/badge";
+    12→    12→import { Switch } from "@/components/ui/switch";
+    13→    13→import { Textarea } from "@/components/ui/textarea";
+    14→    14→import { Skeleton } from "@/components/ui/skeleton";
+    15→    15→import { Slider } from "@/components/ui/slider";
+    16→    16→import { Separator } from "@/components/ui/separator";
+    17→    17→import { Card, CardContent } from "@/components/ui/card";
+    18→    18→import {
+    19→    19→  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+    20→    20→} from "@/components/ui/table";
+    21→    21→import {
+    22→    22→  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
+    23→    23→} from "@/components/ui/dialog";
+    24→    24→import {
+    25→    25→  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+    26→    26→  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+    27→    27→} from "@/components/ui/alert-dialog";
+    28→    28→import {
+    29→    29→  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+    30→    30→} from "@/components/ui/dropdown-menu";
+    31→    31→import { Checkbox } from "@/components/ui/checkbox";
+    32→    32→import { ScrollArea } from "@/components/ui/scroll-area";
+    33→    33→
+    34→    34→// ── Types ────────────────────────────────────────────────────────
+    35→    35→interface Insurer {
+    36→    36→  id: string; name: string; logo: string | null; description: string | null;
+    37→    37→  phone: string | null; email: string | null; website: string | null;
+    38→    38→  rating: number; isVerified: boolean; isActive: boolean;
+    39→    39→  createdAt: string; _count: { offers: number; guaranteeLinks: number };
+    40→    40→}
+    41→    41→
+    42→    42→interface InsurerFull extends Omit<Insurer, "_count"> {
+    43→    43→  guaranteeLinks: { id: string; insurerId: string; guaranteeId: string; isEnabled: boolean; customRate: number | null; customPrice: number | null; guarantee: GuaranteeMini }[];
+    44→    44→  offers: { id: string; name: string; coverageType: string; basePrice: number; isActive: boolean }[];
+    45→    45→}
+    46→    46→
+    47→    47→interface GuaranteeMini {
+    48→    48→  id: string; name: string; calcMethod: string; fixedPrice: number | null; rate: number | null;
+    49→    49→}
+    50→    50→
+    51→    51→// ── Helpers ──────────────────────────────────────────────────────
+    52→    52→const fmtDate = (d: string) => (d ? new Date(d).toLocaleDateString("fr-FR") : "—");
+    53→    53→const fmtPrice = (n: number) => new Intl.NumberFormat("fr-FR").format(n) + " FCFA";
+    54→    54→
+    55→    55→const emptyInsurer = {
+    56→    56→  name: "", logo: "", description: "", phone: "", email: "", website: "",
+    57→    57→  rating: 0, isVerified: false, isActive: true,
+    58→    58→};
+    59→    59→
+    60→    60→const coverageLabels: Record<string, string> = { tiers: "Tiers", tiers_plus: "Tiers+", tous_risques: "Tous Risques" };
+    61→    61→
+    62→    62→// ── Calc method badge ────────────────────────────────────────────
+    63→    63→function CalcBadge({ method }: { method: string }) {
+    64→    64→  const colors: Record<string, string> = {
+    65→    65→    FREE: "bg-emerald-100 text-emerald-800",
+    66→    66→    FIXED_AMOUNT: "bg-blue-100 text-blue-800",
+    67→    67→    VARIABLE_BASED: "bg-orange-100 text-orange-800",
+    68→    68→    MATRIX_BASED: "bg-purple-100 text-purple-800",
+    69→    69→  };
+    70→    70→  const labels: Record<string, string> = {
+    71→    71→    FREE: "Gratuit", FIXED_AMOUNT: "Montant fixe", VARIABLE_BASED: "Taux variable", MATRIX_BASED: "Matrice",
+    72→    72→  };
+    73→    73→  return <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${colors[method] || "bg-gray-100"}`}>{labels[method] || method}</span>;
+    74→    74→}
+    75→    75→
+    76→    76→// ── Main component ───────────────────────────────────────────────
+    77→    77→export function AssureursTab() {
+    78→    78→  const { toast } = useToast();
+    79→    79→  const [insurers, setInsurers] = useState<Insurer[]>([]);
+    80→    80→  const [loading, setLoading] = useState(true);
+    81→    81→  const [search, setSearch] = useState("");
+    82→    82→  const [formOpen, setFormOpen] = useState(false);
+    83→    83→  const [editing, setEditing] = useState<Insurer | null>(null);
+    84→    84→  const [form, setForm] = useState(emptyInsurer);
+    85→    85→  const [saving, setSaving] = useState(false);
+    86→    86→  const [deleteId, setDeleteId] = useState<string | null>(null);
+    87→    87→  const [deleting, setDeleting] = useState(false);
+    88→    88→
+    89→    89→  // Guarantee management
+    90→    90→  const [guaranteeDialogOpen, setGuaranteeDialogOpen] = useState(false);
+    91→    91→  const [selectedInsurer, setSelectedInsurer] = useState<InsurerFull | null>(null);
+    92→    92→  const [allGuarantees, setAllGuarantees] = useState<GuaranteeMini[]>([]);
+    93→    93→  const [guaranteeLinks, setGuaranteeLinks] = useState<{ guaranteeId: string; isEnabled: boolean; customRate: string; customPrice: string }[]>([]);
+    94→    94→  const [savingGuarantees, setSavingGuarantees] = useState(false);
+    95→    95→
+    96→    96→  // Detail view
+    97→    97→  const [detailInsurer, setDetailInsurer] = useState<InsurerFull | null>(null);
+    98→    98→  const [detailLoading, setDetailLoading] = useState(false);
+    99→    99→
+   100→   100→  const fetchInsurers = useCallback(async () => {
+   101→   101→    try {
+   102→   102→      const res = await fetch("/api/admin/insurers");
+   103→   103→      if (res.ok) setInsurers(await res.json());
+   104→   104→    } finally { setLoading(false); }
+   105→   105→  }, []);
+   106→   106→
+   107→   107→  useEffect(() => { fetchInsurers(); }, [fetchInsurers]);
+   108→   108→
+   109→   109→  const filtered = insurers.filter((i) => !search || i.name.toLowerCase().includes(search.toLowerCase()));
+   110→   110→
+   111→   111→  const openCreate = () => { setEditing(null); setForm(emptyInsurer); setFormOpen(true); };
+   112→   112→  const openEdit = (i: Insurer) => { setEditing(i); setForm({ name: i.name, logo: i.logo || "", description: i.description || "", phone: i.phone || "", email: i.email || "", website: i.website || "", rating: i.rating, isVerified: i.isVerified, isActive: i.isActive }); setFormOpen(true); };
+   113→   113→
+   114→   114→  const handleSave = async () => {
+   115→   115→    if (!form.name.trim()) { toast({ title: "Le nom est obligatoire", variant: "destructive" }); return; }
+   116→   116→    setSaving(true);
+   117→   117→    try {
+   118→   118→      const url = editing ? `/api/admin/insurers/${editing.id}` : "/api/admin/insurers";
+   119→   119→      const method = editing ? "PUT" : "POST";
+   120→   120→      const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
+   121→   121→      if (!res.ok) { const e = await res.json(); throw new Error(e.error || "Erreur"); }
+   122→   122→      toast({ title: editing ? "Assureur modifié" : "Assureur créé" });
+   123→   123→      setFormOpen(false);
+   124→   124→      fetchInsurers();
+   125→   125→    } catch (err) { toast({ title: (err as Error).message, variant: "destructive" }); }
+   126→   126→    finally { setSaving(false); }
+   127→   127→  };
+   128→   128→
+   129→   129→  const handleDelete = async () => {
+   130→   130→    if (!deleteId) return;
+   131→   131→    setDeleting(true);
+   132→   132→    try {
+   133→   133→      const res = await fetch(`/api/admin/insurers/${deleteId}`, { method: "DELETE" });
+   134→   134→      if (!res.ok) throw new Error();
+   135→   135→      toast({ title: "Assureur supprimé" });
+   136→   136→      setDeleteId(null);
+   137→   137→      fetchInsurers();
+   138→   138→    } catch { toast({ title: "Erreur lors de la suppression", variant: "destructive" }); }
+   139→   139→    finally { setDeleting(false); }
+   140→   140→  };
+   141→   141→
+   142→   142→  const handleToggleActive = async (i: Insurer) => {
+   143→   143→    try {
+   144→   144→      const res = await fetch(`/api/admin/insurers/${i.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...i, isActive: !i.isActive }) });
+   145→   145→      if (res.ok) fetchInsurers();
+   146→   146→    } catch { toast({ title: "Erreur", variant: "destructive" }); }
+   147→   147→  };
+   148→   148→
+   149→   149→  // ── Detail view ────────────────────────────────────────────────
+   150→   150→  const openDetail = async (i: Insurer) => {
+   151→   151→    setDetailLoading(true);
+   152→   152→    setDetailInsurer(null);
+   153→   153→    try {
+   154→   154→      const res = await fetch(`/api/admin/insurers/${i.id}`);
+   155→   155→      if (res.ok) {
+   156→   156→        setDetailInsurer(await res.json());
+   157→   157→      } else throw new Error();
+   158→   158→    } catch { toast({ title: "Erreur de chargement", variant: "destructive" }); }
+   159→   159→    finally { setDetailLoading(false); }
+   160→   160→  };
+   161→   161→
+   162→   162→  // ── Guarantee management ───────────────────────────────────────
+   163→   163→  const openGuaranteeDialog = async (insurer: Insurer) => {
+   164→   164→    try {
+   165→   165→      const [insurerRes, guaranteesRes] = await Promise.all([
+   166→   166→        fetch(`/api/admin/insurers/${insurer.id}`),
+   167→   167→        fetch("/api/admin/guarantees"),
+   168→   168→      ]);
+   169→   169→      if (!insurerRes.ok || !guaranteesRes.ok) throw new Error();
+   170→   170→      const insurerFull: InsurerFull = await insurerRes.json();
+   171→   171→      const guarantees: GuaranteeMini[] = await guaranteesRes.json();
+   172→   172→      setSelectedInsurer(insurerFull);
+   173→   173→      setAllGuarantees(guarantees);
+   174→   174→
+   175→   175→      const linkMap = new Map(insurerFull.guaranteeLinks.map((l) => [l.guaranteeId, l]));
+   176→   176→      const links = guarantees.map((g) => {
+   177→   177→        const existing = linkMap.get(g.id);
+   178→   178→        return {
+   179→   179→          guaranteeId: g.id,
+   180→   180→          isEnabled: existing?.isEnabled ?? false,
+   181→   181→          customRate: existing?.customRate?.toString() ?? "",
+   182→   182→          customPrice: existing?.customPrice?.toString() ?? "",
+   183→   183→        };
+   184→   184→      });
+   185→   185→      setGuaranteeLinks(links);
+   186→   186→      setGuaranteeDialogOpen(true);
+   187→   187→    } catch { toast({ title: "Erreur de chargement", variant: "destructive" }); }
+   188→   188→  };
+   189→   189→
+   190→   190→  const toggleGuarantee = (idx: number) => {
+   191→   191→    setGuaranteeLinks((prev) => prev.map((l, i) => i === idx ? { ...l, isEnabled: !l.isEnabled } : l));
+   192→   192→  };
+   193→   193→
+   194→   194→  const updateLink = (idx: number, field: "customRate" | "customPrice", value: string) => {
+   195→   195→    setGuaranteeLinks((prev) => prev.map((l, i) => i === idx ? { ...l, [field]: value } : l));
+   196→   196→  };
+   197→   197→
+   198→   198→  const saveGuarantees = async () => {
+   199→   199→    if (!selectedInsurer) return;
+   200→   200→    setSavingGuarantees(true);
+   201→   201→    try {
+   202→   202→      const payload = guaranteeLinks.map((l) => ({
+   203→   203→        guaranteeId: l.guaranteeId,
+   204→   204→        isEnabled: l.isEnabled,
+   205→   205→        customRate: l.customRate ? parseFloat(l.customRate) : null,
+   206→   206→        customPrice: l.customPrice ? parseFloat(l.customPrice) : null,
+   207→   207→      }));
+   208→   208→      const res = await fetch(`/api/admin/insurers/${selectedInsurer.id}/guarantees`, {
+   209→   209→        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ guarantees: payload }),
+   210→   210→      });
+   211→   211→      if (!res.ok) throw new Error();
+   212→   212→      toast({ title: "Garanties mises à jour" });
+   213→   213→      setGuaranteeDialogOpen(false);
+   214→   214→      fetchInsurers();
+   215→   215→    } catch { toast({ title: "Erreur de sauvegarde", variant: "destructive" }); }
+   216→   216→    finally { setSavingGuarantees(false); }
+   217→   217→  };
+   218→   218→
+   219→   219→  // ── Render ─────────────────────────────────────────────────────
+   220→   220→  if (loading) return <div className="space-y-4">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-12 rounded-lg" />)}</div>;
+   221→   221→
+   222→   222→  return (
+   223→   223→    <div>
+   224→   224→      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+   225→   225→        <h1 className="text-2xl font-bold">Assureurs</h1>
+   226→   226→        <div className="flex items-center gap-2">
+   227→   227→          <div className="relative flex-1 sm:w-64">
+   228→   228→            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+   229→   229→            <Input placeholder="Rechercher..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+   230→   230→          </div>
+   231→   231→          <Button onClick={openCreate} className="bg-[#B9E54D] text-black hover:bg-[#a5d044]"><Plus className="h-4 w-4 mr-1" /> Ajouter</Button>
+   232→   232→        </div>
+   233→   233→      </div>
+   234→   234→
+   235→   235→      {/* Desktop table */}
+   236→   236→      <div className="hidden md:block rounded-xl border bg-card overflow-hidden">
+   237→   237→        <Table>
+   238→   238→          <TableHeader>
+   239→   239→            <TableRow className="bg-muted/50">
+   240→   240→              <TableHead>Nom</TableHead>
+   241→   241→              <TableHead>Téléphone</TableHead>
+   242→   242→              <TableHead>Email</TableHead>
+   243→   243→              <TableHead className="text-center">Note</TableHead>
+   244→   244→              <TableHead className="text-center">Vérifié</TableHead>
+   245→   245→              <TableHead className="text-center">Offres</TableHead>
+   246→   246→              <TableHead className="text-center">Garanties</TableHead>
+   247→   247→              <TableHead className="text-center">Statut</TableHead>
+   248→   248→              <TableHead className="w-10"></TableHead>
+   249→   249→            </TableRow>
+   250→   250→          </TableHeader>
+   251→   251→          <TableBody>
+   252→   252→            {filtered.map((i) => (
+   253→   253→              <TableRow key={i.id}>
+   254→   254→                <TableCell className="font-medium">{i.name}</TableCell>
+   255→   255→                <TableCell className="text-sm text-muted-foreground">{i.phone || "—"}</TableCell>
+   256→   256→                <TableCell className="text-sm text-muted-foreground">{i.email || "—"}</TableCell>
+   257→   257→                <TableCell className="text-center"><div className="flex items-center justify-center gap-0.5"><Star className="h-3 w-3 fill-amber-400 text-amber-400" /><span className="text-sm">{i.rating}</span></div></TableCell>
+   258→   258→                <TableCell className="text-center">{i.isVerified ? <Badge className="bg-emerald-100 text-emerald-800">Oui</Badge> : <Badge variant="secondary">Non</Badge>}</TableCell>
+   259→   259→                <TableCell className="text-center">{i._count.offers}</TableCell>
+   260→   260→                <TableCell className="text-center">{i._count.guaranteeLinks}</TableCell>
+   261→   261→                <TableCell className="text-center"><Switch checked={i.isActive} onCheckedChange={() => handleToggleActive(i)} /></TableCell>
+   262→   262→                <TableCell>
+   263→   263→                  <DropdownMenu>
+   264→   264→                    <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+   265→   265→                    <DropdownMenuContent align="end">
+   266→   266→                      <DropdownMenuItem onClick={() => openDetail(i)}><Eye className="h-4 w-4 mr-2" /> Voir</DropdownMenuItem>
+   267→   267→                      <DropdownMenuItem onClick={() => openGuaranteeDialog(i)}><ShieldCheck className="h-4 w-4 mr-2" /> Gérer les garanties</DropdownMenuItem>
+   268→   268→                      <DropdownMenuItem onClick={() => openEdit(i)}><Pencil className="h-4 w-4 mr-2" /> Modifier</DropdownMenuItem>
+   269→   269→                      <DropdownMenuItem className="text-destructive" onClick={() => setDeleteId(i.id)}><Trash2 className="h-4 w-4 mr-2" /> Supprimer</DropdownMenuItem>
+   270→   270→                    </DropdownMenuContent>
+   271→   271→                  </DropdownMenu>
+   272→   272→                </TableCell>
+   273→   273→              </TableRow>
+   274→   274→            ))}
+   275→   275→          </TableBody>
+   276→   276→        </Table>
+   277→   277→        {filtered.length === 0 && <p className="text-center py-8 text-muted-foreground text-sm">Aucun assureur trouvé.</p>}
+   278→   278→      </div>
+   279→   279→
+   280→   280→      {/* Mobile cards */}
+   281→   281→      <div className="md:hidden space-y-3">
+   282→   282→        {filtered.map((i) => (
+   283→   283→          <Card key={i.id} className="p-4">
+   284→   284→            <div className="flex items-start justify-between mb-2">
+   285→   285→              <div>
+   286→   286→                <p className="font-semibold">{i.name}</p>
+   287→   287→                <p className="text-xs text-muted-foreground">{i.phone || "—"}</p>
+   288→   288→              </div>
+   289→   289→              <Switch checked={i.isActive} onCheckedChange={() => handleToggleActive(i)} />
+   290→   290→            </div>
+   291→   291→            <div className="flex flex-wrap gap-2 text-xs mb-3">
+   292→   292→              <Badge variant="outline">{i._count.offers} offres</Badge>
+   293→   293→              <Badge variant="outline">{i._count.guaranteeLinks} garanties</Badge>
+   294→   294→              {i.isVerified && <Badge className="bg-emerald-100 text-emerald-800">Vérifié</Badge>}
+   295→   295→            </div>
+   296→   296→            <div className="flex gap-2">
+   297→   297→              <Button variant="outline" size="sm" className="flex-1" onClick={() => openDetail(i)}><Eye className="h-3.5 w-3.5 mr-1" /> Voir</Button>
+   298→   298→              <Button variant="outline" size="sm" onClick={() => openEdit(i)}><Pencil className="h-3.5 w-3.5" /></Button>
+   299→   299→              <Button variant="outline" size="sm" className="text-destructive" onClick={() => setDeleteId(i.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+   300→   300→            </div>
+   301→   301→          </Card>
+   302→   302→        ))}
+   303→   303→      </div>
+   304→   304→
+   305→   305→      {/* ── Detail Dialog ──────────────────────────────────────────── */}
+   306→   306→      <Dialog open={!!detailInsurer || detailLoading} onOpenChange={() => setDetailInsurer(null)}>
+   307→   307→        <DialogContent className="max-w-2xl max-h-[90vh]">
+   308→   308→          {detailLoading ? (
+   309→   309→            <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin" /></div>
+   310→   310→          ) : detailInsurer ? (
+   311→   311→            <>
+   312→   312→              <DialogHeader>
+   313→   313→                <div className="flex items-center gap-3">
+   314→   314→                  <DialogTitle className="text-xl">{detailInsurer.name}</DialogTitle>
+   315→   315→                  {detailInsurer.isVerified && (
+   316→   316→                    <Badge className="bg-emerald-100 text-emerald-800 flex items-center gap-1">
+   317→   317→                      <ShieldCheck className="h-3 w-3" /> Vérifié
+   318→   318→                    </Badge>
+   319→   319→                  )}
+   320→   320→                  <div className="flex items-center gap-0.5 ml-1">
+   321→   321→                    <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+   322→   322→                    <span className="font-semibold text-sm">{detailInsurer.rating}</span>
+   323→   323→                  </div>
+   324→   324→                </div>
+   325→   325→                <DialogDescription>{detailInsurer.description || "Aucune description"}</DialogDescription>
+   326→   326→              </DialogHeader>
+   327→   327→
+   328→   328→              <ScrollArea className="max-h-[65vh] pr-2">
+   329→   329→                <div className="space-y-6 pb-4">
+   330→   330→                  {/* Stats row */}
+   331→   331→                  <div className="grid grid-cols-3 gap-3">
+   332→   332→                    <Card><CardContent className="p-4 text-center"><p className="text-2xl font-bold">{detailInsurer.offers.length}</p><p className="text-xs text-muted-foreground">Offres</p></CardContent></Card>
+   333→   333→                    <Card><CardContent className="p-4 text-center"><p className="text-2xl font-bold">{detailInsurer.guaranteeLinks.length}</p><p className="text-xs text-muted-foreground">Garanties liées</p></CardContent></Card>
+   334→   334→                    <Card><CardContent className="p-4 text-center"><p className="text-2xl font-bold">{detailInsurer.offers.reduce((acc, o) => acc + 1, 0)}</p><p className="text-xs text-muted-foreground">Devis reçus</p></CardContent></Card>
+   335→   335→                  </div>
+   336→   336→
+   337→   337→                  {/* Contact info */}
+   338→   338→                  <div className="space-y-2">
+   339→   339→                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Contact</h3>
+   340→   340→                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+   341→   341→                      <div className="flex items-center gap-2">
+   342→   342→                        <Phone className="h-4 w-4 text-muted-foreground" />
+   343→   343→                        <span>{detailInsurer.phone || "—"}</span>
+   344→   344→                      </div>
+   345→   345→                      <div className="flex items-center gap-2">
+   346→   346→                        <Mail className="h-4 w-4 text-muted-foreground" />
+   347→   347→                        <span className="truncate">{detailInsurer.email || "—"}</span>
+   348→   348→                      </div>
+   349→   349→                      <div className="flex items-center gap-2">
+   350→   350→                        <Globe className="h-4 w-4 text-muted-foreground" />
+   351→   351→                        <span className="truncate">{detailInsurer.website || "—"}</span>
+   352→   352→                      </div>
+   353→   353→                    </div>
+   354→   354→                  </div>
+   355→   355→
+   356→   356→                  <Separator />
+   357→   357→
+   358→   358→                  {/* Offers */}
+   359→   359→                  <div className="space-y-2">
+   360→   360→                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Offres ({detailInsurer.offers.length})</h3>
+   361→   361→                    {detailInsurer.offers.length > 0 ? (
+   362→   362→                      <div className="rounded-xl border overflow-hidden">
+   363→   363→                        <Table>
+   364→   364→                          <TableHeader>
+   365→   365→                            <TableRow className="bg-muted/50">
+   366→   366→                              <TableHead>Nom</TableHead>
+   367→   367→                              <TableHead>Type</TableHead>
+   368→   368→                              <TableHead>Prix</TableHead>
+   369→   369→                              <TableHead className="text-center">Statut</TableHead>
+   370→   370→                            </TableRow>
+   371→   371→                          </TableHeader>
+   372→   372→                          <TableBody>
+   373→   373→                            {detailInsurer.offers.map((o) => (
+   374→   374→                              <TableRow key={o.id}>
+   375→   375→                                <TableCell className="font-medium text-sm">{o.name}</TableCell>
+   376→   376→                                <TableCell><Badge variant="outline" className="text-xs">{coverageLabels[o.coverageType] || o.coverageType}</Badge></TableCell>
+   377→   377→                                <TableCell className="text-sm font-mono">{fmtPrice(o.basePrice)}</TableCell>
+   378→   378→                                <TableCell className="text-center">
+   379→   379→                                  <Badge className={o.isActive ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-800"}>
+   380→   380→                                    {o.isActive ? "Active" : "Inactive"}
+   381→   381→                                  </Badge>
+   382→   382→                                </TableCell>
+   383→   383→                              </TableRow>
+   384→   384→                            ))}
+   385→   385→                          </TableBody>
+   386→   386→                        </Table>
+   387→   387→                      </div>
+   388→   388→                    ) : (
+   389→   389→                      <p className="text-sm text-muted-foreground">Aucune offre.</p>
+   390→   390→                    )}
+   391→   391→                  </div>
+   392→   392→
+   393→   393→                  <Separator />
+   394→   394→
+   395→   395→                  {/* Guarantee links */}
+   396→   396→                  <div className="space-y-2">
+   397→   397→                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Garanties ({detailInsurer.guaranteeLinks.length})</h3>
+   398→   398→                    {detailInsurer.guaranteeLinks.length > 0 ? (
+   399→   399→                      <div className="rounded-xl border overflow-hidden">
+   400→   400→                        <Table>
+   401→   401→                          <TableHeader>
+   402→   402→                            <TableRow className="bg-muted/50">
+   403→   403→                              <TableHead>Garantie</TableHead>
+   404→   404→                              <TableHead>Méthode</TableHead>
+   405→   405→                              <TableHead className="text-center">Activée</TableHead>
+   406→   406→                              <TableHead className="text-right">Surcharge</TableHead>
+   407→   407→                            </TableRow>
+   408→   408→                          </TableHeader>
+   409→   409→                          <TableBody>
+   410→   410→                            {detailInsurer.guaranteeLinks.map((gl) => (
+   411→   411→                              <TableRow key={gl.id}>
+   412→   412→                                <TableCell className="font-medium text-sm">{gl.guarantee.name}</TableCell>
+   413→   413→                                <TableCell><CalcBadge method={gl.guarantee.calcMethod} /></TableCell>
+   414→   414→                                <TableCell className="text-center">
+   415→   415→                                  <Badge className={gl.isEnabled ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-800"}>
+   416→   416→                                    {gl.isEnabled ? "Oui" : "Non"}
+   417→   417→                                  </Badge>
+   418→   418→                                </TableCell>
+   419→   419→                                <TableCell className="text-right text-sm text-muted-foreground">
+   420→   420→                                  {gl.customPrice ? fmtPrice(gl.customPrice) : gl.customRate ? `${gl.customRate}%` : "—"}
+   421→   421→                                </TableCell>
+   422→   422→                              </TableRow>
+   423→   423→                            ))}
+   424→   424→                          </TableBody>
+   425→   425→                        </Table>
+   426→   426→                      </div>
+   427→   427→                    ) : (
+   428→   428→                      <p className="text-sm text-muted-foreground">Aucune garantie liée.</p>
+   429→   429→                    )}
+   430→   430→                  </div>
+   431→   431→                </div>
+   432→   432→              </ScrollArea>
+   433→   433→
+   434→   434→              <Separator />
+   435→   435→              <DialogFooter>
+   436→   436→                <Button variant="outline" onClick={() => { setDetailInsurer(null); const ins = insurers.find((x) => x.id === detailInsurer.id); if (ins) openEdit(ins); }}>
+   437→   437→                  <Pencil className="h-4 w-4 mr-1" /> Modifier
+   438→   438→                </Button>
+   439→   439→              </DialogFooter>
+   440→   440→            </>
+   441→   441→          ) : null}
+   442→   442→        </DialogContent>
+   443→   443→      </Dialog>
+   444→   444→
+   445→   445→      {/* ── Form Dialog ──────────────────────────────────────────── */}
+   446→   446→      <Dialog open={formOpen} onOpenChange={setFormOpen}>
+   447→   447→        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+   448→   448→          <DialogHeader><DialogTitle>{editing ? "Modifier l'assureur" : "Nouvel assureur"}</DialogTitle></DialogHeader>
+   449→   449→          <div className="grid gap-4 py-4">
+   450→   450→            <div className="grid gap-2"><Label>Nom *</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
+   451→   451→            <div className="grid gap-2"><Label>Logo (URL)</Label><Input value={form.logo} onChange={(e) => setForm({ ...form, logo: e.target.value })} /></div>
+   452→   452→            <div className="grid gap-2"><Label>Description</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} /></div>
+   453→   453→            <div className="grid grid-cols-2 gap-4">
+   454→   454→              <div className="grid gap-2"><Label>Téléphone</Label><Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
+   455→   455→              <div className="grid gap-2"><Label>Email</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
+   456→   456→            </div>
+   457→   457→            <div className="grid gap-2"><Label>Site web</Label><Input value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} /></div>
+   458→   458→            <div className="grid gap-2">
+   459→   459→              <Label>Note : {form.rating}</Label>
+   460→   460→              <Slider value={[form.rating]} min={0} max={5} step={0.1} onValueChange={([v]) => setForm({ ...form, rating: v })} />
+   461→   461→            </div>
+   462→   462→            <div className="flex items-center justify-between">
+   463→   463→              <Label>Assureur vérifié</Label>
+   464→   464→              <Switch checked={form.isVerified} onCheckedChange={(v) => setForm({ ...form, isVerified: v })} />
+   465→   465→            </div>
+   466→   466→            <div className="flex items-center justify-between">
+   467→   467→              <Label>Actif</Label>
+   468→   468→              <Switch checked={form.isActive} onCheckedChange={(v) => setForm({ ...form, isActive: v })} />
+   469→   469→            </div>
+   470→   470→          </div>
+   471→   471→          <DialogFooter>
+   472→   472→            <Button variant="outline" onClick={() => setFormOpen(false)}>Annuler</Button>
+   473→   473→            <Button onClick={handleSave} disabled={saving} className="bg-[#B9E54D] text-black hover:bg-[#a5d044]">{saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}{editing ? "Modifier" : "Créer"}</Button>
+   474→   474→          </DialogFooter>
+   475→   475→        </DialogContent>
+   476→   476→      </Dialog>
+   477→   477→
+   478→   478→      {/* ── Delete Dialog ────────────────────────────────────────── */}
+   479→   479→      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+   480→   480→        <AlertDialogContent>
+   481→   481→          <AlertDialogHeader><AlertDialogTitle>Supprimer cet assureur ?</AlertDialogTitle><AlertDialogDescription>Cette action supprimera également toutes les offres, devis et liaisons associés.</AlertDialogDescription></AlertDialogHeader>
+   482→   482→          <AlertDialogFooter>
+   483→   483→            <AlertDialogCancel>Annuler</AlertDialogCancel>
+   484→   484→            <AlertDialogAction onClick={handleDelete} disabled={deleting} className="bg-destructive text-destructive-foreground">{deleting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Supprimer</AlertDialogAction>
+   485→   485→          </AlertDialogFooter>
+   486→   486→        </AlertDialogContent>
+   487→   487→      </AlertDialog>
+   488→   488→
+   489→   489→      {/* ── Guarantees Dialog ────────────────────────────────────── */}
+   490→   490→      <Dialog open={guaranteeDialogOpen} onOpenChange={setGuaranteeDialogOpen}>
+   491→   491→        <DialogContent className="max-w-2xl max-h-[90vh]">
+   492→   492→          <DialogHeader>
+   493→   493→            <DialogTitle>Garanties de {selectedInsurer?.name}</DialogTitle>
+   494→   494→          </DialogHeader>
+   495→   495→          <ScrollArea className="h-[60vh] pr-4">
+   496→   496→            <div className="space-y-2">
+   497→   497→              {guaranteeLinks.map((link, idx) => {
+   498→   498→                const g = allGuarantees.find((x) => x.id === link.guaranteeId);
+   499→   499→                if (!g) return null;
+   500→   500→                return (
+   501→   501→                  <div key={g.id} className={`rounded-lg border p-3 transition-colors ${link.isEnabled ? "bg-card" : "bg-muted/30 opacity-60"}`}>
+   502→   502→                    <div className="flex items-center justify-between mb-2">
+   503→   503→                      <div className="flex items-center gap-2">
+   504→   504→                        <Checkbox checked={link.isEnabled} onCheckedChange={() => toggleGuarantee(idx)} />
+   505→   505→                        <span className="text-sm font-medium">{g.name}</span>
+   506→   506→                      </div>
+   507→   507→                      <CalcBadge method={g.calcMethod} />
+   508→   508→                    </div>
+   509→   509→                    {link.isEnabled && (g.calcMethod === "FIXED_AMOUNT" || g.calcMethod === "VARIABLE_BASED") && (
+   510→   510→                      <div className="grid grid-cols-2 gap-2 ml-6 mt-1">
+   511→   511→                        {g.calcMethod === "FIXED_AMOUNT" && (
+   512→   512→                          <div className="grid gap-1">
+   513→   513→                            <Label className="text-xs text-muted-foreground">Prix personnalisé (FCFA)</Label>
+   514→   514→                            <Input type="number" placeholder={g.fixedPrice?.toString()} value={link.customPrice} onChange={(e) => updateLink(idx, "customPrice", e.target.value)} className="h-8 text-xs" />
+   515→   515→                          </div>
+   516→   516→                        )}
+   517→   517→                        {g.calcMethod === "VARIABLE_BASED" && (
+   518→   518→                          <div className="grid gap-1">
+   519→   519→                            <Label className="text-xs text-muted-foreground">Taux personnalisé (%)</Label>
+   520→   520→                            <Input type="number" step="0.01" placeholder={g.rate?.toString()} value={link.customRate} onChange={(e) => updateLink(idx, "customRate", e.target.value)} className="h-8 text-xs" />
+   521→   521→                          </div>
+   522→   522→                        )}
+   523→   523→                      </div>
+   524→   524→                    )}
+   525→   525→                  </div>
+   526→   526→                );
+   527→   527→              })}
+   528→   528→            </div>
+   529→   529→          </ScrollArea>
+   530→   530→          <Separator />
+   531→   531→          <DialogFooter>
+   532→   532→            <Button variant="outline" onClick={() => setGuaranteeDialogOpen(false)}>Annuler</Button>
+   533→   533→            <Button onClick={saveGuarantees} disabled={savingGuarantees} className="bg-[#B9E54D] text-black hover:bg-[#a5d044]">
+   534→   534→              {savingGuarantees && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Enregistrer
+   535→   535→            </Button>
+   536→   536→          </DialogFooter>
+   537→   537→        </DialogContent>
+   538→   538→      </Dialog>
+   539→   539→    </div>
+   540→   540→  );
+   541→   541→}
