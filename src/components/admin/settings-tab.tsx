@@ -66,8 +66,8 @@ export function SettingsTab() {
           <div className="hidden md:block rounded-xl border bg-card overflow-hidden">
             <Table><TableHeader><TableRow className="bg-muted/50"><TableHead>Nom</TableHead><TableHead>Email</TableHead><TableHead>Téléphone</TableHead><TableHead>Rôle</TableHead><TableHead className="text-center">Devis</TableHead><TableHead>Date</TableHead><TableHead className="text-center">Statut</TableHead><TableHead className="w-10" /></TableRow></TableHeader>
             <TableBody>{profiles.map((p) => (
-              <TableRow key={p.id}><TableCell>{p.lastName || "—"} {p.firstName || ""}</TableCell><TableCell className="text-sm">{p.email}</TableCell><TableCell className="text-sm">{p.phone || "—"}</TableCell><TableCell><Badge className={roleColors[p.role] || ""}>{roleLabels[p.role] || p.role}</Badge><TableCell className="text-center">{p._count.quotes}</TableCell><TableCell className="text-sm text-muted-foreground">{p.createdAt ? new Date(p.createdAt).toLocaleDateString("fr-FR") : "—"}</TableCell><TableCell className="text-center"><Switch checked={p.isActive} onCheckedChange={async () => { await fetch("/api/admin/profiles", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: p.id, isActive: !p.isActive }) }); fetchProfiles(); }} /></TableCell>
-                <TableCell><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(p)}><Pencil className="h-4 w-4" /></TableCell></TableRow>
+              <TableRow key={p.id}><TableCell>{p.lastName || "—"} {p.firstName || ""}</TableCell><TableCell className="text-sm">{p.email}</TableCell><TableCell className="text-sm">{p.phone || "—"}</TableCell><TableCell><Badge className={roleColors[p.role] || ""}>{roleLabels[p.role] || p.role}</Badge></TableCell><TableCell className="text-center">{p._count.quotes}</TableCell><TableCell className="text-sm text-muted-foreground">{p.createdAt ? new Date(p.createdAt).toLocaleDateString("fr-FR") : "—"}</TableCell><TableCell className="text-center"><Switch checked={p.isActive} onCheckedChange={async () => { await fetch("/api/admin/profiles", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: p.id, isActive: !p.isActive }) }); fetchProfiles(); }} /></TableCell>
+                <TableCell><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(p)}><Pencil className="h-4 w-4" /></Button></TableCell></TableRow>
             ))}</TableBody></Table>
           </div>
         </TabsContent>
@@ -85,11 +85,11 @@ export function SettingsTab() {
       </Tabs>
       <Dialog open={editOpen} onOpenChange={setEditOpen}><DialogContent className="max-w-md">
         <DialogHeader><DialogTitle>Modifier le profil</DialogTitle><DialogDescription>Mise à jour les informations du profil.</DialogDescription></DialogHeader>
-        <div className="grid gap-4 py-4">
+        {edit && (<div className="grid gap-4 py-4">
           <div className="grid grid-cols-2 gap-4"><div className="grid gap-2"><Label>Prénom</Label><Input value={edit.firstName || ""} onChange={(e) => setEdit({ ...edit, firstName: e.target.value })} /></div><div className="grid gap-2"><Label>Nom</Label><Input value={edit.lastName || ""} onChange={(e) => setEdit({ ...edit, lastName: e.target.value })} /></div></div>
           <div className="grid grid-cols-2 gap-4"><div className="grid gap-2"><Label>Téléphone</Label><Input value={edit.phone || ""} onChange={(e) => setEdit({ ...edit, phone: e.target.value })} /></div><div className="grid gap-2"><Label>Rôle</Label><Select value={edit.role} onValueChange={(v) => setEdit({ ...edit, role: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="USER">Utilisateur</SelectItem><SelectItem value="INSURER">Assureur</SelectItem><SelectItem value="ADMIN">Admin</SelectItem></SelectContent></Select></div></div>
           <div className="flex items-center justify-between"><Label>Actif</Label><Switch checked={edit.isActive} onCheckedChange={(v) => setEdit({ ...edit, isActive: v })} /></div>
-        </div>
+        </div>)}
         <DialogFooter><Button variant="outline" onClick={() => setEditOpen(false)}>Annuler</Button><Button onClick={handleSave} disabled={saving} className="bg-[#B9E54D] text-black hover:bg-[#a5d044]">{saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Enregistrer</Button></DialogFooter>
       </DialogContent></Dialog>
     </div>
