@@ -11,6 +11,7 @@ import { AuthModals } from "@/components/auth/auth-modals";
 import { DashboardPage } from "@/components/dashboard/dashboard-page";
 import { AboutPage } from "@/components/about/about-page";
 import { ContactPage } from "@/components/contact/contact-page";
+import { AdminPage } from "@/components/admin/admin-page";
 import { AnimatePresence, motion } from "framer-motion";
 
 export default function Home() {
@@ -51,15 +52,17 @@ export default function Home() {
         return <AboutPage />;
       case "contact":
         return <ContactPage />;
+      case "admin":
+        return <AdminPage />;
       default:
         return <LandingPage />;
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <main className="flex-1">
+    <div className={currentView === "admin" ? "min-h-screen" : "min-h-screen flex flex-col"}>
+      {currentView !== "admin" && <Header />}
+      <main className={currentView === "admin" ? "" : "flex-1"}>
         <AnimatePresence mode="wait">
           <motion.div
             key={currentView}
@@ -72,7 +75,7 @@ export default function Home() {
           </motion.div>
         </AnimatePresence>
       </main>
-      <Footer />
+      {currentView !== "admin" && <Footer />}
       {authModal !== "none" && <AuthModals />}
     </div>
   );

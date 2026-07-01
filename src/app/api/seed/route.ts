@@ -165,6 +165,24 @@ export async function POST() {
       }
     }
 
+    // Seed guarantees
+    const existingGuarantees = await db.guarantee.count();
+    if (existingGuarantees === 0) {
+      const guarantees = [
+        { name: "Responsabilité Civile", slug: "responsabilite-civile", icon: "Shield", category: "garantie", sortOrder: 1, description: "Couverture des dommages causés aux tiers" },
+        { name: "Recours des Tiers Incendie", slug: "recours-tiers-incendie", icon: "Flame", category: "garantie", sortOrder: 2, description: "Recours contre le responsable d'un incendie" },
+        { name: "Défense / Recours", slug: "defense-recours", icon: "Scale", category: "garantie", sortOrder: 3, description: "Prise en charge des frais de défense et recours" },
+        { name: "Individuelle Conducteur", slug: "individuelle-conducteur", icon: "User", category: "garantie", sortOrder: 4, description: "Protection corporelle du conducteur" },
+        { name: "Individuelle Personne Transportée", slug: "individuelle-personne-transportee", icon: "Users", category: "garantie", sortOrder: 5, description: "Protection des passagers du véhicule" },
+        { name: "Avance sur Recours", slug: "avance-sur-recours", icon: "Banknote", category: "garantie", sortOrder: 6, description: "Avance de fonds en attendant le recours" },
+        { name: "Incendie", slug: "incendie", icon: "FlameKindling", category: "garantie", sortOrder: 7, description: "Couverture des dommages par incendie" },
+        { name: "Vol", slug: "vol", icon: "Eye", category: "garantie", sortOrder: 8, description: "Couverture en cas de vol ou tentative de vol" },
+      ];
+      for (const g of guarantees) {
+        await db.guarantee.create({ data: g });
+      }
+    }
+
     const totalOffers = createdInsurers.length * 3;
     return NextResponse.json({
       message: "Database seeded successfully",

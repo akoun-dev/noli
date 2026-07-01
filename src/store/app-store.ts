@@ -47,6 +47,8 @@ interface AppState {
   setOffersToCompare: (offers: InsurerOffer[]) => void;
  comparisonModalOpen: boolean;
   setComparisonModalOpen: (v: boolean) => void;
+  adminTab: string;
+  setAdminTab: (tab: string) => void;
   resetComparison: () => void;
 }
 
@@ -106,6 +108,8 @@ export const useAppStore = create<AppState>((set) => ({
   setOffersToCompare: (offers) => set({ offersToCompare: offers }),
   comparisonModalOpen: false,
   setComparisonModalOpen: (v) => set({ comparisonModalOpen: v }),
+  adminTab: "dashboard",
+  setAdminTab: (tab) => set({ adminTab: tab }),
   resetComparison: () =>
     set({
       comparisonStep: 1,

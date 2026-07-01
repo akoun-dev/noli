@@ -273,3 +273,32 @@ Stage Summary:
 - All 3 files modified: store, header, landing page, results page
 - Lint clean (only pre-existing launch-server.js require errors)
 - Browser verified: landing shows all sections, results page shows comparison bar + buttons + modal, 4-offer limit works with toast, zero console errors
+---
+Task ID: 2
+Agent: Main Agent
+Task: Build complete admin interface (CRUD for insurers, offers, guarantees, quotes + dashboard)
+
+Work Log:
+- Added Guarantee model to Prisma schema (name, slug, description, icon, category, sortOrder, isActive)
+- Ran db push + generate to apply schema
+- Added "admin" to AppView type in types/index.ts
+- Added adminTab + setAdminTab to Zustand store
+- Updated page.tsx: admin view has no header/footer (own layout), imported AdminPage
+- Created 8 admin API routes via subagent:
+  - /api/admin/stats (GET) - dashboard stats
+  - /api/admin/insurers (GET/POST) + [id] (GET/PUT/DELETE)
+  - /api/admin/offers (GET/POST) + [id] (GET/PUT/DELETE)
+  - /api/admin/guarantees (GET/POST) + [id] (GET/PUT/DELETE)
+  - /api/admin/quotes (GET/PUT)
+- Created admin-page.tsx (~2190 lines) via subagent: sidebar + 5 tabs
+- Updated seed route to include 8 guarantee categories
+- Added "Administration" link in footer
+- Seeded 8 guarantees via API after server restart
+- Browser verified: dashboard shows 6/18/0/8 stats, insurers table with 6 rows, offers table with filters, guarantees table, mobile responsive, Retour au site works
+
+Stage Summary:
+- Full admin panel with sidebar navigation, 5 tabs, all CRUD operations
+- 8 API route files created
+- 1 admin UI component (2190 lines)
+- Zero lint errors (only pre-existing launch-server.js)
+- Access via "Administration" link in footer

@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { MapPin, Phone, Mail } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { useAppStore } from "@/store/app-store";
 
 const assuranceLinks = [
   { label: "Tiers simple", href: "#" },
@@ -19,6 +20,7 @@ const noliLinks = [
 ];
 
 export function Footer() {
+  const setView = useAppStore((s) => s.setView);
   return (
     <footer id="footer" className="mt-auto w-full bg-primary text-secondary-foreground">
       {/* Accent top bar */}
@@ -144,12 +146,20 @@ export function Footer() {
         <p className="text-xs text-secondary-foreground/50">
           © {new Date().getFullYear()} NOLI Assurance. Tous droits réservés.
         </p>
-        <p className="flex items-center gap-1.5 text-xs text-secondary-foreground/50">
-          Propulsé par
-          <span className="rounded bg-accent px-1.5 py-0.5 text-xs font-semibold text-accent-foreground">
-            NOLI
-          </span>
-        </p>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => setView("admin")}
+            className="text-xs text-secondary-foreground/30 hover:text-secondary-foreground/60 transition-colors"
+          >
+            Administration
+          </button>
+          <p className="flex items-center gap-1.5 text-xs text-secondary-foreground/50">
+            Propulsé par
+            <span className="rounded bg-accent px-1.5 py-0.5 text-xs font-semibold text-accent-foreground">
+              NOLI
+            </span>
+          </p>
+        </div>
       </div>
     </footer>
   );
