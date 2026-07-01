@@ -4,15 +4,14 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Menu,
-  X,
+  Moon,
+  Sun,
   User,
   LogOut,
-  Shield,
   LayoutDashboard,
-  Home,
-  GitCompareArrows,
   ChevronDown,
 } from "lucide-react";
+import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -32,20 +31,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { useAppStore } from "@/store/app-store";
-import type { AppView } from "@/types";
 
-const navLinks: { label: string; view: AppView; icon: React.ReactNode }[] = [
-  { label: "Accueil", view: "landing", icon: <Home className="size-4" /> },
-  {
-    label: "Comparer",
-    view: "compare",
-    icon: <GitCompareArrows className="size-4" />,
-  },
-  {
-    label: "Tableau de bord",
-    view: "dashboard",
-    icon: <LayoutDashboard className="size-4" />,
-  },
+const navItems = [
+  { label: "ACCUEIL", action: "landing" as const },
+  { label: "COMMENT ÇA MARCHE", action: "compare" as const },
+  { label: "À PROPOS", action: "about" as const },
+  { label: "CONTACT", action: "contact" as const },
 ];
 
 function getUserInitials(name?: string): string {
@@ -60,55 +51,71 @@ function getUserInitials(name?: string): string {
 export function Header() {
   const { currentView, setView, user, setUser, setAuthModal } = useAppStore();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
 
-  const handleNav = (view: AppView) => {
-    setView(view);
+  // Avoid hydration mismatch
+  useState(() => {
+    setMounted(true);
+  });
+
+  const handleNav = (action: string) => {
+    switch (action) {
+      case "landing":
+        setView("landing");
+        break;
+      case "compare":
+        setView("compare");
+        break;
+      case "about":
+        // Scroll to about section or just stay on landing
+        setView("landing");
+        break;
+      case "contact":
+        document.getElementById("footer")?.scrollIntoView({ behavior: "smooth" });
+        break;
+    }
     setMobileOpen(false);
   };
 
+  const isActive = (action: string) => {
+    if (action === "landing" && currentView === "landing") return true;
+    return false;
+  };
+
   return (
-    <motion.header
-      initial={{ y: -20, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.4, ease: "easeOut" }}
-      className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60"
-    >
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+    <header className="header-sticky sticky top-0 z-50 w-full border-b border-border/40">
+      <div className="mx-auto flex h-16 max-w-[1400px] items-center justify-between px-8">
         {/* Logo */}
         <button
           onClick={() => handleNav("landing")}
           className="flex items-center gap-1 transition-opacity hover:opacity-80"
         >
-          <span className="text-xl font-extrabold tracking-tight text-foreground sm:text-2xl">
+          <span className="font-[family-name:var(--font-space-grotesk)] text-xl font-bold text-primary">
             NOLI
           </span>
-          <span className="bg-brand inline-block size-2 rounded-full" />
-          <span className="text-sm font-medium text-muted-foreground sm:text-base">
-            Assurance
-          </span>
+          <span className="inline-block h-2 w-2 rounded-full bg-accent" />
         </button>
 
-        {/* Desktop Navigation */}
-        <nav className="hidden items-center gap-1 md:flex">
-          {navLinks.map((link) => {
-            const isActive = currentView === link.view;
+        {/* Desktop Navigation (center) */}
+        <nav className="hidden items-center gap-6 lg:flex">
+          {navItems.map((item) => {
+            const active = isActive(item.action);
             return (
-              <motion.button
-                key={link.view}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => handleNav(link.view)}
-                className={`relative rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                  isActive
-                    ? "text-foreground"
-                    : "text-muted-foreground hover:text-foreground"
+              <button
+                key={item.label}
+                onClick={() => handleNav(item.action)}
+                className={`relative text-sm font-medium uppercase tracking-wide transition-colors ${
+                  active
+                    ? "text-primary"
+                    : "text-muted-foreground hover:text-primary"
                 }`}
               >
-                {link.label}
-                {isActive && (
+                {item.label}
+                {active && (
                   <motion.span
                     layoutId="nav-underline"
-                    className="absolute inset-x-1 -bottom-0.5 h-0.5 rounded-full bg-brand"
+                    className="absolute -bottom-1 left-0 right-0 h-0.5 rounded-full bg-primary"
                     transition={{
                       type: "spring",
                       stiffness: 380,
@@ -116,21 +123,36 @@ export function Header() {
                     }}
                   />
                 )}
-              </motion.button>
+              </button>
             );
           })}
         </nav>
 
         {/* Desktop Right Section */}
-        <div className="hidden items-center gap-3 md:flex">
+        <div className="hidden items-center gap-4 lg:flex">
+          {/* Theme Toggle */}
+          {mounted && (
+            <button
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              className="flex h-9 w-9 items-center justify-center rounded-full transition-colors hover:bg-muted"
+              aria-label="Changer de thème"
+            >
+              {theme === "dark" ? (
+                <Sun className="h-4 w-4 text-foreground" />
+              ) : (
+                <Moon className="h-4 w-4 text-foreground" />
+              )}
+            </button>
+          )}
+
           {user.isLoggedIn ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 rounded-full transition-colors hover:bg-accent">
-                  <div className="bg-brand flex size-9 items-center justify-center rounded-full text-sm font-bold text-brand-foreground">
+                <button className="flex items-center gap-2 rounded-full transition-colors hover:bg-muted">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
                     {getUserInitials(user.name)}
                   </div>
-                  <ChevronDown className="size-3.5 text-muted-foreground" />
+                  <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
@@ -145,132 +167,112 @@ export function Header() {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => handleNav("dashboard")}>
-                  <User className="size-4" />
+                <DropdownMenuItem
+                  onClick={() => {
+                    setView("dashboard");
+                  }}
+                >
+                  <LayoutDashboard className="h-4 w-4" />
+                  Tableau de bord
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setView("dashboard");
+                  }}
+                >
+                  <User className="h-4 w-4" />
                   Mon profil
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  variant="destructive"
                   onClick={() => setUser({ isLoggedIn: false })}
                 >
-                  <LogOut className="size-4" />
+                  <LogOut className="h-4 w-4" />
                   Déconnexion
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
             <>
-              <Button
-                variant="outline"
-                size="sm"
+              <button
                 onClick={() => setAuthModal("login")}
-                className="font-medium"
+                className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
               >
-                Se connecter
-              </Button>
+                Connexion
+              </button>
               <Button
-                size="sm"
-                onClick={() => handleNav("compare")}
-                className="bg-brand font-medium text-brand-foreground hover:bg-brand-dark"
+                onClick={() => setAuthModal("register")}
+                className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
               >
-                <Shield className="size-4" />
-                Comparer maintenant
+                S&apos;inscrire
               </Button>
             </>
           )}
         </div>
 
-        {/* Mobile: Single CTA + Hamburger */}
-        <div className="flex items-center gap-2 md:hidden">
+        {/* Mobile: Hamburger + Auth indicator */}
+        <div className="flex items-center gap-2 lg:hidden">
           {user.isLoggedIn ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="flex size-9 items-center justify-center rounded-full bg-brand text-sm font-bold text-brand-foreground">
-                  {getUserInitials(user.name)}
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuLabel className="font-normal">
-                  <div className="flex flex-col gap-1">
-                    <p className="text-sm font-medium leading-none">
-                      {user.name || "Utilisateur"}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {user.email || ""}
-                    </p>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => handleNav("dashboard")}>
-                  <User className="size-4" />
-                  Mon profil
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  variant="destructive"
-                  onClick={() => setUser({ isLoggedIn: false })}
-                >
-                  <LogOut className="size-4" />
-                  Déconnexion
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <Button
-              size="sm"
-              onClick={() => handleNav("compare")}
-              className="bg-brand px-3 text-xs font-semibold text-brand-foreground hover:bg-brand-dark"
-            >
-              <Shield className="size-3.5" />
-              <span className="hidden sm:inline">Comparer</span>
-            </Button>
-          )}
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
+              {getUserInitials(user.name)}
+            </div>
+          ) : null}
 
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="size-9">
-                <Menu className="size-5" />
+              <Button variant="ghost" size="icon" className="h-9 w-9">
+                <Menu className="h-5 w-5" />
                 <span className="sr-only">Ouvrir le menu</span>
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="w-full overflow-y-auto p-0 sm:max-w-sm">
               <SheetHeader className="border-b border-border/40 px-6 py-5">
                 <SheetTitle className="flex items-center gap-1 text-left">
-                  <span className="text-xl font-extrabold tracking-tight">
+                  <span className="font-[family-name:var(--font-space-grotesk)] text-xl font-bold text-primary">
                     NOLI
                   </span>
-                  <span className="bg-brand inline-block size-2 rounded-full" />
-                  <span className="text-sm font-medium text-muted-foreground">
-                    Assurance
-                  </span>
+                  <span className="inline-block h-2 w-2 rounded-full bg-accent" />
                 </SheetTitle>
               </SheetHeader>
 
               <nav className="flex flex-col gap-1 p-4">
                 <AnimatePresence>
-                  {navLinks.map((link, i) => {
-                    const isActive = currentView === link.view;
+                  {navItems.map((item, i) => {
+                    const active = isActive(item.action);
                     return (
                       <motion.button
-                        key={link.view}
+                        key={item.label}
                         initial={{ x: 20, opacity: 0 }}
                         animate={{ x: 0, opacity: 1 }}
                         transition={{ delay: i * 0.08, duration: 0.25 }}
-                        onClick={() => handleNav(link.view)}
-                        className={`flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors ${
-                          isActive
-                            ? "bg-brand/10 text-brand"
-                            : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                        onClick={() => handleNav(item.action)}
+                        className={`flex items-center rounded-lg px-4 py-3 text-sm font-medium uppercase tracking-wide transition-colors ${
+                          active
+                            ? "bg-primary/10 text-primary"
+                            : "text-muted-foreground hover:bg-muted hover:text-foreground"
                         }`}
                       >
-                        {link.icon}
-                        {link.label}
+                        {item.label}
                       </motion.button>
                     );
                   })}
                 </AnimatePresence>
               </nav>
+
+              {/* Theme toggle in mobile */}
+              <div className="px-4 py-2">
+                <button
+                  onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                  className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                >
+                  {mounted && theme === "dark" ? (
+                    <Sun className="h-4 w-4" />
+                  ) : (
+                    <Moon className="h-4 w-4" />
+                  )}
+                  {mounted && theme === "dark" ? "Mode clair" : "Mode sombre"}
+                </button>
+              </div>
 
               {!user.isLoggedIn && (
                 <div className="mt-2 flex flex-col gap-3 p-4">
@@ -284,14 +286,46 @@ export function Header() {
                         setMobileOpen(false);
                       }}
                     >
-                      Se connecter
+                      Connexion
                     </Button>
                     <Button
-                      className="w-full bg-brand font-semibold text-brand-foreground hover:bg-brand-dark"
-                      onClick={() => handleNav("compare")}
+                      className="w-full rounded-full bg-primary font-semibold text-primary-foreground hover:bg-primary/90"
+                      onClick={() => {
+                        setAuthModal("register");
+                        setMobileOpen(false);
+                      }}
                     >
-                      <Shield className="size-4" />
-                      Comparer maintenant
+                      S&apos;inscrire
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {user.isLoggedIn && (
+                <div className="mt-2 p-4">
+                  <Separator />
+                  <div className="flex flex-col gap-2 pt-2">
+                    <Button
+                      variant="outline"
+                      className="w-full font-medium"
+                      onClick={() => {
+                        setView("dashboard");
+                        setMobileOpen(false);
+                      }}
+                    >
+                      <LayoutDashboard className="mr-2 h-4 w-4" />
+                      Tableau de bord
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="w-full text-destructive hover:text-destructive"
+                      onClick={() => {
+                        setUser({ isLoggedIn: false });
+                        setMobileOpen(false);
+                      }}
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Déconnexion
                     </Button>
                   </div>
                 </div>
@@ -300,6 +334,6 @@ export function Header() {
           </Sheet>
         </div>
       </div>
-    </motion.header>
+    </header>
   );
 }

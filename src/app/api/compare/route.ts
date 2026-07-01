@@ -4,78 +4,59 @@ import type { PersonalInfo, VehicleInfo, CoverageNeeds, InsurerOffer } from "@/t
 
 function calculatePrice(
   basePrice: number,
-  coverageType: string,
   personal: PersonalInfo,
   vehicle: VehicleInfo,
   needs: CoverageNeeds
 ): number {
   let price = basePrice;
 
-  // Age factor: younger = more expensive
-  const age = getAge(personal.dateOfBirth);
-  if (age < 25) price *= 1.3;
-  else if (age < 30) price *= 1.15;
-  else if (age >= 50) price *= 0.95;
-
-  // License experience
-  const licenseYears = getYearsSince(personal.licenseDate);
-  if (licenseYears < 2) price *= 1.2;
-  else if (licenseYears < 5) price *= 1.1;
-  else if (licenseYears >= 10) price *= 0.92;
-
-  // Claims history
-  if (personal.hasClaims) {
-    price *= 1 + Math.min(personal.claimsCount * 0.15, 0.6);
-  }
+  // Fiscal power factor
+  const cv = parseInt(vehicle.fiscalPower || "6");
+  if (cv <= 4) price *= 0.8;
+  else if (cv <= 6) price *= 1.0;
+  else if (cv <= 8) price *= 1.12;
+  else if (cv <= 11) price *= 1.25;
+  else price *= 1.4;
 
   // Vehicle age
-  const vehicleAge = new Date().getFullYear() - parseInt(vehicle.year || "2020");
-  if (vehicleAge > 10) price *= 1.2;
-  else if (vehicleAge > 5) price *= 1.1;
-  else if (vehicleAge <= 1) price *= 1.05;
+  const currentYear = new Date().getFullYear();
+  const vehicleAge = currentYear - parseInt(vehicle.year || String(currentYear));
+  if (vehicleAge <= 1) price *= 1.05;
+  else if (vehicleAge <= 3) price *= 1.0;
+  else if (vehicleAge <= 5) price *= 1.1;
+  else if (vehicleAge <= 10) price *= 1.2;
+  else price *= 1.35;
 
-  // Fiscal power
-  const fp = parseInt(vehicle.fiscalPower || "6");
-  if (fp > 12) price *= 1.25;
-  else if (fp > 8) price *= 1.12;
+  // Usage factor
+  if (vehicle.usage === "professionnel") price *= 1.15;
+  else if (vehicle.usage === "taxi_vtc") price *= 1.4;
+  else if (vehicle.usage === "autre") price *= 1.2;
 
-  // Usage
-  if (personal.usage === "professionnel") price *= 1.15;
+  // Fuel type
+  if (vehicle.fuelType === "diesel") price *= 1.05;
+  else if (vehicle.fuelType === "hybride") price *= 1.08;
+  else if (vehicle.fuelType === "electrique") price *= 0.95;
 
-  // Annual mileage
-  const mileage = parseInt(personal.annualMileage || "10000");
-  if (mileage > 25000) price *= 1.2;
-  else if (mileage > 15000) price *= 1.08;
+  // Seats
+  const seats = parseInt(vehicle.seats || "5");
+  if (seats > 7) price *= 1.15;
+  else if (seats <= 2) price *= 0.9;
 
-  // Deductible level
-  if (needs.deductibleLevel === "low") price *= 1.15;
-  else if (needs.deductibleLevel === "high") price *= 0.88;
+  // Value factor
+  const newVal = parseInt((vehicle.newValue || "0").replace(/\s/g, "")) || 10000000;
+  if (newVal > 30000000) price *= 1.3;
+  else if (newVal > 20000000) price *= 1.15;
+  else if (newVal > 10000000) price *= 1.0;
+  else price *= 0.85;
 
-  // Imported vehicle
-  if (vehicle.isImported) price *= 1.1;
+  // Guarantee categories - more categories = higher price
+  const catCount = needs.guaranteeCategories?.length || 0;
+  if (catCount <= 2) price *= 0.85;
+  else if (catCount <= 4) price *= 1.0;
+  else if (catCount <= 6) price *= 1.2;
+  else price *= 1.35;
 
-  // Round to nearest 500
   return Math.round(price / 500) * 500;
-}
-
-function getAge(dateStr: string): number {
-  if (!dateStr) return 30;
-  const birth = new Date(dateStr);
-  const today = new Date();
-  let age = today.getFullYear() - birth.getFullYear();
-  const m = today.getMonth() - birth.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
-  return Math.max(18, age);
-}
-
-function getYearsSince(dateStr: string): number {
-  if (!dateStr) return 5;
-  const d = new Date(dateStr);
-  const today = new Date();
-  let years = today.getFullYear() - d.getFullYear();
-  const m = today.getMonth() - d.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < d.getDate())) years--;
-  return Math.max(0, years);
 }
 
 export async function POST(request: NextRequest) {
@@ -85,34 +66,33 @@ export async function POST(request: NextRequest) {
     const vehicle: VehicleInfo = body.vehicleInfo;
     const needs: CoverageNeeds = body.coverageNeeds;
 
-    // Validate required fields
     if (!personal.firstName || !personal.lastName || !personal.email || !personal.phone) {
       return NextResponse.json({ error: "Informations personnelles incomplètes" }, { status: 400 });
     }
-    if (!vehicle.brand || !vehicle.model || !vehicle.year || !vehicle.fiscalPower) {
+    if (!vehicle.fiscalPower || !vehicle.year || !vehicle.fuelType) {
       return NextResponse.json({ error: "Informations véhicule incomplètes" }, { status: 400 });
     }
 
-    // Fetch all active offers matching the coverage type
+    // Determine coverage type from selected guarantees
+    const cats = needs.guaranteeCategories || [];
+    let coverageType = "tiers";
+    if (cats.length >= 6 || cats.includes("individuelle_conducteur") || cats.includes("dommages")) {
+      coverageType = "tous_risques";
+    } else if (cats.includes("incendie") || cats.includes("vol") || cats.length >= 3) {
+      coverageType = "tiers_plus";
+    }
+
     const offers = await db.offer.findMany({
       where: {
-        coverageType: needs.coverageType,
+        coverageType,
         isActive: true,
         insurer: { isActive: true },
       },
       include: { insurer: true },
     });
 
-    // Calculate prices and format results
     const results: InsurerOffer[] = offers.map((offer) => {
-      const monthlyPrice = calculatePrice(
-        offer.basePrice,
-        offer.coverageType,
-        personal,
-        vehicle,
-        needs
-      );
-
+      const monthlyPrice = calculatePrice(offer.basePrice, personal, vehicle, needs);
       return {
         id: offer.id,
         insurerId: offer.insurerId,
@@ -131,10 +111,8 @@ export async function POST(request: NextRequest) {
       };
     });
 
-    // Sort by price ascending by default
     results.sort((a, b) => a.monthlyPrice - b.monthlyPrice);
 
-    // Save quote if user is logged in
     if (body.userId) {
       const ref = `NOLI-${Date.now().toString(36).toUpperCase()}`;
       try {
@@ -149,9 +127,7 @@ export async function POST(request: NextRequest) {
             proposedPrice: results.length > 0 ? results[0].monthlyPrice : 0,
           },
         });
-      } catch {
-        // Non-critical: quote save failure shouldn't block results
-      }
+      } catch { /* non-critical */ }
     }
 
     return NextResponse.json({ results, total: results.length });

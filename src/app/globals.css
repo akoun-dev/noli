@@ -6,7 +6,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-poppins);
+  --font-display: var(--font-space-grotesk);
+  --font-subtitle: var(--font-nunito-sans);
   --font-mono: var(--font-geist-mono);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -41,89 +43,83 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  --color-brand: var(--brand);
-  --color-brand-foreground: var(--brand-foreground);
-  --color-brand-light: var(--brand-light);
-  --color-brand-dark: var(--brand-dark);
+  --color-brand: var(--accent);
+  --color-brand-foreground: var(--accent-foreground);
 }
 
 :root {
-  --radius: 0.625rem;
-  /* NOLI Brand Colors - Black + Lime/Yellow-Green */
-  --background: oklch(0.99 0.002 120);
-  --foreground: oklch(0.17 0.01 120);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.17 0.01 120);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.17 0.01 120);
-  --primary: oklch(0.22 0.02 120);
-  --primary-foreground: oklch(0.99 0.002 120);
-  --secondary: oklch(0.96 0.005 120);
-  --secondary-foreground: oklch(0.22 0.02 120);
-  --muted: oklch(0.96 0.005 120);
-  --muted-foreground: oklch(0.45 0.01 120);
-  --accent: oklch(0.95 0.01 120);
-  --accent-foreground: oklch(0.22 0.02 120);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.91 0.005 120);
-  --input: oklch(0.91 0.005 120);
-  --ring: oklch(0.78 0.15 110);
-  --chart-1: oklch(0.78 0.15 110);
-  --chart-2: oklch(0.65 0.18 145);
-  --chart-3: oklch(0.55 0.1 250);
-  --chart-4: oklch(0.7 0.15 60);
-  --chart-5: oklch(0.6 0.2 30);
-  --sidebar: oklch(0.98 0.003 120);
-  --sidebar-foreground: oklch(0.17 0.01 120);
-  --sidebar-primary: oklch(0.22 0.02 120);
-  --sidebar-primary-foreground: oklch(0.99 0.002 120);
-  --sidebar-accent: oklch(0.95 0.01 120);
-  --sidebar-accent-foreground: oklch(0.22 0.02 120);
-  --sidebar-border: oklch(0.91 0.005 120);
-  --sidebar-ring: oklch(0.78 0.15 110);
-  /* Brand Lime/Yellow-Green */
-  --brand: oklch(0.82 0.16 110);
-  --brand-foreground: oklch(0.18 0.04 110);
-  --brand-light: oklch(0.92 0.06 110);
-  --brand-dark: oklch(0.68 0.18 110);
+  --radius: 0.75rem;
+  /* NOLI Brand — Charte Graphique */
+  --background: hsl(0 0% 100%);                     /* #FFFFFF */
+  --foreground: hsl(120 2% 9%);                      /* #171817 */
+  --card: hsl(153 16% 92%);                          /* #E6F0EB */
+  --card-foreground: hsl(120 2% 9%);                 /* #171817 */
+  --popover: hsl(153 16% 98%);                       /* #F9FCFA */
+  --popover-foreground: hsl(120 2% 9%);              /* #171817 */
+  --primary: hsl(195 65% 21%);                       /* #1B464D */
+  --primary-foreground: hsl(68 76% 54%);             /* #DEEF4A */
+  --secondary: hsl(177 60% 31%);                     /* #23847E */
+  --secondary-foreground: hsl(0 0% 100%);            /* #FFFFFF */
+  --muted: hsl(148 13% 73%);                         /* #A0B6AC */
+  --muted-foreground: hsl(188 30% 30%);              /* #36636D */
+  --accent: hsl(68 76% 54%);                         /* #DEEF4A */
+  --accent-foreground: hsl(120 2% 9%);               /* #171817 */
+  --destructive: hsl(4 84% 58%);                     /* #E85544 */
+  --border: hsl(148 13% 73%);                        /* #A0B6AC */
+  --input: hsl(148 13% 73%);                         /* #A0B6AC */
+  --ring: hsl(68 76% 54%);                           /* #DEEF4A */
+  --chart-1: hsl(195 65% 21%);
+  --chart-2: hsl(177 60% 31%);
+  --chart-3: hsl(68 76% 54%);
+  --chart-4: hsl(148 13% 73%);
+  --chart-5: hsl(4 84% 58%);
+  --sidebar: hsl(195 65% 21%);                       /* #1B464D */
+  --sidebar-foreground: hsl(66 85% 96%);             /* #F2F8E0 */
+  --sidebar-primary: hsl(177 60% 31%);               /* #23847E */
+  --sidebar-primary-foreground: hsl(0 0% 100%);      /* #FFFFFF */
+  --sidebar-accent: hsl(68 76% 54%);                 /* #DEEF4A */
+  --sidebar-accent-foreground: hsl(120 2% 9%);       /* #171817 */
+  --sidebar-border: hsl(188 35% 35%);                /* #3A7886 */
+  --sidebar-ring: hsl(68 76% 54%);                   /* #DEEF4A */
+  /* Custom shadows */
+  --card-shadow: 0 20px 45px -15px hsl(188 48% 22% / 0.15);
+  --hover-shadow: 0 30px 55px -15px hsl(176 58% 33% / 0.25);
 }
 
 .dark {
-  --background: oklch(0.14 0.01 120);
-  --foreground: oklch(0.95 0.005 120);
-  --card: oklch(0.2 0.015 120);
-  --card-foreground: oklch(0.95 0.005 120);
-  --popover: oklch(0.2 0.015 120);
-  --popover-foreground: oklch(0.95 0.005 120);
-  --primary: oklch(0.95 0.005 120);
-  --primary-foreground: oklch(0.14 0.01 120);
-  --secondary: oklch(0.25 0.015 120);
-  --secondary-foreground: oklch(0.95 0.005 120);
-  --muted: oklch(0.25 0.015 120);
-  --muted-foreground: oklch(0.65 0.01 120);
-  --accent: oklch(0.25 0.015 120);
-  --accent-foreground: oklch(0.95 0.005 120);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.78 0.15 110);
-  --chart-1: oklch(0.78 0.15 110);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.18 0.015 120);
-  --sidebar-foreground: oklch(0.95 0.005 120);
-  --sidebar-primary: oklch(0.78 0.15 110);
-  --sidebar-primary-foreground: oklch(0.14 0.01 120);
-  --sidebar-accent: oklch(0.25 0.015 120);
-  --sidebar-accent-foreground: oklch(0.95 0.005 120);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.78 0.15 110);
-  --brand: oklch(0.78 0.15 110);
-  --brand-foreground: oklch(0.14 0.02 110);
-  --brand-light: oklch(0.88 0.08 110);
-  --brand-dark: oklch(0.65 0.16 110);
+  --background: hsl(120 3% 8%);                      /* #141514 */
+  --foreground: hsl(153 23% 96%);                    /* #F0F7F3 */
+  --card: hsl(188 35% 14%);                          /* #173138 */
+  --card-foreground: hsl(153 23% 96%);               /* #F0F7F3 */
+  --popover: hsl(120 3% 12%);
+  --popover-foreground: hsl(153 23% 96%);
+  --primary: hsl(66 85% 61%);                        /* #DEEF55 */
+  --primary-foreground: hsl(120 3% 8%);              /* #141514 */
+  --secondary: hsl(176 58% 33%);                     /* #23847E */
+  --secondary-foreground: hsl(0 0% 100%);
+  --muted: hsl(188 30% 18%);                         /* #1F3C44 */
+  --muted-foreground: hsl(153 10% 78%);              /* #C0D1C7 */
+  --accent: hsl(188 48% 22%);                        /* #1D535E */
+  --accent-foreground: hsl(66 85% 61%);              /* #DEEF55 */
+  --destructive: hsl(5 68% 46%);                     /* #C94A3A */
+  --border: hsl(188 30% 22%);                        /* #264C55 */
+  --input: hsl(188 30% 22%);
+  --ring: hsl(68 76% 54%);                           /* #DEEF4A */
+  --chart-1: hsl(66 85% 61%);
+  --chart-2: hsl(176 58% 33%);
+  --chart-3: hsl(188 48% 22%);
+  --chart-4: hsl(153 10% 78%);
+  --chart-5: hsl(5 68% 46%);
+  --sidebar: hsl(120 3% 8%);
+  --sidebar-foreground: hsl(153 23% 96%);
+  --sidebar-primary: hsl(66 85% 61%);
+  --sidebar-primary-foreground: hsl(120 3% 8%);
+  --sidebar-accent: hsl(176 58% 33%);
+  --sidebar-accent-foreground: hsl(0 0% 100%);
+  --sidebar-border: hsl(188 25% 18%);
+  --sidebar-ring: hsl(68 76% 54%);
+  --card-shadow: 0 25px 55px -20px hsl(188 48% 5% / 0.6);
+  --hover-shadow: 0 30px 65px -20px hsl(66 85% 61% / 0.45);
 }
 
 @layer base {
@@ -136,26 +132,54 @@
 }
 
 /* Custom scrollbar */
-.custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
+.custom-scrollbar::-webkit-scrollbar { width: 6px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: hsl(148 13% 73% / 40%); border-radius: 3px; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: hsl(148 13% 73% / 60%); }
+
+/* Card shadows */
+.card-shadow { box-shadow: var(--card-shadow); }
+.card-shadow-hover:hover { box-shadow: var(--hover-shadow); }
+
+/* Hero gradient */
+.bg-hero {
+  background: linear-gradient(145deg,
+    hsl(188 48% 92%) 0%,
+    hsl(176 58% 90%) 35%,
+    hsl(66 85% 80%) 100%
+  );
 }
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: oklch(0.78 0.15 110 / 30%);
-  border-radius: 3px;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: oklch(0.78 0.15 110 / 50%);
+.dark .bg-hero {
+  background: linear-gradient(145deg,
+    hsl(120 3% 8%) 0%,
+    hsl(188 35% 15%) 70%,
+    hsl(176 58% 22%) 100%
+  );
 }
 
-/* Brand gradient */
-.brand-gradient {
-  background: linear-gradient(135deg, oklch(0.78 0.16 110), oklch(0.72 0.14 130));
+/* Animations */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+.animate-fade-in { animation: fade-in 0.5s ease-out; }
+.animate-slide-up { animation: slide-up 0.6s ease-out; }
+.animate-float { animation: float 3s ease-in-out infinite; }
 
-/* Lime text glow */
-.brand-glow {
-  text-shadow: 0 0 30px oklch(0.78 0.15 110 / 30%);
+/* Header sticky */
+.header-sticky {
+  background: hsl(153 16% 92% / 0.8);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+.dark .header-sticky {
+  background: hsl(120 3% 8% / 0.8);
 }

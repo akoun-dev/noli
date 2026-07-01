@@ -86,14 +86,14 @@ function StatCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
-      <Card>
+      <Card className="card-shadow bg-card">
         <CardContent className="p-4 sm:p-6 flex items-start gap-4">
-          <div className="rounded-lg bg-brand-light/40 p-2.5 shrink-0">
-            <Icon className="size-5 text-brand" />
+          <div className="rounded-lg bg-primary/10 p-2.5 shrink-0">
+            <Icon className="size-5 text-primary" />
           </div>
           <div>
             <p className="text-sm text-muted-foreground">{label}</p>
-            <p className="text-2xl font-bold mt-0.5">{value}</p>
+            <p className="text-2xl font-bold mt-0.5 text-primary">{value}</p>
             {sub && (
               <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>
             )}
@@ -156,7 +156,7 @@ function QuoteCard({ quote }: { quote: QuoteRecord }) {
   });
 
   return (
-    <Card>
+    <Card className="card-shadow bg-card">
       <CardContent className="p-4 space-y-3">
         <div className="flex items-start justify-between">
           <div>
@@ -181,7 +181,7 @@ function QuoteCard({ quote }: { quote: QuoteRecord }) {
           </div>
           <div>
             <p className="text-muted-foreground text-xs">Prix propos\u00e9</p>
-            <p className="font-medium text-brand">
+            <p className="font-medium text-primary">
               {formatFCFA(quote.proposedPrice)}
             </p>
           </div>
@@ -228,8 +228,8 @@ export function DashboardPage() {
   if (!user.isLoggedIn) {
     return (
       <section className="max-w-2xl mx-auto px-4 py-16 sm:py-24 text-center">
-        <div className="rounded-full bg-brand-light/30 p-6 mx-auto w-fit mb-6">
-          <LogIn className="size-10 text-brand" />
+        <div className="rounded-full bg-primary/10 p-6 mx-auto w-fit mb-6">
+          <LogIn className="size-10 text-primary" />
         </div>
         <h1 className="text-2xl sm:text-3xl font-bold mb-3">Tableau de bord</h1>
         <p className="text-muted-foreground mb-8 max-w-md mx-auto">
@@ -238,7 +238,7 @@ export function DashboardPage() {
         </p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Button
-            className="bg-brand text-brand-foreground hover:bg-brand-dark"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full"
             onClick={() => setAuthModal("login")}
           >
             <LogIn className="size-4" />
@@ -298,7 +298,7 @@ export function DashboardPage() {
         transition={{ duration: 0.3, delay: 0.1 }}
         className="mb-8"
       >
-        <Card>
+        <Card className="card-shadow bg-card">
           <CardHeader>
             <CardTitle className="text-lg">Mes demandes de devis</CardTitle>
           </CardHeader>
@@ -316,7 +316,7 @@ export function DashboardPage() {
                   appara\u00eetre ici.
                 </p>
                 <Button
-                  className="bg-brand text-brand-foreground hover:bg-brand-dark"
+                  className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full"
                   onClick={() => setView("compare")}
                 >
                   <Zap className="size-4" />
@@ -368,7 +368,7 @@ export function DashboardPage() {
         <h2 className="text-lg font-semibold mb-4">Actions rapides</h2>
         <div className="flex flex-col sm:flex-row gap-3">
           <Button
-            className="bg-brand text-brand-foreground hover:bg-brand-dark"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full"
             onClick={() => setView("compare")}
           >
             <Zap className="size-4" />
@@ -388,12 +388,12 @@ export function DashboardPage() {
         transition={{ duration: 0.3, delay: 0.3 }}
       >
         <Collapsible open={profileOpen} onOpenChange={setProfileOpen}>
-          <Card>
+          <Card className="card-shadow bg-card">
             <CollapsibleTrigger className="w-full text-left">
               <CardHeader className="flex flex-row items-center justify-between cursor-pointer">
                 <div className="flex items-center gap-3">
-                  <div className="rounded-full bg-brand-light/40 p-2">
-                    <User className="size-5 text-brand" />
+                  <div className="rounded-full bg-primary/10 p-2">
+                    <User className="size-5 text-primary" />
                   </div>
                   <div>
                     <CardTitle className="text-base">Mon profil</CardTitle>

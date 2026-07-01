@@ -7,35 +7,25 @@ export type AppView =
 export type AuthModal = "none" | "login" | "register" | "forgot";
 
 export interface PersonalInfo {
-  firstName: string;
   lastName: string;
+  firstName: string;
   email: string;
   phone: string;
-  dateOfBirth: string;
-  licenseDate: string;
-  hasClaims: boolean;
-  claimsCount: number;
-  usage: "personnel" | "professionnel";
-  annualMileage: string;
+  whatsappOptIn: boolean;
 }
 
 export interface VehicleInfo {
-  vehicleType: string;
-  brand: string;
-  model: string;
-  year: string;
+  fuelType: string;
   fiscalPower: string;
-  registration: string;
+  seats: string;
+  year: string;
   newValue: string;
   currentValue: string;
-  isImported: boolean;
+  usage: string;
 }
 
 export interface CoverageNeeds {
-  coverageType: "tiers" | "tiers_plus" | "tous_risques";
-  options: string[];
-  monthlyBudget: string;
-  deductibleLevel: "low" | "medium" | "high";
+  guaranteeCategories: string[];
 }
 
 export interface ComparisonResult {

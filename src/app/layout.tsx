@@ -1,43 +1,44 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Space_Grotesk, Nunito_Sans, Poppins } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme-provider";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const spaceGrotesk = Space_Grotesk({
+  variable: "--font-space-grotesk",
   subsets: ["latin"],
+  weight: ["600", "700"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const nunitoSans = Nunito_Sans({
+  variable: "--font-nunito-sans",
   subsets: ["latin"],
+  weight: ["400", "600", "700"],
+});
+
+const poppins = Poppins({
+  variable: "--font-poppins",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
-  title: "NOLI Assurance - Comparez les Meilleures Assurances Auto en Côte d'Ivoire",
+  title: "NOLI Assurance - Comparez les Assurances en Côte d'Ivoire",
   description:
-    "NOLI Assurance vous permet de comparer les offres d'assurance automobile de plusieurs assureurs en Côte d'Ivoire. Obtenez des devis gratuits en 3 minutes.",
+    "NOLI Assurance : comparez les offres d'assurance automobile et trouvez le meilleur tarif en Côte d'Ivoire.",
   keywords: [
     "assurance",
     "assurance auto",
     "Côte d'Ivoire",
     "Abidjan",
-    "comparateur assurance",
-    "devis assurance",
+    "comparateur",
     "NOLI",
-    "assurance automobile",
+    "devis assurance",
   ],
   authors: [{ name: "NOLI Assurance" }],
   icons: {
     icon: "/favicon.svg",
     apple: "/apple-touch-icon.png",
-  },
-  openGraph: {
-    title: "NOLI Assurance - Comparez les Assurances Auto",
-    description:
-      "Plateforme de comparaison d'assurances automobiles en Côte d'Ivoire",
-    type: "website",
   },
 };
 
@@ -49,7 +50,7 @@ export default function RootLayout({
   return (
     <html lang="fr" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
+        className={`${spaceGrotesk.variable} ${nunitoSans.variable} ${poppins.variable} antialiased`}
       >
         <ThemeProvider
           attribute="class"

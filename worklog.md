@@ -127,4 +127,30 @@ Work Log:
 
 Stage Summary:
 - All features verified end-to-end in browser
-- App fully functional with real data from SQLite database
+- App fully functional with real data from SQLite database---
+Task ID: r8
+Agent: full-stack-developer
+Task: Update Results, Auth, Dashboard with new color scheme
+
+Work Log:
+- Replaced all brand color references with primary/accent/card tokens
+- Updated buttons, badges, cards to use new teal/yellow-green palette
+
+Stage Summary:
+- src/components/results/results-page.tsx
+- src/components/auth/auth-modals.tsx
+- src/components/dashboard/dashboard-page.tsx
+---
+Task ID: r3/r4/r9
+Agent: full-stack-developer
+Task: Rewrite Header, Landing Page, Footer to match charte graphique
+
+Work Log:
+- Rewrote header with teal/dark design, correct nav labels, S'inscrire button
+- Rewrote landing page as 2-column grid with insurance cards + mascot area
+- Rewrote footer with dark teal theme
+
+Stage Summary:
+- src/components/layout/header.tsx
+- src/components/landing/landing-page.tsx
+- src/components/layout/footer.tsx

@@ -38,7 +38,7 @@ function PasswordStrength({ password }: { password: string }) {
     "bg-orange-500",
     "bg-yellow-500",
     "bg-emerald-500",
-    "bg-brand",
+    "bg-accent",
   ];
 
   return (
@@ -184,7 +184,7 @@ function LoginModal() {
         <button
           type="button"
           onClick={() => setAuthModal("forgot")}
-          className="text-sm text-brand hover:underline"
+          className="text-sm text-primary hover:underline"
         >
           Mot de passe oubli\u00e9 ?
         </button>
@@ -192,7 +192,7 @@ function LoginModal() {
 
       <Button
         type="submit"
-        className="w-full bg-brand text-brand-foreground hover:bg-brand-dark"
+        className="w-full bg-primary text-primary-foreground hover:bg-primary/90 rounded-full"
         disabled={loading}
       >
         {loading ? (
@@ -212,7 +212,7 @@ function LoginModal() {
         <button
           type="button"
           onClick={() => setAuthModal("register")}
-          className="text-brand font-medium hover:underline"
+          className="text-primary font-medium hover:underline"
         >
           S&apos;inscrire
         </button>
@@ -435,11 +435,11 @@ function RegisterModal() {
         />
         <Label htmlFor="reg-terms" className="text-sm font-normal leading-snug cursor-pointer">
           J&apos;accepte les{" "}
-          <span className="text-brand hover:underline cursor-pointer">
+          <span className="text-primary hover:underline cursor-pointer">
             conditions d&apos;utilisation
           </span>{" "}
           et la{" "}
-          <span className="text-brand hover:underline cursor-pointer">
+          <span className="text-primary hover:underline cursor-pointer">
             politique de confidentialit\u00e9
           </span>
         </Label>
@@ -450,7 +450,7 @@ function RegisterModal() {
 
       <Button
         type="submit"
-        className="w-full bg-brand text-brand-foreground hover:bg-brand-dark"
+        className="w-full bg-primary text-primary-foreground hover:bg-primary/90 rounded-full"
         disabled={loading}
       >
         {loading ? (
@@ -470,7 +470,7 @@ function RegisterModal() {
         <button
           type="button"
           onClick={() => setAuthModal("login")}
-          className="text-brand font-medium hover:underline"
+          className="text-primary font-medium hover:underline"
         >
           Se connecter
         </button>
@@ -530,8 +530,8 @@ function ForgotPasswordModal() {
 
   return sent ? (
     <div className="space-y-4 text-center py-4">
-      <div className="rounded-full bg-brand-light/30 p-4 mx-auto w-fit">
-        <Shield className="size-8 text-brand" />
+      <div className="rounded-full bg-accent/20 p-4 mx-auto w-fit">
+        <Shield className="size-8 text-primary" />
       </div>
       <h3 className="font-semibold text-lg">V\u00e9rifiez votre email</h3>
       <p className="text-sm text-muted-foreground">
@@ -573,7 +573,7 @@ function ForgotPasswordModal() {
 
       <Button
         type="submit"
-        className="w-full bg-brand text-brand-foreground hover:bg-brand-dark"
+        className="w-full bg-primary text-primary-foreground hover:bg-primary/90 rounded-full"
         disabled={loading}
       >
         {loading ? (
@@ -587,7 +587,7 @@ function ForgotPasswordModal() {
         <button
           type="button"
           onClick={() => setAuthModal("login")}
-          className="text-sm text-brand hover:underline"
+          className="text-sm text-primary hover:underline"
         >
           <ArrowRight className="size-3.5 inline rotate-180" /> Retour \u00e0 la
           connexion
@@ -627,7 +627,7 @@ export function AuthModals() {
         if (!open) setAuthModal("none");
       }}
     >
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md bg-card">
         <DialogHeader>
           <DialogTitle className="text-xl">
             {modalConfig[authModal]?.title}

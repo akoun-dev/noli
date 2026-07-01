@@ -50,12 +50,12 @@ const coverageBadge = (type: string) => {
     },
     "Tiers+": {
       label: "Tiers+",
-      className: "bg-blue-100 text-blue-800 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800",
+      className: "bg-primary/15 text-primary border border-primary/20",
       icon: <ShieldCheck className="size-3" />,
     },
     "Tous Risques": {
       label: "Tous Risques",
-      className: "bg-emerald-100 text-emerald-800 border border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800",
+      className: "bg-accent/20 text-accent-foreground border border-accent/30",
       icon: <ShieldAlert className="size-3" />,
     },
   };
@@ -81,9 +81,9 @@ function StarRating({ rating }: { rating: number }) {
           key={i}
           className={`size-3.5 ${
             i < Math.floor(rating)
-              ? "fill-yellow-400 text-yellow-400"
+              ? "fill-accent text-accent"
               : i < rating
-                ? "fill-yellow-400/50 text-yellow-400"
+                ? "fill-accent/50 text-accent"
                 : "text-muted-foreground/30"
           }`}
         />
@@ -115,7 +115,7 @@ function OfferCard({
       transition={{ duration: 0.3 }}
       layout
     >
-      <Card className="overflow-hidden hover:shadow-md transition-shadow h-full flex flex-col">
+      <Card className="card-shadow bg-card overflow-hidden hover:shadow-lg transition-shadow h-full flex flex-col">
         <CardContent className="p-4 sm:p-6 flex flex-col flex-1 gap-4">
           {/* Insurer info */}
           <div className="flex items-start justify-between gap-2">
@@ -134,8 +134,8 @@ function OfferCard({
           <StarRating rating={offer.insurerRating} />
 
           {/* Price */}
-          <div className="bg-brand-light/30 rounded-lg p-3 -mx-1">
-            <p className="text-2xl sm:text-3xl font-bold text-brand">
+          <div className="bg-accent/10 rounded-lg p-3 -mx-1">
+            <p className="text-2xl sm:text-3xl font-bold text-primary">
               {formatFCFA(offer.monthlyPrice)}
               <span className="text-sm font-normal text-muted-foreground">/mois</span>
             </p>
@@ -167,7 +167,7 @@ function OfferCard({
             <ul className="space-y-1.5">
               {visibleFeatures.map((feature, idx) => (
                 <li key={idx} className="flex items-start gap-2 text-sm">
-                  <Check className="size-4 text-brand mt-0.5 shrink-0" />
+                  <Check className="size-4 text-primary mt-0.5 shrink-0" />
                   <span>{feature}</span>
                 </li>
               ))}
@@ -176,7 +176,7 @@ function OfferCard({
               <div className="mt-2">
                 <button
                   onClick={() => setExpanded(!expanded)}
-                  className="text-sm text-brand hover:underline flex items-center gap-1 font-medium"
+                  className="text-sm text-primary hover:underline flex items-center gap-1 font-medium"
                 >
                   {expanded ? (
                     <>
@@ -201,7 +201,7 @@ function OfferCard({
                     >
                       {hiddenFeatures.map((feature, idx) => (
                         <li key={idx} className="flex items-start gap-2 text-sm">
-                          <Check className="size-4 text-brand mt-0.5 shrink-0" />
+                          <Check className="size-4 text-primary mt-0.5 shrink-0" />
                           <span>{feature}</span>
                         </li>
                       ))}
@@ -216,13 +216,13 @@ function OfferCard({
           <div className="flex flex-col sm:flex-row gap-2 mt-auto pt-2">
             <Button
               variant="outline"
-              className="flex-1"
+              className="flex-1 border-primary text-primary hover:bg-primary/5 rounded-full"
               onClick={() => onViewDetails(offer)}
             >
               Voir les d\u00e9tails
             </Button>
             <Button
-              className="flex-1 bg-brand text-brand-foreground hover:bg-brand-dark"
+              className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 rounded-full"
               onClick={() => onRequestQuote(offer)}
             >
               <Zap className="size-4" />
@@ -270,9 +270,9 @@ function OfferDetailDialog({
           </div>
 
           {/* Pricing */}
-          <div className="bg-brand-light/30 rounded-lg p-4 space-y-2">
+          <div className="bg-accent/10 rounded-lg p-4 space-y-2">
             <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-brand">
+              <span className="text-3xl font-bold text-primary">
                 {formatFCFA(offer.monthlyPrice)}
               </span>
               <span className="text-muted-foreground">/mois</span>
@@ -316,7 +316,7 @@ function OfferDetailDialog({
             <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {offer.features.map((feature, idx) => (
                 <li key={idx} className="flex items-start gap-2 text-sm">
-                  <Check className="size-4 text-brand mt-0.5 shrink-0" />
+                  <Check className="size-4 text-primary mt-0.5 shrink-0" />
                   <span>{feature}</span>
                 </li>
               ))}
@@ -336,7 +336,7 @@ function OfferDetailDialog({
           {/* CTA */}
           <Button
             size="lg"
-            className="w-full bg-brand text-brand-foreground hover:bg-brand-dark"
+            className="w-full bg-primary text-primary-foreground hover:bg-primary/90 rounded-full"
             onClick={() => {
               onRequestQuote(offer);
               onClose();
@@ -441,7 +441,7 @@ export function ResultsPage() {
           param\u00e8tres de recherche.
         </p>
         <Button
-          className="bg-brand text-brand-foreground hover:bg-brand-dark"
+          className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full"
           onClick={() => setView("compare")}
         >
           <MapPin className="size-4" />
@@ -493,8 +493,8 @@ export function ResultsPage() {
             onClick={() => setSelectedInsurerFilter("all")}
             className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors border ${
               selectedInsurerFilter === "all"
-                ? "bg-brand text-brand-foreground border-brand"
-                : "bg-background text-foreground border-border hover:bg-muted"
+                ? "bg-card text-primary border-primary"
+                : "bg-card text-foreground border-border hover:bg-muted"
             }`}
           >
             Tous
@@ -505,8 +505,8 @@ export function ResultsPage() {
               onClick={() => setSelectedInsurerFilter(name)}
               className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors border ${
                 selectedInsurerFilter === name
-                  ? "bg-brand text-brand-foreground border-brand"
-                  : "bg-background text-foreground border-border hover:bg-muted"
+                  ? "bg-card text-primary border-primary"
+                  : "bg-card text-foreground border-border hover:bg-muted"
               }`}
             >
               {name}
