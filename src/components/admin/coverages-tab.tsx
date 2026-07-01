@@ -33,6 +33,7 @@ import { Search, Plus, MoreHorizontal, Pencil, Trash2, ChevronLeft, ChevronRight
 /* ── Types ─────────────────────────────────────────────────── */
 interface InsurerOption { id: string; name: string; code: string; }
 interface CatOption { id: string; name: string; code: string; }
+interface InsCatOption { id: string; name: string; }
 
 interface Coverage {
   id: string;
@@ -83,7 +84,7 @@ type CalculationType = "FREE" | "FIXED_AMOUNT" | "VARIABLE_BASED" | "MATRIX_BASE
 
 interface Step1Data {
   name: string;
-  type: string;
+  insuranceCategoryId: string;
   description: string;
   insurerId: string;
   categoryId: string;
@@ -93,21 +94,8 @@ interface Step1Data {
 }
 
 const emptyStep1: Step1Data = {
-  name: "", type: "", description: "", insurerId: "", categoryId: "",
+  name: "", insuranceCategoryId: "", description: "", insurerId: "", categoryId: "",
   isMandatory: false, displayOrder: "0", isActive: true,
-};
-
-const codeSuggestions: Record<string, string> = {
-  RESPONSABILITE_CIVILE: "RC",
-  INCENDIE: "INC",
-  VOL: "VOL",
-  BRIS_DE_GLACE: "BDG",
-  ASSISTANCE: "AST",
-  DEFENSE_ET_RECOURS: "DR",
-  PERSONNES_TRANSPORTEES: "PTR",
-  CATASTROPHES_NATURELLES: "CATNAT",
-  DOMMAGES_COLLISION: "DCOL",
-  PROTECTION_JURIDIQUE: "PJ",
 };
 
 const step2Cards: { type: CalculationType; label: string; color: string; emoji: string }[] = [
@@ -123,6 +111,7 @@ export function CoveragesTab() {
   const [items, setItems] = useState<Coverage[]>([]);
   const [insurers, setInsurers] = useState<InsurerOption[]>([]);
   const [categories, setCategories] = useState<CatOption[]>([]);
+  const [insuranceCategories, setInsuranceCategories] = useState<InsCatOption[]>([]);
   const [search, setSearch] = useState("");
   const [filterInsurer, setFilterInsurer] = useState("");
   const [filterCategory, setFilterCategory] = useState("");
@@ -167,12 +156,14 @@ export function CoveragesTab() {
 
   const fetchLookups = useCallback(async () => {
     try {
-      const [insRes, catRes] = await Promise.all([
+      const [insRes, catRes, insCatRes] = await Promise.all([
         fetch("/api/admin/insurers"),
         fetch("/api/admin/coverage-categories"),
+        fetch("/api/admin/insurance-categories"),
       ]);
       if (insRes.ok) setInsurers(await insRes.json());
       if (catRes.ok) setCategories(await catRes.json());
+      if (insCatRes.ok) setInsuranceCategories(await insCatRes.json());
     } catch { /* silent */ }
   }, []);
 
@@ -215,7 +206,7 @@ export function CoveragesTab() {
     setEditing(item);
     setStep1({
       name: item.name,
-      type: item.type,
+      insuranceCategoryId: "", // will be resolved after insuranceCategories load
       description: item.description ?? "",
       insurerId: item.insurerId,
       categoryId: item.categoryId ?? "",
@@ -266,9 +257,17 @@ export function CoveragesTab() {
     try {
       const url = editing ? `/api/admin/coverages/${editing.id}` : "/api/admin/coverages";
       const method = editing ? "PUT" : "POST";
+      // Resolve insurance category name for the `type` field
+      const insCat = insuranceCategories.find((c) => c.id === step1.insuranceCategoryId);
       const body = {
-        ...step1,
+        name: step1.name,
+        type: insCat?.name || "",
+        description: step1.description,
+        insurerId: step1.insurerId,
+        categoryId: step1.categoryId || null,
+        isMandatory: step1.isMandatory,
         displayOrder: parseInt(step1.displayOrder, 10) || 0,
+        isActive: step1.isActive,
         calculationType: calcType,
         metadata: buildMetadataFromStep3(),
       };
@@ -360,7 +359,7 @@ export function CoveragesTab() {
       return (
         <div className="space-y-4">
           <Label>Montant fixe (FCFA) *</Label>
-          <Input type="number" value={(metadata.fixedAmount as number) ?? ""} onChange={(e) => setMetadata({ ...metadata, fixedAmount: parseFloat(e.target.value) || 0 })} placeholder="Ex: 50000" />
+          <Input className="w-full" type="number" value={(metadata.fixedAmount as number) ?? ""} onChange={(e) => setMetadata({ ...metadata, fixedAmount: parseFloat(e.target.value) || 0 })} placeholder="Ex: 50000" />
         </div>
       );
     }
@@ -370,7 +369,7 @@ export function CoveragesTab() {
           <div>
             <Label>Variable</Label>
             <Select value={(metadata.variable as string) || "VN"} onValueChange={(v) => setMetadata({ ...metadata, variable: v })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="VN">Valeur Neuve (VN)</SelectItem>
                 <SelectItem value="VN_REPLACEMENT_VALUE">VN / Valeur de remplacement</SelectItem>
@@ -382,13 +381,13 @@ export function CoveragesTab() {
             <Label htmlFor="conditional">Taux conditionné par seuil</Label>
           </div>
           {metadata.hasConditional ? (
-            <div className="grid grid-cols-3 gap-3 rounded-lg border p-4 bg-muted/50">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 rounded-lg border p-4 bg-muted/50">
               <div><Label className="text-xs">Seuil (FCFA)</Label><Input type="number" value={(metadata.threshold as number) ?? ""} onChange={(e) => setMetadata({ ...metadata, threshold: parseFloat(e.target.value) || 0 })} /></div>
               <div><Label className="text-xs">Taux sous (%)</Label><Input type="number" step="0.01" value={(metadata.rateBelow as number) ?? ""} onChange={(e) => setMetadata({ ...metadata, rateBelow: parseFloat(e.target.value) || 0 })} /></div>
               <div><Label className="text-xs">Taux au-dessus (%)</Label><Input type="number" step="0.01" value={(metadata.rateAbove as number) ?? ""} onChange={(e) => setMetadata({ ...metadata, rateAbove: parseFloat(e.target.value) || 0 })} /></div>
             </div>
           ) : (
-            <div><Label>Taux (%)</Label><Input type="number" step="0.01" value={(metadata.rate as number) ?? ""} onChange={(e) => setMetadata({ ...metadata, rate: parseFloat(e.target.value) || 0 })} /></div>
+            <div className="w-full"><Label>Taux (%)</Label><Input className="w-full" type="number" step="0.01" value={(metadata.rate as number) ?? ""} onChange={(e) => setMetadata({ ...metadata, rate: parseFloat(e.target.value) || 0 })} /></div>
           )}
           <Separator />
           <div className="flex items-center gap-2">
@@ -396,7 +395,7 @@ export function CoveragesTab() {
             <Label htmlFor="franchise">Appliquer une franchise</Label>
           </div>
           {metadata.franchiseEnabled && (
-            <div className="grid grid-cols-2 gap-3 rounded-lg border p-4 bg-muted/50">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-lg border p-4 bg-muted/50">
               <div><Label className="text-xs">Franchise (%)</Label><Input type="number" step="0.01" value={(metadata.franchisePercent as number) ?? ""} onChange={(e) => setMetadata({ ...metadata, franchisePercent: parseFloat(e.target.value) || 0 })} /></div>
               <div><Label className="text-xs">Montant min (FCFA)</Label><Input type="number" value={(metadata.franchiseMin as number) ?? ""} onChange={(e) => setMetadata({ ...metadata, franchiseMin: parseFloat(e.target.value) || 0 })} /></div>
             </div>
@@ -410,7 +409,7 @@ export function CoveragesTab() {
           <div>
             <Label>Type de matrice</Label>
             <Select value={(metadata.matrixType as string) || "FISCAL_POWER"} onValueChange={(v) => setMetadata({ ...metadata, matrixType: v })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="FISCAL_POWER">Puissance fiscale</SelectItem>
                 <SelectItem value="FORMULA">Formule (IC/IPT)</SelectItem>
@@ -633,29 +632,29 @@ export function CoveragesTab() {
           <ScrollArea className="max-h-[60vh] pr-4">
             {step === 1 && (
               <div className="space-y-4">
-                <div>
-                  <Label>Type</Label>
-                    <Select value={step1.type} onValueChange={(v) => setStep1({ ...step1, type: v })}>
-                      <SelectTrigger><SelectValue placeholder="Sélectionner" /></SelectTrigger>
-                      <SelectContent>
-                        {Object.keys(codeSuggestions).map((key) => <SelectItem key={key} value={key}>{key}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                <div><Label>Nom *</Label><Input value={step1.name} onChange={(e) => setStep1({ ...step1, name: e.target.value })} /></div>
-                <div><Label>Description</Label><Textarea value={step1.description} onChange={(e) => setStep1({ ...step1, description: e.target.value })} rows={2} /></div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
+                <div className="w-full">
+                  <Label>Catégorie Produit</Label>
+                  <Select value={step1.insuranceCategoryId} onValueChange={(v) => setStep1({ ...step1, insuranceCategoryId: v })}>
+                    <SelectTrigger className="w-full"><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
+                    <SelectContent>
+                      {insuranceCategories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="w-full"><Label>Nom *</Label><Input className="w-full" value={step1.name} onChange={(e) => setStep1({ ...step1, name: e.target.value })} /></div>
+                <div className="w-full"><Label>Description</Label><Textarea className="w-full" value={step1.description} onChange={(e) => setStep1({ ...step1, description: e.target.value })} rows={2} /></div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="w-full">
                     <Label>Assureur *</Label>
                     <Select value={step1.insurerId} onValueChange={(v) => setStep1({ ...step1, insurerId: v })}>
-                      <SelectTrigger><SelectValue placeholder="Sélectionner" /></SelectTrigger>
+                      <SelectTrigger className="w-full"><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
                       <SelectContent>{insurers.map((i) => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
-                  <div>
-                    <Label>Catégorie</Label>
+                  <div className="w-full">
+                    <Label>Cat. Garantie</Label>
                     <Select value={step1.categoryId} onValueChange={(v) => setStep1({ ...step1, categoryId: v })}>
-                      <SelectTrigger><SelectValue placeholder="Sélectionner" /></SelectTrigger>
+                      <SelectTrigger className="w-full"><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="__none__">Aucune</SelectItem>
                         {categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
@@ -663,8 +662,8 @@ export function CoveragesTab() {
                     </Select>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div><Label>Ordre d'affichage</Label><Input type="number" value={step1.displayOrder} onChange={(e) => setStep1({ ...step1, displayOrder: e.target.value })} /></div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="w-full"><Label>Ordre d'affichage</Label><Input className="w-full" type="number" value={step1.displayOrder} onChange={(e) => setStep1({ ...step1, displayOrder: e.target.value })} /></div>
                   <div className="flex items-center justify-between h-full pt-6">
                     <Label>Obligatoire</Label>
                     <Switch checked={step1.isMandatory} onCheckedChange={(v) => setStep1({ ...step1, isMandatory: v })} />
@@ -674,7 +673,7 @@ export function CoveragesTab() {
             )}
 
             {step === 2 && (
-              <div className="grid grid-cols-2 gap-4 py-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4">
                 {step2Cards.map((c) => (
                   <button
                     key={c.type}
@@ -720,24 +719,24 @@ export function CoveragesTab() {
 
       {/* Tariff Rule Dialog */}
       <Dialog open={trDialogOpen} onOpenChange={setTrDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-lg max-w-[95vw]">
           <DialogHeader><DialogTitle>{trEditing ? "Modifier la règle" : "Nouvelle règle tarifaire"}</DialogTitle></DialogHeader>
           <div className="space-y-4 py-2">
-            <div className="grid grid-cols-2 gap-4">
-              <div><Label>Carburant</Label><Input value={trForm.fuelType} onChange={(e) => setTrForm({ ...trForm, fuelType: e.target.value })} placeholder="ESSENCE, DIESEL" /></div>
-              <div><Label>Formule</Label><Input value={trForm.formulaName} onChange={(e) => setTrForm({ ...trForm, formulaName: e.target.value })} placeholder="Formule 1" /></div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div><Label>Carburant</Label><Input className="w-full" value={trForm.fuelType} onChange={(e) => setTrForm({ ...trForm, fuelType: e.target.value })} placeholder="ESSENCE, DIESEL" /></div>
+              <div><Label>Formule</Label><Input className="w-full" value={trForm.formulaName} onChange={(e) => setTrForm({ ...trForm, formulaName: e.target.value })} placeholder="Formule 1" /></div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div><Label>Min CV</Label><Input type="number" value={trForm.minFiscalPower} onChange={(e) => setTrForm({ ...trForm, minFiscalPower: e.target.value })} /></div>
-              <div><Label>Max CV</Label><Input type="number" value={trForm.maxFiscalPower} onChange={(e) => setTrForm({ ...trForm, maxFiscalPower: e.target.value })} /></div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div><Label>Min CV</Label><Input className="w-full" type="number" value={trForm.minFiscalPower} onChange={(e) => setTrForm({ ...trForm, minFiscalPower: e.target.value })} /></div>
+              <div><Label>Max CV</Label><Input className="w-full" type="number" value={trForm.maxFiscalPower} onChange={(e) => setTrForm({ ...trForm, maxFiscalPower: e.target.value })} /></div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div><Label>Taux (%)</Label><Input type="number" step="0.01" value={trForm.baseRate} onChange={(e) => setTrForm({ ...trForm, baseRate: e.target.value })} /></div>
-              <div><Label>Montant fixe (FCFA)</Label><Input type="number" value={trForm.fixedAmount} onChange={(e) => setTrForm({ ...trForm, fixedAmount: e.target.value })} /></div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div><Label>Taux (%)</Label><Input className="w-full" type="number" step="0.01" value={trForm.baseRate} onChange={(e) => setTrForm({ ...trForm, baseRate: e.target.value })} /></div>
+              <div><Label>Montant fixe (FCFA)</Label><Input className="w-full" type="number" value={trForm.fixedAmount} onChange={(e) => setTrForm({ ...trForm, fixedAmount: e.target.value })} /></div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div><Label>Montant min (FCFA)</Label><Input type="number" value={trForm.minAmount} onChange={(e) => setTrForm({ ...trForm, minAmount: e.target.value })} /></div>
-              <div><Label>Montant max (FCFA)</Label><Input type="number" value={trForm.maxAmount} onChange={(e) => setTrForm({ ...trForm, maxAmount: e.target.value })} /></div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div><Label>Montant min (FCFA)</Label><Input className="w-full" type="number" value={trForm.minAmount} onChange={(e) => setTrForm({ ...trForm, minAmount: e.target.value })} /></div>
+              <div><Label>Montant max (FCFA)</Label><Input className="w-full" type="number" value={trForm.maxAmount} onChange={(e) => setTrForm({ ...trForm, maxAmount: e.target.value })} /></div>
             </div>
           </div>
           <DialogFooter>
