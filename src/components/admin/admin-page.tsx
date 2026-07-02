@@ -3,7 +3,7 @@
 import { useAppStore } from "@/store/app-store";
 import {
   LayoutDashboard, Building2, FileText, Shield, ShieldCheck,
-  Receipt, Settings, Layers, ArrowLeft, Menu,
+  Receipt, Settings, Layers, ArrowLeft, Menu, ClipboardList, Database, UserCog,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -16,6 +16,9 @@ import { CoverageCategoriesTab } from "./coverage-categories-tab";
 import { CoveragesTab } from "./coverages-tab";
 import { DevisTab } from "./devis-tab";
 import { SettingsTab } from "./settings-tab";
+import { AuditLogsTab } from "./audit-logs-tab";
+import { BackupsTab } from "./backups-tab";
+import { RolesTab } from "./roles-tab";
 
 const sidebarItems = [
   { id: "dashboard", label: "Tableau de bord", icon: LayoutDashboard },
@@ -25,6 +28,9 @@ const sidebarItems = [
   { id: "coverage-categories", label: "Cat. Garanties", icon: ShieldCheck },
   { id: "coverages", label: "Garanties", icon: Shield },
   { id: "devis", label: "Devis", icon: Receipt },
+  { id: "audit-logs", label: "Journaux d'audit", icon: ClipboardList },
+  { id: "backups", label: "Sauvegardes", icon: Database },
+  { id: "roles", label: "Rôles & Permissions", icon: UserCog },
   { id: "settings", label: "Paramètres", icon: Settings },
 ] as const;
 
@@ -84,6 +90,9 @@ export function AdminPage() {
       case "coverage-categories": return <CoverageCategoriesTab />;
       case "coverages": return <CoveragesTab />;
       case "devis": return <DevisTab />;
+      case "audit-logs": return <AuditLogsTab />;
+      case "backups": return <BackupsTab />;
+      case "roles": return <RolesTab />;
       case "settings": return <SettingsTab />;
       default: return <DashboardTab />;
     }
@@ -110,7 +119,7 @@ export function AdminPage() {
         </div>
       </div>
       <main className="flex-1 overflow-y-auto">
-        <div className="p-4 pt-16 lg:p-6 lg:pt-6 max-w-[1400px] mx-auto">{renderTab()}</div>
+        <div className="p-4 pt-16 lg:p-6 lg:pt-6 w-full">{renderTab()}</div>
       </main>
     </div>
   );

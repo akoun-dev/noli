@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useSyncExternalStore } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Menu,
@@ -51,12 +51,13 @@ export function Header() {
   const { currentView, setView, user, setUser } = useAppStore();
   const [mobileOpen, setMobileOpen] = useState(false);
   const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  // Avoid hydration mismatch
-  useState(() => {
-    setMounted(true);
-  });
+  // Hydration-safe: returns false on server, true on client.
+  // Avoids setState-in-effect lint error from React 19 compiler.
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
 
   const handleNav = (action: string) => {
     switch (action) {

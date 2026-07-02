@@ -83,6 +83,16 @@ export async function PUT(
       },
     });
 
+    await db.auditLog.create({
+      data: {
+        action: "UPDATE",
+        entity: "Insurer",
+        entityId: id,
+        details: JSON.stringify({ code: insurer.code, name: insurer.name }),
+        userName: "SYSTEM",
+      },
+    });
+
     return NextResponse.json(insurer);
   } catch (error) {
     console.error("Erreur insurer PUT:", error);
@@ -109,6 +119,16 @@ export async function DELETE(
     }
 
     await db.insurer.delete({ where: { id } });
+
+    await db.auditLog.create({
+      data: {
+        action: "DELETE",
+        entity: "Insurer",
+        entityId: id,
+        details: JSON.stringify({ code: existing.code, name: existing.name }),
+        userName: "SYSTEM",
+      },
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -59,6 +59,10 @@ export async function PUT(
       },
     });
 
+    await db.auditLog.create({
+      data: { action: "UPDATE", entity: "InsuranceCategory", entityId: id, details: JSON.stringify({ name: category.name }), userName: "SYSTEM" },
+    });
+
     return NextResponse.json(category);
   } catch (error) {
     console.error("Erreur insurance-category PUT:", error);
@@ -85,6 +89,10 @@ export async function DELETE(
     }
 
     await db.insuranceCategory.delete({ where: { id } });
+
+    await db.auditLog.create({
+      data: { action: "DELETE", entity: "InsuranceCategory", entityId: id, details: JSON.stringify({ name: existing.name }), userName: "SYSTEM" },
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -66,25 +66,11 @@ export async function GET(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const { id, status } = body;
+    const { id, status, finalPrice, notes } = body;
 
     if (!id) {
       return NextResponse.json(
         { error: "L'identifiant du devis est requis" },
-        { status: 400 }
-      );
-    }
-    if (!status) {
-      return NextResponse.json(
-        { error: "Le statut est requis" },
-        { status: 400 }
-      );
-    }
-
-    const validStatuses = ["DRAFT", "PENDING", "APPROVED", "REJECTED"];
-    if (!validStatuses.includes(status)) {
-      return NextResponse.json(
-        { error: "Statut invalide. Valeurs autorisées : DRAFT, PENDING, APPROVED, REJECTED" },
         { status: 400 }
       );
     }
@@ -97,9 +83,51 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    const data: Record<string, unknown> = {};
+    const changes: Record<string, unknown> = {};
+
+    if (status !== undefined) {
+      const validStatuses = ["DRAFT", "PENDING", "APPROVED", "REJECTED"];
+      if (!validStatuses.includes(status)) {
+        return NextResponse.json(
+          { error: "Statut invalide. Valeurs autorisées : DRAFT, PENDING, APPROVED, REJECTED" },
+          { status: 400 }
+        );
+      }
+      data.status = status;
+      if (status !== existing.status) changes.status = { from: existing.status, to: status };
+    }
+
+    if (finalPrice !== undefined) {
+      data.finalPrice = finalPrice ?? null;
+      changes.finalPrice = finalPrice;
+    }
+
+    if (notes !== undefined) {
+      data.notes = notes || null;
+      changes.notes = notes ? "(modifié)" : "(supprimé)";
+    }
+
+    if (Object.keys(data).length === 0) {
+      return NextResponse.json(
+        { error: "Aucune donnée à mettre à jour" },
+        { status: 400 }
+      );
+    }
+
     const quote = await db.quote.update({
       where: { id },
-      data: { status },
+      data,
+    });
+
+    await db.auditLog.create({
+      data: {
+        action: "UPDATE",
+        entity: "Quote",
+        entityId: id,
+        details: JSON.stringify({ reference: existing.reference, changes }),
+        userName: "SYSTEM",
+      },
     });
 
     return NextResponse.json(quote);

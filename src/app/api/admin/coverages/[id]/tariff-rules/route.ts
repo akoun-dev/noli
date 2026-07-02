@@ -79,6 +79,10 @@ export async function POST(
       },
     });
 
+    await db.auditLog.create({
+      data: { action: "CREATE", entity: "CoverageTariffRule", entityId: rule.id, details: JSON.stringify({ coverageId: id, fuelType: rule.fuelType, minFiscalPower: rule.minFiscalPower, maxFiscalPower: rule.maxFiscalPower }), userName: "SYSTEM" },
+    });
+
     return NextResponse.json(rule, { status: 201 });
   } catch (error) {
     console.error("Erreur tariff-rules POST:", error);

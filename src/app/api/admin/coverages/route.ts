@@ -145,6 +145,10 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    await db.auditLog.create({
+      data: { action: "CREATE", entity: "Coverage", entityId: coverage.id, details: JSON.stringify({ code: coverage.code, name: coverage.name, calculationType }), userName: "SYSTEM" },
+    });
+
     return NextResponse.json(parseMetadata(coverage as unknown as Record<string, unknown>), { status: 201 });
   } catch (error) {
     console.error("Erreur coverages POST:", error);

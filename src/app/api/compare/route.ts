@@ -60,11 +60,28 @@ function calculatePrice(
   return Math.round(price / 500) * 500;
 }
 
-// Map internal coverageType to Prisma contractType
-const contractTypeMap: Record<string, string> = {
-  tiers: "basic",
-  tiers_plus: "third_party_plus",
-  tous_risques: "all_risks",
+// Map DB coverage category codes → feature keywords to match in offer features
+// These DB codes are now sent directly from the frontend Step 3
+const CATEGORY_FEATURE_KEYWORDS: Record<string, string[]> = {
+  RESPONSABILITE_CIVILE: ["RC", "Responsabilité"],
+  DEFENSE_RECOURS: ["DR", "Défense", "Défense & Recours", "Défense / Recours"],
+  INDIVIDUELLE_CONDUCTEUR: ["IC", "Individuelle"],
+  INDIVIDUELLE_PASSAGERS: ["IPT", "Passager"],
+  INCENDIE: ["Incendie"],
+  VOL: ["Vol"],
+  BRIS_GLACES: ["BDG", "Bris", "Glaces"],
+  TIERCE_COMPLETE: ["TCM", "Tierce Complète"],
+  TIERCE_COLLISION: ["TCL", "Tierce Collision"],
+  ASSISTANCE: ["Assistance"],
+  AVANCE_RECOURS: ["Avance"],
+  ACCESSOIRES: ["Accessoire"],
+};
+
+// Map contractType to human-readable coverage type
+const contractTypeLabel: Record<string, string> = {
+  basic: "Tiers",
+  third_party_plus: "Tiers+",
+  all_risks: "Tous Risques",
 };
 
 export async function POST(request: NextRequest) {
@@ -81,20 +98,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Informations véhicule incomplètes" }, { status: 400 });
     }
 
-    // Determine coverage type from selected guarantees
-    const cats = needs.guaranteeCategories || [];
-    let coverageType = "tiers";
-    if (cats.length >= 6 || cats.includes("individuelle_conducteur") || cats.includes("dommages")) {
-      coverageType = "tous_risques";
-    } else if (cats.includes("incendie") || cats.includes("vol") || cats.length >= 3) {
-      coverageType = "tiers_plus";
+    // Selected guarantee category codes from step 3 (DB codes)
+    const selectedCats: string[] = needs.guaranteeCategories || [];
+
+    // Build keyword list for feature matching
+    const featureKeywords = new Set<string>();
+    for (const catCode of selectedCats) {
+      const keywords = CATEGORY_FEATURE_KEYWORDS[catCode] || [];
+      for (const kw of keywords) featureKeywords.add(kw);
     }
 
-    const contractType = contractTypeMap[coverageType] || "basic";
-
+    // Fetch ALL active offers (no contract type pre-filtering)
     const offers = await db.insuranceOffer.findMany({
       where: {
-        contractType,
         isActive: true,
         insurer: { isActive: true },
       },
@@ -102,26 +118,47 @@ export async function POST(request: NextRequest) {
       orderBy: { priceMin: "asc" },
     });
 
-    const results: InsurerOffer[] = offers.map((offer) => {
-      const basePrice = offer.priceMin || 25000;
-      const monthlyPrice = calculatePrice(basePrice, personal, vehicle, needs);
-      return {
-        id: offer.id,
-        insurerId: offer.insurerId,
-        insurerName: offer.insurer.name,
-        insurerLogo: offer.insurer.logoUrl || null,
-        insurerRating: 4.0,
-        name: offer.name,
-        coverageType: offer.contractType || contractType,
-        description: offer.description,
-        monthlyPrice,
-        annualPrice: monthlyPrice * 11,
-        deductible: offer.deductible || 0,
-        maxCoverage: offer.coverageAmount || 0,
-        features: (() => { try { return JSON.parse(offer.features || "[]"); } catch { return []; } })(),
-        conditions: null,
-      };
-    });
+    // Filter: offer features must match at least 1 selected category keyword
+    const results: InsurerOffer[] = [];
+
+    for (const offer of offers) {
+      let offerFeatures: string[] = [];
+      try { offerFeatures = JSON.parse(offer.features || "[]"); } catch { /* ignore */ }
+
+      // Find which selected categories this offer covers via its features
+      const matchedCategories: string[] = [];
+      for (const catCode of selectedCats) {
+        const keywords = CATEGORY_FEATURE_KEYWORDS[catCode] || [];
+        const hit = offerFeatures.some((f) =>
+          keywords.some((kw) => f.toUpperCase().includes(kw.toUpperCase()))
+        );
+        if (hit) matchedCategories.push(catCode);
+      }
+
+      // Only include offers that match AT LEAST 1 selected category
+      if (selectedCats.length === 0 || matchedCategories.length > 0) {
+        const basePrice = offer.priceMin || 25000;
+        const monthlyPrice = calculatePrice(basePrice, personal, vehicle, needs);
+
+        results.push({
+          id: offer.id,
+          insurerId: offer.insurerId,
+          insurerName: offer.insurer.name,
+          insurerLogo: offer.insurer.logoUrl || null,
+          insurerRating: 4.0,
+          name: offer.name,
+          coverageType: contractTypeLabel[offer.contractType || "basic"] || offer.contractType || "Tiers",
+          description: offer.description,
+          monthlyPrice,
+          annualPrice: monthlyPrice * 11,
+          deductible: offer.deductible || 0,
+          maxCoverage: offer.coverageAmount || 0,
+          features: offerFeatures,
+          conditions: null,
+          matchedGuarantees: matchedCategories,
+        });
+      }
+    }
 
     results.sort((a, b) => a.monthlyPrice - b.monthlyPrice);
 
@@ -129,7 +166,6 @@ export async function POST(request: NextRequest) {
     if (body.userId) {
       const ref = `NOLI-${Date.now().toString(36).toUpperCase()}`;
       try {
-        // Find the insurance category for Auto
         const autoCat = await db.insuranceCategory.findFirst({ where: { name: { contains: "Auto" } } });
         await db.quote.create({
           data: {

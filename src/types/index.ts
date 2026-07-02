@@ -55,6 +55,7 @@ export interface InsurerOffer {
   maxCoverage: number;
   features: string[];
   conditions: string | null;
+  matchedGuarantees?: string[];
 }
 
 export interface QuoteRecord {

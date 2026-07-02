@@ -22,6 +22,7 @@ model Profile {
 
   quotes          Quote[]
   insurerAccounts InsurerAccount[]
+  customRoles     ProfileRole[]
 }
 
 // ── 2. ASSUREURS ──────────────────────────────────────────────
@@ -187,6 +188,8 @@ model Quote {
   offer                 InsuranceOffer? @relation(fields: [offerId], references: [id])
   status                String   @default("DRAFT") // DRAFT, PENDING, APPROVED, REJECTED
   estimatedPrice        Int?
+  finalPrice            Float?
+  notes                 String?
   vehicleData           String   @default("{}") // JSON
   personalData          String   @default("{}") // JSON
   coverageRequirements  String   @default("{}") // JSON
@@ -211,4 +214,93 @@ model QuoteCoverage {
   createdAt              DateTime @default(now())
 
   @@unique([quoteId, coverageId])
+}
+
+// ── 10. PARAMÈTRES SYSTÈME ───────────────────────────────────
+model SystemSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String   @default("")
+  category  String   @default("general") // general, email, security, notification, appearance
+  label     String
+  type      String   @default("text") // text, boolean, number, json, password
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ── 11. JOURNAUX D'AUDIT ─────────────────────────────────────
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  userEmail String?
+  userName  String?
+  action    String   // LOGIN, LOGOUT, CREATE, UPDATE, DELETE, EXPORT, SETTINGS_CHANGE, etc.
+  entity    String   // Profile, Insurer, Offer, Quote, Settings, Backup, Role, etc.
+  entityId  String?
+  details   String   @default("{}") // JSON
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+}
+
+// ── 12. SAUVEGARDES ──────────────────────────────────────────
+model Backup {
+  id          String   @id @default(cuid())
+  filename    String
+  fileSize    Int      @default(0)
+  status      String   @default("COMPLETED") // COMPLETED, FAILED, IN_PROGRESS, SCHEDULED
+  type        String   @default("MANUAL") // MANUAL, SCHEDULED, AUTO
+  schedule    String?  // cron expression
+  nextRun     DateTime?
+  path        String?
+  note        String?
+  createdAt   DateTime @default(now())
+}
+
+// ── 13. RÔLES PERSONNALISÉS ──────────────────────────────────
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  permissions RolePermission[]
+  profiles    ProfileRole[]
+}
+
+// ── 14. PERMISSIONS ──────────────────────────────────────────
+model Permission {
+  id          String   @id @default(cuid())
+  code        String   @unique // settings.view, users.create, offers.delete, etc.
+  name        String
+  category    String   // settings, users, offers, quotes, insurers, coverages, backups, audit, roles
+  createdAt   DateTime @default(now())
+
+  roles RolePermission[]
+}
+
+// Junction: Role ↔ Permission
+model RolePermission {
+  id           String     @id @default(cuid())
+  roleId       String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permissionId String
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+
+  @@unique([roleId, permissionId])
+}
+
+// Junction: Profile ↔ Role (custom roles)
+model ProfileRole {
+  id        String   @id @default(cuid())
+  profileId String
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  roleId    String
+  role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([profileId, roleId])
 }

@@ -100,6 +100,10 @@ export async function PUT(
       },
     });
 
+    await db.auditLog.create({
+      data: { action: "UPDATE", entity: "Coverage", entityId: id, details: JSON.stringify({ code: coverage.code, name: coverage.name }), userName: "SYSTEM" },
+    });
+
     return NextResponse.json(parseMetadata(coverage as unknown as Record<string, unknown>));
   } catch (error) {
     console.error("Erreur coverage PUT:", error);
@@ -126,6 +130,10 @@ export async function DELETE(
     }
 
     await db.coverage.delete({ where: { id } });
+
+    await db.auditLog.create({
+      data: { action: "DELETE", entity: "Coverage", entityId: id, details: JSON.stringify({ code: existing.code, name: existing.name }), userName: "SYSTEM" },
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -69,6 +69,10 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    await db.auditLog.create({
+      data: { action: "CREATE", entity: "CoverageCategory", entityId: category.id, details: JSON.stringify({ code: category.code, name: category.name }), userName: "SYSTEM" },
+    });
+
     return NextResponse.json(category, { status: 201 });
   } catch (error) {
     console.error("Erreur coverage-categories POST:", error);

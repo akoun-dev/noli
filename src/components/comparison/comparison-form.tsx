@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   User,
@@ -13,12 +13,15 @@ import {
   UserCheck,
   Users,
   Banknote,
-  Flame,
   Scale,
   Lock,
   FlameKindling,
   ShieldCheck,
   CheckCheck,
+  Wrench,
+  CarFront,
+  HandHelping,
+  type LucideIcon,
 } from "lucide-react";
 
 import { useAppStore } from "@/store/app-store";
@@ -35,6 +38,33 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
+
+// ─── Icon mapping for DB coverage category codes ──────────────────
+const CATEGORY_ICON_MAP: Record<string, LucideIcon> = {
+  RESPONSABILITE_CIVILE: Shield,
+  DEFENSE_RECOURS: Scale,
+  INDIVIDUELLE_CONDUCTEUR: UserCheck,
+  INDIVIDUELLE_PASSAGERS: Users,
+  INCENDIE: FlameKindling,
+  VOL: Lock,
+  BRIS_GLACES: CarFront,
+  TIERCE_COMPLETE: Car,
+  TIERCE_COLLISION: CarFront,
+  ASSISTANCE: HandHelping,
+  AVANCE_RECOURS: Banknote,
+  ACCESSOIRES: Wrench,
+};
+
+const DEFAULT_ICON = Shield;
+
+// ─── Types ────────────────────────────────────────────────────────
+interface DBCoverageCategory {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  displayOrder: number;
+}
 
 // ─── Constants ─────────────────────────────────────────────────────
 const STEPS = [
@@ -64,17 +94,6 @@ const USAGE_OPTIONS = [
   { value: "autre", label: "Autre" },
 ];
 
-const GUARANTEE_CATEGORIES = [
-  { id: "responsabilite_civile", label: "Responsabilité Civile", icon: Shield },
-  { id: "recours_tiers", label: "Recours des Tiers Incendie", icon: Flame },
-  { id: "defense_recours", label: "Défense / Recours", icon: Scale },
-  { id: "individuelle_conducteur", label: "Individuelle Conducteur", icon: UserCheck },
-  { id: "individuelle_personne", label: "Individuelle Personne Transportée", icon: Users },
-  { id: "avance_recours", label: "Avance sur Recours", icon: Banknote },
-  { id: "incendie", label: "Incendie", icon: FlameKindling },
-  { id: "vol", label: "Vol", icon: Lock },
-];
-
 // ─── Animation ──────────────────────────────────────────────────────
 const slideVariants = {
   enter: (d: number) => ({ x: d > 0 ? 200 : -200, opacity: 0 }),
@@ -95,6 +114,25 @@ export function ComparisonForm() {
   const { toast } = useToast();
   const [direction, setDirection] = useState(0);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Dynamic coverage categories from DB
+  const [dbCategories, setDbCategories] = useState<DBCoverageCategory[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
+
+  // Fetch coverage categories when component mounts (or step reaches 3)
+  useEffect(() => {
+    if (dbCategories.length > 0) return;
+    setCategoriesLoading(true);
+    fetch("/api/coverage-categories")
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) setDbCategories(data);
+      })
+      .catch(() => {
+        // Fallback: empty — user will see error on submit
+      })
+      .finally(() => setCategoriesLoading(false));
+  }, [dbCategories.length]);
 
   const goNext = useCallback(() => {
     if (comparisonStep < 3) {
@@ -187,9 +225,9 @@ export function ComparisonForm() {
   };
 
   const toggleAllCategories = () => {
-    const allIds = GUARANTEE_CATEGORIES.map((c) => c.id);
+    const allIds = dbCategories.map((c) => c.code);
     const current = coverageNeeds.guaranteeCategories || [];
-    if (current.length === allIds.length) {
+    if (current.length === allIds.length && allIds.length > 0) {
       setCoverageNeeds({ guaranteeCategories: [] });
     } else {
       setCoverageNeeds({ guaranteeCategories: allIds });
@@ -278,6 +316,8 @@ export function ComparisonForm() {
             )}
             {comparisonStep === 3 && (
               <Step3
+                categories={dbCategories}
+                loading={categoriesLoading}
                 selected={coverageNeeds.guaranteeCategories || []}
                 onToggle={toggleCategory}
                 onToggleAll={toggleAllCategories}
@@ -518,7 +558,7 @@ function Step2({
         <FieldError field="seats" />
       </div>
 
-      {/* Année de mise en circulation — champ date (month) */}
+      {/* Année de mise en circulation */}
       <div className="space-y-2">
         <Label htmlFor="circulationDate">Année de mise en circulation *</Label>
         <Input
@@ -533,7 +573,7 @@ function Step2({
         <FieldError field="year" />
       </div>
 
-      {/* Valeur neuve & actuelle — côte à côte sur desktop, empilés sur mobile */}
+      {/* Valeur neuve & actuelle */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="newValue">Valeur neuve (FCFA) *</Label>
@@ -598,20 +638,57 @@ function Step2({
   );
 }
 
-/* ─── Step 3 ────────────────────────────────────────────────────── */
+/* ─── Step 3 — Dynamic categories from DB ──────────────────────── */
 function Step3({
+  categories,
+  loading,
   selected,
   onToggle,
   onToggleAll,
   error,
 }: {
+  categories: DBCoverageCategory[];
+  loading: boolean;
   selected: string[];
   onToggle: (id: string) => void;
   onToggleAll: () => void;
   error?: string;
 }) {
-  const allIds = GUARANTEE_CATEGORIES.map((c) => c.id);
-  const allSelected = selected.length === allIds.length;
+  const allIds = categories.map((c) => c.code);
+  const allSelected = allIds.length > 0 && selected.length === allIds.length;
+
+  if (loading) {
+    return (
+      <div className="space-y-5 animate-fade-in">
+        <div>
+          <h2 className="font-[family-name:var(--font-space-grotesk)] text-xl font-bold text-foreground">
+            Catégories de garanties
+          </h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Chargement des garanties disponibles...
+          </p>
+        </div>
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-6 h-6 animate-spin text-primary" />
+        </div>
+      </div>
+    );
+  }
+
+  if (categories.length === 0) {
+    return (
+      <div className="space-y-5 animate-fade-in">
+        <div>
+          <h2 className="font-[family-name:var(--font-space-grotesk)] text-xl font-bold text-foreground">
+            Catégories de garanties
+          </h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Aucune catégorie de garantie disponible.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5 animate-fade-in">
@@ -647,18 +724,18 @@ function Step3({
         <p className="text-sm text-destructive">{error}</p>
       )}
 
-      <div className="grid grid-cols-1 gap-3">
-        {GUARANTEE_CATEGORIES.map((cat, i) => {
-          const isSelected = selected.includes(cat.id);
-          const Icon = cat.icon;
+      <div className="grid grid-cols-1 gap-3 max-h-[50vh] overflow-y-auto pr-1">
+        {categories.map((cat, i) => {
+          const isSelected = selected.includes(cat.code);
+          const Icon = CATEGORY_ICON_MAP[cat.code] || DEFAULT_ICON;
           return (
             <motion.button
               type="button"
-              key={cat.id}
+              key={cat.code}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.04 }}
-              onClick={() => onToggle(cat.id)}
+              transition={{ delay: i * 0.03 }}
+              onClick={() => onToggle(cat.code)}
               className={`flex items-center gap-4 w-full p-4 rounded-xl border-2 transition-all text-left cursor-pointer bg-card ${
                 isSelected
                   ? "border-primary bg-primary/5"
@@ -683,7 +760,7 @@ function Step3({
                   isSelected ? "text-primary" : "text-foreground"
                 }`}
               >
-                {cat.label}
+                {cat.name}
               </span>
               {isSelected && (
                 <ShieldCheck className="w-4 h-4 text-primary ml-auto shrink-0" />

@@ -61,6 +61,22 @@ const coverageBadgeStyle = (type: string) => {
 
 const MAX_COMPARE = 4;
 
+// Map DB coverage category codes to French display labels
+const GUARANTEE_LABELS: Record<string, string> = {
+  RESPONSABILITE_CIVILE: "RC",
+  DEFENSE_RECOURS: "Défense & Recours",
+  INDIVIDUELLE_CONDUCTEUR: "IC",
+  INDIVIDUELLE_PASSAGERS: "IPT",
+  INCENDIE: "Incendie",
+  VOL: "Vol",
+  BRIS_GLACES: "Bris de glaces",
+  TIERCE_COMPLETE: "Tierce Complète",
+  TIERCE_COLLISION: "Tierce Collision",
+  ASSISTANCE: "Assistance",
+  AVANCE_RECOURS: "Avance sur recours",
+  ACCESSOIRES: "Accessoires",
+};
+
 /* ──────────────────────── sub-components ───────────────────────── */
 
 function StarRating({ rating }: { rating: number }) {
@@ -679,6 +695,23 @@ function OfferCard({
           {/* ── Center section: Guarantees ── */}
           <div className="flex-1 p-4 lg:p-5 min-w-0">
             <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+              Garanties correspondantes
+            </h4>
+            {/* Matched guarantee badges */}
+            {offer.matchedGuarantees && offer.matchedGuarantees.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-3">
+                {offer.matchedGuarantees.map((code) => (
+                  <span
+                    key={code}
+                    className="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary px-2.5 py-0.5 text-[11px] font-semibold border border-primary/20"
+                  >
+                    <CheckCircle2 className="size-3" />
+                    {GUARANTEE_LABELS[code] || code}
+                  </span>
+                ))}
+              </div>
+            )}
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2 mt-1">
               Garanties inclues
             </h4>
             <Separator className="mb-3" />

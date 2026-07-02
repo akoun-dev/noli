@@ -132,6 +132,7 @@ export function CoveragesTab() {
   const [trLoading, setTrLoading] = useState(false);
   const [trDialogOpen, setTrDialogOpen] = useState(false);
   const [trEditing, setTrEditing] = useState<TariffRule | null>(null);
+  const [trDeleteId, setTrDeleteId] = useState<string | null>(null);
   const [trForm, setTrForm] = useState({
     fuelType: "", minFiscalPower: "", maxFiscalPower: "", baseRate: "", fixedAmount: "", minAmount: "", maxAmount: "", formulaName: "",
   });
@@ -342,6 +343,19 @@ export function CoveragesTab() {
       toast({ title: "Erreur", variant: "destructive" });
     } finally {
       setTrSaving(false);
+    }
+  };
+
+  const handleTrDelete = async () => {
+    if (!trDeleteId || !selectedId) return;
+    try {
+      const res = await fetch(`/api/admin/tariff-rules/${trDeleteId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error();
+      toast({ title: "Règle tarifaire supprimée" });
+      setTrDeleteId(null);
+      fetchTariffRules(selectedId);
+    } catch {
+      toast({ title: "Erreur", variant: "destructive" });
     }
   };
 
@@ -597,6 +611,7 @@ export function CoveragesTab() {
                             <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem onClick={() => openTrEdit(rule)}><Pencil className="h-4 w-4 mr-2" />Modifier</DropdownMenuItem>
+                              <DropdownMenuItem className="text-destructive" onClick={() => setTrDeleteId(rule.id)}><Trash2 className="h-4 w-4 mr-2" />Supprimer</DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
@@ -753,6 +768,17 @@ export function CoveragesTab() {
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction className="bg-destructive text-white hover:bg-destructive/90" onClick={handleDelete}>Supprimer</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ── Tariff Rule Delete Dialog ──────────────────────── */}
+      <AlertDialog open={!!trDeleteId} onOpenChange={() => setTrDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader><AlertDialogTitle>Supprimer la règle tarifaire ?</AlertDialogTitle><AlertDialogDescription>Cette action est irréversible.</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive text-white hover:bg-destructive/90" onClick={handleTrDelete}>Supprimer</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

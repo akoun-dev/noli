@@ -89,6 +89,16 @@ export async function PUT(
       },
     });
 
+    await db.auditLog.create({
+      data: {
+        action: "UPDATE",
+        entity: "InsuranceOffer",
+        entityId: id,
+        details: JSON.stringify({ name: offer.name, contractType: offer.contractType }),
+        userName: "SYSTEM",
+      },
+    });
+
     return NextResponse.json(parseFeatures(offer as unknown as Record<string, unknown>));
   } catch (error) {
     console.error("Erreur insurance-offer PUT:", error);
@@ -115,6 +125,16 @@ export async function DELETE(
     }
 
     await db.insuranceOffer.delete({ where: { id } });
+
+    await db.auditLog.create({
+      data: {
+        action: "DELETE",
+        entity: "InsuranceOffer",
+        entityId: id,
+        details: JSON.stringify({ name: existing.name, contractType: existing.contractType }),
+        userName: "SYSTEM",
+      },
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

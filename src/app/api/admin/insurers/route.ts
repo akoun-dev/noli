@@ -83,6 +83,16 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    await db.auditLog.create({
+      data: {
+        action: "CREATE",
+        entity: "Insurer",
+        entityId: insurer.id,
+        details: JSON.stringify({ code: insurer.code, name: insurer.name }),
+        userName: "SYSTEM",
+      },
+    });
+
     return NextResponse.json(insurer, { status: 201 });
   } catch (error) {
     console.error("Erreur insurers POST:", error);

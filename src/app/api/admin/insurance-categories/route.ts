@@ -41,6 +41,10 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    await db.auditLog.create({
+      data: { action: "CREATE", entity: "InsuranceCategory", entityId: category.id, details: JSON.stringify({ name: category.name }), userName: "SYSTEM" },
+    });
+
     return NextResponse.json(category, { status: 201 });
   } catch (error) {
     console.error("Erreur insurance-categories POST:", error);

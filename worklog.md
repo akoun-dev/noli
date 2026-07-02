@@ -221,3 +221,122 @@ Stage Summary:
 - Dark mode footer and CTA section stay properly dark
 - Interactive elements (buttons, badges) correctly swap to lime accent in dark mode
 - Lint clean
+---
+Task ID: 5
+Agent: New Admin Tabs Agent
+Task: Create 3 new admin tab components (Audit Logs, Backups, Roles) and update admin sidebar
+
+Work Log:
+- Created `/src/components/admin/audit-logs-tab.tsx` with:
+  - Header with title "Journaux d'audit" and "Exporter les journaux" button (lime brand color)
+  - Horizontal responsive filter bar: search input, action Select (9 options), entity Select (8 options), 2 date inputs, "Réinitialiser" button
+  - 4 stats cards: Total événements, Connexions aujourd'hui, Modifications, Suppressions
+  - Desktop table with columns: Date/Heure, Utilisateur, Action (colored badge), Entité, Détails (expandable JSON), IP
+  - Mobile cards with same data in card layout
+  - Pagination at bottom with numbered page buttons
+  - Empty state "Aucun journal trouvé" with FileText icon
+  - Skeleton loading state
+  - Action badge colors: LOGIN=green, LOGOUT=gray, CREATE=blue, UPDATE=amber, DELETE=red, EXPORT=purple, SETTINGS_CHANGE=cyan, BACKUP=teal
+  - French action labels mapping
+  - max-h-[calc(100vh-280px)] with overflow scroll on table area
+  - Data fetched from GET /api/admin/audit-logs with query params
+
+- Created `/src/components/admin/backups-tab.tsx` with:
+  - Header with title "Sauvegardes" and "Nouvelle sauvegarde" button (lime brand color)
+  - 3 stats cards: Dernière sauvegarde (date), Taille totale (formatted), Espace disque (placeholder "2.1 Go")
+  - Scheduled backup Card with: Switch toggle, frequency Select (Quotidienne/Hebdomadaire/Mensuelle), time/day inputs, "Prochaine exécution" display, Save button
+  - Backup list (desktop table / mobile cards) with columns: Date, Fichier, Taille, Type (badge), Statut (badge with animated icon), Actions
+  - Type badges: MANUAL=Manuel gray, SCHEDULED=Planifié amber, AUTO=Auto blue
+  - Status badges: COMPLETED=Complété green, FAILED=Échoué red, IN_PROGRESS=En cours amber with spinner
+  - Actions: Restaurer (AlertDialog confirm), Télécharger (disabled), Supprimer (AlertDialog destructive confirm)
+  - formatFileSize helper (o, Ko, Mo, Go)
+  - Empty state "Aucune sauvegarde" with Database icon
+  - CRUD API calls: POST/GET/DELETE /api/admin/backups, POST schedule, POST restore
+  - Toast notifications and refetch after create/delete/restore
+
+- Created `/src/components/admin/roles-tab.tsx` with:
+  - Header with title "Rôles & Permissions" and "Nouveau rôle" button (lime brand color)
+  - Desktop: 2-column layout (w-80 roles list + flex-1 permissions panel), both scrollable
+  - Mobile: stacked layout with roles list card + permissions card below
+  - Roles list: default roles (Lock icon, "Par défaut" badge, no delete), custom roles (edit/delete buttons)
+  - Each role card shows: name, description, permission count, user count badge
+  - Permissions panel: grouped by 9 categories (Paramètres, Utilisateurs, Offres, Devis, Assureurs, Garanties, Sauvegardes, Audit, Rôles)
+  - Each category: Collapsible with checkbox for each permission, "Sélectionner tout" / "Désélectionner tout"
+  - "Enregistrer les permissions" button in permissions panel
+  - Create/Edit role Dialog with: name input, description textarea, all permission checkboxes (always expanded), Create/Save button
+  - Delete role AlertDialog with confirmation
+  - Empty state "Aucun rôle personnalisé" with Shield icon
+  - CRUD API calls: GET/POST/PUT/DELETE /api/admin/roles, GET /api/admin/permissions
+
+- Updated `/src/components/admin/admin-page.tsx`:
+  - Added 3 imports: ClipboardList, Database, UserCog to lucide-react
+  - Added 3 tab imports: AuditLogsTab, BackupsTab, RolesTab
+  - Added 3 sidebar items before "settings": audit-logs, backups, roles
+  - Added 3 cases to renderTab switch
+
+Stage Summary:
+- 3 new admin tab components created with full responsive design (desktop table + mobile cards)
+- All components use named exports only (no default exports)
+- Brand lime color applied to primary buttons: bg-[#B9E54D] text-black hover:bg-[#a5d044]
+- All components use bg-card (not bg-white) for dark mode support
+- All text in French
+- Lint clean (only pre-existing launch-server.js errors remain)
+- Dev server compiles successfully
+- Admin sidebar now has 11 items: Tableau de bord, Assureurs, Catégories Produits, Offres, Cat. Garanties, Garanties, Devis, Journaux d'audit, Sauvegardes, Rôles & Permissions, Paramètres
+---
+Task ID: 10
+Agent: Main Agent
+Task: Complete admin settings system - 7 settings tabs, audit logs, backups, roles & permissions
+
+Work Log:
+- Updated Prisma schema with 7 new models: SystemSetting, AuditLog, Backup, Role, Permission, RolePermission, ProfileRole
+- Added customRoles relation to Profile model
+- Pushed schema to SQLite database
+- Created API routes:
+  - `/api/admin/settings` (GET+PUT): auto-seeds 25 settings across 5 categories, audit logs on change
+  - `/api/admin/audit-logs` (GET): filtered/paginated audit log retrieval with full-text search
+  - `/api/admin/backups` (GET+POST): list backups, create manual backup (copies SQLite file), schedule backups
+  - `/api/admin/backups/[id]` (DELETE+POST): delete backup file, restore from backup
+  - `/api/admin/roles` (GET+POST): list roles with permissions, create new role
+  - `/api/admin/roles/[id]` (GET+PUT+DELETE): single role CRUD, sync permissions
+  - `/api/admin/permissions` (GET): 34 permissions across 9 categories, auto-seeds and assigns to default roles
+  - `/api/admin/profiles/[id]/roles` (GET+PUT): assign custom roles to profiles
+- Fixed roles-tab.tsx: rewrote entirely to match API response format (permissions with IDs, not just codes)
+- Fixed settings-tab.tsx: added mounted guard for useTheme hydration, fixed fetchRoles to extract array from {roles:[...]} response
+- Fixed audit-logs-tab.tsx: fixed details rendering (API returns parsed objects, not strings), added detailsPreview helper
+- Added audit log creation to settings PUT endpoint
+- All API routes create AuditLog entries for mutating operations
+- Browser verified: all 11 admin sidebar items, Settings 7 sub-tabs (Général, Email, Utilisateurs, Sécurité, Notifications, Apparence, Comptes), Audit Logs with data, Backups, Roles & Permissions with 3 default roles (ADMIN 34 perms, INSURER 8 perms, USER 3 perms)
+
+Stage Summary:
+- Complete admin settings system with 7 sub-tabs covering: Général (site name, email, maintenance), Email (SMTP config), Utilisateurs (profile management), Sécurité (password policy, lockout), Notifications (channels & events), Apparence (theme, language, date), Gestion des comptes (roles & status)
+- Audit logging system with filtered/searchable log viewer
+- Backup management with manual/scheduled backup support
+- Role-based permission system with 34 permissions across 9 categories and 3 default roles
+- 3 new admin sidebar items: Journaux d'audit, Sauvegardes, Rôles & Permissions
+- Lint clean (only pre-existing launch-server.js errors)
+- All verified via browser testing
+---
+Task ID: 6
+Agent: fullstack-dev
+Task: Fix backups tab - remove mocks, connect to real API
+
+Work Log:
+- Read backups-tab.tsx and API route to understand current code and data flow
+- Identified Backup interface mismatch with Prisma model (file→filename, size→fileSize, date→createdAt)
+- Replaced hardcoded "Espace disque disponible: 2.1 Go" card with "Nombre de sauvegardes" showing real count from API data
+- Updated Backup interface to match actual API response fields (createdAt, filename, fileSize)
+- Updated all references throughout the component (stats, table cells, mobile cards, alert dialogs)
+- Added null-safe fileSize access (b.fileSize ?? 0) in totalSize calculation
+- Added Tooltip wrapping to disabled Download buttons (both desktop and mobile) with "Fonctionnalité en développement" message
+- Verified toast feedback already exists for restore and delete (uses shadcn useToast, not sonner - correct for this project)
+- Verified schedule save correctly calls POST /api/admin/backups?action=schedule with proper JSON body
+- Fixed API route to JSON.stringify(schedule) when saving to DB (value column is String type, was receiving object)
+- Removed unused AlertTriangle and HardDrive imports, added Layers and Tooltip imports
+
+Stage Summary:
+- Backups tab now connects to real API data with correct field mapping
+- Stats show: last backup date (from API), total size (calculated from fileSize), backup count (from API)
+- Disabled download buttons have tooltip feedback
+- Schedule config saves correctly as JSON to SystemSetting table
+- No new lint errors introduced

@@ -70,6 +70,10 @@ export async function PUT(
       },
     });
 
+    await db.auditLog.create({
+      data: { action: "UPDATE", entity: "CoverageCategory", entityId: id, details: JSON.stringify({ code: category.code, name: category.name }), userName: "SYSTEM" },
+    });
+
     return NextResponse.json(category);
   } catch (error) {
     console.error("Erreur coverage-category PUT:", error);
@@ -96,6 +100,10 @@ export async function DELETE(
     }
 
     await db.coverageCategory.delete({ where: { id } });
+
+    await db.auditLog.create({
+      data: { action: "DELETE", entity: "CoverageCategory", entityId: id, details: JSON.stringify({ code: existing.code, name: existing.name }), userName: "SYSTEM" },
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -95,6 +95,16 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    await db.auditLog.create({
+      data: {
+        action: "CREATE",
+        entity: "InsuranceOffer",
+        entityId: offer.id,
+        details: JSON.stringify({ name: offer.name, contractType: offer.contractType, insurerId }),
+        userName: "SYSTEM",
+      },
+    });
+
     return NextResponse.json(parseFeatures(offer as unknown as Record<string, unknown>), { status: 201 });
   } catch (error) {
     console.error("Erreur insurance-offers POST:", error);
