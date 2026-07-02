@@ -509,3 +509,68 @@ Stage Summary:
 - Mobile responsive: hamburger menu, compact header with bell + avatar
 - Zebre icon confirmed present on login/register/forgot pages
 - Lint clean (only pre-existing launch-server.js errors)
+---
+Task ID: 5
+Agent: general-purpose
+Task: Create insurer API routes
+
+Work Log:
+- Created `src/app/api/insurer/me/route.ts` — GET returns insurer profile (id, code, name, logoUrl, contactEmail, phone, website, isActive) via InsurerAccount lookup
+- Created `src/app/api/insurer/stats/route.ts` — GET returns dashboard stats: totalOffers, activeOffers, totalQuotes, pendingQuotes, approvedQuotes, rejectedQuotes, draftQuotes, totalCoverages, recentQuotes (last 5 with userName + vehicleInfo)
+- Created `src/app/api/insurer/offers/route.ts` — GET returns paginated offers with status filter (active/inactive), search, includes category name and quote count
+- Created `src/app/api/insurer/quotes/route.ts` — GET returns paginated quotes for insurer's offers with status/search filters, parsed personalData/vehicleData JSON
+- Created `src/app/api/insurer/quotes/[id]/status/route.ts` — PUT updates quote status (APPROVED/REJECTED/PENDING) with ownership verification; auto-sets finalPrice=estimatedPrice on approval
+- Created `src/app/api/insurer/coverages/route.ts` — GET returns coverages for insurer with optional categoryId and search filters
+- Fixed `findUnique` → `findFirst` on InsurerAccount (Prisma compound unique requires both profileId+insurerId)
+- All routes use French error messages, proper try/catch, and NextResponse.json pattern
+
+Stage Summary:
+- 6 API route files created under `src/app/api/insurer/`
+- All routes resolve insurerId via `InsurerAccount.findFirst({ where: { profileId: userId } })`
+- TypeScript compiles cleanly (only pre-existing errors in unrelated files)
+- Routes ready for frontend insurer dashboard integration
+
+---
+Task ID: 6
+Agent: full-stack-developer
+Task: Build insurer UI components
+
+Work Log:
+- Created `src/components/insurer/insurer-page.tsx` — Full admin-style layout replicating admin-page.tsx pattern: sticky top header bar (home icon, welcome text with insurer name, theme toggle, live clock, refresh, notification bell, user avatar dropdown), left sidebar (desktop 256px, mobile Sheet) with 5 nav items (Tableau de bord, Mes Offres, Devis Reçus, Garanties, Mon Profil), main content area with tab routing via `insurerTab`/`setInsurerTab` store state. Fetches insurer name from `/api/insurer/me`. Logout sets `isLoggedIn: false` and redirects to landing. "Mon Profil" navigates to profile view.
+- Created `src/components/insurer/insurer-dashboard.tsx` — Dashboard tab with 4 stat cards (Total Offres, Devis Reçus, En Attente with lime accent, Approuvés with green accent) in 2x2/4x1 responsive grid. Below: "Devis Récents" section with desktop table and mobile card list. Status badges: PENDING=amber, APPROVED=green, REJECTED=red, DRAFT=gray. Loading skeletons while fetching. Fetches from `/api/insurer/stats`.
+- Created `src/components/insurer/insurer-offers.tsx` — Offers tab with search input + status filter (all/active/inactive). Desktop: shadcn Table with 9 columns. Mobile: card list. Click opens detail Dialog showing: name, description, category, price range, deductible, contract type, features (parsed JSON), quote count. Fetches from `/api/insurer/offers`.
+- Created `src/components/insurer/insurer-quotes.tsx` — Quotes tab (most important) with status filter badges (Tous, En attente, Approuvés, Rejetés, Brouillons) + search input. Desktop table + mobile cards. Click opens detail Dialog with: quote info (reference, status, dates, prices), client info (parsed from personalData JSON), vehicle info (parsed from vehicleData JSON — marque, modele, immatriculation, puissance, annee, carburant, valeur), notes. Action buttons "Approuver" (green) and "Rejeter" (red) for PENDING/DRAFT quotes — calls `PUT /api/insurer/quotes/[id]/status` and shows toast on success/error. Fetches from `/api/insurer/quotes`.
+- Created `src/components/insurer/insurer-coverages.tsx` — Coverages tab with search by name/code + category filter dropdown (populated dynamically). Desktop table + mobile cards. Shows: code, name, type, category, obligatory (Oui/Non), status. Client-side filtering. Fetches from `/api/insurer/coverages`.
+- Fixed lint errors: removed synchronous `setState` calls inside effects (moved to async callbacks), matching existing admin component patterns.
+
+Stage Summary:
+- 5 files created: `insurer-page.tsx`, `insurer-dashboard.tsx`, `insurer-offers.tsx`, `insurer-quotes.tsx`, `insurer-coverages.tsx`
+- All components use BLACK + LIME (#B9E54D) brand, French text, FCFA currency formatting
+- Responsive design: desktop tables, mobile card lists
+- Quotes tab supports approve/reject actions with toast feedback
+- Lint passes (only pre-existing launch-server.js warnings remain)
+- Dev server compiles successfully
+---
+Task ID: 7
+Agent: Main Agent
+Task: Build complete insurer interface with real data
+
+Work Log:
+- Read Prisma schema, identified InsurerAccount junction table linking Profile to Insurer
+- Created test data: InsurerAccount for assureur@saham.ci → SAHAM Assurances, 5 test quotes with different statuses (PENDING, APPROVED, REJECTED, DRAFT)
+- Added "insurer" to AppView type, insurerTab/setInsurerTab to Zustand store
+- Added "insurer" to isFullPage() in page.tsx, imported InsurerPage
+- Updated auth-pages.tsx login/register to redirect INSURER role to "insurer" view
+- Created 6 API routes under /api/insurer/: me, stats, offers, quotes, quotes/[id]/status, coverages
+- Created 5 UI components: insurer-page, insurer-dashboard, insurer-offers, insurer-quotes, insurer-coverages
+- Fixed multiple bugs: missing useCallback import in dashboard, API response shape mismatches (category as object vs string, priceMin vs minPrice, isActive vs status, _count.quotes vs quoteCount, vehicleData/personalData as parsed objects)
+- Browser verified: all 4 tabs load correctly, quote detail dialog with approve/reject, user dropdown, logout
+
+Stage Summary:
+- Insurer interface fully functional with real data (no mocks)
+- Dashboard: 4 stat cards + recent quotes table with status badges
+- Offers: search + active/inactive filter + detail dialog
+- Quotes: status filter buttons + search + detail dialog with client/vehicle info + Approve/Reject actions
+- Coverages: search + category filter + table
+- Header matches admin style: home icon, insurer name, clock, refresh, bell, avatar dropdown
+- Test account: assureur@saham.ci / saham123

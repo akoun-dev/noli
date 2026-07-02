@@ -6,6 +6,7 @@ export type AppView =
   | "about"
   | "contact"
   | "admin"
+  | "insurer"
   | "login"
   | "register"
   | "forgot"

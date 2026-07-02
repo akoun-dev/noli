@@ -13,9 +13,10 @@ import { ProfilePage } from "@/components/profile/profile-page";
 import { AboutPage } from "@/components/about/about-page";
 import { ContactPage } from "@/components/contact/contact-page";
 import { AdminPage } from "@/components/admin/admin-page";
+import { InsurerPage } from "@/components/insurer/insurer-page";
 import { AnimatePresence, motion } from "framer-motion";
 
-const isFullPage = (view: string) => view === "admin";
+const isFullPage = (view: string) => view === "admin" || view === "insurer";
 
 export default function Home() {
   const currentView = useAppStore((s) => s.currentView);
@@ -54,6 +55,8 @@ export default function Home() {
         return <ContactPage />;
       case "admin":
         return <AdminPage />;
+      case "insurer":
+        return <InsurerPage />;
       case "login":
       case "register":
       case "forgot":

@@ -116,6 +116,8 @@ function LoginPage() {
       // Redirect by role
       if (data.user.role === "ADMIN") {
         setView("admin");
+      } else if (data.user.role === "INSURER") {
+        setView("insurer");
       } else {
         setView("landing");
       }
@@ -320,6 +322,8 @@ function RegisterPage() {
       // Redirect by role
       if (data.user.role === "ADMIN") {
         setView("admin");
+      } else if (data.user.role === "INSURER") {
+        setView("insurer");
       } else {
         setView("landing");
       }

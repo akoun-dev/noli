@@ -50,6 +50,8 @@ interface AppState {
   setComparisonModalOpen: (v: boolean) => void;
   adminTab: string;
   setAdminTab: (tab: string) => void;
+  insurerTab: string;
+  setInsurerTab: (tab: string) => void;
   resetComparison: () => void;
 }
 
@@ -111,6 +113,8 @@ export const useAppStore = create<AppState>((set) => ({
   setComparisonModalOpen: (v) => set({ comparisonModalOpen: v }),
   adminTab: "dashboard",
   setAdminTab: (tab) => set({ adminTab: tab }),
+  insurerTab: "dashboard",
+  setInsurerTab: (tab) => set({ insurerTab: tab }),
   resetComparison: () =>
     set({
       comparisonStep: 1,
