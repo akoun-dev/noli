@@ -60,6 +60,13 @@ function calculatePrice(
   return Math.round(price / 500) * 500;
 }
 
+// Map internal coverageType to Prisma contractType
+const contractTypeMap: Record<string, string> = {
+  tiers: "basic",
+  tiers_plus: "third_party_plus",
+  tous_risques: "all_risks",
+};
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -83,49 +90,57 @@ export async function POST(request: NextRequest) {
       coverageType = "tiers_plus";
     }
 
-    const offers = await db.offer.findMany({
+    const contractType = contractTypeMap[coverageType] || "basic";
+
+    const offers = await db.insuranceOffer.findMany({
       where: {
-        coverageType,
+        contractType,
         isActive: true,
         insurer: { isActive: true },
       },
       include: { insurer: true },
+      orderBy: { priceMin: "asc" },
     });
 
     const results: InsurerOffer[] = offers.map((offer) => {
-      const monthlyPrice = calculatePrice(offer.basePrice, personal, vehicle, needs);
+      const basePrice = offer.priceMin || 25000;
+      const monthlyPrice = calculatePrice(basePrice, personal, vehicle, needs);
       return {
         id: offer.id,
         insurerId: offer.insurerId,
         insurerName: offer.insurer.name,
-        insurerLogo: offer.insurer.logo,
-        insurerRating: offer.insurer.rating,
+        insurerLogo: offer.insurer.logoUrl || null,
+        insurerRating: 4.0,
         name: offer.name,
-        coverageType: offer.coverageType,
+        coverageType: offer.contractType || contractType,
         description: offer.description,
         monthlyPrice,
         annualPrice: monthlyPrice * 11,
         deductible: offer.deductible || 0,
-        maxCoverage: offer.maxCoverage || 0,
-        features: JSON.parse(offer.features || "[]"),
-        conditions: offer.conditions,
+        maxCoverage: offer.coverageAmount || 0,
+        features: (() => { try { return JSON.parse(offer.features || "[]"); } catch { return []; } })(),
+        conditions: null,
       };
     });
 
     results.sort((a, b) => a.monthlyPrice - b.monthlyPrice);
 
+    // Save quote to database
     if (body.userId) {
       const ref = `NOLI-${Date.now().toString(36).toUpperCase()}`;
       try {
+        // Find the insurance category for Auto
+        const autoCat = await db.insuranceCategory.findFirst({ where: { name: { contains: "Auto" } } });
         await db.quote.create({
           data: {
             reference: ref,
             userId: body.userId,
-            status: "pending",
-            personalInfo: JSON.stringify(personal),
-            vehicleInfo: JSON.stringify(vehicle),
-            coverageNeeds: JSON.stringify(needs),
-            proposedPrice: results.length > 0 ? results[0].monthlyPrice : 0,
+            categoryId: autoCat?.id || null,
+            status: "PENDING",
+            personalData: JSON.stringify(personal),
+            vehicleData: JSON.stringify(vehicle),
+            coverageRequirements: JSON.stringify(needs),
+            estimatedPrice: results.length > 0 ? results[0].monthlyPrice : 0,
           },
         });
       } catch { /* non-critical */ }

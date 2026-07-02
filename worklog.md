@@ -58,3 +58,20 @@ Stage Summary:
 - Form now displays a clean list of existing insurer offers (name + type badge + price) when an insurer is selected
 - All form fields are `w-full` and vertically stacked for full responsiveness
 - No more JSON display — offers shown as formatted list items
+---
+Task ID: 4
+Agent: Main Agent
+Task: Fix POST /api/compare 500 Internal Server Error
+
+Work Log:
+- Identified root cause: `db.offer.findMany()` — Prisma model is `insuranceOffer` not `offer`
+- Fixed all incorrect field references: `basePrice` → `priceMin`, `insurer.logo` → `insurer.logoUrl`, `insurer.rating` → default 4.0, `maxCoverage` → `coverageAmount`, `conditions` → null
+- Added `contractTypeMap` to translate internal coverage types (`tiers` → `basic`, `tiers_plus` → `third_party_plus`, `tous_risques` → `all_risks`)
+- Fixed `db.quote.create` to match actual Prisma Quote schema (fields: reference, userId, categoryId, status, personalData, vehicleData, coverageRequirements, estimatedPrice)
+- Added safe JSON.parse for features field
+- Verified via curl: API returns 5 Tiers+ offers with correct pricing for RC+Incendie+Vol selection
+- Browser verified full flow: 3-step form → 5 offres trouvées → results displayed with prices in FCFA, insurer filters, guarantee badges
+
+Stage Summary:
+- `/api/compare` route now correctly queries `db.insuranceOffer` with proper `contractType` filtering
+- Full comparison flow works end-to-end: form submission → API → results page with filters
