@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { Eye, EyeOff, Loader2, Shield, Zap, ArrowRight, ArrowLeft, CheckCircle2 } from "lucide-react";
+import { Eye, EyeOff, Loader2, Zap, ArrowRight, ArrowLeft, CheckCircle2 } from "lucide-react";
 import { useAppStore } from "@/store/app-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -134,7 +134,7 @@ function LoginPage() {
     <div className="w-full max-w-md mx-auto">
       <div className="text-center mb-8">
         <div className="inline-flex items-center justify-center rounded-full bg-primary/10 p-3 mb-4">
-          <Shield className="h-8 w-8 text-primary" />
+          <img src="/img/zebre_plein_sans_fond.png" alt="NOLI" className="h-8 w-8 object-contain" />
         </div>
         <h1 className="text-2xl font-bold tracking-tight">Se connecter</h1>
         <p className="text-muted-foreground mt-2">
@@ -344,7 +344,7 @@ function RegisterPage() {
     <div className="w-full max-w-md mx-auto">
       <div className="text-center mb-8">
         <div className="inline-flex items-center justify-center rounded-full bg-primary/10 p-3 mb-4">
-          <CheckCircle2 className="h-8 w-8 text-primary" />
+          <img src="/img/zebre_plein_sans_fond.png" alt="NOLI" className="h-8 w-8 object-contain" />
         </div>
         <h1 className="text-2xl font-bold tracking-tight">Cr\u00e9er un compte</h1>
         <p className="text-muted-foreground mt-2">
@@ -582,7 +582,7 @@ function ForgotPasswordPage() {
       {sent ? (
         <div className="text-center space-y-4 py-8">
           <div className="inline-flex items-center justify-center rounded-full bg-accent/20 p-4">
-            <Shield className="h-10 w-10 text-primary" />
+            <img src="/img/zebre_plein_sans_fond.png" alt="NOLI" className="h-10 w-10 object-contain" />
           </div>
           <h1 className="text-2xl font-bold tracking-tight">V\u00e9rifiez votre email</h1>
           <p className="text-muted-foreground">
@@ -602,7 +602,7 @@ function ForgotPasswordPage() {
         <>
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center rounded-full bg-primary/10 p-3 mb-4">
-              <Shield className="h-8 w-8 text-primary" />
+              <img src="/img/zebre_plein_sans_fond.png" alt="NOLI" className="h-8 w-8 object-contain" />
             </div>
             <h1 className="text-2xl font-bold tracking-tight">Mot de passe oubli\u00e9</h1>
             <p className="text-muted-foreground mt-2">

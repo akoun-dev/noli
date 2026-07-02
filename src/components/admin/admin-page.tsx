@@ -4,6 +4,7 @@ import { useAppStore } from "@/store/app-store";
 import {
   LayoutDashboard, Building2, FileText, Shield, ShieldCheck,
   Receipt, Settings, Layers, ArrowLeft, Menu, ClipboardList, Database, UserCog,
+  User, LogOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -35,6 +36,8 @@ const sidebarItems = [
 ] as const;
 
 function SidebarContent({ activeTab, onSelect, onBack }: { activeTab: string; onSelect: (t: string) => void; onBack: () => void }) {
+  const { user, setUser, setView } = useAppStore();
+  const initials = user.name ? user.name.trim().split(/\s+/).map((w: string) => w[0]).join("").toUpperCase().slice(0, 2) : "U";
   return (
     <div className="flex h-full flex-col">
       <div className="p-4">
@@ -69,10 +72,34 @@ function SidebarContent({ activeTab, onSelect, onBack }: { activeTab: string; on
       </div>
       <div className="mt-auto p-4">
         <Separator className="mb-4" />
-        <Button variant="ghost" size="sm" className="w-full justify-start gap-2 text-muted-foreground" onClick={onBack}>
-          <ArrowLeft className="h-4 w-4" />
-          Retour au site
-        </Button>
+        {/* User info */}
+        <div className="flex items-center gap-3 mb-3 px-1">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground overflow-hidden shrink-0">
+            {user.avatarUrl ? (
+              <img src={user.avatarUrl} alt={user.name || ""} className="h-full w-full object-cover" />
+            ) : (
+              initials
+            )}
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-medium truncate">{user.name || "Utilisateur"}</p>
+            <p className="text-xs text-muted-foreground truncate">{user.email || ""}</p>
+          </div>
+        </div>
+        <div className="space-y-1">
+          <Button variant="ghost" size="sm" className="w-full justify-start gap-2 text-muted-foreground" onClick={() => setView("profile")}>
+            <User className="h-4 w-4" />
+            Mon profil
+          </Button>
+          <Button variant="ghost" size="sm" className="w-full justify-start gap-2 text-destructive hover:text-destructive" onClick={() => { setUser({ isLoggedIn: false }); onBack(); }}>
+            <LogOut className="h-4 w-4" />
+            Déconnexion
+          </Button>
+          <Button variant="ghost" size="sm" className="w-full justify-start gap-2 text-muted-foreground" onClick={onBack}>
+            <ArrowLeft className="h-4 w-4" />
+            Retour au site
+          </Button>
+        </div>
       </div>
     </div>
   );
