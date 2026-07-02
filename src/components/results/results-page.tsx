@@ -19,6 +19,9 @@ import {
   Trash2,
   Check,
   Info,
+  Heart,
+  TrendingDown,
+  Star,
 } from "lucide-react";
 import { useAppStore } from "@/store/app-store";
 import type { InsurerOffer } from "@/types";
@@ -490,33 +493,141 @@ function ComparisonModal({
   );
 }
 
-/* ──────── Offer Card ──────── */
+/* ──────── Summary Panels ──────── */
+
+function SummaryPanels({ offers }: { offers: InsurerOffer[] }) {
+  const cheapestOffers = useMemo(
+    () =>
+      [...offers]
+        .sort((a, b) => a.annualPrice - b.annualPrice)
+        .slice(0, 3),
+    [offers]
+  );
+
+  const bestRatedOffers = useMemo(
+    () =>
+      [...offers]
+        .sort((a, b) => b.insurerRating - a.insurerRating)
+        .slice(0, 3),
+    [offers]
+  );
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+      {/* Left panel: Cheapest offers */}
+      <div className="bg-card rounded-xl border border-border/60 overflow-hidden">
+        {/* Panel header */}
+        <div className="flex items-center justify-between px-4 py-3 bg-muted/30 border-b border-border/40">
+          <TrendingDown className="size-4 text-primary" />
+          <h3 className="text-sm font-semibold text-foreground text-center flex-1">
+            Offres les moins chères
+          </h3>
+          <Info className="size-4 text-muted-foreground" />
+        </div>
+        {/* Offer rows */}
+        <div className="divide-y divide-border/30">
+          {cheapestOffers.map((offer) => (
+            <div
+              key={offer.id}
+              className="flex items-center gap-3 px-4 py-3 hover:bg-muted/10 transition-colors"
+            >
+              {offer.insurerLogo ? (
+                <img
+                  src={offer.insurerLogo}
+                  alt={offer.insurerName}
+                  className="size-8 rounded-full object-contain bg-muted/40 p-0.5 shrink-0"
+                />
+              ) : (
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 shrink-0">
+                  <Shield className="size-4 text-primary" />
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-foreground truncate">
+                  {offer.insurerName}
+                </p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {offer.coverageType}
+                </p>
+              </div>
+              <div className="text-right shrink-0">
+                <p className="text-sm font-bold text-foreground">
+                  {formatFCFA(offer.annualPrice)}/an
+                </p>
+                <p className="text-[10px] text-muted-foreground">dossier inclus</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Right panel: Best rated insurers */}
+      <div className="bg-card rounded-xl border border-border/60 overflow-hidden">
+        {/* Panel header */}
+        <div className="flex items-center justify-between px-4 py-3 bg-muted/30 border-b border-border/40">
+          <Star className="size-4 text-accent" />
+          <h3 className="text-sm font-semibold text-foreground text-center flex-1">
+            Assureurs les mieux notés
+          </h3>
+          <Info className="size-4 text-muted-foreground" />
+        </div>
+        {/* Offer rows */}
+        <div className="divide-y divide-border/30">
+          {bestRatedOffers.map((offer) => (
+            <div
+              key={offer.id}
+              className="flex items-center gap-3 px-4 py-3 hover:bg-muted/10 transition-colors"
+            >
+              {offer.insurerLogo ? (
+                <img
+                  src={offer.insurerLogo}
+                  alt={offer.insurerName}
+                  className="size-8 rounded-full object-contain bg-muted/40 p-0.5 shrink-0"
+                />
+              ) : (
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 shrink-0">
+                  <Shield className="size-4 text-primary" />
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-foreground truncate">
+                  {offer.insurerName}
+                </p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {offer.coverageType}
+                </p>
+              </div>
+              <div className="text-right shrink-0">
+                <p className="text-sm font-bold text-foreground">
+                  {formatFCFA(offer.annualPrice)}/an
+                </p>
+                <p className="text-[10px] text-muted-foreground">dossier inclus</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ──────── Offer Card (3-column horizontal layout) ──────── */
 
 function OfferCard({
   offer,
-  priceMode,
-  onViewDetails,
   onRequestQuote,
+  onRequestCall,
   onAddToCompare,
   isCompared,
 }: {
   offer: InsurerOffer;
-  priceMode: "annual" | "monthly";
-  onViewDetails: (offer: InsurerOffer) => void;
   onRequestQuote: (offer: InsurerOffer) => void;
+  onRequestCall: (offer: InsurerOffer) => void;
   onAddToCompare: (offer: InsurerOffer) => void;
   isCompared: boolean;
 }) {
-  const [expanded, setExpanded] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const visibleFeatures = offer.features.slice(0, 4);
-  const hiddenFeatures = offer.features.slice(4);
-
-  const mainPrice =
-    priceMode === "annual" ? offer.annualPrice : offer.monthlyPrice;
-  const secondaryPrice =
-    priceMode === "annual" ? offer.monthlyPrice : offer.annualPrice;
-  const mainLabel = priceMode === "annual" ? "/an" : "/mois";
-  const secondaryLabel = priceMode === "annual" ? "/mois" : "/an";
 
   return (
     <motion.div
@@ -525,277 +636,216 @@ function OfferCard({
       exit={{ opacity: 0, y: -10 }}
       transition={{ duration: 0.3 }}
       layout
+      className="space-y-0"
     >
-      <div className="bg-card rounded-xl p-5 shadow-sm hover:shadow-lg transition-shadow duration-300 flex flex-col gap-4 h-full">
-        {/* Top section: Insurer name + coverage badge */}
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex flex-col gap-1">
-            <h3 className="text-lg font-bold text-foreground leading-tight">
-              {offer.insurerName}
-            </h3>
-            <p className="text-sm text-muted-foreground">{offer.name}</p>
-          </div>
-          <Badge
-            variant="outline"
-            className={
-              coverageBadgeStyle(offer.coverageType) +
-              " rounded-full px-3 py-0.5 text-xs font-semibold shrink-0"
-            }
-          >
-            {offer.coverageType}
-          </Badge>
-        </div>
+      <div className="bg-card rounded-xl border border-border/60 shadow-sm hover:shadow-lg transition-shadow duration-300 overflow-visible relative">
+        {/* Heart icon top-right */}
+        <button
+          className="absolute top-3 right-3 z-10 text-muted-foreground/50 hover:text-red-500 transition-colors"
+          aria-label="Ajouter aux favoris"
+        >
+          <Heart className="size-5" />
+        </button>
 
-        {/* Star rating */}
-        <StarRating rating={offer.insurerRating} />
-
-        <Separator />
-
-        {/* Guarantees included */}
-        <div>
-          <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
-            Garanties incluses
-          </h4>
-          <ul className="space-y-1.5">
-            {visibleFeatures.map((feature, idx) => (
-              <li key={idx} className="flex items-start gap-2 text-sm">
-                <CheckCircle2 className="size-4 text-green-600 mt-0.5 shrink-0" />
-                <span className="text-foreground/90">{feature}</span>
-              </li>
-            ))}
-          </ul>
-          {hiddenFeatures.length > 0 && (
-            <div className="mt-1.5">
-              <button
-                onClick={() => setExpanded(!expanded)}
-                className="text-sm text-secondary hover:text-primary font-medium flex items-center gap-1 transition-colors"
-              >
-                {expanded ? (
-                  <>
-                    <ChevronUp className="size-3.5" />
-                    Voir moins
-                  </>
-                ) : (
-                  <>
-                    <ChevronDown className="size-3.5" />
-                    +{hiddenFeatures.length} de plus
-                  </>
-                )}
-              </button>
-              <AnimatePresence>
-                {expanded && (
-                  <motion.ul
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="overflow-hidden space-y-1.5 mt-1.5"
-                  >
-                    {hiddenFeatures.map((feature, idx) => (
-                      <li
-                        key={idx}
-                        className="flex items-start gap-2 text-sm"
-                      >
-                        <CheckCircle2 className="size-4 text-green-600 mt-0.5 shrink-0" />
-                        <span className="text-foreground/90">
-                          {feature}
-                        </span>
-                      </li>
-                    ))}
-                  </motion.ul>
-                )}
-              </AnimatePresence>
-            </div>
-          )}
-        </div>
-
-        <Separator />
-
-        {/* Pricing section */}
-        <div className="bg-primary/5 rounded-lg p-4 -mx-1">
-          <p className="text-xs text-muted-foreground mb-1">À partir de</p>
-          <p className="text-2xl sm:text-3xl font-bold text-primary leading-tight">
-            {formatFCFA(mainPrice)}
-            <span className="text-sm font-normal text-muted-foreground">
-              {mainLabel}
-            </span>
-          </p>
-          <p className="text-sm text-muted-foreground mt-1">
-            Soit{" "}
-            <span className="font-medium text-foreground">
-              {formatFCFA(secondaryPrice)}
-            </span>{" "}
-            {secondaryLabel}
-          </p>
-          <p className="text-xs text-muted-foreground mt-2">
-            Franchise :{" "}
-            <span className="font-medium text-foreground">
-              {formatFCFA(offer.deductible)}
-            </span>
-          </p>
-        </div>
-
-        {/* Action buttons */}
-        <div className="flex flex-col sm:flex-row gap-2.5 mt-auto pt-1">
-          <Button
-            className="flex-1 bg-accent text-accent-foreground hover:bg-accent/90 rounded-lg font-semibold shadow-sm"
-            onClick={() => onViewDetails(offer)}
-          >
-            <Info className="size-4 mr-2" />
-            En savoir plus sur cette offre
-          </Button>
-          <Button
-            variant={isCompared ? "default" : "outline"}
-            className={`flex-1 rounded-lg font-medium transition-all duration-200 ${
-              isCompared
-                ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                : "border-primary/30 text-primary hover:bg-primary/5"
-            }`}
-            onClick={() => onAddToCompare(offer)}
-            disabled={!isCompared && false}
-          >
-            {isCompared ? (
-              <>
-                <Check className="size-4 mr-2" />
-                Sélectionné
-              </>
+        <div className="flex flex-col lg:flex-row lg:items-stretch">
+          {/* ── Left section: Insurer info ── */}
+          <div className="flex flex-row lg:flex-col items-center lg:items-start gap-3 lg:gap-4 p-4 lg:p-5 lg:w-56 shrink-0 border-b lg:border-b-0 lg:border-r border-border/40">
+            {offer.insurerLogo ? (
+              <img
+                src={offer.insurerLogo}
+                alt={offer.insurerName}
+                className="size-12 lg:size-14 rounded-xl object-contain bg-muted/40 p-1 shrink-0"
+              />
             ) : (
-              <>
-                <Plus className="size-4 mr-2" />
-                Comparer
-              </>
-            )}
-          </Button>
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
-/* ──────── Detail Dialog ──────── */
-
-function OfferDetailDialog({
-  offer,
-  open,
-  onClose,
-  onRequestQuote,
-}: {
-  offer: InsurerOffer | null;
-  open: boolean;
-  onClose: () => void;
-  onRequestQuote: (offer: InsurerOffer) => void;
-}) {
-  if (!offer) return null;
-
-  return (
-    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <DialogTitle className="text-xl">{offer.name}</DialogTitle>
-              <DialogDescription className="mt-1">
-                {offer.insurerName} &middot; {offer.coverageType}
-              </DialogDescription>
-            </div>
-            <Badge
-              variant="outline"
-              className={
-                coverageBadgeStyle(offer.coverageType) +
-                " rounded-full px-3 py-0.5 text-xs font-semibold shrink-0"
-              }
-            >
-              {offer.coverageType}
-            </Badge>
-          </div>
-        </DialogHeader>
-
-        <div className="space-y-6 mt-2">
-          {/* Rating */}
-          <StarRating rating={offer.insurerRating} />
-
-          {/* Pricing */}
-          <div className="bg-primary/5 rounded-lg p-4 space-y-2">
-            <p className="text-xs text-muted-foreground">À partir de</p>
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-primary">
-                {formatFCFA(offer.annualPrice)}
-              </span>
-              <span className="text-muted-foreground">/an</span>
-            </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-lg font-medium text-foreground">
-                {formatFCFA(offer.monthlyPrice)}
-              </span>
-              <span className="text-muted-foreground">/mois</span>
-            </div>
-            <Separator />
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <span className="text-muted-foreground">Franchise :</span>
-                <p className="font-medium">{formatFCFA(offer.deductible)}</p>
+              <div className="flex h-12 lg:h-14 w-12 lg:w-14 items-center justify-center rounded-xl bg-primary/10 shrink-0">
+                <Shield className="size-7 text-primary" />
               </div>
-              {offer.maxCoverage > 0 && (
-                <div>
-                  <span className="text-muted-foreground">
-                    Couverture max :
-                  </span>
-                  <p className="font-medium">
-                    {Math.round(offer.maxCoverage / 1_000_000)} M FCFA
-                  </p>
-                </div>
-              )}
+            )}
+            <div className="flex flex-col min-w-0">
+              <h3 className="text-base lg:text-lg font-bold text-foreground leading-tight truncate">
+                {offer.insurerName}
+              </h3>
+              <Badge
+                variant="outline"
+                className={`w-fit rounded-full px-2.5 py-0.5 text-[10px] font-semibold mt-1 ${
+                  coverageBadgeStyle(offer.coverageType)
+                }`}
+              >
+                {offer.coverageType}
+              </Badge>
             </div>
           </div>
 
-          {/* Description */}
-          {offer.description && (
-            <div>
-              <h4 className="font-semibold mb-2 text-sm">Description</h4>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {offer.description}
-              </p>
-            </div>
-          )}
-
-          {/* Features */}
-          <div>
-            <h4 className="font-semibold mb-3 text-sm">Garanties incluses</h4>
-            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {offer.features.map((feature, idx) => (
+          {/* ── Center section: Guarantees ── */}
+          <div className="flex-1 p-4 lg:p-5 min-w-0">
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+              Garanties inclues
+            </h4>
+            <Separator className="mb-3" />
+            <ul className="space-y-1.5">
+              {visibleFeatures.map((feature, idx) => (
                 <li key={idx} className="flex items-start gap-2 text-sm">
                   <CheckCircle2 className="size-4 text-green-600 mt-0.5 shrink-0" />
-                  <span>{feature}</span>
+                  <span className="text-foreground/90">{feature}</span>
                 </li>
               ))}
             </ul>
+            <p className="text-xs text-muted-foreground mt-3">
+              Franchise :{" "}
+              <span className="font-medium text-foreground">
+                {formatFCFA(offer.deductible)}
+              </span>
+            </p>
           </div>
 
-          {/* Conditions */}
-          {offer.conditions && (
+          {/* ── Right section: Price + action buttons ── */}
+          <div className="flex flex-col items-start lg:items-end gap-3 p-4 lg:p-5 lg:w-64 shrink-0 border-t lg:border-t-0 lg:border-l border-border/40">
             <div>
-              <h4 className="font-semibold mb-2 text-sm">Conditions</h4>
-              <p className="text-sm text-muted-foreground leading-relaxed bg-muted/30 rounded-lg p-3">
-                {offer.conditions}
+              <p className="text-xs text-muted-foreground mb-0.5">
+                À partir de
+              </p>
+              <p className="text-xl lg:text-2xl font-bold text-primary leading-tight">
+                {formatFCFA(offer.annualPrice)}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                /an · Soit {formatFCFA(offer.monthlyPrice)}/mois
               </p>
             </div>
-          )}
-
-          {/* CTA */}
-          <Button
-            size="lg"
-            className="w-full bg-accent text-accent-foreground hover:bg-accent/90 rounded-full font-semibold shadow-sm"
-            onClick={() => {
-              onRequestQuote(offer);
-              onClose();
-            }}
-          >
-            <FileText className="size-4 mr-2" />
-            Obtenir le devis
-          </Button>
+            <div className="w-full flex flex-col gap-2 mt-auto">
+              <Button
+                className="w-full bg-accent text-accent-foreground hover:bg-accent/90 rounded-lg font-semibold shadow-sm"
+                onClick={() => onRequestQuote(offer)}
+              >
+                <FileText className="size-4 mr-2" />
+                Obtenir le devis
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full rounded-lg font-medium"
+                onClick={() => onRequestCall(offer)}
+              >
+                <Phone className="size-4 mr-2" />
+                Être rappelé
+              </Button>
+              <Button
+                variant={isCompared ? "default" : "outline"}
+                className={`w-full rounded-lg font-medium transition-all duration-200 ${
+                  isCompared
+                    ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                    : "border-primary/30 text-primary hover:bg-primary/5"
+                }`}
+                onClick={() => onAddToCompare(offer)}
+              >
+                {isCompared ? (
+                  <>
+                    <Check className="size-4 mr-2" />
+                    Comparer
+                  </>
+                ) : (
+                  <>
+                    <Plus className="size-4 mr-2" />
+                    Comparer
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+
+      {/* ── Inline "En savoir plus" dropdown ── */}
+      <div className="mt-0">
+        <button
+          onClick={() => setDetailsOpen(!detailsOpen)}
+          className="w-full flex items-center justify-center gap-2 py-3 text-sm font-medium text-secondary hover:text-primary transition-colors"
+        >
+          En savoir plus sur cette offre
+          {detailsOpen ? (
+            <ChevronUp className="size-4" />
+          ) : (
+            <ChevronDown className="size-4" />
+          )}
+        </button>
+
+        <AnimatePresence>
+          {detailsOpen && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+              className="overflow-hidden"
+            >
+              <div className="bg-muted/20 rounded-lg border border-border/40 p-5 space-y-5">
+                {/* Description */}
+                {offer.description && (
+                  <div>
+                    <h4 className="font-semibold text-sm mb-2 text-foreground">
+                      Description
+                    </h4>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      {offer.description}
+                    </p>
+                  </div>
+                )}
+
+                {/* All features grid */}
+                <div>
+                  <h4 className="font-semibold text-sm mb-3 text-foreground">
+                    Garanties incluses
+                  </h4>
+                  <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {offer.features.map((feature, idx) => (
+                      <li key={idx} className="flex items-start gap-2 text-sm">
+                        <CheckCircle2 className="size-4 text-green-600 mt-0.5 shrink-0" />
+                        <span className="text-foreground/90">{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* Coverage amount */}
+                {offer.maxCoverage > 0 && (
+                  <div className="flex items-center gap-3 bg-card rounded-lg p-3 border border-border/30">
+                    <Shield className="size-5 text-primary shrink-0" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">
+                        Capital maximum couvert
+                      </p>
+                      <p className="text-sm font-bold text-foreground">
+                        {Math.round(offer.maxCoverage / 1_000_000)} M FCFA
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Conditions */}
+                {offer.conditions && (
+                  <div>
+                    <h4 className="font-semibold text-sm mb-2 text-foreground">
+                      Conditions
+                    </h4>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      {offer.conditions}
+                    </p>
+                  </div>
+                )}
+
+                {/* CTA */}
+                <Button
+                  size="lg"
+                  className="w-full bg-accent text-accent-foreground hover:bg-accent/90 rounded-lg font-semibold shadow-sm"
+                  onClick={() => onRequestQuote(offer)}
+                >
+                  <FileText className="size-4 mr-2" />
+                  Obtenir le devis
+                </Button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </motion.div>
   );
 }
 
@@ -830,8 +880,6 @@ export function ResultsPage() {
     comparisonResults,
     sortBy,
     setSortBy,
-    selectedOffer,
-    setSelectedOffer,
     setView,
     userQuotes,
     setUserQuotes,
@@ -976,8 +1024,11 @@ export function ResultsPage() {
     setUserQuotes([quote, ...userQuotes]);
   };
 
-  const handleViewDetails = (offer: InsurerOffer) => {
-    setSelectedOffer(offer);
+  const handleRequestCall = (offer: InsurerOffer) => {
+    toast({
+      title: "Demande de rappel envoyée",
+      description: `${offer.insurerName} vous rappellera sous 24h concernant l'offre ${offer.name}.`,
+    });
   };
 
   const handleToggleAllInsurers = useCallback(() => {
@@ -1117,6 +1168,9 @@ export function ResultsPage() {
           )}
         </AnimatePresence>
 
+        {/* ── Summary Panels ── */}
+        <SummaryPanels offers={comparisonResults} />
+
         {/* ── Two-column layout ── */}
         <div className="flex gap-6 items-start">
           {/* Desktop Sidebar */}
@@ -1143,9 +1197,8 @@ export function ResultsPage() {
                   <OfferCard
                     key={offer.id}
                     offer={offer}
-                    priceMode={priceMode}
-                    onViewDetails={handleViewDetails}
                     onRequestQuote={handleRequestQuote}
+                    onRequestCall={handleRequestCall}
                     onAddToCompare={handleToggleCompare}
                     isCompared={isOfferCompared(offer.id)}
                   />
@@ -1174,14 +1227,6 @@ export function ResultsPage() {
             )}
           </main>
         </div>
-
-        {/* Detail dialog */}
-        <OfferDetailDialog
-          offer={selectedOffer}
-          open={selectedOffer !== null}
-          onClose={() => setSelectedOffer(null)}
-          onRequestQuote={handleRequestQuote}
-        />
 
         {/* Comparison modal */}
         <ComparisonModal

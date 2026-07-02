@@ -123,3 +123,51 @@ Stage Summary:
 - Theme fixed: no more `bg-white` hardcoded colors breaking dark mode
 - Lint clean (only pre-existing launch-server.js warnings)
 - All auth flows verified end-to-end on desktop and mobile
+---
+Task ID: 7
+Agent: Full-Stack Developer
+Task: Redesign results page with summary panels, new card layout, and inline details
+
+Work Log:
+- Read full current results-page.tsx (1195 lines) to understand existing structure
+- Added SummaryPanels component: 2-column grid with "Offres les moins chères" (sorted by price asc, top 3) and "Assureurs les mieux notés" (sorted by rating desc, top 3), each with icon header (TrendingDown/Star + Info), insurer logo/shield, name, coverage type, price right-aligned, "dossier inclus" subtitle. Responsive: stacks vertically on mobile.
+- Redesigned OfferCard to 3-column horizontal layout:
+  - Left section (lg:w-56): insurer logo/shield icon, bold insurer name, coverage type badge
+  - Center section (flex-1): "Garanties inclues" heading, separator, checkmark feature list (first 4), franchise info below
+  - Right section (lg:w-64): "À partir de" label, big annual price, monthly equivalent, 3 stacked buttons (Obtenir le devis in accent, Être rappelé outline, Comparer outline with Plus/Check toggle)
+  - Heart icon in top-right corner (visual only)
+  - Mobile: stacks vertically with border dividers
+- Replaced OfferDetailDialog with inline expandable section: "En savoir plus sur cette offre" button with ChevronDown/Up, AnimatePresence expand/collapse showing description, all features in grid, maxCoverage, conditions, and "Obtenir le devis" CTA
+- Removed OfferDetailDialog component entirely
+- Removed selectedOffer/setSelectedOffer from store destructuring (no longer needed)
+- Removed Dialog imports used only by OfferDetailDialog (kept Dialog imports for ComparisonModal)
+- Added Heart, TrendingDown, Star to lucide-react imports
+- Removed priceMode prop from OfferCard (annual price always shown in new layout)
+- Preserved all unchanged components: StarRating, FiltersSidebar, ComparisonBar, ComparisonModal, EmptyResultsState
+- Preserved all helper functions: formatFCFA, coverageBadgeStyle, COVERAGE_OPTIONS, MAX_COMPARE
+- Preserved all main component logic: filters, sorting, comparison handlers, quote request
+
+Stage Summary:
+- Results page redesigned with 3-column horizontal offer cards and summary panels
+- Summary panels show cheapest and best-rated offers at a glance
+- Offer details now expand inline below each card (no more dialog)
+- OfferDetailDialog removed, reducing bundle size
+- Heart/favorite icon added to cards (visual placeholder)
+- All text in French, FCFA formatting, responsive layout (mobile stacks vertically)
+- Lint clean (only pre-existing launch-server.js errors)
+- Dev server compiles successfully
+---
+Task ID: 7b
+Agent: Main Agent
+Task: Fix Être rappelé button handler + browser verification
+
+Work Log:
+- Added `onRequestCall` prop to OfferCard component and `handleRequestCall` function in main component
+- `handleRequestCall` shows toast: "Demande de rappel envoyée" with insurer name and offer name
+- Passed `onRequestCall={handleRequestCall}` to all OfferCard instances
+- Browser verified: summary panels render (Offres les moins chères + Assureurs les mieux notés), 3-column card layout with 3 buttons (Obtenir le devis, Être rappelé, Comparer), inline "En savoir plus" dropdown expands with details, responsive layout
+
+Stage Summary:
+- All 3 card buttons now functional (devis, rappel, compare)
+- Full results page verified via VLM screenshot analysis
+- Lint clean
