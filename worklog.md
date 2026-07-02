@@ -483,3 +483,29 @@ Stage Summary:
 - Header avatar shows user photo when uploaded
 - Admin can upload/assign logos to insurers in the create/edit dialog
 - Insurer logos display in table, mobile cards, and detail views
+---
+Task ID: 7
+Agent: Main Agent
+Task: Add admin header bar matching reference image + verify zebre icon in auth views
+
+Work Log:
+- Analyzed uploaded reference image of admin header (horizontal bar: home icon + welcome text left; date/time + refresh + bell + user dropdown right)
+- Confirmed zebre_plein_sans_fond.png already used in auth views (login, register, forgot password)
+- Completely rewrote `admin-page.tsx` with new layout:
+  - Full-width top header bar (AdminHeader component) spanning above sidebar + content
+  - Left section: Home icon (retour au site) + "Bienvenue, NOLI Assurance" (brand-colored)
+  - Right section: Theme toggle, live clock (French format), refresh button, notification bell with badge, user avatar dropdown
+  - User dropdown: profile info (name, email, role in green), Mon profil, Tableau de bord, Retour au site, Déconnexion
+  - Simplified sidebar (brand + nav only, no user info at bottom)
+  - Mobile: hamburger menu in header, sidebar in Sheet overlay
+- Fixed lint error (setState in effect) in LiveClock by using tick counter pattern
+- Fixed logout to redirect to landing page (setView("landing") + setUser)
+- Reset admin password for testing
+
+Stage Summary:
+- Admin header matches reference design: home icon, welcome text, date/time, refresh, notifications, user dropdown
+- User dropdown has: Mon profil, Tableau de bord, Retour au site, Déconnexion
+- All interactions verified: login → admin header visible, profile navigation works, logout redirects to landing
+- Mobile responsive: hamburger menu, compact header with bell + avatar
+- Zebre icon confirmed present on login/register/forgot pages
+- Lint clean (only pre-existing launch-server.js errors)
