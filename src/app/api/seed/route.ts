@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
 
 export async function POST() {
   try {
@@ -165,6 +166,36 @@ export async function POST() {
       ],
     });
 
+    // ── Test Accounts ─────────────────────────────────────────
+    const profiles = await db.profile.createMany({
+      data: [
+        {
+          email: "admin@noli.ci",
+          password: bcrypt.hashSync("Admin@2025", 10),
+          firstName: "Admin",
+          lastName: "NOLI",
+          phone: "+225 01 00 00 00",
+          role: "ADMIN",
+        },
+        {
+          email: "user@test.ci",
+          password: bcrypt.hashSync("User@2025", 10),
+          firstName: "Jean",
+          lastName: "Dupont",
+          phone: "+225 07 01 02 03",
+          role: "USER",
+        },
+        {
+          email: "assureur@saham.ci",
+          password: bcrypt.hashSync("Assureur@2025", 10),
+          firstName: "Compte",
+          lastName: "SAHAM",
+          phone: "+225 07 10 10 10",
+          role: "INSURER",
+        },
+      ],
+    });
+
     return NextResponse.json({
       message: "Base de données initialisée",
       insurers: insurers.length,
@@ -172,6 +203,7 @@ export async function POST() {
       insuranceCategories: 1,
       insuranceOffers: insurers.length * 3,
       insurancePackages: 4,
+      profiles: profiles.length,
     });
   } catch (error) {
     console.error("Erreur seed:", error);

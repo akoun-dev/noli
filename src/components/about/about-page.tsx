@@ -65,7 +65,7 @@ export function AboutPage() {
   return (
     <main className="min-h-screen">
       {/* ─── Hero ────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden bg-[#E8F4F0] py-20 md:py-28">
+      <section className="relative overflow-hidden bg-[#E8F4F0] dark:bg-[#121e19] py-20 md:py-28">
         {/* Decorative blobs */}
         <div className="pointer-events-none absolute -top-20 -right-20 h-72 w-72 rounded-full bg-accent/20 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-16 -left-16 h-56 w-56 rounded-full bg-secondary/15 blur-3xl" />
@@ -171,7 +171,7 @@ export function AboutPage() {
       </section>
 
       {/* ─── Nos Valeurs ─────────────────────────────────────── */}
-      <section className="bg-[#E8F4F0] py-16 md:py-24">
+      <section className="bg-[#E8F4F0] dark:bg-[#121e19] py-16 md:py-24">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
           <motion.div
             initial="hidden"
@@ -262,7 +262,7 @@ export function AboutPage() {
               <motion.div
                 key={s.label}
                 variants={itemVariants}
-                className="rounded-xl border border-border/50 bg-[#E8F4F0] px-6 py-8 text-center"
+                className="rounded-xl border border-border/50 bg-[#E8F4F0] dark:bg-[#121e19] px-6 py-8 text-center"
               >
                 <p className="font-display text-4xl font-bold text-primary sm:text-5xl">
                   {s.value}

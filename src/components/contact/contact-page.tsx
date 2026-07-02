@@ -121,7 +121,7 @@ export function ContactPage() {
   return (
     <main className="min-h-screen">
       {/* ─── Header ──────────────────────────────────────────── */}
-      <section className="bg-[#E8F4F0] py-16 md:py-20">
+      <section className="bg-[#E8F4F0] dark:bg-[#121e19] py-16 md:py-20">
         <div className="pointer-events-none absolute -top-16 -right-16 h-56 w-56 rounded-full bg-accent/15 blur-3xl" />
 
         <div className="relative mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">

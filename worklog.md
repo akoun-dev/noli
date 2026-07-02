@@ -75,3 +75,28 @@ Work Log:
 Stage Summary:
 - `/api/compare` route now correctly queries `db.insuranceOffer` with proper `contractType` filtering
 - Full comparison flow works end-to-end: form submission → API → results page with filters
+---
+Task ID: 5
+Agent: Main Agent
+Task: Fix theme dark mode + Fix auth system + Create test accounts
+
+Work Log:
+- Investigated theme: CSS variables correctly defined in :root/.dark, @custom-variant dark works
+- Found root cause: 6 hardcoded `bg-[#E8F4F0]` in landing, about, contact pages not responding to dark mode
+- Added `dark:bg-[#121e19]` to all affected sections + decorative blur elements
+- Investigated auth: `db.user` doesn't exist (model is `Profile`), no `password` field, plain-text passwords, response format mismatch
+- Added `password String` field to Prisma Profile model + pushed to DB
+- Rewrote `/api/auth/route.ts`: `db.profile`, bcryptjs hashing, `firstName`/`lastName` split from `name`, correct `{ user: { ... } }` response format matching client expectations, forgot password handler
+- Created 3 test accounts via API:
+  - admin@noli.ci / Admin@2025 (role: ADMIN)
+  - user@test.ci / User@2025 (role: USER)
+  - assureur@saham.ci / Assureur@2025 (role: INSURER)
+- Updated seed route to include test accounts for fresh installs
+- Browser verified: dark mode hero + testimonials sections now properly dark
+- Browser verified: login with admin@noli.ci → shows "AN" avatar menu with Tableau de bord, Mon profil, Déconnexion
+
+Stage Summary:
+- Theme dark mode fixed on landing, about, and contact pages
+- Auth system fully functional: register, login (bcrypt), forgot password
+- 3 test accounts created and verified
+- Lint clean (only pre-existing launch-server.js warnings)

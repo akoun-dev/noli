@@ -237,10 +237,10 @@ export default function LandingPage() {
       {/* ════════════ HERO ════════════ */}
       <section
         ref={heroRef}
-        className="relative overflow-hidden bg-[#E8F4F0]"
+        className="relative overflow-hidden bg-[#E8F4F0] dark:bg-[#121e19]"
       >
-        <div className="absolute -top-40 -right-40 h-[500px] w-[500px] rounded-full bg-[#D1ECDF]/50 blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-32 -left-32 h-[400px] w-[400px] rounded-full bg-[#DEEF4A]/10 blur-3xl pointer-events-none" />
+        <div className="absolute -top-40 -right-40 h-[500px] w-[500px] rounded-full bg-[#D1ECDF]/50 dark:bg-[#1a3a2a]/50 blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-32 -left-32 h-[400px] w-[400px] rounded-full bg-[#DEEF4A]/10 dark:bg-[#DEEF4A]/5 blur-3xl pointer-events-none" />
 
         <div className="relative mx-auto max-w-[1400px] px-4 sm:px-8 py-10 sm:py-14 md:py-20 lg:py-24">
           <motion.div
@@ -501,7 +501,7 @@ export default function LandingPage() {
       </section>
 
       {/* ════════════ TÉMOIGNAGES ════════════ */}
-      <section className="bg-[#E8F4F0] py-16 md:py-24">
+      <section className="bg-[#E8F4F0] dark:bg-[#121e19] py-16 md:py-24">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
           <motion.div
             initial="hidden"

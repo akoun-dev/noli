@@ -11,6 +11,7 @@ datasource db {
 model Profile {
   id          String   @id @default(cuid())
   email       String   @unique
+  password    String
   role        String   @default("USER") // USER, INSURER, ADMIN
   firstName   String?
   lastName    String?
