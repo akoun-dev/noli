@@ -281,7 +281,7 @@ export default function LandingPage() {
                           ? `Comparer ${card.label}`
                           : `${card.label} — bientôt disponible`
                       }
-                      className={`group relative flex flex-col gap-3 rounded-xl bg-white p-5 card-shadow transition-all duration-300 ${
+                      className={`group relative flex flex-col gap-3 rounded-xl bg-card p-5 card-shadow transition-all duration-300 ${
                         card.available
                           ? "cursor-pointer hover:scale-[1.02] card-shadow-hover ring-1 ring-transparent hover:ring-accent/40"
                           : "cursor-default opacity-50 pointer-events-none"

@@ -48,7 +48,7 @@ function getUserInitials(name?: string): string {
 }
 
 export function Header() {
-  const { currentView, setView, user, setUser, setAuthModal } = useAppStore();
+  const { currentView, setView, user, setUser } = useAppStore();
   const [mobileOpen, setMobileOpen] = useState(false);
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -190,13 +190,13 @@ export function Header() {
           ) : (
             <>
               <button
-                onClick={() => setAuthModal("login")}
+                onClick={() => setView("login")}
                 className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
               >
                 Connexion
               </button>
               <Button
-                onClick={() => setAuthModal("register")}
+                onClick={() => setView("register")}
                 className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
               >
                 S&apos;inscrire
@@ -274,7 +274,7 @@ export function Header() {
                       variant="outline"
                       className="w-full font-medium"
                       onClick={() => {
-                        setAuthModal("login");
+                        setView("login");
                         setMobileOpen(false);
                       }}
                     >
@@ -283,7 +283,7 @@ export function Header() {
                     <Button
                       className="w-full rounded-full bg-primary font-semibold text-primary-foreground hover:bg-primary/90"
                       onClick={() => {
-                        setAuthModal("register");
+                        setView("register");
                         setMobileOpen(false);
                       }}
                     >

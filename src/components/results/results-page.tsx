@@ -265,7 +265,7 @@ function ComparisonBar({
           {offers.map((offer) => (
             <span
               key={offer.id}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-white border border-border/60 px-3 py-1.5 text-sm text-foreground shadow-sm shrink-0"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-card border border-border/60 px-3 py-1.5 text-sm text-foreground shadow-sm shrink-0"
             >
               <Shield className="size-3.5 text-primary" />
               {offer.insurerName}
@@ -378,8 +378,8 @@ function ComparisonModal({
 
             <tbody>
               {/* Prix mensuel */}
-              <tr className="bg-white">
-                <td className="p-4 text-sm font-medium text-foreground sticky left-0 bg-white border-b border-border/30">
+              <tr className="bg-card">
+                <td className="p-4 text-sm font-medium text-foreground sticky left-0 bg-card border-b border-border/30">
                   Prix mensuel
                 </td>
                 {offers.map((offer) => (
@@ -408,8 +408,8 @@ function ComparisonModal({
               </tr>
 
               {/* Note / Rating */}
-              <tr className="bg-white">
-                <td className="p-4 text-sm font-medium text-foreground sticky left-0 bg-white border-b border-border/30">
+              <tr className="bg-card">
+                <td className="p-4 text-sm font-medium text-foreground sticky left-0 bg-card border-b border-border/30">
                   Note assureur
                 </td>
                 {offers.map((offer) => (
@@ -430,11 +430,11 @@ function ComparisonModal({
                 return (
                   <tr
                     key={feature}
-                    className={isZebra ? "bg-muted/20" : "bg-white"}
+                    className={isZebra ? "bg-muted/20" : "bg-card"}
                   >
                     <td
                       className={`p-4 text-sm text-foreground sticky left-0 border-b border-border/30 ${
-                        isZebra ? "bg-muted/20" : "bg-white"
+                        isZebra ? "bg-muted/20" : "bg-card"
                       }`}
                     >
                       {feature}

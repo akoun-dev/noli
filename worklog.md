@@ -100,3 +100,26 @@ Stage Summary:
 - Auth system fully functional: register, login (bcrypt), forgot password
 - 3 test accounts created and verified
 - Lint clean (only pre-existing launch-server.js warnings)
+---
+Task ID: 6
+Agent: Main Agent
+Task: Convert auth modals to full-page views + fix remaining theme issues
+
+Work Log:
+- Added `"login" | "register" | "forgot"` to `AppView` type in `src/types/index.ts`
+- Created `src/components/auth/auth-pages.tsx` with full-page Login, Register, and ForgotPassword components (no Dialog wrapper)
+- Each auth page has: icon header, form with validation, password strength indicator (register), navigation links between pages, "Retour à l'accueil" link
+- Auth pages render with their own minimal header (logo only) and footer — no main Header/Footer
+- Updated `src/app/page.tsx`: added `isFullPage()` helper to hide Header/Footer for auth views, imported `AuthPages` instead of `AuthModals`, added auth cases to switch
+- Updated `src/components/layout/header.tsx`: replaced `setAuthModal("login"/"register")` with `setView("login"/"register")` in both desktop and mobile menus, removed `setAuthModal` from destructuring
+- Updated `src/components/dashboard/dashboard-page.tsx`: replaced `setAuthModal` with `setView` in the not-logged-in state
+- Fixed theme: replaced all `bg-white` with `bg-card` in `results-page.tsx` (comparison table rows, insurer chips) and `landing-page.tsx` (insurance category cards) for proper dark mode support
+- Verified test accounts exist: admin@noli.ci, user@test.ci, assureur@saham.ci
+- Browser verified: login page renders as full page (not modal), login flow works (admin@noli.ci → "AN" avatar), register page with all fields, forgot password page, navigation between pages, mobile responsive auth, dark mode toggle works
+
+Stage Summary:
+- Auth system completely converted from modal-based to page-based navigation
+- 3 auth pages (Connexion, Inscription, Mot de passe oublié) render as full-screen views
+- Theme fixed: no more `bg-white` hardcoded colors breaking dark mode
+- Lint clean (only pre-existing launch-server.js warnings)
+- All auth flows verified end-to-end on desktop and mobile

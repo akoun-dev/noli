@@ -7,16 +7,18 @@ import { Footer } from "@/components/layout/footer";
 import LandingPage from "@/components/landing/landing-page";
 import { ComparisonForm } from "@/components/comparison/comparison-form";
 import { ResultsPage } from "@/components/results/results-page";
-import { AuthModals } from "@/components/auth/auth-modals";
+import { AuthPages } from "@/components/auth/auth-pages";
 import { DashboardPage } from "@/components/dashboard/dashboard-page";
 import { AboutPage } from "@/components/about/about-page";
 import { ContactPage } from "@/components/contact/contact-page";
 import { AdminPage } from "@/components/admin/admin-page";
 import { AnimatePresence, motion } from "framer-motion";
 
+const isFullPage = (view: string) =>
+  view === "admin" || view === "login" || view === "register" || view === "forgot";
+
 export default function Home() {
   const currentView = useAppStore((s) => s.currentView);
-  const authModal = useAppStore((s) => s.authModal);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -46,15 +48,21 @@ export default function Home() {
         return <ContactPage />;
       case "admin":
         return <AdminPage />;
+      case "login":
+      case "register":
+      case "forgot":
+        return <AuthPages />;
       default:
         return <LandingPage />;
     }
   };
 
+  const fullPage = isFullPage(currentView);
+
   return (
-    <div className={currentView === "admin" ? "min-h-screen" : "min-h-screen flex flex-col"}>
-      {currentView !== "admin" && <Header />}
-      <main className={currentView === "admin" ? "" : "flex-1"}>
+    <div className={fullPage ? "min-h-screen" : "min-h-screen flex flex-col"}>
+      {!fullPage && <Header />}
+      <main className={fullPage ? "" : "flex-1"}>
         <AnimatePresence mode="wait">
           <motion.div
             key={currentView}
@@ -67,8 +75,7 @@ export default function Home() {
           </motion.div>
         </AnimatePresence>
       </main>
-      {currentView !== "admin" && <Footer />}
-      {authModal !== "none" && <AuthModals />}
+      {!fullPage && <Footer />}
     </div>
   );
 }

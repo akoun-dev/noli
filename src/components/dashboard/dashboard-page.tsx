@@ -219,7 +219,7 @@ function QuoteCard({ quote }: { quote: QuoteRecord }) {
 }
 
 export function DashboardPage() {
-  const { user, userQuotes, setView, setAuthModal, personalInfo } = useAppStore();
+  const { user, userQuotes, setView, personalInfo } = useAppStore();
   const [profileOpen, setProfileOpen] = useState(false);
 
   const stats = useMemo(() => {
@@ -255,14 +255,14 @@ export function DashboardPage() {
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Button
             className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full"
-            onClick={() => setAuthModal("login")}
+            onClick={() => setView("login")}
           >
             <LogIn className="size-4" />
             Se connecter
           </Button>
           <Button
             variant="outline"
-            onClick={() => setAuthModal("register")}
+            onClick={() => setView("register")}
           >
             Créer un compte
           </Button>

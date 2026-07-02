@@ -5,7 +5,10 @@ export type AppView =
   | "dashboard"
   | "about"
   | "contact"
-  | "admin";
+  | "admin"
+  | "login"
+  | "register"
+  | "forgot";
 
 export type AuthModal = "none" | "login" | "register" | "forgot";
 
