@@ -20,6 +20,7 @@ interface AppState {
     email?: string;
     name?: string;
     role?: string;
+    avatarUrl?: string;
     isLoggedIn: boolean;
   };
   setUser: (user: AppState["user"]) => void;

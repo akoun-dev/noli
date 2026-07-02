@@ -443,3 +443,43 @@ Work Log:
 - Code contains correct "Mot de passe oublié" (\u00e9 = é)
 - Browser accessibility tree confirms correct text
 - No fix needed
+---
+Task ID: 1
+Agent: Main Agent
+Task: Header on auth pages + Profile management + Insurer logo upload
+
+Work Log:
+- Added `photoUrl String?` to Profile model in Prisma schema, ran db push
+- Added `"profile"` to `AppView` type union
+- Added `avatarUrl?: string` to user state in Zustand store
+- Updated `isFullPage()` to only return true for "admin" (auth pages now show main Header/Footer)
+- Simplified `AuthPages` component to remove its own header/footer (just renders the centered form)
+- Created `/api/upload/route.ts` — POST endpoint for file upload (JPG/PNG/WebP/GIF, max 2MB, configurable folder)
+- Created `/api/profile/route.ts` — GET (fetch profile) and PUT (update name/phone/photo/password) endpoints
+- Created `src/components/profile/profile-page.tsx` — Full profile management page with:
+  - Avatar photo upload with hover overlay
+  - Personal info form (first name, last name, phone, read-only email)
+  - Password change form with current/new/confirm fields
+  - Match/mismatch indicators on confirm password
+- Updated header.tsx:
+  - Avatar image display when `user.avatarUrl` is set (both desktop dropdown trigger and mobile indicator)
+  - "Mon profil" dropdown item → `setView("profile")` instead of `setView("dashboard")`
+  - Added "Mon profil" button to mobile menu
+- Updated auth-pages.tsx:
+  - Login and Register now store `avatarUrl: data.user.photoUrl` on success
+- Updated auth API (`/api/auth/route.ts`):
+  - Both register and login responses now include `photoUrl` field
+- Updated assureurs-tab.tsx:
+  - Added `logoUrl` to Insurer interface and FormData type
+  - Added `handleLogoUpload` function with upload to /api/upload
+  - Added logo upload UI in create/edit dialog (preview, change, remove)
+  - Added logo thumbnails in desktop table rows and mobile cards
+  - Added logo in detail dialog header
+- Updated `page.tsx` to handle `profile` view with ProfilePage component
+
+Stage Summary:
+- Auth pages now show the main Header (with theme toggle and nav) and Footer
+- Users can manage their profile: photo upload, edit name/phone, change password
+- Header avatar shows user photo when uploaded
+- Admin can upload/assign logos to insurers in the create/edit dialog
+- Insurer logos display in table, mobile cards, and detail views

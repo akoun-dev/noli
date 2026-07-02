@@ -145,8 +145,12 @@ export function Header() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-2 rounded-full transition-colors hover:bg-muted">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
-                    {getUserInitials(user.name)}
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground overflow-hidden">
+                    {user.avatarUrl ? (
+                      <img src={user.avatarUrl} alt={user.name || ""} className="h-full w-full object-cover" />
+                    ) : (
+                      getUserInitials(user.name)
+                    )}
                   </div>
                   <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
                 </button>
@@ -173,7 +177,7 @@ export function Header() {
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => {
-                    setView("dashboard");
+                    setView("profile");
                   }}
                 >
                   <User className="h-4 w-4" />
@@ -209,8 +213,12 @@ export function Header() {
         {/* Mobile: Hamburger + Auth indicator */}
         <div className="flex items-center gap-2 lg:hidden">
           {user.isLoggedIn ? (
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
-              {getUserInitials(user.name)}
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground overflow-hidden">
+              {user.avatarUrl ? (
+                <img src={user.avatarUrl} alt={user.name || ""} className="h-full w-full object-cover" />
+              ) : (
+                getUserInitials(user.name)
+              )}
             </div>
           ) : null}
 
@@ -308,6 +316,17 @@ export function Header() {
                     >
                       <LayoutDashboard className="mr-2 h-4 w-4" />
                       Tableau de bord
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="w-full font-medium"
+                      onClick={() => {
+                        setView("profile");
+                        setMobileOpen(false);
+                      }}
+                    >
+                      <User className="mr-2 h-4 w-4" />
+                      Mon profil
                     </Button>
                     <Button
                       variant="ghost"

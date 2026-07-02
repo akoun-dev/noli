@@ -104,6 +104,7 @@ function LoginPage() {
         email: data.user.email,
         name: data.user.name,
         role: data.user.role,
+        avatarUrl: data.user.photoUrl,
         isLoggedIn: true,
       });
 
@@ -305,6 +306,7 @@ function RegisterPage() {
         email: data.user.email,
         name: data.user.name,
         role: data.user.role,
+        avatarUrl: data.user.photoUrl,
         isLoggedIn: true,
       });
 
@@ -678,38 +680,12 @@ export function AuthPages() {
   }, [currentView]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      {/* Auth top bar with logo */}
-      <header className="sticky top-0 z-50 w-full border-b border-border/40">
-        <div className="header-sticky">
-          <div className="mx-auto flex h-16 max-w-[1400px] items-center justify-between px-4 sm:px-8">
-            <button
-              onClick={() => useAppStore.getState().setView("landing")}
-              className="flex items-center gap-1.5 transition-opacity hover:opacity-80"
-            >
-              <img src="/img/noli-vertical.png" alt="NOLI Assurance" className="h-9 w-auto object-contain" />
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Auth content area */}
-      <div className="flex-1 flex items-center justify-center px-4 py-12 md:py-20">
-        <div className="w-full max-w-md">
-          {currentView === "login" && <LoginPage />}
-          {currentView === "register" && <RegisterPage />}
-          {currentView === "forgot" && <ForgotPasswordPage />}
-        </div>
+    <div className="flex-1 flex items-center justify-center px-4 py-12 md:py-20">
+      <div className="w-full max-w-md">
+        {currentView === "login" && <LoginPage />}
+        {currentView === "register" && <RegisterPage />}
+        {currentView === "forgot" && <ForgotPasswordPage />}
       </div>
-
-      {/* Footer */}
-      <footer className="mt-auto w-full border-t border-border/40">
-        <div className="mx-auto flex max-w-[1400px] items-center justify-center px-8 py-5">
-          <p className="text-xs text-muted-foreground">
-            &copy; {new Date().getFullYear()} NOLI Assurance. Tous droits r\u00e9serv\u00e9s.
-          </p>
-        </div>
-      </footer>
     </div>
   );
 }

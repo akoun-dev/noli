@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,12 +22,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, Plus, MoreHorizontal, Eye, Pencil, Trash2, Building2, FileText, Shield, Users, Mail, Phone, Globe } from "lucide-react";
+import { Search, Plus, MoreHorizontal, Eye, Pencil, Trash2, Building2, FileText, Shield, Users, Mail, Phone, Globe, Upload, X, Loader2 } from "lucide-react";
 
 interface Insurer {
   id: string;
   code: string;
   name: string;
+  logoUrl: string | null;
   contactEmail: string | null;
   phone: string | null;
   website: string | null;
@@ -43,13 +44,14 @@ interface InsurerDetail extends Omit<Insurer, "_count"> {
 
 type FormData = {
   name: string;
+  logoUrl: string;
   contactEmail: string;
   phone: string;
   website: string;
   isActive: boolean;
 };
 
-const emptyForm: FormData = { name: "", contactEmail: "", phone: "", website: "", isActive: true };
+const emptyForm: FormData = { name: "", logoUrl: "", contactEmail: "", phone: "", website: "", isActive: true };
 
 export function AssureursTab() {
   const { toast } = useToast();
@@ -64,6 +66,8 @@ export function AssureursTab() {
   const [detailItem, setDetailItem] = useState<InsurerDetail | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
 
   const fetchItems = useCallback(async () => {
     try {
@@ -82,9 +86,30 @@ export function AssureursTab() {
   useEffect(() => { fetchItems(); }, [fetchItems]);
 
   const openCreate = () => { setEditing(null); setForm(emptyForm); setDialogOpen(true); };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingLogo(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("folder", "logos");
+      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setForm((f) => ({ ...f, logoUrl: data.url }));
+    } catch {
+      toast({ title: "Erreur", description: "Impossible de télécharger le logo", variant: "destructive" });
+    } finally {
+      setUploadingLogo(false);
+      if (logoInputRef.current) logoInputRef.current.value = "";
+    }
+  };
+
   const openEdit = (item: Insurer) => {
     setEditing(item);
-    setForm({ name: item.name, contactEmail: item.contactEmail ?? "", phone: item.phone ?? "", website: item.website ?? "", isActive: item.isActive });
+    setForm({ name: item.name, logoUrl: item.logoUrl ?? "", contactEmail: item.contactEmail ?? "", phone: item.phone ?? "", website: item.website ?? "", isActive: item.isActive });
     setDialogOpen(true);
   };
 
@@ -199,7 +224,18 @@ export function AssureursTab() {
               <TableBody>
                 {items.map((item) => (
                   <TableRow key={item.id}>
-                    <TableCell className="font-medium">{item.name}</TableCell>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        {item.logoUrl ? (
+                          <img src={item.logoUrl} alt="" className="h-7 w-7 rounded object-contain bg-muted p-0.5" />
+                        ) : (
+                          <div className="h-7 w-7 rounded bg-muted flex items-center justify-center">
+                            <Building2 className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                        )}
+                        {item.name}
+                      </div>
+                    </TableCell>
                     <TableCell className="text-muted-foreground text-sm">{item.contactEmail ?? "—"}</TableCell>
                     <TableCell className="text-muted-foreground text-sm">{item.phone ?? "—"}</TableCell>
                     <TableCell className="text-center">{item._count.offers}</TableCell>
@@ -227,7 +263,14 @@ export function AssureursTab() {
               <Card key={item.id} className="rounded-xl border shadow-sm">
                 <CardContent className="p-4 space-y-3">
                   <div className="flex items-start justify-between">
-                    <div>
+                    <div className="flex items-center gap-2">
+                      {item.logoUrl ? (
+                        <img src={item.logoUrl} alt="" className="h-8 w-8 rounded object-contain bg-muted p-0.5" />
+                      ) : (
+                        <div className="h-8 w-8 rounded bg-muted flex items-center justify-center">
+                          <Building2 className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                      )}
                       <p className="font-semibold">{item.name}</p>
                     </div>
                     <Switch checked={item.isActive} onCheckedChange={() => toggleActive(item)} />
@@ -256,6 +299,54 @@ export function AssureursTab() {
             <DialogTitle>{editing ? "Modifier l'assureur" : "Nouvel assureur"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
+            {/* Logo Upload */}
+            <div className="space-y-2">
+              <Label>Logo de l'assureur</Label>
+              <div className="flex items-center gap-4">
+                {form.logoUrl ? (
+                  <div className="relative group">
+                    <div className="h-16 w-16 rounded-lg border bg-muted flex items-center justify-center overflow-hidden">
+                      <img src={form.logoUrl} alt="Logo" className="h-full w-full object-contain p-1" />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setForm((f) => ({ ...f, logoUrl: "" }))}
+                      className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="h-16 w-16 rounded-lg border-2 border-dashed border-muted-foreground/25 flex items-center justify-center">
+                    <Building2 className="h-6 w-6 text-muted-foreground/50" />
+                  </div>
+                )}
+                <div className="flex-1">
+                  <input
+                    ref={logoInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    className="hidden"
+                    onChange={handleLogoUpload}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => logoInputRef.current?.click()}
+                    disabled={uploadingLogo}
+                  >
+                    {uploadingLogo ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <Upload className="h-4 w-4 mr-2" />
+                    )}
+                    {uploadingLogo ? "Téléchargement..." : form.logoUrl ? "Changer le logo" : "Télécharger un logo"}
+                  </Button>
+                  <p className="text-xs text-muted-foreground mt-1">JPG, PNG, WebP ou GIF — Max 2 Mo</p>
+                </div>
+              </div>
+            </div>
             <div><Label htmlFor="name">Nom *</Label><Input id="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ex: NOLI Assurance" /></div>
             <div><Label htmlFor="contactEmail">Email</Label><Input id="contactEmail" type="email" value={form.contactEmail} onChange={(e) => setForm({ ...form, contactEmail: e.target.value })} /></div>
             <div><Label htmlFor="phone">Téléphone</Label><Input id="phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
@@ -277,8 +368,18 @@ export function AssureursTab() {
         <DialogContent className="sm:max-w-2xl max-h-[85vh]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Building2 className="h-5 w-5" />
-              {detailLoading ? <Skeleton className="h-6 w-48" /> : detailItem ? <>{detailItem.name}</> : null}
+              {detailLoading ? (
+                <Skeleton className="h-6 w-48" />
+              ) : detailItem ? (
+                <>
+                  {detailItem.logoUrl ? (
+                    <img src={detailItem.logoUrl} alt="" className="h-6 w-6 object-contain" />
+                  ) : (
+                    <Building2 className="h-5 w-5" />
+                  )}
+                  {detailItem.name}
+                </>
+              ) : null}
             </DialogTitle>
           </DialogHeader>
           {detailLoading ? (

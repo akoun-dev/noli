@@ -9,13 +9,13 @@ import { ComparisonForm } from "@/components/comparison/comparison-form";
 import { ResultsPage } from "@/components/results/results-page";
 import { AuthPages } from "@/components/auth/auth-pages";
 import { DashboardPage } from "@/components/dashboard/dashboard-page";
+import { ProfilePage } from "@/components/profile/profile-page";
 import { AboutPage } from "@/components/about/about-page";
 import { ContactPage } from "@/components/contact/contact-page";
 import { AdminPage } from "@/components/admin/admin-page";
 import { AnimatePresence, motion } from "framer-motion";
 
-const isFullPage = (view: string) =>
-  view === "admin" || view === "login" || view === "register" || view === "forgot";
+const isFullPage = (view: string) => view === "admin";
 
 export default function Home() {
   const currentView = useAppStore((s) => s.currentView);
@@ -40,6 +40,12 @@ export default function Home() {
         return (
           <div className="py-8 md:py-12">
             <DashboardPage />
+          </div>
+        );
+      case "profile":
+        return (
+          <div className="py-8 md:py-12">
+            <ProfilePage />
           </div>
         );
       case "about":

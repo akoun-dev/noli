@@ -8,7 +8,8 @@ export type AppView =
   | "admin"
   | "login"
   | "register"
-  | "forgot";
+  | "forgot"
+  | "profile";
 
 export type AuthModal = "none" | "login" | "register" | "forgot";
 
