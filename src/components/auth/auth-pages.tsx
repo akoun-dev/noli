@@ -148,6 +148,7 @@ function LoginPage() {
           <Input
             id="login-email"
             type="email"
+            autoComplete="email"
             placeholder="votre@email.com"
             value={email}
             onChange={(e) => {
@@ -168,6 +169,7 @@ function LoginPage() {
             <Input
               id="login-password"
               type={showPassword ? "text" : "password"}
+              autoComplete="current-password"
               placeholder="\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022"
               value={password}
               onChange={(e) => {
@@ -357,6 +359,7 @@ function RegisterPage() {
           <Label htmlFor="reg-name">Nom complet</Label>
           <Input
             id="reg-name"
+            autoComplete="name"
             placeholder="Jean Dupont"
             value={fullName}
             onChange={(e) => {
@@ -376,6 +379,7 @@ function RegisterPage() {
           <Input
             id="reg-email"
             type="email"
+            autoComplete="email"
             placeholder="votre@email.com"
             value={email}
             onChange={(e) => {
@@ -397,6 +401,7 @@ function RegisterPage() {
           <Input
             id="reg-phone"
             type="tel"
+            autoComplete="tel"
             placeholder="+225 07 XX XX XX"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
@@ -409,6 +414,7 @@ function RegisterPage() {
             <Input
               id="reg-password"
               type={showPassword ? "text" : "password"}
+              autoComplete="new-password"
               placeholder="\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022"
               value={password}
               onChange={(e) => {
@@ -439,6 +445,7 @@ function RegisterPage() {
             <Input
               id="reg-confirm"
               type={showConfirm ? "text" : "password"}
+              autoComplete="new-password"
               placeholder="\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022"
               value={confirmPassword}
               onChange={(e) => {
@@ -621,6 +628,7 @@ function ForgotPasswordPage() {
               <Input
                 id="forgot-email"
                 type="email"
+                autoComplete="email"
                 placeholder="votre@email.com"
                 value={email}
                 onChange={(e) => {
