@@ -471,12 +471,12 @@ function RegisterPage() {
             className={errors.terms ? "border-destructive" : ""}
           />
           <Label htmlFor="reg-terms" className="text-sm font-normal leading-snug cursor-pointer">
-            J&apos;accepte les{" "}
-            <span className="text-primary hover:underline cursor-pointer">
+            <span className="whitespace-nowrap">J&apos;accepte les{" "}</span>
+            <span className="text-primary hover:underline cursor-pointer whitespace-nowrap">
               conditions d&apos;utilisation
-            </span>{" "}
-            et la{" "}
-            <span className="text-primary hover:underline cursor-pointer">
+            </span>
+            <span className="whitespace-nowrap">{" "}et la{" "}</span>
+            <span className="text-primary hover:underline cursor-pointer whitespace-nowrap">
               politique de confidentialit\u00e9
             </span>
           </Label>

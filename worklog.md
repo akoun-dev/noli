@@ -340,3 +340,106 @@ Stage Summary:
 - Disabled download buttons have tooltip feedback
 - Schedule config saves correctly as JSON to SystemSetting table
 - No new lint errors introduced
+
+---
+Task ID: 1
+Agent: main
+Task: Fix hydration mismatch error in header.tsx theme toggle
+
+Work Log:
+- Verified the existing fix using `useSyncExternalStore` with server snapshot `false` and client snapshot `true`
+- The desktop theme button is wrapped in `{mounted && (...)}` preventing server render
+- The mobile theme toggle also uses `mounted` guard
+- Confirmed no hydration errors in browser console
+
+Stage Summary:
+- Hydration fix was already in place and working correctly
+- No code changes needed
+
+---
+Task ID: 2
+Agent: main
+Task: Create API endpoint for coverage categories (Step 3 dynamic categories)
+
+Work Log:
+- Created `/api/coverage-categories/route.ts` — public GET endpoint
+- Returns active coverage categories from DB with id, code, name, description, displayOrder
+
+Stage Summary:
+- New file: `src/app/api/coverage-categories/route.ts`
+- Categories fetched: 12 (RC, DR, IC, IPT, Incendie, Vol, BDG, TCM, TCL, Assistance, Avance Recours, Accessoires)
+
+---
+Task ID: 3
+Agent: main
+Task: Update comparison-form.tsx Step 3 to use dynamic DB categories
+
+Work Log:
+- Removed hardcoded `GUARANTEE_CATEGORIES` constant (8 items)
+- Added `useEffect` to fetch categories from `/api/coverage-categories` on mount
+- Added `CATEGORY_ICON_MAP` mapping DB codes to Lucide icons
+- Step 3 now shows all 12 DB categories dynamically with loading state
+- Selection uses DB codes (e.g., "RESPONSABILITE_CIVILE") instead of old frontend IDs
+
+Stage Summary:
+- Updated: `src/components/comparison/comparison-form.tsx`
+- Categories now dynamic from database (12 categories vs 8 hardcoded)
+
+---
+Task ID: 4
+Agent: main
+Task: Rewrite compare API to filter offers by features (not insurer-level coverages)
+
+Work Log:
+- Removed contractType pre-filtering based on selected categories
+- Now fetches ALL active offers and filters by offer features array
+- Each offer's features are checked against selected category keywords
+- Only offers matching at least 1 selected category are returned
+- `matchedGuarantees` array populated per offer with matched DB codes
+- Updated `CATEGORY_FEATURE_KEYWORDS` to use DB codes as keys
+
+Stage Summary:
+- Updated: `src/app/api/compare/route.ts`
+- Filtering now works correctly: offers only shown if features match selected guarantees
+- Each result includes `matchedGuarantees` array
+
+---
+Task ID: 5
+Agent: main
+Task: Update results page to display matched guarantees on offer cards
+
+Work Log:
+- Added `GUARANTEE_LABELS` mapping from DB codes to French display names
+- Added "Garanties correspondantes" section with colored badges on each offer card
+- Badges show which selected guarantees each offer covers
+
+Stage Summary:
+- Updated: `src/components/results/results-page.tsx`
+- Each offer card now shows matched guarantee badges with green check icons
+
+---
+Task ID: 7
+Agent: main
+Task: Fix register page broken checkbox text wrapping on mobile
+
+Work Log:
+- Diagnosed issue: checkbox text "J'accepte les conditions d'utilisation et la politique de confidentialité" wraps mid-phrase on 375px screens
+- VLM confirmed text appeared as garbled: "J'accepte conditions et politique de les d'utilisation la confidentialité"
+- Fix: wrapped each phrase segment in `<span className="whitespace-nowrap">` to prevent mid-phrase line breaks
+- Applied fix to both `auth-pages.tsx` and `auth-modals.tsx`
+
+Stage Summary:
+- Fixed: `src/components/auth/auth-pages.tsx` — checkbox text wrapping
+- Fixed: `src/components/auth/auth-modals.tsx` — same fix
+- Verified via mobile screenshot that text now reads correctly
+
+---
+Task ID: 8
+Agent: main
+Task: Verify forgot password page text
+
+Work Log:
+- VLM reported "Mot de passé oublié" but this was a VLM misread
+- Code contains correct "Mot de passe oublié" (\u00e9 = é)
+- Browser accessibility tree confirms correct text
+- No fix needed
