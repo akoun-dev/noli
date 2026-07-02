@@ -111,7 +111,13 @@ function LoginPage() {
         title: "Connexion r\u00e9ussie",
         description: `Bonjour, ${data.user.name} !`,
       });
-      setView("landing");
+
+      // Redirect by role
+      if (data.user.role === "ADMIN") {
+        setView("admin");
+      } else {
+        setView("landing");
+      }
     } catch {
       toast({
         title: "Erreur",
@@ -306,7 +312,13 @@ function RegisterPage() {
         title: "Compte cr\u00e9\u00e9",
         description: `Bienvenue, ${data.user.name} ! Votre compte a \u00e9t\u00e9 cr\u00e9\u00e9 avec succ\u00e8s.`,
       });
-      setView("landing");
+
+      // Redirect by role
+      if (data.user.role === "ADMIN") {
+        setView("admin");
+      } else {
+        setView("landing");
+      }
     } catch {
       toast({
         title: "Erreur",

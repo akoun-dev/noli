@@ -171,3 +171,53 @@ Stage Summary:
 - All 3 card buttons now functional (devis, rappel, compare)
 - Full results page verified via VLM screenshot analysis
 - Lint clean
+---
+Task ID: 8
+Agent: Full-Stack Developer
+Task: Simplify offer creation form - remove fields, add guarantee checkboxes
+
+Work Log:
+- Added `Checkbox` import from shadcn/ui
+- Removed `InsurerOfferPreview` interface (no longer needed)
+- Updated `empty` form object: removed `contractType`, `priceMin`, `priceMax`, `coverageAmount` fields
+- Replaced `insurerOffers`/`insurerOffersLoading` state with `formCoverages`/`formCoveragesLoading` state
+- Replaced useEffect that fetched insurer offers with one that fetches coverages from `/api/admin/coverages?insurerId=...`
+- Updated `openEdit` to not set `contractType`, `priceMin`, `priceMax`, `coverageAmount` in form
+- Updated `handleSave` validation: removed `!form.contractType` check, updated error message
+- Removed "Type" column from desktop table header and table body
+- Removed Type Badge from mobile cards
+- Removed "Offres de cet assureur" section from form dialog
+- Removed "Type de contrat" Select field from form dialog
+- Removed "Prix min (FCFA)" and "Prix max (FCFA)" fields from form dialog
+- Removed "Capital garanti (FCFA)" field from form dialog
+- Replaced "Caractéristiques (JSON)" Textarea with guarantee checkboxes: fetches coverages when insurer selected, groups by `category?.name || "Autre"`, uses Checkbox+Label, shows "Obligatoire" badge for mandatory coverages, stores selected names as JSON string array in `form.features`
+- Styled checkbox section: `border rounded-lg max-h-64 overflow-y-auto p-3 space-y-3`
+- Added loading, empty, and no-insurer-selected states for checkboxes
+- Lint clean (only pre-existing launch-server.js errors)
+- Dev server compiles successfully
+
+Stage Summary:
+- Form simplified to: Assureur, Nom, Description, Franchise, Garanties (checkboxes), Active
+- Guarantee checkboxes auto-populate from insurer's coverages, grouped by category
+- Pre-checks existing features when editing an offer
+- Table and mobile cards no longer show contract type
+- All other functionality intact (detail dialog, delete, toggle active, search, filter)
+---
+Task ID: 9
+Agent: Main Agent
+Task: Fix auth redirect by role + fix dark mode footer/CTA
+
+Work Log:
+- Updated auth-pages.tsx login success: added role-based redirect (ADMIN → admin view, USER/INSURER → landing)
+- Updated auth-pages.tsx register success: same role-based redirect
+- Investigated dark mode: found toggle works, localStorage persists, CSS variables correct
+- Identified root cause: `--primary` and `--accent` swap values in dark mode, causing structural elements (footer, "Pourquoi NOLI" section) to turn lime/yellow
+- Fixed footer: added `dark:bg-[#1B464D]` to maintain dark teal in both themes
+- Fixed landing page "Pourquoi NOLI" section: added `dark:bg-[#1B464D]` to maintain dark teal
+- VLM verified: footer now dark in dark mode (was lime before fix)
+
+Stage Summary:
+- Admin users are now redirected to admin panel after login/register
+- Dark mode footer and CTA section stay properly dark
+- Interactive elements (buttons, badges) correctly swap to lime accent in dark mode
+- Lint clean

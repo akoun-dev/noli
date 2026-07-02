@@ -1,0 +1,524 @@
+     1→     1→"use client";
+     2→     2→
+     3→     3→import { useEffect, useState, useCallback } from "react";
+     4→     4→import { useToast } from "@/hooks/use-toast";
+     5→     5→import { Plus, Pencil, Trash2, Search, Loader2, MoreHorizontal, Eye, FileText, Shield, Building2, Calendar } from "lucide-react";
+     6→     6→import { Button } from "@/components/ui/button";
+     7→     7→import { Input } from "@/components/ui/input";
+     8→     8→import { Label } from "@/components/ui/label";
+     9→     9→import { Badge } from "@/components/ui/badge";
+    10→    10→import { Switch } from "@/components/ui/switch";
+    11→    11→import { Textarea } from "@/components/ui/textarea";
+    12→    12→import { Skeleton } from "@/components/ui/skeleton";
+    13→    13→import { Card, CardContent } from "@/components/ui/card";
+    14→    14→import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+    15→    15→import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+    16→    16→import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+    17→    17→import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+    18→    18→import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+    19→    19→import { Separator } from "@/components/ui/separator";
+    20→    20→import { ScrollArea } from "@/components/ui/scroll-area";
+    21→    21→
+    22→    22→const fmtPrice = (n: number) => new Intl.NumberFormat("fr-FR").format(n) + " FCFA";
+    23→    23→const fmtDate = (d: string) => (d ? new Date(d).toLocaleDateString("fr-FR") : "—");
+    24→    24→const ctLabels: Record<string, string> = { basic: "Tiers Simple", third_party_plus: "Tiers+", all_risks: "Tous Risques" };
+    25→    25→const ctColors: Record<string, string> = { basic: "bg-slate-100 text-slate-800", third_party_plus: "bg-amber-100 text-amber-800", all_risks: "bg-emerald-100 text-emerald-800" };
+    26→    26→const calcBadge: Record<string, string> = { FREE: "bg-emerald-100 text-emerald-800", FIXED_AMOUNT: "bg-blue-100 text-blue-800", VARIABLE_BASED: "bg-orange-100 text-orange-800", MATRIX_BASED: "bg-purple-100 text-purple-800" };
+    27→    27→const calcLabel: Record<string, string> = { FREE: "Gratuit", FIXED_AMOUNT: "Fixe", VARIABLE_BASED: "Variable", MATRIX_BASED: "Matrice" };
+    28→    28→
+    29→    29→interface InsurerMini { id: string; name: string; code: string }
+    30→    30→interface Offer {
+    31→    31→  id: string; insurerId: string; name: string; contractType: string;
+    32→    32→  description: string | null; priceMin: number | null; priceMax: number | null;
+    33→    33→  coverageAmount: number | null; deductible: number; features: string[];
+    34→    34→  isActive: boolean; createdAt: string;
+    35→    35→  insurer: { id: string; name: string; code: string };
+    36→    36→  category?: { id: string; name: string } | null;
+    37→    37→  _count?: { quotes: number };
+    38→    38→}
+    39→    39→interface CoverageMini {
+    40→    40→  id: string; code: string; name: string; type: string;
+    41→    41→  calculationType: string; isMandatory: boolean; isActive: boolean;
+    42→    42→  category: { id: string; name: string; code: string } | null;
+    43→    43→}
+    44→    44→
+    45→    45→const empty = {
+    46→    46→  insurerId: "", name: "", contractType: "basic" as string, description: "",
+    47→    47→  priceMin: null as number | null, priceMax: null as number | null,
+    48→    48→  coverageAmount: null as number | null, deductible: 0,
+    49→    49→  features: "[]" as string, isActive: true,
+    50→    50→};
+    51→    51→
+    52→    52→interface InsurerOfferPreview {
+    53→    53→  id: string; name: string; contractType: string;
+    54→    54→  priceMin: number | null; priceMax: number | null;
+    55→    55→  isActive: boolean; createdAt: string;
+    56→    56→}
+    57→    57→
+    58→    58→export function InsuranceOffersTab() {
+    59→    59→  const { toast } = useToast();
+    60→    60→  const [offers, setOffers] = useState<Offer[]>([]);
+    61→    61→  const [insurers, setInsurers] = useState<InsurerMini[]>([]);
+    62→    62→  const [loading, setLoading] = useState(true);
+    63→    63→  const [search, setSearch] = useState("");
+    64→    64→  const [filterInsurer, setFilterInsurer] = useState("");
+    65→    65→  const [filterType, setFilterType] = useState("");
+    66→    66→  const [formOpen, setFormOpen] = useState(false);
+    67→    67→  const [editing, setEditing] = useState<Offer | null>(null);
+    68→    68→  const [form, setForm] = useState(empty);
+    69→    69→  const [saving, setSaving] = useState(false);
+    70→    70→  const [deleteId, setDeleteId] = useState<string | null>(null);
+    71→    71→
+    72→    72→  // Detail state
+    73→    73→  const [detailOpen, setDetailOpen] = useState(false);
+    74→    74→  const [selected, setSelected] = useState<Offer | null>(null);
+    75→    75→  const [detailLoading, setDetailLoading] = useState(false);
+    76→    76→  const [detailCoverages, setDetailCoverages] = useState<CoverageMini[]>([]);
+    77→    77→  const [detailQuotesCount, setDetailQuotesCount] = useState(0);
+    78→    78→
+    79→    79→  // Form: existing offers for selected insurer
+    80→    80→  const [insurerOffers, setInsurerOffers] = useState<InsurerOfferPreview[]>([]);
+    81→    81→  const [insurerOffersLoading, setInsurerOffersLoading] = useState(false);
+    82→    82→
+    83→    83→  const fetchData = useCallback(async () => {
+    84→    84→    try {
+    85→    85→      const params = new URLSearchParams();
+    86→    86→      if (search) params.set("search", search);
+    87→    87→      if (filterInsurer) params.set("insurerId", filterInsurer);
+    88→    88→      if (filterType) params.set("contractType", filterType);
+    89→    89→      const res = await fetch(`/api/admin/insurance-offers?${params}`);
+    90→    90→      if (res.ok) setOffers(await res.json());
+    91→    91→    } finally { setLoading(false); }
+    92→    92→  }, [search, filterInsurer, filterType]);
+    93→    93→
+    94→    94→  useEffect(() => { fetchData(); }, [fetchData]);
+    95→    95→  useEffect(() => { fetch("/api/admin/insurers?active=true").then((r) => { if (r.ok) r.json().then(setInsurers); }); }, []);
+    96→    96→
+    97→    97→  // Fetch offers linked to the selected insurer in the form
+    98→    98→  useEffect(() => {
+    99→    99→    if (!form.insurerId) {
+   100→   100→      setInsurerOffers([]);
+   101→   101→      return;
+   102→   102→    }
+   103→   103→    setInsurerOffersLoading(true);
+   104→   104→    fetch(`/api/admin/insurance-offers?insurerId=${form.insurerId}`)
+   105→   105→      .then((r) => { if (r.ok) return r.json(); return []; })
+   106→   106→      .then((data) => setInsurerOffers(data))
+   107→   107→      .catch(() => setInsurerOffers([]))
+   108→   108→      .finally(() => setInsurerOffersLoading(false));
+   109→   109→  }, [form.insurerId]);
+   110→   110→
+   111→   111→  const openCreate = () => { setEditing(null); setForm(empty); setFormOpen(true); };
+   112→   112→  const openEdit = (o: Offer) => {
+   113→   113→    setEditing(o);
+   114→   114→    setForm({
+   115→   115→      insurerId: o.insurerId, name: o.name, contractType: o.contractType,
+   116→   116→      description: o.description || "", priceMin: o.priceMin, priceMax: o.priceMax,
+   117→   117→      coverageAmount: o.coverageAmount, deductible: o.deductible,
+   118→   118→      features: JSON.stringify(o.features), isActive: o.isActive,
+   119→   119→    });
+   120→   120→    setFormOpen(true);
+   121→   121→  };
+   122→   122→
+   123→   123→  const openDetail = async (o: Offer) => {
+   124→   124→    setSelected(o);
+   125→   125→    setDetailOpen(true);
+   126→   126→    setDetailLoading(true);
+   127→   127→    setDetailCoverages([]);
+   128→   128→    setDetailQuotesCount(0);
+   129→   129→    try {
+   130→   130→      const [covRes, quotesRes] = await Promise.all([
+   131→   131→        fetch(`/api/admin/coverages?insurerId=${o.insurerId}`),
+   132→   132→        fetch(`/api/admin/quotes?offerId=${o.id}`),
+   133→   133→      ]);
+   134→   134→      if (covRes.ok) setDetailCoverages(await covRes.json());
+   135→   135→      if (quotesRes.ok) {
+   136→   136→        const quotes = await quotesRes.json();
+   137→   137→        setDetailQuotesCount(Array.isArray(quotes) ? quotes.length : 0);
+   138→   138→      }
+   139→   139→    } catch {
+   140→   140→      /* silent */
+   141→   141→    } finally {
+   142→   142→      setDetailLoading(false);
+   143→   143→    }
+   144→   144→  };
+   145→   145→
+   146→   146→  const handleSave = async () => {
+   147→   147→    if (!form.insurerId || !form.name.trim() || !form.contractType) {
+   148→   148→      toast({ title: "Champs obligatoires: assureur, nom, type de contrat", variant: "destructive" });
+   149→   149→      return;
+   150→   150→    }
+   151→   151→    setSaving(true);
+   152→   152→    try {
+   153→   153→      const url = editing ? `/api/admin/insurance-offers/${editing.id}` : "/api/admin/insurance-offers";
+   154→   154→      const res = await fetch(url, {
+   155→   155→        method: editing ? "PUT" : "POST",
+   156→   156→        headers: { "Content-Type": "application/json" },
+   157→   157→        body: JSON.stringify({ ...form, features: JSON.parse(form.features) }),
+   158→   158→      });
+   159→   159→      if (!res.ok) { const e = await res.json(); throw new Error(e.error || "Erreur"); }
+   160→   160→      toast({ title: editing ? "Offre modifiée" : "Offre créée" });
+   161→   161→      setFormOpen(false); fetchData();
+   162→   162→    } catch (err) { toast({ title: (err as Error).message, variant: "destructive" }); }
+   163→   163→    finally { setSaving(false); }
+   164→   164→  };
+   165→   165→
+   166→   166→  const handleDelete = async () => {
+   167→   167→    if (!deleteId) return;
+   168→   168→    try {
+   169→   169→      await fetch(`/api/admin/insurance-offers/${deleteId}`, { method: "DELETE" });
+   170→   170→      toast({ title: "Offre supprimée" }); setDeleteId(null); fetchData();
+   171→   171→    } catch { toast({ title: "Erreur", variant: "destructive" }); }
+   172→   172→  };
+   173→   173→
+   174→   174→  const handleToggle = async (o: Offer) => {
+   175→   175→    try {
+   176→   176→      await fetch(`/api/admin/insurance-offers/${o.id}`, {
+   177→   177→        method: "PUT", headers: { "Content-Type": "application/json" },
+   178→   178→        body: JSON.stringify({ isActive: !o.isActive }),
+   179→   179→      });
+   180→   180→      fetchData();
+   181→   181→    } catch { /* silent */ }
+   182→   182→  };
+   183→   183→
+   184→   184→  if (loading) return <div className="space-y-4">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-12 rounded-lg" />)}</div>;
+   185→   185→
+   186→   186→  // Group coverages by category for detail view
+   187→   187→  const groupedCoverages = detailCoverages.reduce<Record<string, CoverageMini[]>>((acc, c) => {
+   188→   188→    const key = c.category?.name || "Autre";
+   189→   189→    (acc[key] ??= []).push(c);
+   190→   190→    return acc;
+   191→   191→  }, {});
+   192→   192→
+   193→   193→  const detailStatCards = [
+   194→   194→    { label: "Garanties", value: detailCoverages.length, icon: Shield, color: "text-orange-600 bg-orange-50" },
+   195→   195→    { label: "Devis", value: detailQuotesCount, icon: FileText, color: "text-blue-600 bg-blue-50" },
+   196→   196→    { label: "Assureur", value: selected?.insurer?.code || "—", icon: Building2, color: "text-purple-600 bg-purple-50" },
+   197→   197→  ];
+   198→   198→
+   199→   199→  return (
+   200→   200→    <div className="space-y-4">
+   201→   201→      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+   202→   202→        <h1 className="text-2xl font-bold">Offres</h1>
+   203→   203→        <div className="flex items-center gap-2 flex-wrap">
+   204→   204→          <div className="relative flex-1 sm:w-56">
+   205→   205→            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+   206→   206→            <Input placeholder="Rechercher..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+   207→   207→          </div>
+   208→   208→          <Select value={filterInsurer || "all"} onValueChange={(v) => setFilterInsurer(v === "all" ? "" : v)}>
+   209→   209→            <SelectTrigger className="w-full sm:w-40"><SelectValue placeholder="Assureur" /></SelectTrigger>
+   210→   210→            <SelectContent><SelectItem value="all">Tous</SelectItem>{insurers.map((i) => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}</SelectContent>
+   211→   211→          </Select>
+   212→   212→          <Select value={filterType || "all"} onValueChange={(v) => setFilterType(v === "all" ? "" : v)}>
+   213→   213→            <SelectTrigger className="w-full sm:w-40"><SelectValue placeholder="Type" /></SelectTrigger>
+   214→   214→            <SelectContent><SelectItem value="all">Tous</SelectItem><SelectItem value="basic">Tiers Simple</SelectItem><SelectItem value="third_party_plus">Tiers+</SelectItem><SelectItem value="all_risks">Tous Risques</SelectItem></SelectContent>
+   215→   215→          </Select>
+   216→   216→          <Button onClick={openCreate} className="bg-[#B9E54D] text-black hover:bg-[#a5d044]"><Plus className="h-4 w-4 mr-1" /> Ajouter</Button>
+   217→   217→        </div>
+   218→   218→      </div>
+   219→   219→
+   220→   220→      {/* Desktop table */}
+   221→   221→      <div className="hidden md:block rounded-xl border bg-card overflow-hidden">
+   222→   222→        <Table>
+   223→   223→          <TableHeader>
+   224→   224→            <TableRow className="bg-muted/50">
+   225→   225→              <TableHead>Nom</TableHead><TableHead>Assureur</TableHead><TableHead>Type</TableHead>
+   226→   226→              <TableHead className="text-right">Prix min</TableHead><TableHead className="text-right">Prix max</TableHead>
+   227→   227→              <TableHead className="text-center">Franchise</TableHead><TableHead>Catégorie</TableHead>
+   228→   228→              <TableHead className="text-center">Statut</TableHead><TableHead className="w-12" />
+   229→   229→            </TableRow>
+   230→   230→          </TableHeader>
+   231→   231→          <TableBody>
+   232→   232→            {offers.map((o) => (
+   233→   233→              <TableRow key={o.id} className="cursor-pointer hover:bg-muted/30" onClick={() => openDetail(o)}>
+   234→   234→                <TableCell className="font-medium">{o.name}</TableCell>
+   235→   235→                <TableCell className="text-sm">{o.insurer?.name || "—"}</TableCell>
+   236→   236→                <TableCell><Badge className={ctColors[o.contractType] || ""}>{ctLabels[o.contractType] || o.contractType}</Badge></TableCell>
+   237→   237→                <TableCell className="text-right font-mono text-sm">{o.priceMin ? fmtPrice(o.priceMin) : "—"}</TableCell>
+   238→   238→                <TableCell className="text-right font-mono text-sm">{o.priceMax ? fmtPrice(o.priceMax) : "—"}</TableCell>
+   239→   239→                <TableCell className="text-center font-mono text-sm">{o.deductible ? fmtPrice(o.deductible) : "—"}</TableCell>
+   240→   240→                <TableCell className="text-sm">{o.category?.name || "—"}</TableCell>
+   241→   241→                <TableCell className="text-center"><Switch checked={o.isActive} onCheckedChange={(e) => { e.stopPropagation(); handleToggle(o); }} onClick={(e) => e.stopPropagation()} /></TableCell>
+   242→   242→                <TableCell>
+   243→   243→                  <DropdownMenu><DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+   244→   244→                    <DropdownMenuContent align="end">
+   245→   245→                      <DropdownMenuItem onClick={() => openDetail(o)}><Eye className="h-4 w-4 mr-2" /> Voir</DropdownMenuItem>
+   246→   246→                      <DropdownMenuItem onClick={() => openEdit(o)}><Pencil className="h-4 w-4 mr-2" /> Modifier</DropdownMenuItem>
+   247→   247→                      <DropdownMenuItem className="text-destructive" onClick={() => setDeleteId(o.id)}><Trash2 className="h-4 w-4 mr-2" /> Supprimer</DropdownMenuItem>
+   248→   248→                    </DropdownMenuContent>
+   249→   249→                  </DropdownMenu>
+   250→   250→                </TableCell>
+   251→   251→              </TableRow>
+   252→   252→            ))}
+   253→   253→          </TableBody>
+   254→   254→        </Table>
+   255→   255→        {offers.length === 0 && <p className="text-center py-8 text-muted-foreground text-sm">Aucune offre.</p>}
+   256→   256→      </div>
+   257→   257→
+   258→   258→      {/* Mobile cards */}
+   259→   259→      <div className="md:hidden space-y-3">{offers.map((o) => (
+   260→   260→        <Card key={o.id} className="p-4 cursor-pointer" onClick={() => openDetail(o)}>
+   261→   261→          <div className="flex items-start justify-between mb-1">
+   262→   262→            <div><p className="font-semibold">{o.name}</p><p className="text-sm text-muted-foreground">{o.insurer?.name}</p></div>
+   263→   263→            <Badge className={ctColors[o.contractType] || ""}>{ctLabels[o.contractType]}</Badge>
+   264→   264→          </div>
+   265→   265→          <div className="flex items-center gap-3 mt-2 text-sm">
+   266→   266→            {o.priceMin && <span className="font-mono">à partir de {fmtPrice(o.priceMin)}</span>}
+   267→   267→            <Switch checked={o.isActive} onCheckedChange={(e) => { e.stopPropagation(); handleToggle(o); }} onClick={(e) => e.stopPropagation()} />
+   268→   268→          </div>
+   269→   269→          <div className="flex gap-2 mt-3">
+   270→   270→            <Button variant="outline" size="sm" className="flex-1" onClick={(e) => { e.stopPropagation(); openDetail(o); }}><Eye className="h-3.5 w-3.5 mr-1" /> Détails</Button>
+   271→   271→            <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(o); }}><Pencil className="h-3.5 w-3.5" /></Button>
+   272→   272→            <Button variant="outline" size="sm" className="text-destructive" onClick={(e) => { e.stopPropagation(); setDeleteId(o.id); }}><Trash2 className="h-3.5 w-3.5" /></Button>
+   273→   273→          </div>
+   274→   274→        </Card>
+   275→   275→      ))}</div>
+   276→   276→
+   277→   277→      {/* Create/Edit Dialog */}
+   278→   278→      <Dialog open={formOpen} onOpenChange={setFormOpen}>
+   279→   279→        <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
+   280→   280→          <DialogHeader>
+   281→   281→            <DialogTitle>{editing ? "Modifier l'offre" : "Nouvelle offre"}</DialogTitle>
+   282→   282→            <DialogDescription>Configurez les détails de l'offre.</DialogDescription>
+   283→   283→          </DialogHeader>
+   284→   284→          <div className="grid gap-4 py-4">
+   285→   285→            <div className="w-full grid gap-2">
+   286→   286→              <Label>Assureur *</Label>
+   287→   287→              <Select value={form.insurerId} onValueChange={(v) => setForm({ ...form, insurerId: v })}>
+   288→   288→                <SelectTrigger className="w-full"><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
+   289→   289→                <SelectContent>{insurers.map((i) => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}</SelectContent>
+   290→   290→              </Select>
+   291→   291→            </div>
+   292→   292→
+   293→   293→            {/* Linked offers for selected insurer */}
+   294→   294→            {form.insurerId && (
+   295→   295→              <div className="w-full">
+   296→   296→                <div className="flex items-center justify-between mb-2">
+   297→   297→                  <Label className="text-sm text-muted-foreground">
+   298→   298→                    Offres de cet assureur ({insurerOffers.length})
+   299→   299→                  </Label>
+   300→   300→                  {insurerOffersLoading && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
+   301→   301→                </div>
+   302→   302→                <div className="max-h-48 overflow-y-auto rounded-lg border space-y-0">
+   303→   303→                  {insurerOffers.length === 0 && !insurerOffersLoading && (
+   304→   304→                    <p className="text-sm text-muted-foreground text-center py-3">Aucune offre existante pour cet assureur.</p>
+   305→   305→                  )}
+   306→   306→                  {insurerOffers.map((o) => (
+   307→   307→                    <div
+   308→   308→                      key={o.id}
+   309→   309→                      className={`flex items-center justify-between px-3 py-2 border-b last:border-b-0 ${editing?.id === o.id ? "bg-[#B9E54D]/10" : "hover:bg-muted/50"}`}
+   310→   310→                    >
+   311→   311→                      <div className="flex items-center gap-2 min-w-0">
+   312→   312→                        <span className="text-sm font-medium truncate">{o.name}</span>
+   313→   313→                        <Badge className={`text-[10px] shrink-0 ${ctColors[o.contractType] || ""}`}>{ctLabels[o.contractType] || o.contractType}</Badge>
+   314→   314→                      </div>
+   315→   315→                      <div className="flex items-center gap-2 shrink-0">
+   316→   316→                        {o.priceMin != null && (
+   317→   317→                          <span className="text-xs text-muted-foreground font-mono">{fmtPrice(o.priceMin)}</span>
+   318→   318→                        )}
+   319→   319→                        {!o.isActive && (
+   320→   320→                          <Badge variant="secondary" className="text-[10px]">Inactif</Badge>
+   321→   321→                        )}
+   322→   322→                      </div>
+   323→   323→                    </div>
+   324→   324→                  ))}
+   325→   325→                </div>
+   326→   326→              </div>
+   327→   327→            )}
+   328→   328→
+   329→   329→            <div className="w-full grid gap-2">
+   330→   330→              <Label>Nom *</Label>
+   331→   331→              <Input className="w-full" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Économique" />
+   332→   332→            </div>
+   333→   333→            <div className="w-full grid gap-2">
+   334→   334→              <Label>Type de contrat *</Label>
+   335→   335→              <Select value={form.contractType} onValueChange={(v) => setForm({ ...form, contractType: v })}>
+   336→   336→                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+   337→   337→                <SelectContent><SelectItem value="basic">Tiers Simple</SelectItem><SelectItem value="third_party_plus">Tiers+</SelectItem><SelectItem value="all_risks">Tous Risques</SelectItem></SelectContent>
+   338→   338→              </Select>
+   339→   339→            </div>
+   340→   340→            <div className="w-full grid gap-2">
+   341→   341→              <Label>Description</Label>
+   342→   342→              <Textarea className="w-full" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} />
+   343→   343→            </div>
+   344→   344→            <div className="w-full grid gap-2">
+   345→   345→              <Label>Prix min (FCFA)</Label>
+   346→   346→              <Input className="w-full" type="number" value={form.priceMin ?? ""} onChange={(e) => setForm({ ...form, priceMin: e.target.value ? parseFloat(e.target.value) : null })} />
+   347→   347→            </div>
+   348→   348→            <div className="w-full grid gap-2">
+   349→   349→              <Label>Prix max (FCFA)</Label>
+   350→   350→              <Input className="w-full" type="number" value={form.priceMax ?? ""} onChange={(e) => setForm({ ...form, priceMax: e.target.value ? parseFloat(e.target.value) : null })} />
+   351→   351→            </div>
+   352→   352→            <div className="w-full grid gap-2">
+   353→   353→              <Label>Franchise (FCFA)</Label>
+   354→   354→              <Input className="w-full" type="number" value={form.deductible} onChange={(e) => setForm({ ...form, deductible: parseInt(e.target.value) || 0 })} />
+   355→   355→            </div>
+   356→   356→            <div className="w-full grid gap-2">
+   357→   357→              <Label>Capital garanti (FCFA)</Label>
+   358→   358→              <Input className="w-full" type="number" value={form.coverageAmount ?? ""} onChange={(e) => setForm({ ...form, coverageAmount: e.target.value ? parseFloat(e.target.value) : null })} />
+   359→   359→            </div>
+   360→   360→            <div className="w-full grid gap-2">
+   361→   361→              <Label>Caractéristiques (JSON)</Label>
+   362→   362→              <Textarea className="w-full font-mono text-xs" value={form.features} onChange={(e) => setForm({ ...form, features: e.target.value })} rows={3} placeholder='["RC", "Incendie", "Vol"]' />
+   363→   363→            </div>
+   364→   364→            <div className="flex items-center justify-between">
+   365→   365→              <Label>Active</Label>
+   366→   366→              <Switch checked={form.isActive} onCheckedChange={(v) => setForm({ ...form, isActive: v })} />
+   367→   367→            </div>
+   368→   368→          </div>
+   369→   369→          <DialogFooter>
+   370→   370→            <Button variant="outline" onClick={() => setFormOpen(false)}>Annuler</Button>
+   371→   371→            <Button onClick={handleSave} disabled={saving} className="bg-[#B9E54D] text-black hover:bg-[#a5d044]">{saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}{editing ? "Modifier" : "Créer"}</Button>
+   372→   372→          </DialogFooter>
+   373→   373→        </DialogContent>
+   374→   374→      </Dialog>
+   375→   375→
+   376→   376→      {/* Detail Dialog */}
+   377→   377→      <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
+   378→   378→        <DialogContent className="sm:max-w-2xl max-h-[85vh]">
+   379→   379→          <DialogHeader>
+   380→   380→            <DialogTitle className="flex items-center gap-2">
+   381→   381→              <FileText className="h-5 w-5 text-[#B9E54D]" />
+   382→   382→              {detailLoading ? <Skeleton className="h-6 w-48" /> : selected?.name}
+   383→   383→            </DialogTitle>
+   384→   384→            <DialogDescription>{selected?.description}</DialogDescription>
+   385→   385→          </DialogHeader>
+   386→   386→          {detailLoading ? (
+   387→   387→            <div className="space-y-3"><Skeleton className="h-20" /><Skeleton className="h-40" /></div>
+   388→   388→          ) : selected ? (
+   389→   389→            <ScrollArea className="max-h-[60vh] pr-4">
+   390→   390→              <div className="space-y-6">
+   391→   391→                {/* Stat cards */}
+   392→   392→                <div className="grid grid-cols-3 gap-3">
+   393→   393→                  {detailStatCards.map((s) => {
+   394→   394→                    const Icon = s.icon;
+   395→   395→                    return (
+   396→   396→                      <Card key={s.label} className="rounded-xl border-0 shadow-sm">
+   397→   397→                        <CardContent className={`p-4 text-center rounded-xl ${s.color}`}>
+   398→   398→                          <Icon className="h-5 w-5 mx-auto mb-1" />
+   399→   399→                          <p className="text-xl font-bold">{s.value}</p>
+   400→   400→                          <p className="text-xs opacity-80">{s.label}</p>
+   401→   401→                        </CardContent>
+   402→   402→                      </Card>
+   403→   403→                    );
+   404→   404→                  })}
+   405→   405→                </div>
+   406→   406→
+   407→   407→                {/* Info grid */}
+   408→   408→                <div className="space-y-2">
+   409→   409→                  <h3 className="font-semibold text-sm">Informations</h3>
+   410→   410→                  <div className="grid grid-cols-2 gap-3 text-sm">
+   411→   411→                    <div className="rounded-lg border p-3">
+   412→   412→                      <p className="text-muted-foreground text-xs mb-1">Assureur</p>
+   413→   413→                      <p className="font-semibold">{selected.insurer?.name}</p>
+   414→   414→                      <p className="text-xs text-muted-foreground">{selected.insurer?.code}</p>
+   415→   415→                    </div>
+   416→   416→                    <div className="rounded-lg border p-3">
+   417→   417→                      <p className="text-muted-foreground text-xs mb-1">Type de contrat</p>
+   418→   418→                      <Badge className={ctColors[selected.contractType] || ""}>{ctLabels[selected.contractType] || selected.contractType}</Badge>
+   419→   419→                    </div>
+   420→   420→                    <div className="rounded-lg border p-3">
+   421→   421→                      <p className="text-muted-foreground text-xs mb-1">Prix min</p>
+   422→   422→                      <p className="font-mono font-semibold">{selected.priceMin ? fmtPrice(selected.priceMin) : "—"}</p>
+   423→   423→                    </div>
+   424→   424→                    <div className="rounded-lg border p-3">
+   425→   425→                      <p className="text-muted-foreground text-xs mb-1">Prix max</p>
+   426→   426→                      <p className="font-mono font-semibold">{selected.priceMax ? fmtPrice(selected.priceMax) : "—"}</p>
+   427→   427→                    </div>
+   428→   428→                    <div className="rounded-lg border p-3">
+   429→   429→                      <p className="text-muted-foreground text-xs mb-1">Franchise</p>
+   430→   430→                      <p className="font-mono font-semibold">{selected.deductible ? fmtPrice(selected.deductible) : "—"}</p>
+   431→   431→                    </div>
+   432→   432→                    <div className="rounded-lg border p-3">
+   433→   433→                      <p className="text-muted-foreground text-xs mb-1">Capital garanti</p>
+   434→   434→                      <p className="font-mono font-semibold">{selected.coverageAmount ? fmtPrice(selected.coverageAmount) : "—"}</p>
+   435→   435→                    </div>
+   436→   436→                    {selected.category && (
+   437→   437→                      <div className="rounded-lg border p-3">
+   438→   438→                        <p className="text-muted-foreground text-xs mb-1">Catégorie</p>
+   439→   439→                        <p className="font-medium">{selected.category.name}</p>
+   440→   440→                      </div>
+   441→   441→                    )}
+   442→   442→                    {selected.createdAt && (
+   443→   443→                      <div className="rounded-lg border p-3">
+   444→   444→                        <p className="text-muted-foreground text-xs mb-1">Créée le</p>
+   445→   445→                        <p className="font-medium">{fmtDate(selected.createdAt)}</p>
+   446→   446→                      </div>
+   447→   447→                    )}
+   448→   448→                  </div>
+   449→   449→                </div>
+   450→   450→
+   451→   451→                {/* Description */}
+   452→   452→                {selected.description && (
+   453→   453→                  <div className="space-y-2">
+   454→   454→                    <h3 className="font-semibold text-sm">Description</h3>
+   455→   455→                    <p className="text-sm text-muted-foreground whitespace-pre-wrap rounded-lg border p-3">{selected.description}</p>
+   456→   456→                  </div>
+   457→   457→                )}
+   458→   458→
+   459→   459→                {/* Features */}
+   460→   460→                {selected.features?.length > 0 && (
+   461→   461→                  <div className="space-y-2">
+   462→   462→                    <h3 className="font-semibold text-sm">Caractéristiques</h3>
+   463→   463→                    <div className="flex flex-wrap gap-1.5">
+   464→   464→                      {selected.features.map((f: string) => <Badge key={f} variant="secondary" className="text-xs">{f}</Badge>)}
+   465→   465→                    </div>
+   466→   466→                  </div>
+   467→   467→                )}
+   468→   468→
+   469→   469→                <Separator />
+   470→   470→
+   471→   471→                {/* Coverages */}
+   472→   472→                <div className="space-y-2">
+   473→   473→                  <h3 className="font-semibold text-sm">Garanties de l&apos;assureur ({detailCoverages.length})</h3>
+   474→   474→                  {detailCoverages.length === 0 ? (
+   475→   475→                    <p className="text-sm text-muted-foreground">Aucune garantie configurée pour cet assureur.</p>
+   476→   476→                  ) : (
+   477→   477→                    <div className="space-y-3">
+   478→   478→                      {Object.entries(groupedCoverages).sort(([a], [b]) => a.localeCompare(b)).map(([cat, covs]) => (
+   479→   479→                        <div key={cat}>
+   480→   480→                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">{cat} ({covs.length})</p>
+   481→   481→                          <div className="space-y-1">
+   482→   482→                            {covs.map((c) => (
+   483→   483→                              <div key={c.id} className="flex items-center justify-between rounded-lg border px-3 py-2">
+   484→   484→                                <div className="flex items-center gap-2 flex-wrap">
+   485→   485→                                  <span className="text-sm font-medium">{c.name}</span>
+   486→   486→                                  {c.isMandatory && <Badge variant="default" className="text-[10px] px-1.5 py-0">Obligatoire</Badge>}
+   487→   487→                                </div>
+   488→   488→                                <div className="flex items-center gap-2">
+   489→   489→                                  <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium ${calcBadge[c.calculationType] || ""}`}>{calcLabel[c.calculationType] || c.calculationType}</span>
+   490→   490→                                  {!c.isActive && <Badge variant="secondary" className="text-[10px]">Inactif</Badge>}
+   491→   491→                                </div>
+   492→   492→                              </div>
+   493→   493→                            ))}
+   494→   494→                          </div>
+   495→   495→                        </div>
+   496→   496→                      ))}
+   497→   497→                    </div>
+   498→   498→                  )}
+   499→   499→                </div>
+   500→   500→              </div>
+   501→   501→            </ScrollArea>
+   502→   502→          ) : null}
+   503→   503→          <DialogFooter>
+   504→   504→            <Button variant="outline" onClick={() => setDetailOpen(false)}>Fermer</Button>
+   505→   505→          </DialogFooter>
+   506→   506→        </DialogContent>
+   507→   507→      </Dialog>
+   508→   508→
+   509→   509→      {/* Delete confirmation */}
+   510→   510→      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+   511→   511→        <AlertDialogContent>
+   512→   512→          <AlertDialogHeader>
+   513→   513→            <AlertDialogTitle>Supprimer cette offre ?</AlertDialogTitle>
+   514→   514→            <AlertDialogDescription>Les devis associés seront perdus.</AlertDialogDescription>
+   515→   515→          </AlertDialogHeader>
+   516→   516→          <AlertDialogFooter>
+   517→   517→            <AlertDialogCancel>Annuler</AlertDialogCancel>
+   518→   518→            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">Supprimer</AlertDialogAction>
+   519→   519→          </AlertDialogFooter>
+   520→   520→        </AlertDialogContent>
+   521→   521→      </AlertDialog>
+   522→   522→    </div>
+   523→   523→  );
+   524→   524→}

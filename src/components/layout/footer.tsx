@@ -22,7 +22,7 @@ const noliLinks = [
 export function Footer() {
   const setView = useAppStore((s) => s.setView);
   return (
-    <footer id="footer" className="mt-auto w-full bg-primary text-secondary-foreground">
+    <footer id="footer" className="mt-auto w-full bg-primary dark:bg-[#1B464D] text-secondary-foreground">
       {/* Accent top bar */}
       <div className="h-1 w-full bg-accent" />
 

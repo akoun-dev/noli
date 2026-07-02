@@ -448,7 +448,7 @@ export default function LandingPage() {
       </section>
 
       {/* ════════════ POURQUOI NOLI ════════════ */}
-      <section className="bg-primary py-16 md:py-24">
+      <section className="bg-primary dark:bg-[#1B464D] py-16 md:py-24">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
           <motion.div
             initial="hidden"

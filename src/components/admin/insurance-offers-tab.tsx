@@ -18,6 +18,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const fmtPrice = (n: number) => new Intl.NumberFormat("fr-FR").format(n) + " FCFA";
 const fmtDate = (d: string) => (d ? new Date(d).toLocaleDateString("fr-FR") : "—");
@@ -43,17 +44,10 @@ interface CoverageMini {
 }
 
 const empty = {
-  insurerId: "", name: "", contractType: "basic" as string, description: "",
-  priceMin: null as number | null, priceMax: null as number | null,
-  coverageAmount: null as number | null, deductible: 0,
+  insurerId: "", name: "", description: "",
+  deductible: 0,
   features: "[]" as string, isActive: true,
 };
-
-interface InsurerOfferPreview {
-  id: string; name: string; contractType: string;
-  priceMin: number | null; priceMax: number | null;
-  isActive: boolean; createdAt: string;
-}
 
 export function InsuranceOffersTab() {
   const { toast } = useToast();
@@ -76,9 +70,9 @@ export function InsuranceOffersTab() {
   const [detailCoverages, setDetailCoverages] = useState<CoverageMini[]>([]);
   const [detailQuotesCount, setDetailQuotesCount] = useState(0);
 
-  // Form: existing offers for selected insurer
-  const [insurerOffers, setInsurerOffers] = useState<InsurerOfferPreview[]>([]);
-  const [insurerOffersLoading, setInsurerOffersLoading] = useState(false);
+  // Form: coverages for selected insurer (guarantee checkboxes)
+  const [formCoverages, setFormCoverages] = useState<CoverageMini[]>([]);
+  const [formCoveragesLoading, setFormCoveragesLoading] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -94,27 +88,26 @@ export function InsuranceOffersTab() {
   useEffect(() => { fetchData(); }, [fetchData]);
   useEffect(() => { fetch("/api/admin/insurers?active=true").then((r) => { if (r.ok) r.json().then(setInsurers); }); }, []);
 
-  // Fetch offers linked to the selected insurer in the form
+  // Fetch coverages for the selected insurer in the form (for guarantee checkboxes)
   useEffect(() => {
     if (!form.insurerId) {
-      setInsurerOffers([]);
+      setFormCoverages([]);
       return;
     }
-    setInsurerOffersLoading(true);
-    fetch(`/api/admin/insurance-offers?insurerId=${form.insurerId}`)
+    setFormCoveragesLoading(true);
+    fetch(`/api/admin/coverages?insurerId=${form.insurerId}`)
       .then((r) => { if (r.ok) return r.json(); return []; })
-      .then((data) => setInsurerOffers(data))
-      .catch(() => setInsurerOffers([]))
-      .finally(() => setInsurerOffersLoading(false));
+      .then((data) => setFormCoverages(data))
+      .catch(() => setFormCoverages([]))
+      .finally(() => setFormCoveragesLoading(false));
   }, [form.insurerId]);
 
   const openCreate = () => { setEditing(null); setForm(empty); setFormOpen(true); };
   const openEdit = (o: Offer) => {
     setEditing(o);
     setForm({
-      insurerId: o.insurerId, name: o.name, contractType: o.contractType,
-      description: o.description || "", priceMin: o.priceMin, priceMax: o.priceMax,
-      coverageAmount: o.coverageAmount, deductible: o.deductible,
+      insurerId: o.insurerId, name: o.name,
+      description: o.description || "", deductible: o.deductible,
       features: JSON.stringify(o.features), isActive: o.isActive,
     });
     setFormOpen(true);
@@ -144,8 +137,8 @@ export function InsuranceOffersTab() {
   };
 
   const handleSave = async () => {
-    if (!form.insurerId || !form.name.trim() || !form.contractType) {
-      toast({ title: "Champs obligatoires: assureur, nom, type de contrat", variant: "destructive" });
+    if (!form.insurerId || !form.name.trim()) {
+      toast({ title: "Champs obligatoires: assureur, nom", variant: "destructive" });
       return;
     }
     setSaving(true);
@@ -222,7 +215,7 @@ export function InsuranceOffersTab() {
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50">
-              <TableHead>Nom</TableHead><TableHead>Assureur</TableHead><TableHead>Type</TableHead>
+              <TableHead>Nom</TableHead><TableHead>Assureur</TableHead>
               <TableHead className="text-right">Prix min</TableHead><TableHead className="text-right">Prix max</TableHead>
               <TableHead className="text-center">Franchise</TableHead><TableHead>Catégorie</TableHead>
               <TableHead className="text-center">Statut</TableHead><TableHead className="w-12" />
@@ -233,7 +226,6 @@ export function InsuranceOffersTab() {
               <TableRow key={o.id} className="cursor-pointer hover:bg-muted/30" onClick={() => openDetail(o)}>
                 <TableCell className="font-medium">{o.name}</TableCell>
                 <TableCell className="text-sm">{o.insurer?.name || "—"}</TableCell>
-                <TableCell><Badge className={ctColors[o.contractType] || ""}>{ctLabels[o.contractType] || o.contractType}</Badge></TableCell>
                 <TableCell className="text-right font-mono text-sm">{o.priceMin ? fmtPrice(o.priceMin) : "—"}</TableCell>
                 <TableCell className="text-right font-mono text-sm">{o.priceMax ? fmtPrice(o.priceMax) : "—"}</TableCell>
                 <TableCell className="text-center font-mono text-sm">{o.deductible ? fmtPrice(o.deductible) : "—"}</TableCell>
@@ -260,7 +252,6 @@ export function InsuranceOffersTab() {
         <Card key={o.id} className="p-4 cursor-pointer" onClick={() => openDetail(o)}>
           <div className="flex items-start justify-between mb-1">
             <div><p className="font-semibold">{o.name}</p><p className="text-sm text-muted-foreground">{o.insurer?.name}</p></div>
-            <Badge className={ctColors[o.contractType] || ""}>{ctLabels[o.contractType]}</Badge>
           </div>
           <div className="flex items-center gap-3 mt-2 text-sm">
             {o.priceMin && <span className="font-mono">à partir de {fmtPrice(o.priceMin)}</span>}
@@ -290,76 +281,65 @@ export function InsuranceOffersTab() {
               </Select>
             </div>
 
-            {/* Linked offers for selected insurer */}
-            {form.insurerId && (
-              <div className="w-full">
-                <div className="flex items-center justify-between mb-2">
-                  <Label className="text-sm text-muted-foreground">
-                    Offres de cet assureur ({insurerOffers.length})
-                  </Label>
-                  {insurerOffersLoading && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
-                </div>
-                <div className="max-h-48 overflow-y-auto rounded-lg border space-y-0">
-                  {insurerOffers.length === 0 && !insurerOffersLoading && (
-                    <p className="text-sm text-muted-foreground text-center py-3">Aucune offre existante pour cet assureur.</p>
-                  )}
-                  {insurerOffers.map((o) => (
-                    <div
-                      key={o.id}
-                      className={`flex items-center justify-between px-3 py-2 border-b last:border-b-0 ${editing?.id === o.id ? "bg-[#B9E54D]/10" : "hover:bg-muted/50"}`}
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="text-sm font-medium truncate">{o.name}</span>
-                        <Badge className={`text-[10px] shrink-0 ${ctColors[o.contractType] || ""}`}>{ctLabels[o.contractType] || o.contractType}</Badge>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        {o.priceMin != null && (
-                          <span className="text-xs text-muted-foreground font-mono">{fmtPrice(o.priceMin)}</span>
-                        )}
-                        {!o.isActive && (
-                          <Badge variant="secondary" className="text-[10px]">Inactif</Badge>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
             <div className="w-full grid gap-2">
               <Label>Nom *</Label>
               <Input className="w-full" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Économique" />
-            </div>
-            <div className="w-full grid gap-2">
-              <Label>Type de contrat *</Label>
-              <Select value={form.contractType} onValueChange={(v) => setForm({ ...form, contractType: v })}>
-                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                <SelectContent><SelectItem value="basic">Tiers Simple</SelectItem><SelectItem value="third_party_plus">Tiers+</SelectItem><SelectItem value="all_risks">Tous Risques</SelectItem></SelectContent>
-              </Select>
             </div>
             <div className="w-full grid gap-2">
               <Label>Description</Label>
               <Textarea className="w-full" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} />
             </div>
             <div className="w-full grid gap-2">
-              <Label>Prix min (FCFA)</Label>
-              <Input className="w-full" type="number" value={form.priceMin ?? ""} onChange={(e) => setForm({ ...form, priceMin: e.target.value ? parseFloat(e.target.value) : null })} />
-            </div>
-            <div className="w-full grid gap-2">
-              <Label>Prix max (FCFA)</Label>
-              <Input className="w-full" type="number" value={form.priceMax ?? ""} onChange={(e) => setForm({ ...form, priceMax: e.target.value ? parseFloat(e.target.value) : null })} />
-            </div>
-            <div className="w-full grid gap-2">
               <Label>Franchise (FCFA)</Label>
               <Input className="w-full" type="number" value={form.deductible} onChange={(e) => setForm({ ...form, deductible: parseInt(e.target.value) || 0 })} />
             </div>
+
+            {/* Guarantee checkboxes */}
             <div className="w-full grid gap-2">
-              <Label>Capital garanti (FCFA)</Label>
-              <Input className="w-full" type="number" value={form.coverageAmount ?? ""} onChange={(e) => setForm({ ...form, coverageAmount: e.target.value ? parseFloat(e.target.value) : null })} />
-            </div>
-            <div className="w-full grid gap-2">
-              <Label>Caractéristiques (JSON)</Label>
-              <Textarea className="w-full font-mono text-xs" value={form.features} onChange={(e) => setForm({ ...form, features: e.target.value })} rows={3} placeholder='["RC", "Incendie", "Vol"]' />
+              <Label>Garanties</Label>
+              {formCoveragesLoading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+              {!formCoveragesLoading && form.insurerId && formCoverages.length === 0 && (
+                <p className="text-sm text-muted-foreground">Aucune garantie configurée pour cet assureur.</p>
+              )}
+              {!formCoveragesLoading && formCoverages.length > 0 && (() => {
+                const grouped = formCoverages.reduce<Record<string, CoverageMini[]>>((acc, c) => {
+                  const key = c.category?.name || "Autre";
+                  (acc[key] ??= []).push(c);
+                  return acc;
+                }, {});
+                const selectedFeatures: string[] = (() => { try { return JSON.parse(form.features); } catch { return []; } })();
+                return (
+                  <div className="border rounded-lg max-h-64 overflow-y-auto p-3 space-y-3">
+                    {Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b)).map(([cat, covs]) => (
+                      <div key={cat}>
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">{cat}</p>
+                        <div className="space-y-1.5">
+                          {covs.map((c) => (
+                            <div key={c.id} className="flex items-center gap-2">
+                              <Checkbox
+                                id={`cov-${c.id}`}
+                                checked={selectedFeatures.includes(c.name)}
+                                onCheckedChange={(checked) => {
+                                  const current: string[] = (() => { try { return JSON.parse(form.features); } catch { return []; } })();
+                                  const updated = checked
+                                    ? [...current, c.name]
+                                    : current.filter((n: string) => n !== c.name);
+                                  setForm({ ...form, features: JSON.stringify(updated) });
+                                }}
+                              />
+                              <Label htmlFor={`cov-${c.id}`} className="text-sm font-normal cursor-pointer">{c.name}</Label>
+                              {c.isMandatory && <Badge variant="default" className="text-[10px] px-1.5 py-0">Obligatoire</Badge>}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+              {!form.insurerId && (
+                <p className="text-sm text-muted-foreground">Sélectionnez d&apos;abord un assureur.</p>
+              )}
             </div>
             <div className="flex items-center justify-between">
               <Label>Active</Label>
