@@ -51,7 +51,6 @@ export async function POST(request: NextRequest) {
           email: profile.email,
           name: [profile.firstName, profile.lastName].filter(Boolean).join(" "),
           role: profile.role,
-          photoUrl: profile.photoUrl,
         },
       });
     }
@@ -82,7 +81,6 @@ export async function POST(request: NextRequest) {
           email: profile.email,
           name: [profile.firstName, profile.lastName].filter(Boolean).join(" "),
           role: profile.role,
-          photoUrl: profile.photoUrl,
         },
       });
     }

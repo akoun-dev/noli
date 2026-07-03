@@ -5,15 +5,29 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get("userId");
+    const all = searchParams.get("all") === "true";
+    const limit = parseInt(searchParams.get("limit") || "50", 10);
 
-    if (!userId) {
-      return NextResponse.json({ error: "userId requis" }, { status: 400 });
+    const whereClause: Record<string, unknown> = {};
+    if (userId && !all) {
+      whereClause.userId = userId;
     }
 
     const quotes = await db.quote.findMany({
-      where: { userId },
+      where: whereClause,
+      include: {
+        user: { select: { id: true, firstName: true, lastName: true, email: true } },
+        category: { select: { id: true, name: true } },
+        offer: {
+          select: {
+            id: true,
+            name: true,
+            insurer: { select: { id: true, name: true, logoUrl: true } },
+          },
+        },
+      },
       orderBy: { createdAt: "desc" },
-      take: 50,
+      take: limit,
     });
 
     return NextResponse.json({ quotes });

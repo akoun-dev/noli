@@ -104,7 +104,6 @@ function LoginPage() {
         email: data.user.email,
         name: data.user.name,
         role: data.user.role,
-        avatarUrl: data.user.photoUrl,
         isLoggedIn: true,
       });
 
@@ -117,9 +116,9 @@ function LoginPage() {
       if (data.user.role === "ADMIN") {
         setView("admin");
       } else if (data.user.role === "INSURER") {
-        setView("insurer");
+        setView("insurer-dashboard");
       } else {
-        setView("dashboard");
+        setView("user-dashboard");
       }
     } catch {
       toast({
@@ -135,9 +134,7 @@ function LoginPage() {
   return (
     <div className="w-full max-w-md mx-auto">
       <div className="text-center mb-8">
-        <div className="inline-flex items-center justify-center rounded-full bg-primary/10 p-3 mb-4">
-          <img src="/img/zebre_plein_sans_fond.png" alt="NOLI" className="h-8 w-8 object-contain" />
-        </div>
+        <img src="/img/zebre_plein_sans_fond.png" alt="NOLI" className="h-16 w-auto mx-auto mb-4" />
         <h1 className="text-2xl font-bold tracking-tight">Se connecter</h1>
         <p className="text-muted-foreground mt-2">
           Acc\u00e9dez \u00e0 votre espace NOLI Assurance
@@ -150,7 +147,6 @@ function LoginPage() {
           <Input
             id="login-email"
             type="email"
-            autoComplete="email"
             placeholder="votre@email.com"
             value={email}
             onChange={(e) => {
@@ -171,7 +167,6 @@ function LoginPage() {
             <Input
               id="login-password"
               type={showPassword ? "text" : "password"}
-              autoComplete="current-password"
               placeholder="\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022"
               value={password}
               onChange={(e) => {
@@ -310,7 +305,6 @@ function RegisterPage() {
         email: data.user.email,
         name: data.user.name,
         role: data.user.role,
-        avatarUrl: data.user.photoUrl,
         isLoggedIn: true,
       });
 
@@ -323,9 +317,9 @@ function RegisterPage() {
       if (data.user.role === "ADMIN") {
         setView("admin");
       } else if (data.user.role === "INSURER") {
-        setView("insurer");
+        setView("insurer-dashboard");
       } else {
-        setView("dashboard");
+        setView("user-dashboard");
       }
     } catch {
       toast({
@@ -349,9 +343,7 @@ function RegisterPage() {
   return (
     <div className="w-full max-w-md mx-auto">
       <div className="text-center mb-8">
-        <div className="inline-flex items-center justify-center rounded-full bg-primary/10 p-3 mb-4">
-          <img src="/img/zebre_plein_sans_fond.png" alt="NOLI" className="h-8 w-8 object-contain" />
-        </div>
+        <img src="/img/zebre_plein_sans_fond.png" alt="NOLI" className="h-16 w-auto mx-auto mb-4" />
         <h1 className="text-2xl font-bold tracking-tight">Cr\u00e9er un compte</h1>
         <p className="text-muted-foreground mt-2">
           Rejoignez NOLI Assurance pour comparer et souscrire
@@ -363,7 +355,6 @@ function RegisterPage() {
           <Label htmlFor="reg-name">Nom complet</Label>
           <Input
             id="reg-name"
-            autoComplete="name"
             placeholder="Jean Dupont"
             value={fullName}
             onChange={(e) => {
@@ -383,7 +374,6 @@ function RegisterPage() {
           <Input
             id="reg-email"
             type="email"
-            autoComplete="email"
             placeholder="votre@email.com"
             value={email}
             onChange={(e) => {
@@ -405,7 +395,6 @@ function RegisterPage() {
           <Input
             id="reg-phone"
             type="tel"
-            autoComplete="tel"
             placeholder="+225 07 XX XX XX"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
@@ -418,7 +407,6 @@ function RegisterPage() {
             <Input
               id="reg-password"
               type={showPassword ? "text" : "password"}
-              autoComplete="new-password"
               placeholder="\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022"
               value={password}
               onChange={(e) => {
@@ -449,7 +437,6 @@ function RegisterPage() {
             <Input
               id="reg-confirm"
               type={showConfirm ? "text" : "password"}
-              autoComplete="new-password"
               placeholder="\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022"
               value={confirmPassword}
               onChange={(e) => {
@@ -484,12 +471,12 @@ function RegisterPage() {
             className={errors.terms ? "border-destructive" : ""}
           />
           <Label htmlFor="reg-terms" className="text-sm font-normal leading-snug cursor-pointer">
-            <span className="whitespace-nowrap">J&apos;accepte les{" "}</span>
-            <span className="text-primary hover:underline cursor-pointer whitespace-nowrap">
+            J&apos;accepte les{" "}
+            <span className="text-primary hover:underline cursor-pointer">
               conditions d&apos;utilisation
-            </span>
-            <span className="whitespace-nowrap">{" "}et la{" "}</span>
-            <span className="text-primary hover:underline cursor-pointer whitespace-nowrap">
+            </span>{" "}
+            et la{" "}
+            <span className="text-primary hover:underline cursor-pointer">
               politique de confidentialit\u00e9
             </span>
           </Label>
@@ -592,9 +579,7 @@ function ForgotPasswordPage() {
     <div className="w-full max-w-md mx-auto">
       {sent ? (
         <div className="text-center space-y-4 py-8">
-          <div className="inline-flex items-center justify-center rounded-full bg-accent/20 p-4">
-            <img src="/img/zebre_plein_sans_fond.png" alt="NOLI" className="h-10 w-10 object-contain" />
-          </div>
+          <img src="/img/zebre_plein_sans_fond.png" alt="NOLI" className="h-16 w-auto mx-auto" />
           <h1 className="text-2xl font-bold tracking-tight">V\u00e9rifiez votre email</h1>
           <p className="text-muted-foreground">
             Si un compte existe avec cet email, vous recevrez un lien de
@@ -612,9 +597,7 @@ function ForgotPasswordPage() {
       ) : (
         <>
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center rounded-full bg-primary/10 p-3 mb-4">
-              <img src="/img/zebre_plein_sans_fond.png" alt="NOLI" className="h-8 w-8 object-contain" />
-            </div>
+            <img src="/img/zebre_plein_sans_fond.png" alt="NOLI" className="h-16 w-auto mx-auto mb-4" />
             <h1 className="text-2xl font-bold tracking-tight">Mot de passe oubli\u00e9</h1>
             <p className="text-muted-foreground mt-2">
               R\u00e9initialisez votre mot de passe
@@ -632,7 +615,6 @@ function ForgotPasswordPage() {
               <Input
                 id="forgot-email"
                 type="email"
-                autoComplete="email"
                 placeholder="votre@email.com"
                 value={email}
                 onChange={(e) => {
@@ -692,12 +674,38 @@ export function AuthPages() {
   }, [currentView]);
 
   return (
-    <div className="flex-1 flex items-center justify-center px-4 py-12 md:py-20">
-      <div className="w-full max-w-md">
-        {currentView === "login" && <LoginPage />}
-        {currentView === "register" && <RegisterPage />}
-        {currentView === "forgot" && <ForgotPasswordPage />}
+    <div className="min-h-screen flex flex-col bg-background">
+      {/* Auth top bar with logo */}
+      <header className="sticky top-0 z-50 w-full border-b border-border/40">
+        <div className="header-sticky">
+          <div className="mx-auto flex h-16 max-w-[1400px] items-center justify-between px-4 sm:px-8">
+            <button
+              onClick={() => useAppStore.getState().setView("landing")}
+              className="flex items-center gap-1.5 transition-opacity hover:opacity-80"
+            >
+              <img src="/img/noli-vertical.png" alt="NOLI Assurance" className="h-9 w-auto object-contain" />
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Auth content area */}
+      <div className="flex-1 flex items-center justify-center px-4 py-12 md:py-20">
+        <div className="w-full max-w-md">
+          {currentView === "login" && <LoginPage />}
+          {currentView === "register" && <RegisterPage />}
+          {currentView === "forgot" && <ForgotPasswordPage />}
+        </div>
       </div>
+
+      {/* Footer */}
+      <footer className="mt-auto w-full border-t border-border/40">
+        <div className="mx-auto flex max-w-[1400px] items-center justify-center px-8 py-5">
+          <p className="text-xs text-muted-foreground">
+            &copy; {new Date().getFullYear()} NOLI Assurance. Tous droits r\u00e9serv\u00e9s.
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }

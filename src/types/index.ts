@@ -1,17 +1,16 @@
 export type AppView =
   | "landing"
+  | "offers"
   | "compare"
   | "results"
-  | "dashboard"
   | "about"
   | "contact"
   | "admin"
-  | "insurer"
+  | "user-dashboard"
+  | "insurer-dashboard"
   | "login"
   | "register"
-  | "forgot"
-  | "profile"
-  | "my-quotes";
+  | "forgot";
 
 export type AuthModal = "none" | "login" | "register" | "forgot";
 

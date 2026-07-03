@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Eye, EyeOff, Loader2, Shield, Zap, ArrowRight } from "lucide-react";
+import { Eye, EyeOff, Loader2, Zap, ArrowRight } from "lucide-react";
 import { useAppStore } from "@/store/app-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -119,6 +119,15 @@ function LoginModal() {
         description: `Bonjour, ${data.user.name} !`,
       });
       setAuthModal("none");
+
+      // Redirect by role
+      if (data.user.role === "ADMIN") {
+        useAppStore.getState().setView("admin");
+      } else if (data.user.role === "INSURER") {
+        useAppStore.getState().setView("insurer-dashboard");
+      } else {
+        useAppStore.getState().setView("user-dashboard");
+      }
     } catch {
       toast({
         title: "Erreur",
@@ -293,6 +302,15 @@ function RegisterModal() {
         description: `Bienvenue, ${data.user.name} ! Votre compte a \u00e9t\u00e9 cr\u00e9\u00e9 avec succ\u00e8s.`,
       });
       setAuthModal("none");
+
+      // Redirect by role
+      if (data.user.role === "ADMIN") {
+        useAppStore.getState().setView("admin");
+      } else if (data.user.role === "INSURER") {
+        useAppStore.getState().setView("insurer-dashboard");
+      } else {
+        useAppStore.getState().setView("user-dashboard");
+      }
     } catch {
       toast({
         title: "Erreur",
@@ -434,12 +452,12 @@ function RegisterModal() {
           className={errors.terms ? "border-destructive" : ""}
         />
         <Label htmlFor="reg-terms" className="text-sm font-normal leading-snug cursor-pointer">
-          <span className="whitespace-nowrap">J&apos;accepte les{" "}</span>
-          <span className="text-primary hover:underline cursor-pointer whitespace-nowrap">
+          J&apos;accepte les{" "}
+          <span className="text-primary hover:underline cursor-pointer">
             conditions d&apos;utilisation
-          </span>
-          <span className="whitespace-nowrap">{" "}et la{" "}</span>
-          <span className="text-primary hover:underline cursor-pointer whitespace-nowrap">
+          </span>{" "}
+          et la{" "}
+          <span className="text-primary hover:underline cursor-pointer">
             politique de confidentialit\u00e9
           </span>
         </Label>
@@ -530,9 +548,7 @@ function ForgotPasswordModal() {
 
   return sent ? (
     <div className="space-y-4 text-center py-4">
-      <div className="rounded-full bg-accent/20 p-4 mx-auto w-fit">
-        <Shield className="size-8 text-primary" />
-      </div>
+      <img src="/img/zebre_plein_sans_fond.png" alt="NOLI" className="h-14 w-auto mx-auto" />
       <h3 className="font-semibold text-lg">V\u00e9rifiez votre email</h3>
       <p className="text-sm text-muted-foreground">
         Si un compte existe avec cet email, vous recevrez un lien de

@@ -1,0 +1,1058 @@
+     1→"use client";
+     2→
+     3→import { useState, useCallback } from "react";
+     4→import { motion, AnimatePresence } from "framer-motion";
+     5→import {
+     6→  User,
+     7→  Car,
+     8→  Shield,
+     9→  Check,
+    10→  ChevronLeft,
+    11→  ChevronRight,
+    12→  Loader2,
+    13→  Sparkles,
+    14→  Star,
+    15→  ArrowLeftRight,
+    16→  Zap,
+    17→} from "lucide-react";
+    18→
+    19→import { useAppStore } from "@/store/app-store";
+    20→import type { PersonalInfo, VehicleInfo, CoverageNeeds } from "@/types";
+    21→import { Button } from "@/components/ui/button";
+    22→import { Input } from "@/components/ui/input";
+    23→import { Label } from "@/components/ui/label";
+    24→import {
+    25→  Select,
+    26→  SelectTrigger,
+    27→  SelectValue,
+    28→  SelectContent,
+    29→  SelectItem,
+    30→} from "@/components/ui/select";
+    31→import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+    32→import { Switch } from "@/components/ui/switch";
+    33→import { Checkbox } from "@/components/ui/checkbox";
+    34→import { Card, CardContent } from "@/components/ui/card";
+    35→import { Progress } from "@/components/ui/progress";
+    36→import { Badge } from "@/components/ui/badge";
+    37→import { useToast } from "@/hooks/use-toast";
+    38→
+    39→// ─── Step definitions ───────────────────────────────────────────────
+    40→const STEPS = [
+    41→  { id: 1, label: "Vous", icon: User },
+    42→  { id: 2, label: "Véhicule", icon: Car },
+    43→  { id: 3, label: "Couverture", icon: Shield },
+    44→];
+    45→
+    46→const USAGE_OPTIONS = [
+    47→  { value: "personnel", label: "Personnel" },
+    48→  { value: "professionnel", label: "Professionnel" },
+    49→];
+    50→
+    51→const MILEAGE_OPTIONS = [
+    52→  { value: "less_10000", label: "Moins de 10 000 km" },
+    53→  { value: "10000_15000", label: "10 000 - 15 000 km" },
+    54→  { value: "15000_25000", label: "15 000 - 25 000 km" },
+    55→  { value: "more_25000", label: "Plus de 25 000 km" },
+    56→];
+    57→
+    58→const VEHICLE_TYPES = [
+    59→  "Berline",
+    60→  "SUV / 4x4",
+    61→  "Break",
+    62→  "Coupé",
+    63→  "Utilitaire",
+    64→  "Pick-up",
+    65→];
+    66→
+    67→const BRANDS = [
+    68→  "Toyota",
+    69→  "Nissan",
+    70→  "Hyundai",
+    71→  "Kia",
+    72→  "Honda",
+    73→  "Mitsubishi",
+    74→  "Mercedes",
+    75→  "BMW",
+    76→  "Peugeot",
+    77→  "Renault",
+    78→  "Volkswagen",
+    79→  "Suzuki",
+    80→  "Ford",
+    81→  "Autre",
+    82→];
+    83→
+    84→const YEARS = Array.from({ length: 25 }, (_, i) => String(2024 - i));
+    85→
+    86→const FISCAL_POWER_OPTIONS = [
+    87→  { value: "4_or_less", label: "4 CV ou moins" },
+    88→  { value: "5_6", label: "5-6 CV" },
+    89→  { value: "7_8", label: "7-8 CV" },
+    90→  { value: "9_11", label: "9-11 CV" },
+    91→  { value: "12_plus", label: "12 CV et plus" },
+    92→];
+    93→
+    94→const COVERAGE_OPTIONS = [
+    95→  {
+    96→    value: "assistance",
+    97→    label: "Assistance étendue (pannage, remorquage)",
+    98→  },
+    99→  { value: "courtesy_vehicle", label: "Véhicule de courtoisie" },
+   100→  { value: "driver_protection", label: "Protection du conducteur" },
+   101→  { value: "new_value", label: "Indemnisation valeur à neuf" },
+   102→  { value: "natural_disaster", label: "Couverture catastrophes naturelles" },
+   103→  { value: "legal_protection", label: "Protection juridique étendue" },
+   104→];
+   105→
+   106→const BUDGET_OPTIONS = [
+   107→  { value: "less_20000", label: "Moins de 20 000 FCFA" },
+   108→  { value: "20000_50000", label: "20 000 - 50 000 FCFA" },
+   109→  { value: "50000_100000", label: "50 000 - 100 000 FCFA" },
+   110→  { value: "more_100000", label: "Plus de 100 000 FCFA" },
+   111→];
+   112→
+   113→const DEDUCTIBLE_OPTIONS = [
+   114→  {
+   115→    value: "high",
+   116→    label: "Élevée (prime réduite)",
+   117→    desc: "Franchise plus élevée, cotisation plus basse",
+   118→  },
+   119→  {
+   120→    value: "medium",
+   121→    label: "Moyenne (équilibre)",
+   122→    desc: "Bon compromis entre prime et couverture",
+   123→  },
+   124→  {
+   125→    value: "low",
+   126→    label: "Faible (couverture maximale)",
+   127→    desc: "Franchise minimale, cotisation plus élevée",
+   128→  },
+   129→];
+   130→
+   131→// ─── Animation variants ─────────────────────────────────────────────
+   132→const slideVariants = {
+   133→  enter: (direction: number) => ({
+   134→    x: direction > 0 ? 300 : -300,
+   135→    opacity: 0,
+   136→  }),
+   137→  center: {
+   138→    x: 0,
+   139→    opacity: 1,
+   140→  },
+   141→  exit: (direction: number) => ({
+   142→    x: direction < 0 ? 300 : -300,
+   143→    opacity: 0,
+   144→  }),
+   145→};
+   146→
+   147→// ─── Format number with spaces ──────────────────────────────────────
+   148→function formatNumberWithSpaces(value: string): string {
+   149→  const digits = value.replace(/\D/g, "");
+   150→  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+   151→}
+   152→
+   153→// ─── Main Component ─────────────────────────────────────────────────
+   154→export function ComparisonForm() {
+   155→  const {
+   156→    comparisonStep,
+   157→    setComparisonStep,
+   158→    personalInfo,
+   159→    setPersonalInfo,
+   160→    vehicleInfo,
+   161→    setVehicleInfo,
+   162→    coverageNeeds,
+   163→    setCoverageNeeds,
+   164→    setView,
+   165→    setIsComparing,
+   166→    setComparisonResults,
+   167→    isComparing,
+   168→    user,
+   169→  } = useAppStore();
+   170→
+   171→  const { toast } = useToast();
+   172→  const [direction, setDirection] = useState(0);
+   173→  const [errors, setErrors] = useState<Record<string, string>>({});
+   174→
+   175→  // ─── Navigation ──────────────────────────────────────────────────
+   176→  const goNext = useCallback(() => {
+   177→    if (comparisonStep < 3) {
+   178→      setDirection(1);
+   179→      setComparisonStep(comparisonStep + 1);
+   180→      setErrors({});
+   181→    }
+   182→  }, [comparisonStep, setComparisonStep]);
+   183→
+   184→  const goBack = useCallback(() => {
+   185→    if (comparisonStep === 1) {
+   186→      setView("landing");
+   187→      return;
+   188→    }
+   189→    setDirection(-1);
+   190→    setComparisonStep(comparisonStep - 1);
+   191→    setErrors({});
+   192→  }, [comparisonStep, setComparisonStep, setView]);
+   193→
+   194→  // ─── Validation ──────────────────────────────────────────────────
+   195→  const validateStep1 = (): boolean => {
+   196→    const e: Record<string, string> = {};
+   197→    if (!personalInfo.firstName.trim()) e.firstName = "Le prénom est requis";
+   198→    if (!personalInfo.lastName.trim()) e.lastName = "Le nom est requis";
+   199→    if (!personalInfo.email.trim()) e.email = "L'email est requis";
+   200→    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(personalInfo.email))
+   201→      e.email = "Email invalide";
+   202→    if (!personalInfo.phone.trim()) e.phone = "Le téléphone est requis";
+   203→    if (!personalInfo.dateOfBirth) e.dateOfBirth = "La date de naissance est requise";
+   204→    if (!personalInfo.licenseDate)
+   205→      e.licenseDate = "La date du permis est requise";
+   206→    if (personalInfo.hasClaims && personalInfo.claimsCount < 1)
+   207→      e.claimsCount = "Indiquez au moins 1 sinistre";
+   208→    setErrors(e);
+   209→    return Object.keys(e).length === 0;
+   210→  };
+   211→
+   212→  const validateStep2 = (): boolean => {
+   213→    const e: Record<string, string> = {};
+   214→    if (!vehicleInfo.vehicleType)
+   215→      e.vehicleType = "Le type de véhicule est requis";
+   216→    if (!vehicleInfo.brand) e.brand = "La marque est requise";
+   217→    if (!vehicleInfo.model.trim()) e.model = "Le modèle est requis";
+   218→    if (!vehicleInfo.year) e.year = "L'année est requise";
+   219→    if (!vehicleInfo.fiscalPower)
+   220→      e.fiscalPower = "La puissance fiscale est requise";
+   221→    setErrors(e);
+   222→    return Object.keys(e).length === 0;
+   223→  };
+   224→
+   225→  const validateStep3 = (): boolean => {
+   226→    const e: Record<string, string> = {};
+   227→    if (!coverageNeeds.coverageType)
+   228→      e.coverageType = "Choisissez un type de couverture";
+   229→    if (!coverageNeeds.monthlyBudget)
+   230→      e.monthlyBudget = "Indiquez votre budget mensuel";
+   231→    setErrors(e);
+   232→    return Object.keys(e).length === 0;
+   233→  };
+   234→
+   235→  // ─── Submit ──────────────────────────────────────────────────────
+   236→  const handleSubmit = async () => {
+   237→    if (!validateStep1() || !validateStep2() || !validateStep3()) {
+   238→      setComparisonStep(1);
+   239→      setDirection(0);
+   240→      return;
+   241→    }
+   242→
+   243→    setIsComparing(true);
+   244→
+   245→    try {
+   246→      const res = await fetch("/api/compare", {
+   247→        method: "POST",
+   248→        headers: { "Content-Type": "application/json" },
+   249→        body: JSON.stringify({
+   250→          personalInfo,
+   251→          vehicleInfo,
+   252→          coverageNeeds,
+   253→          userId: user.id,
+   254→        }),
+   255→      });
+   256→
+   257→      if (!res.ok) {
+   258→        throw new Error("Erreur lors de la comparaison");
+   259→      }
+   260→
+   261→      const data = await res.json();
+   262→      setComparisonResults(data.results ?? []);
+   263→      setView("results");
+   264→    } catch (err) {
+   265→      toast({
+   266→        title: "Erreur",
+   267→        description:
+   268→          err instanceof Error
+   269→            ? err.message
+   270→            : "Une erreur est survenue. Veuillez réessayer.",
+   271→        variant: "destructive",
+   272→      });
+   273→    } finally {
+   274→      setIsComparing(false);
+   275→    }
+   276→  };
+   277→
+   278→  // ─── Progress ────────────────────────────────────────────────────
+   279→  const progressValue = (comparisonStep / 3) * 100;
+   280→
+   281→  // ─── Render helpers ──────────────────────────────────────────────
+   282→  const FieldError = ({ field }: { field: string }) =>
+   283→    errors[field] ? (
+   284→      <p className="mt-1 text-xs text-destructive">{errors[field]}</p>
+   285→    ) : null;
+   286→
+   287→  // ─── Step 1: Personal Info ───────────────────────────────────────
+   288→  const renderStep1 = () => (
+   289→    <motion.div
+   290→      key="step1"
+   291→      custom={direction}
+   292→      variants={slideVariants}
+   293→      initial="enter"
+   294→      animate="center"
+   295→      exit="exit"
+   296→      transition={{ duration: 0.3, ease: "easeInOut" }}
+   297→      className="space-y-6"
+   298→    >
+   299→      <div>
+   300→        <h2 className="text-2xl font-bold text-foreground">
+   301→          Informations personnelles
+   302→        </h2>
+   303→        <p className="mt-1 text-sm text-muted-foreground">
+   304→          Renseignez vos informations pour personnaliser votre comparaison.
+   305→        </p>
+   306→      </div>
+   307→
+   308→      <div className="grid gap-4 sm:grid-cols-2">
+   309→        {/* Prénom */}
+   310→        <div className="space-y-2">
+   311→          <Label htmlFor="firstName">Prénom</Label>
+   312→          <Input
+   313→            id="firstName"
+   314→            placeholder="Votre prénom"
+   315→            value={personalInfo.firstName}
+   316→            onChange={(e) => setPersonalInfo({ firstName: e.target.value })}
+   317→            aria-invalid={!!errors.firstName}
+   318→            className={errors.firstName ? "border-destructive" : ""}
+   319→          />
+   320→          <FieldError field="firstName" />
+   321→        </div>
+   322→
+   323→        {/* Nom */}
+   324→        <div className="space-y-2">
+   325→          <Label htmlFor="lastName">Nom</Label>
+   326→          <Input
+   327→            id="lastName"
+   328→            placeholder="Votre nom"
+   329→            value={personalInfo.lastName}
+   330→            onChange={(e) => setPersonalInfo({ lastName: e.target.value })}
+   331→            aria-invalid={!!errors.lastName}
+   332→            className={errors.lastName ? "border-destructive" : ""}
+   333→          />
+   334→          <FieldError field="lastName" />
+   335→        </div>
+   336→
+   337→        {/* Email */}
+   338→        <div className="space-y-2">
+   339→          <Label htmlFor="email">Email</Label>
+   340→          <Input
+   341→            id="email"
+   342→            type="email"
+   343→            placeholder="votre@email.com"
+   344→            value={personalInfo.email}
+   345→            onChange={(e) => setPersonalInfo({ email: e.target.value })}
+   346→            aria-invalid={!!errors.email}
+   347→            className={errors.email ? "border-destructive" : ""}
+   348→          />
+   349→          <FieldError field="email" />
+   350→        </div>
+   351→
+   352→        {/* Téléphone */}
+   353→        <div className="space-y-2">
+   354→          <Label htmlFor="phone">Téléphone</Label>
+   355→          <Input
+   356→            id="phone"
+   357→            type="tel"
+   358→            placeholder="+225 07 XX XX XX"
+   359→            value={personalInfo.phone}
+   360→            onChange={(e) => setPersonalInfo({ phone: e.target.value })}
+   361→            aria-invalid={!!errors.phone}
+   362→            className={errors.phone ? "border-destructive" : ""}
+   363→          />
+   364→          <FieldError field="phone" />
+   365→        </div>
+   366→
+   367→        {/* Date de naissance */}
+   368→        <div className="space-y-2">
+   369→          <Label htmlFor="dateOfBirth">Date de naissance</Label>
+   370→          <Input
+   371→            id="dateOfBirth"
+   372→            type="date"
+   373→            value={personalInfo.dateOfBirth}
+   374→            onChange={(e) => setPersonalInfo({ dateOfBirth: e.target.value })}
+   375→            aria-invalid={!!errors.dateOfBirth}
+   376→            className={errors.dateOfBirth ? "border-destructive" : ""}
+   377→          />
+   378→          <FieldError field="dateOfBirth" />
+   379→        </div>
+   380→
+   381→        {/* Date du permis */}
+   382→        <div className="space-y-2">
+   383→          <Label htmlFor="licenseDate">
+   384→            Date d'obtention du permis
+   385→          </Label>
+   386→          <Input
+   387→            id="licenseDate"
+   388→            type="date"
+   389→            value={personalInfo.licenseDate}
+   390→            onChange={(e) => setPersonalInfo({ licenseDate: e.target.value })}
+   391→            aria-invalid={!!errors.licenseDate}
+   392→            className={errors.licenseDate ? "border-destructive" : ""}
+   393→          />
+   394→          <FieldError field="licenseDate" />
+   395→        </div>
+   396→
+   397→        {/* Usage du véhicule */}
+   398→        <div className="space-y-2">
+   399→          <Label>Usage du véhicule</Label>
+   400→          <Select
+   401→            value={personalInfo.usage}
+   402→            onValueChange={(v) =>
+   403→              setPersonalInfo({
+   404→                usage: v as PersonalInfo["usage"],
+   405→              })
+   406→            }
+   407→          >
+   408→            <SelectTrigger className="w-full">
+   409→              <SelectValue placeholder="Sélectionnez" />
+   410→            </SelectTrigger>
+   411→            <SelectContent>
+   412→              {USAGE_OPTIONS.map((opt) => (
+   413→                <SelectItem key={opt.value} value={opt.value}>
+   414→                  {opt.label}
+   415→                </SelectItem>
+   416→              ))}
+   417→            </SelectContent>
+   418→          </Select>
+   419→        </div>
+   420→
+   421→        {/* Kilométrage annuel */}
+   422→        <div className="space-y-2">
+   423→          <Label>Kilométrage annuel</Label>
+   424→          <Select
+   425→            value={personalInfo.annualMileage}
+   426→            onValueChange={(v) => setPersonalInfo({ annualMileage: v })}
+   427→          >
+   428→            <SelectTrigger className="w-full">
+   429→              <SelectValue placeholder="Sélectionnez" />
+   430→            </SelectTrigger>
+   431→            <SelectContent>
+   432→              {MILEAGE_OPTIONS.map((opt) => (
+   433→                <SelectItem key={opt.value} value={opt.value}>
+   434→                  {opt.label}
+   435→                </SelectItem>
+   436→              ))}
+   437→            </SelectContent>
+   438→          </Select>
+   439→        </div>
+   440→      </div>
+   441→
+   442→      {/* Antécédents de sinistres */}
+   443→      <div className="space-y-3 rounded-lg border p-4">
+   444→        <div className="flex items-center justify-between">
+   445→          <div>
+   446→            <Label htmlFor="hasClaims" className="cursor-pointer">
+   447→              Antécédents de sinistres
+   448→            </Label>
+   449→            <p className="text-xs text-muted-foreground">
+   450→              Avez-vous eu des sinistres ces dernières années ?
+   451→            </p>
+   452→          </div>
+   453→          <Switch
+   454→            id="hasClaims"
+   455→            checked={personalInfo.hasClaims}
+   456→            onCheckedChange={(checked) =>
+   457→              setPersonalInfo({ hasClaims: checked, claimsCount: checked ? 1 : 0 })
+   458→            }
+   459→          />
+   460→        </div>
+   461→
+   462→        <AnimatePresence>
+   463→          {personalInfo.hasClaims && (
+   464→            <motion.div
+   465→              initial={{ height: 0, opacity: 0 }}
+   466→              animate={{ height: "auto", opacity: 1 }}
+   467→              exit={{ height: 0, opacity: 0 }}
+   468→              transition={{ duration: 0.2 }}
+   469→              className="overflow-hidden"
+   470→            >
+   471→              <div className="space-y-2 pt-2">
+   472→                <Label htmlFor="claimsCount">Nombre de sinistres</Label>
+   473→                <Input
+   474→                  id="claimsCount"
+   475→                  type="number"
+   476→                  min={1}
+   477→                  max={10}
+   478→                  value={personalInfo.claimsCount || ""}
+   479→                  onChange={(e) =>
+   480→                    setPersonalInfo({
+   481→                      claimsCount: Math.min(
+   482→                        10,
+   483→                        Math.max(0, Number(e.target.value))
+   484→                      ),
+   485→                    })
+   486→                  }
+   487→                  placeholder="1"
+   488→                  aria-invalid={!!errors.claimsCount}
+   489→                  className={errors.claimsCount ? "border-destructive" : ""}
+   490→                />
+   491→                <FieldError field="claimsCount" />
+   492→              </div>
+   493→            </motion.div>
+   494→          )}
+   495→        </AnimatePresence>
+   496→      </div>
+   497→    </motion.div>
+   498→  );
+   499→
+   500→  // ─── Step 2: Vehicle Info ────────────────────────────────────────
+   501→  const renderStep2 = () => (
+   502→    <motion.div
+   503→      key="step2"
+   504→      custom={direction}
+   505→      variants={slideVariants}
+   506→      initial="enter"
+   507→      animate="center"
+   508→      exit="exit"
+   509→      transition={{ duration: 0.3, ease: "easeInOut" }}
+   510→      className="space-y-6"
+   511→    >
+   512→      <div>
+   513→        <h2 className="text-2xl font-bold text-foreground">
+   514→          Informations véhicule
+   515→        </h2>
+   516→        <p className="mt-1 text-sm text-muted-foreground">
+   517→          Décrivez votre véhicule pour obtenir des offres précises.
+   518→        </p>
+   519→      </div>
+   520→
+   521→      <div className="grid gap-4 sm:grid-cols-2">
+   522→        {/* Type de véhicule */}
+   523→        <div className="space-y-2">
+   524→          <Label>Type de véhicule</Label>
+   525→          <Select
+   526→            value={vehicleInfo.vehicleType}
+   527→            onValueChange={(v) => setVehicleInfo({ vehicleType: v })}
+   528→          >
+   529→            <SelectTrigger
+   530→              className={`w-full ${errors.vehicleType ? "border-destructive" : ""}`}
+   531→            >
+   532→              <SelectValue placeholder="Sélectionnez" />
+   533→            </SelectTrigger>
+   534→            <SelectContent>
+   535→              {VEHICLE_TYPES.map((t) => (
+   536→                <SelectItem key={t} value={t}>
+   537→                  {t}
+   538→                </SelectItem>
+   539→              ))}
+   540→            </SelectContent>
+   541→          </Select>
+   542→          <FieldError field="vehicleType" />
+   543→        </div>
+   544→
+   545→        {/* Marque */}
+   546→        <div className="space-y-2">
+   547→          <Label>Marque</Label>
+   548→          <Select
+   549→            value={vehicleInfo.brand}
+   550→            onValueChange={(v) => setVehicleInfo({ brand: v })}
+   551→          >
+   552→            <SelectTrigger
+   553→              className={`w-full ${errors.brand ? "border-destructive" : ""}`}
+   554→            >
+   555→              <SelectValue placeholder="Sélectionnez" />
+   556→            </SelectTrigger>
+   557→            <SelectContent>
+   558→              {BRANDS.map((b) => (
+   559→                <SelectItem key={b} value={b}>
+   560→                  {b}
+   561→                </SelectItem>
+   562→              ))}
+   563→            </SelectContent>
+   564→          </Select>
+   565→          <FieldError field="brand" />
+   566→        </div>
+   567→
+   568→        {/* Modèle */}
+   569→        <div className="space-y-2">
+   570→          <Label htmlFor="model">Modèle</Label>
+   571→          <Input
+   572→            id="model"
+   573→            placeholder="Ex: RAV4, Hilux, Tucson..."
+   574→            value={vehicleInfo.model}
+   575→            onChange={(e) => setVehicleInfo({ model: e.target.value })}
+   576→            aria-invalid={!!errors.model}
+   577→            className={errors.model ? "border-destructive" : ""}
+   578→          />
+   579→          <FieldError field="model" />
+   580→        </div>
+   581→
+   582→        {/* Année */}
+   583→        <div className="space-y-2">
+   584→          <Label>Année de mise en circulation</Label>
+   585→          <Select
+   586→            value={vehicleInfo.year}
+   587→            onValueChange={(v) => setVehicleInfo({ year: v })}
+   588→          >
+   589→            <SelectTrigger
+   590→              className={`w-full ${errors.year ? "border-destructive" : ""}`}
+   591→            >
+   592→              <SelectValue placeholder="Sélectionnez" />
+   593→            </SelectTrigger>
+   594→            <SelectContent>
+   595→              {YEARS.map((y) => (
+   596→                <SelectItem key={y} value={y}>
+   597→                  {y}
+   598→                </SelectItem>
+   599→              ))}
+   600→            </SelectContent>
+   601→          </Select>
+   602→          <FieldError field="year" />
+   603→        </div>
+   604→
+   605→        {/* Puissance fiscale */}
+   606→        <div className="space-y-2">
+   607→          <Label>Puissance fiscale (CV)</Label>
+   608→          <Select
+   609→            value={vehicleInfo.fiscalPower}
+   610→            onValueChange={(v) => setVehicleInfo({ fiscalPower: v })}
+   611→          >
+   612→            <SelectTrigger
+   613→              className={`w-full ${errors.fiscalPower ? "border-destructive" : ""}`}
+   614→            >
+   615→              <SelectValue placeholder="Sélectionnez" />
+   616→            </SelectTrigger>
+   617→            <SelectContent>
+   618→              {FISCAL_POWER_OPTIONS.map((fp) => (
+   619→                <SelectItem key={fp.value} value={fp.value}>
+   620→                  {fp.label}
+   621→                </SelectItem>
+   622→              ))}
+   623→            </SelectContent>
+   624→          </Select>
+   625→          <FieldError field="fiscalPower" />
+   626→        </div>
+   627→
+   628→        {/* Numéro d'immatriculation */}
+   629→        <div className="space-y-2">
+   630→          <Label htmlFor="registration">Numéro d'immatriculation</Label>
+   631→          <Input
+   632→            id="registration"
+   633→            placeholder="AB 1234 CD"
+   634→            value={vehicleInfo.registration}
+   635→            onChange={(e) =>
+   636→              setVehicleInfo({ registration: e.target.value.toUpperCase() })
+   637→            }
+   638→          />
+   639→        </div>
+   640→
+   641→        {/* Valeur à neuf */}
+   642→        <div className="space-y-2">
+   643→          <Label htmlFor="newValue">Valeur à neuf (FCFA)</Label>
+   644→          <Input
+   645→            id="newValue"
+   646→            type="text"
+   647→            inputMode="numeric"
+   648→            placeholder="Ex: 15 000 000"
+   649→            value={formatNumberWithSpaces(vehicleInfo.newValue)}
+   650→            onChange={(e) =>
+   651→              setVehicleInfo({
+   652→                newValue: e.target.value.replace(/\D/g, ""),
+   653→              })
+   654→            }
+   655→          />
+   656→        </div>
+   657→
+   658→        {/* Valeur vénale */}
+   659→        <div className="space-y-2">
+   660→          <Label htmlFor="currentValue">Valeur vénale actuelle (FCFA)</Label>
+   661→          <Input
+   662→            id="currentValue"
+   663→            type="number"
+   664→            placeholder="Ex: 10 000 000"
+   665→            value={vehicleInfo.currentValue}
+   666→            onChange={(e) => setVehicleInfo({ currentValue: e.target.value })}
+   667→          />
+   668→        </div>
+   669→      </div>
+   670→
+   671→      {/* Véhicule importé */}
+   672→      <div className="flex items-center justify-between rounded-lg border p-4">
+   673→        <div>
+   674→          <Label htmlFor="isImported" className="cursor-pointer">
+   675→            Véhicule importé
+   676→          </Label>
+   677→          <p className="text-xs text-muted-foreground">
+   678→            Votre véhicule a-t-il été importé ?
+   679→          </p>
+   680→        </div>
+   681→        <Switch
+   682→          id="isImported"
+   683→          checked={vehicleInfo.isImported}
+   684→          onCheckedChange={(checked) =>
+   685→            setVehicleInfo({ isImported: checked })
+   686→          }
+   687→        />
+   688→      </div>
+   689→    </motion.div>
+   690→  );
+   691→
+   692→  // ─── Step 3: Coverage Needs ──────────────────────────────────────
+   693→  const coverageCards = [
+   694→    {
+   695→      value: "tiers" as const,
+   696→      title: "Tiers Simple",
+   697→      description:
+   698→        "Couverture de base pour les dommages causés aux tiers. Protection minimale obligatoire.",
+   699→      price: "à partir de 10 000 FCFA/mois",
+   700→      icon: Shield,
+   701→      color: "text-muted-foreground",
+   702→    },
+   703→    {
+   704→      value: "tiers_plus" as const,
+   705→      title: "Tiers Étendu (Tiers+)",
+   706→      description:
+   707→        "Couverture tierce élargie incluant vol, incendie et bris de glace. Bon rapport qualité-prix.",
+   708→      price: "à partir de 25 000 FCFA/mois",
+   709→      icon: Zap,
+   710→      recommended: true,
+   711→      color: "text-brand",
+   712→    },
+   713→    {
+   714→      value: "tous_risques" as const,
+   715→      title: "Tous Risques",
+   716→      description:
+   717→        "Protection complète couvrant tous les sinistres y compris les dommages à votre véhicule.",
+   718→      price: "à partir de 55 000 FCFA/mois",
+   719→      icon: Star,
+   720→      color: "text-foreground",
+   721→    },
+   722→  ];
+   723→
+   724→  const renderStep3 = () => (
+   725→    <motion.div
+   726→      key="step3"
+   727→      custom={direction}
+   728→      variants={slideVariants}
+   729→      initial="enter"
+   730→      animate="center"
+   731→      exit="exit"
+   732→      transition={{ duration: 0.3, ease: "easeInOut" }}
+   733→      className="space-y-6"
+   734→    >
+   735→      <div>
+   736→        <h2 className="text-2xl font-bold text-foreground">
+   737→          Besoins en assurance
+   738→        </h2>
+   739→        <p className="mt-1 text-sm text-muted-foreground">
+   740→          Choisissez votre couverture et vos options préférées.
+   741→        </p>
+   742→      </div>
+   743→
+   744→      {/* Coverage type cards */}
+   745→      <div className="space-y-2">
+   746→        <Label className="text-sm font-medium">Type de couverture</Label>
+   747→        <RadioGroup
+   748→          value={coverageNeeds.coverageType}
+   749→          onValueChange={(v) =>
+   750→            setCoverageNeeds({
+   751→              coverageType: v as CoverageNeeds["coverageType"],
+   752→            })
+   753→          }
+   754→          className="grid gap-3 sm:grid-cols-3"
+   755→        >
+   756→          {coverageCards.map((card) => {
+   757→            const Icon = card.icon;
+   758→            const isSelected = coverageNeeds.coverageType === card.value;
+   759→            return (
+   760→              <motion.label
+   761→                key={card.value}
+   762→                htmlFor={`coverage-${card.value}`}
+   763→                className="cursor-pointer"
+   764→                whileHover={{ scale: 1.01 }}
+   765→                whileTap={{ scale: 0.99 }}
+   766→              >
+   767→                <Card
+   768→                  className={`relative overflow-hidden py-0 gap-0 transition-all duration-200 ${
+   769→                    isSelected
+   770→                      ? "border-2 border-brand shadow-md shadow-brand/10 bg-brand-light/30"
+   771→                      : "border hover:border-muted-foreground/30"
+   772→                  } ${card.recommended && !isSelected ? "border-brand/40" : ""}`}
+   773→                >
+   774→                  {card.recommended && (
+   775→                    <div className="absolute top-2 right-2 z-10">
+   776→                      <Badge className="bg-brand text-brand-foreground border-0 text-[10px] px-1.5">
+   777→                        <Sparkles className="size-3 mr-0.5" />
+   778→                        Recommandé
+   779→                      </Badge>
+   780→                    </div>
+   781→                  )}
+   782→                  <CardContent className="p-4 space-y-3">
+   783→                    <div className="flex items-start gap-3">
+   784→                      <RadioGroupItem
+   785→                        value={card.value}
+   786→                        id={`coverage-${card.value}`}
+   787→                        className="mt-0.5"
+   788→                      />
+   789→                      <div className="flex-1 min-w-0">
+   790→                        <div className="flex items-center gap-2">
+   791→                          <Icon
+   792→                            className={`size-4 ${isSelected ? "text-brand" : card.color}`}
+   793→                          />
+   794→                          <span
+   795→                            className={`font-semibold text-sm ${isSelected ? "text-brand" : "text-foreground"}`}
+   796→                          >
+   797→                            {card.title}
+   798→                          </span>
+   799→                        </div>
+   800→                        <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
+   801→                          {card.description}
+   802→                        </p>
+   803→                        <p
+   804→                          className={`mt-2 text-xs font-bold ${isSelected ? "text-brand" : "text-muted-foreground"}`}
+   805→                        >
+   806→                          {card.price}
+   807→                        </p>
+   808→                      </div>
+   809→                    </div>
+   810→                  </CardContent>
+   811→                </Card>
+   812→              </motion.label>
+   813→            );
+   814→          })}
+   815→        </RadioGroup>
+   816→        <FieldError field="coverageType" />
+   817→      </div>
+   818→
+   819→      {/* Options supplémentaires */}
+   820→      <div className="space-y-3">
+   821→        <Label className="text-sm font-medium">Options supplémentaires</Label>
+   822→        <div className="grid gap-3 sm:grid-cols-2">
+   823→          {COVERAGE_OPTIONS.map((opt) => {
+   824→            const isChecked = coverageNeeds.options.includes(opt.value);
+   825→            return (
+   826→              <label
+   827→                key={opt.value}
+   828→                htmlFor={`opt-${opt.value}`}
+   829→                className="flex items-start gap-3 rounded-lg border p-3 cursor-pointer transition-colors hover:bg-accent/50"
+   830→              >
+   831→                <Checkbox
+   832→                  id={`opt-${opt.value}`}
+   833→                  checked={isChecked}
+   834→                  onCheckedChange={(checked) => {
+   835→                    const current = coverageNeeds.options;
+   836→                    if (checked) {
+   837→                      setCoverageNeeds({
+   838→                        options: [...current, opt.value],
+   839→                      });
+   840→                    } else {
+   841→                      setCoverageNeeds({
+   842→                        options: current.filter((o) => o !== opt.value),
+   843→                      });
+   844→                    }
+   845→                  }}
+   846→                  className="mt-0.5 data-[state=checked]:bg-brand data-[state=checked]:border-brand"
+   847→                />
+   848→                <span className="text-sm leading-snug">{opt.label}</span>
+   849→              </label>
+   850→            );
+   851→          })}
+   852→        </div>
+   853→      </div>
+   854→
+   855→      {/* Budget mensuel */}
+   856→      <div className="space-y-2">
+   857→        <Label>Budget mensuel souhaité</Label>
+   858→        <Select
+   859→          value={coverageNeeds.monthlyBudget}
+   860→          onValueChange={(v) => setCoverageNeeds({ monthlyBudget: v })}
+   861→        >
+   862→          <SelectTrigger
+   863→            className={`w-full ${errors.monthlyBudget ? "border-destructive" : ""}`}
+   864→          >
+   865→            <SelectValue placeholder="Sélectionnez" />
+   866→          </SelectTrigger>
+   867→          <SelectContent>
+   868→            {BUDGET_OPTIONS.map((b) => (
+   869→              <SelectItem key={b.value} value={b.value}>
+   870→                {b.label}
+   871→              </SelectItem>
+   872→            ))}
+   873→          </SelectContent>
+   874→        </Select>
+   875→        <FieldError field="monthlyBudget" />
+   876→      </div>
+   877→
+   878→      {/* Niveau de franchise */}
+   879→      <div className="space-y-3">
+   880→        <Label className="text-sm font-medium">Niveau de franchise</Label>
+   881→        <RadioGroup
+   882→          value={coverageNeeds.deductibleLevel}
+   883→          onValueChange={(v) =>
+   884→            setCoverageNeeds({
+   885→              deductibleLevel: v as CoverageNeeds["deductibleLevel"],
+   886→            })
+   887→          }
+   888→          className="grid gap-3 sm:grid-cols-3"
+   889→        >
+   890→          {DEDUCTIBLE_OPTIONS.map((opt) => {
+   891→            const isSelected = coverageNeeds.deductibleLevel === opt.value;
+   892→            return (
+   893→              <label
+   894→                key={opt.value}
+   895→                htmlFor={`deductible-${opt.value}`}
+   896→                className="cursor-pointer"
+   897→              >
+   898→                <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
+   899→                  <Card
+   900→                    className={`py-0 gap-0 transition-all duration-200 ${
+   901→                      isSelected
+   902→                        ? "border-2 border-brand shadow-md shadow-brand/10 bg-brand-light/30"
+   903→                        : "border hover:border-muted-foreground/30"
+   904→                    }`}
+   905→                  >
+   906→                    <CardContent className="p-4 space-y-2">
+   907→                      <div className="flex items-center gap-2">
+   908→                        <RadioGroupItem
+   909→                          value={opt.value}
+   910→                          id={`deductible-${opt.value}`}
+   911→                        />
+   912→                        <span
+   913→                          className={`text-sm font-medium ${isSelected ? "text-brand" : "text-foreground"}`}
+   914→                        >
+   915→                          {opt.label}
+   916→                        </span>
+   917→                      </div>
+   918→                      <p className="text-xs text-muted-foreground pl-6">
+   919→                        {opt.desc}
+   920→                      </p>
+   921→                    </CardContent>
+   922→                  </Card>
+   923→                </motion.div>
+   924→              </label>
+   925→            );
+   926→          })}
+   927→        </RadioGroup>
+   928→      </div>
+   929→    </motion.div>
+   930→  );
+   931→
+   932→  // ─── Main render ─────────────────────────────────────────────────
+   933→  return (
+   934→    <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
+   935→      {/* Progress bar */}
+   936→      <div className="mb-8">
+   937→        <div className="mb-4 flex items-center justify-between">
+   938→          {STEPS.map((step, idx) => {
+   939→            const Icon = step.icon;
+   940→            const isActive = comparisonStep === step.id;
+   941→            const isCompleted = comparisonStep > step.id;
+   942→            return (
+   943→              <div key={step.id} className="flex items-center gap-2">
+   944→                <div className="flex items-center gap-2">
+   945→                  <motion.div
+   946→                    animate={{
+   947→                      scale: isActive ? 1.1 : 1,
+   948→                      backgroundColor: isActive
+   949→                        ? "var(--color-brand)"
+   950→                        : isCompleted
+   951→                          ? "var(--color-brand)"
+   952→                          : "var(--color-muted)",
+   953→                      color: isActive
+   954→                        ? "var(--color-brand-foreground)"
+   955→                        : isCompleted
+   956→                          ? "var(--color-brand-foreground)"
+   957→                          : "var(--color-muted-foreground)",
+   958→                    }}
+   959→                    className="flex size-9 items-center justify-center rounded-full text-sm font-bold transition-colors"
+   960→                  >
+   961→                    {isCompleted ? (
+   962→                      <Check className="size-4" />
+   963→                    ) : (
+   964→                      <Icon className="size-4" />
+   965→                    )}
+   966→                  </motion.div>
+   967→                  <span
+   968→                    className={`hidden text-sm font-medium sm:inline ${
+   969→                      isActive
+   970→                        ? "text-brand"
+   971→                        : isCompleted
+   972→                          ? "text-foreground"
+   973→                          : "text-muted-foreground"
+   974→                    }`}
+   975→                  >
+   976→                    {idx + 1}. {step.label}
+   977→                  </span>
+   978→                </div>
+   979→                {idx < STEPS.length - 1 && (
+   980→                  <div
+   981→                    className={`mx-2 h-0.5 w-8 sm:w-12 transition-colors ${
+   982→                      comparisonStep > step.id ? "bg-brand" : "bg-muted"
+   983→                    }`}
+   984→                  />
+   985→                )}
+   986→              </div>
+   987→            );
+   988→          })}
+   989→        </div>
+   990→        <Progress
+   991→          value={progressValue}
+   992→          className="h-1.5 [&>[data-slot=progress-indicator]]:bg-brand"
+   993→        />
+   994→      </div>
+   995→
+   996→      {/* Step content */}
+   997→      <div className="relative min-h-[400px]">
+   998→        <AnimatePresence mode="wait" custom={direction}>
+   999→          {comparisonStep === 1 && renderStep1()}
+  1000→          {comparisonStep === 2 && renderStep2()}
+  1001→          {comparisonStep === 3 && renderStep3()}
+  1002→        </AnimatePresence>
+  1003→      </div>
+  1004→
+  1005→      {/* Navigation buttons */}
+  1006→      <div className="mt-8 flex items-center justify-between gap-4">
+  1007→        <Button
+  1008→          variant="outline"
+  1009→          onClick={goBack}
+  1010→          className="gap-2"
+  1011→          disabled={isComparing}
+  1012→        >
+  1013→          <ChevronLeft className="size-4" />
+  1014→          {comparisonStep === 1 ? "Retour" : "Retour"}
+  1015→        </Button>
+  1016→
+  1017→        {comparisonStep < 3 ? (
+  1018→          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+  1019→            <Button
+  1020→              onClick={() => {
+  1021→                if (comparisonStep === 1) {
+  1022→                  if (validateStep1()) goNext();
+  1023→                } else if (comparisonStep === 2) {
+  1024→                  if (validateStep2()) goNext();
+  1025→                }
+  1026→              }}
+  1027→              className="gap-2 bg-brand text-brand-foreground hover:bg-brand-dark"
+  1028→            >
+  1029→              Suivant
+  1030→              <ChevronRight className="size-4" />
+  1031→            </Button>
+  1032→          </motion.div>
+  1033→        ) : (
+  1034→          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+  1035→            <Button
+  1036→              onClick={handleSubmit}
+  1037→              disabled={isComparing}
+  1038→              className="gap-2 bg-brand text-brand-foreground hover:bg-brand-dark min-w-[160px]"
+  1039→              size="lg"
+  1040→            >
+  1041→              {isComparing ? (
+  1042→                <>
+  1043→                  <Loader2 className="size-4 animate-spin" />
+  1044→                  Comparaison...
+  1045→                </>
+  1046→              ) : (
+  1047→                <>
+  1048→                  <ArrowLeftRight className="size-4" />
+  1049→                  Comparer
+  1050→                </>
+  1051→              )}
+  1052→            </Button>
+  1053→          </motion.div>
+  1054→        )}
+  1055→      </div>
+  1056→    </div>
+  1057→  );
+  1058→}

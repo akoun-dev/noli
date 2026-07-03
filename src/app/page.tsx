@@ -5,19 +5,19 @@ import { useAppStore } from "@/store/app-store";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import LandingPage from "@/components/landing/landing-page";
+import OffersPage from "@/components/offers/offers-page";
 import { ComparisonForm } from "@/components/comparison/comparison-form";
 import { ResultsPage } from "@/components/results/results-page";
 import { AuthPages } from "@/components/auth/auth-pages";
-import { DashboardPage } from "@/components/dashboard/dashboard-page";
-import { ProfilePage } from "@/components/profile/profile-page";
 import { AboutPage } from "@/components/about/about-page";
 import { ContactPage } from "@/components/contact/contact-page";
 import { AdminPage } from "@/components/admin/admin-page";
-import { InsurerPage } from "@/components/insurer/insurer-page";
-import { MyQuotesPage } from "@/components/user/my-quotes-page";
+import { UserLayout } from "@/components/user/user-layout";
+import { InsurerLayout } from "@/components/insurer/insurer-layout";
 import { AnimatePresence, motion } from "framer-motion";
 
-const isFullPage = (view: string) => view === "admin" || view === "insurer";
+const isFullPage = (view: string) =>
+  view === "admin" || view === "user-dashboard" || view === "insurer-dashboard" || view === "login" || view === "register" || view === "forgot";
 
 export default function Home() {
   const currentView = useAppStore((s) => s.currentView);
@@ -30,6 +30,8 @@ export default function Home() {
     switch (currentView) {
       case "landing":
         return <LandingPage />;
+      case "offers":
+        return <OffersPage />;
       case "compare":
         return (
           <div className="py-8 md:py-12">
@@ -38,28 +40,16 @@ export default function Home() {
         );
       case "results":
         return <ResultsPage />;
-      case "dashboard":
-        return (
-          <div className="py-8 md:py-12">
-            <DashboardPage />
-          </div>
-        );
-      case "profile":
-        return (
-          <div className="py-8 md:py-12">
-            <ProfilePage />
-          </div>
-        );
       case "about":
         return <AboutPage />;
       case "contact":
         return <ContactPage />;
       case "admin":
         return <AdminPage />;
-      case "insurer":
-        return <InsurerPage />;
-      case "my-quotes":
-        return <MyQuotesPage />;
+      case "user-dashboard":
+        return <UserLayout />;
+      case "insurer-dashboard":
+        return <InsurerLayout />;
       case "login":
       case "register":
       case "forgot":
@@ -87,7 +77,7 @@ export default function Home() {
           </motion.div>
         </AnimatePresence>
       </main>
-      {!fullPage && <Footer />}
+      {!fullPage && <div className="hidden md:block"><Footer /></div>}
     </div>
   );
 }

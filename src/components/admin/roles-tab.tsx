@@ -280,21 +280,25 @@ export function RolesTab() {
           </div>
           {showActions && (
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                className="text-xs text-muted-foreground hover:text-foreground"
+              <span
+                role="button"
+                tabIndex={0}
+                className="text-xs text-muted-foreground hover:text-foreground cursor-pointer"
                 onClick={(e) => { e.stopPropagation(); onToggleAll(true); }}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); onToggleAll(true); } }}
               >
                 Tout
-              </button>
+              </span>
               <span className="text-muted-foreground">/</span>
-              <button
-                type="button"
-                className="text-xs text-muted-foreground hover:text-foreground"
+              <span
+                role="button"
+                tabIndex={0}
+                className="text-xs text-muted-foreground hover:text-foreground cursor-pointer"
                 onClick={(e) => { e.stopPropagation(); onToggleAll(false); }}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); onToggleAll(false); } }}
               >
                 Aucun
-              </button>
+              </span>
             </div>
           )}
         </CollapsibleTrigger>

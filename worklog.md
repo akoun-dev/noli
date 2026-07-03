@@ -340,263 +340,301 @@ Stage Summary:
 - Disabled download buttons have tooltip feedback
 - Schedule config saves correctly as JSON to SystemSetting table
 - No new lint errors introduced
+---
+Task ID: 3
+Agent: full-stack-developer
+Task: Build Offers browsing page
 
+Work Log:
+- Created /src/components/offers/offers-page.tsx
+- Full offer catalog with filtering by category, insurer, contract type
+- Sorting by price and name
+- Responsive grid layout (1/2/3 columns)
+- Loading and empty states
+- "Demander un devis" button linking to comparison form
+- Hero banner with decorative blur elements
+- Filter bar with 4 selects and results count
+- Contract type badge colors: muted (Tiers), secondary (Tiers+), accent (Tous Risques)
+- Insurer logo or initial badge fallback
+- FCFA currency formatting with Intl.NumberFormat
+- Framer Motion animations for cards and layout transitions
+- Error state with retry button
+
+Stage Summary:
+- Offers page created with real API integration
+---
+Task ID: 4
+Agent: full-stack-developer
+Task: Build user profile page
+
+Work Log:
+- Created /src/components/user/user-profile-page.tsx
+- Profile info display with avatar, personal info, membership date
+- Edit personal info form with save to API
+- Change password form with validation
+- Redirects to login if not authenticated
+- Updates store on profile save
+
+Stage Summary:
+- User profile page created with full CRUD to API
 ---
 Task ID: 1
 Agent: main
-Task: Fix hydration mismatch error in header.tsx theme toggle
+Task: Build complete user/customer interface (interface utilisateur)
 
 Work Log:
-- Verified the existing fix using `useSyncExternalStore` with server snapshot `false` and client snapshot `true`
-- The desktop theme button is wrapped in `{mounted && (...)}` preventing server render
-- The mobile theme toggle also uses `mounted` guard
-- Confirmed no hydration errors in browser console
+- Created /api/offers/route.ts - Public offers listing with filtering by category, insurer, contractType, sorting
+- Created /api/user/profile/route.ts - GET user profile, PUT update profile and change password
+- Updated /api/quotes/route.ts - Enhanced to include insurer and category data in quote responses
+- Updated src/types/index.ts - Added "offers" and "profile" to AppView type
+- Created /src/components/offers/offers-page.tsx - Full insurance catalog with hero, filters, responsive grid, loading/empty states
+- Created /src/components/user/user-profile-page.tsx - Profile display, edit form, password change form
+- Rewrote /src/components/dashboard/dashboard-page.tsx - Connected to real DB for quotes and profile, added quick actions, proper loading states
+- Updated /src/components/layout/header.tsx - Added OFFRES nav, TABLEAU DE BORD for logged-in users, user dropdown with profile/offers/logout
+- Updated /src/app/page.tsx - Added routing for offers and profile views
 
 Stage Summary:
-- Hydration fix was already in place and working correctly
-- No code changes needed
+- User interface complete with 4 main user flows: Offers browsing, Comparison wizard, Results/Devis, Dashboard/Profile
+- All views connected to real database (Prisma/SQLite), no mocks
+- Full navigation: Landing → Offers → Compare → Results → Dashboard → Profile
+- Header adapts when logged in (shows TABLEAU DE BORD, user dropdown)
+- All API calls verified 200 OK, no errors in dev log
+- Verified via Agent Browser: registration, login, offers page, filtering, dashboard, profile page, dropdown menu
+---
+Task ID: 2-a
+Agent: Main Agent
+Task: Build complete user dashboard interface (UserLayout + 10 tabs)
+
+Work Log:
+- Created `/src/components/user/user-layout.tsx` — Full-page layout following admin-page.tsx pattern
+  - Sidebar with 10 items (Tableau de bord, Mes Devis, Mes Contrats, Mes Documents, Mes Avis, Paiements, Historique, Notifications, Mon Profil, Paramètres)
+  - Active sidebar items use `bg-[#B9E54D] text-black` brand colors
+  - Mobile: Sheet-based hamburger menu, sticky top bar with NOLI branding
+  - Desktop: 64px sidebar, hidden on mobile
+  - Header bar with: dynamic page title, "Client" badge (lime pill), notification bell, theme toggle (next-themes Sun/Moon), avatar dropdown menu
+  - Avatar dropdown: Mon Profil, Mes Devis, Mes Contrats, Paramètres, Déconnexion
+  - Breadcrumb: "Accueil > {current tab label}", clicking "Accueil" goes to landing
+  - Logout clears user state and redirects to landing
+- Created 10 tab components in `/src/components/user/tabs/`:
+
+  1. `user-dashboard-tab.tsx` — Greeting with user first name, 4 stat cards (Devis en cours, Contrats actifs, Notifications, Économies réalisées), recent activity (last 3 quotes as cards with status badges), quick actions (Nouvelle comparaison → compare view, Parcourir les offres → offers view, Voir mes devis → quotes tab). Fetches quotes from `/api/quotes?userId=XXX`.
+
+  2. `user-quotes-tab.tsx` — Fetches quotes from API, filter tabs (Tous/Brouillons/En attente/Approuvés/Rejetés) with counts, status badges with colors (DRAFT=gray, PENDING=yellow, APPROVED=green, REJECTED=red), cards showing reference, offer/category name, insurer, price in FCFA, date, status. Empty state with contextual message per filter. Loading skeleton state.
+
+  3. `user-contracts-tab.tsx` — Placeholder: "Aucun contrat souscrit pour le moment" with Shield icon, explanation text, CTA "Demander un devis" linking to compare view.
+
+  4. `user-documents-tab.tsx` — Placeholder: "Aucun document disponible" with FolderOpen icon, plus 3 info cards showing document types (Attestations, CGV, Quittances).
+
+  5. `user-reviews-tab.tsx` — Placeholder: "Vous n'avez pas encore laissé d'avis" with explanation, plus example review card with star rating display (non-functional).
+
+  6. `user-payments-tab.tsx` — Placeholder: "Aucun paiement enregistré", 4 payment method cards (Mobile Money, Wave, Orange Money, Carte bancaire), upcoming payments empty section.
+
+  7. `user-history-tab.tsx` — Placeholder: "Aucun historique de comparaison" with History icon and explanation.
+
+  8. `user-notifications-tab.tsx` — Placeholder: "Aucune notification" with Bell icon, 4 notification type cards (Alertes devis, Rappels échéance, Informations compte, Alertes importantes).
+
+  9. `user-profile-tab.tsx` — Full profile management: fetches from `/api/user/profile?userId=XXX`, 3-column layout (profile card with avatar/initials/info + 2-column forms), personal info edit form (firstName, lastName, phone, email disabled), password change form with show/hide toggles and validation, loading skeleton, saves via `PUT /api/user/profile`.
+
+  10. `user-settings-tab.tsx` — Account settings (email notification toggle, language Français, theme picker with Sun/Moon/Monitor buttons synced with next-themes), security section (change password form), danger zone (delete account with AlertDialog, non-functional with toast message).
+
+- All text in French, FCFA formatting with Intl.NumberFormat('fr-FR')
+- All components use `"use client"`, named exports, `bg-card` for dark mode, `rounded-xl border` cards
+- Framer Motion entrance animations on all tabs
+- Responsive: sidebar hidden on mobile, Sheet trigger in header, responsive grids
+- Lint clean (only pre-existing launch-server.js errors)
+- Dev log: only pre-existing insurer-layout module-not-found error (not related to this task)
+
+Stage Summary:
+- Complete user dashboard UI with 10 tabs following admin-page.tsx pattern
+- Full-page layout with escamotable sidebar, header bar with theme toggle and avatar dropdown
+- Dashboard tab fetches real data (quotes count, recent activity)
+- Quotes tab with status filtering and colored badges
+- Profile tab with full edit form and password change
+- Settings tab with theme picker, notification toggle, password change, delete account
+- 7 placeholder tabs (contracts, documents, reviews, payments, history, notifications) with contextual info
+- All text in French, brand colors (black + lime #B9E54D), FCFA currency
+---
+Task ID: 2-b
+Agent: Main Agent
+Task: Build ASSUREUR (Insurer) interface for NOLI Assurance
+
+Work Log:
+- Created `/src/components/insurer/insurer-layout.tsx` — Full-page layout with sidebar (9 items), header bar (mobile hamburger, page title, Assureur badge, notification bell with count, theme toggle, user avatar dropdown), breadcrumb (Accueil > Espace Assureur > {tab label}), and tab content area. Follows exact same pattern as admin-page.tsx and user-layout.tsx. Uses `bg-[#B9E54D] text-black` for active sidebar state.
+- Created `/src/components/insurer/tabs/insurer-dashboard-tab.tsx` — KPI grid (3x2): Devis reçus 7j/30j, Taux de transformation, Contrats actifs, Chiffre d'affaires, Sinistres en cours. Each card has trend indicator. Recent quotes table (last 5) fetched from `/api/quotes`.
+- Created `/src/components/insurer/tabs/insurer-clients-tab.tsx` — Search bar + filter button (disabled). Table with column headers (Nom, Email, Téléphone, Devis, Contrats, Date inscription). Empty state with Users icon explaining clients appear from quote requests.
+- Created `/src/components/insurer/tabs/insurer-contracts-tab.tsx` — Info banner explaining contract flow. Table header preview (Référence, Client, Offre, Montant, Statut, Date). Empty state with Shield icon.
+- Created `/src/components/insurer/tabs/insurer-claims-tab.tsx` — Amber info banner explaining claims process. Table header preview (Référence, Client, Contrat, Date, Statut, Montant). Empty state with AlertTriangle icon.
+- Created `/src/components/insurer/tabs/insurer-offers-tab.tsx` — Fetches from `/api/offers`, displays in responsive grid (1/2/3 cols). Each card: name, category, price range (FCFA), contract type badge, coverage amount, active badge, description, features list (max 4 with tooltip). "Créer une offre" and "Importer CSV" buttons (disabled placeholders). Loading skeleton grid, error state, empty state.
+- Created `/src/components/insurer/tabs/insurer-quotes-tab.tsx` — Fetches from `/api/quotes`. Status filter tabs: Tous, Brouillons, En attente, Approuvés, Refusés. Table with colored status badges (DRAFT=gray, PENDING=amber, APPROVED=green, REJECTED=red). Action buttons for PENDING status: Accepter/Refuser/Contre-proposition (disabled).
+- Created `/src/components/insurer/tabs/insurer-analytics-tab.tsx` — 4 metric cards (Total devis, Taux d'acceptation, Revenu moyen/devi, Clients uniques). 3 chart placeholder boxes with labels: Évolution des devis, Répartition par catégorie, Performance par offre.
+- Created `/src/components/insurer/tabs/insurer-guarantees-tab.tsx` — 5 info cards for guarantee categories (RC, Incendie, Vol, DTA, Bris de glace) with colored icons. Table header preview (Code, Nom, Catégorie, Type de calcul, Obligatoire, Statut). "Ajouter une garantie" button (disabled).
+- Created `/src/components/insurer/tabs/insurer-settings-tab.tsx` — Company info section (name, email, phone, website). Profile section (name, email, password change). Preferences (dark mode toggle via next-themes, language Français). Team section (placeholder). Fetches profile from `/api/user/profile`.
+- Notifications tab removed from sidebar per spec (doc says real-time alerts system handles this).
+- Fixed lint errors: removed synchronous `setLoading(true)` calls inside useEffect bodies, removed unused `Loader2` import.
+- All text in French, currency formatted as FCFA with `Intl.NumberFormat('fr-FR')`.
+- Responsive: sidebar hidden on mobile with Sheet trigger, grid layouts adapt from 1 to 3 columns.
+
+Stage Summary:
+- Complete insurer dashboard with 9 sidebar tabs, all fully functional as UI
+- Layout follows exact admin/user pattern: sidebar + header + breadcrumb + content
+- Real API integration for offers (`/api/offers`) and quotes (`/api/quotes`)
+- Placeholder data for KPIs and analytics (realistic FCFA numbers)
+- Status system with 4 states and colored badges across quotes/contracts
+- Lint passes (only pre-existing launch-server.js warnings remain)
+- Dev server compiles successfully (200 on GET /)
 
 ---
-Task ID: 2
-Agent: main
-Task: Create API endpoint for coverage categories (Step 3 dynamic categories)
+Task ID: 2-a
+Agent: full-stack-developer (subagent)
+Task: Build User interface with layout + 10 tab pages
 
 Work Log:
-- Created `/api/coverage-categories/route.ts` — public GET endpoint
-- Returns active coverage categories from DB with id, code, name, description, displayOrder
+- Created `src/components/user/user-layout.tsx` with collapsible sidebar (10 items), header bar (dynamic title, "Client" badge, notification bell, theme toggle, avatar dropdown), breadcrumb
+- Created 10 tab components in `src/components/user/tabs/`:
+  - user-dashboard-tab.tsx: Greeting, stat cards, recent activity, quick actions (fetches from API)
+  - user-quotes-tab.tsx: Quote list with status filter tabs and colored badges
+  - user-contracts-tab.tsx: Placeholder with CTA
+  - user-documents-tab.tsx: Document type info cards
+  - user-reviews-tab.tsx: Star rating display placeholder
+  - user-payments-tab.tsx: Payment methods cards placeholder
+  - user-history-tab.tsx: Empty state placeholder
+  - user-notifications-tab.tsx: Notification types info cards
+  - user-profile-tab.tsx: Live profile display + edit + password change (fetches from API)
+  - user-settings-tab.tsx: Theme, notifications, password change, delete account
 
 Stage Summary:
-- New file: `src/app/api/coverage-categories/route.ts`
-- Categories fetched: 12 (RC, DR, IC, IPT, Incendie, Vol, BDG, TCM, TCL, Assistance, Avance Recours, Accessoires)
+- All 10 user tabs functional, French text, FCFA currency, brand colors
+- Responsive sidebar (Sheet on mobile)
+- API integration for dashboard stats, quotes, profile
+
+---
+Task ID: 2-b
+Agent: full-stack-developer (subagent)
+Task: Build Assureur interface with layout + 9 tab pages
+
+Work Log:
+- Created `src/components/insurer/insurer-layout.tsx` with 9-item sidebar, header bar ("Assureur" badge), breadcrumb
+- Created 9 tab components in `src/components/insurer/tabs/`:
+  - insurer-dashboard-tab.tsx: 6 KPI cards, recent quotes table
+  - insurer-clients-tab.tsx: Search + table headers placeholder
+  - insurer-contracts-tab.tsx: Info banner + table headers placeholder
+  - insurer-claims-tab.tsx: Amber info banner + table headers placeholder
+  - insurer-offers-tab.tsx: Live API offers grid with features
+  - insurer-quotes-tab.tsx: 5 status filter tabs, colored badges, action buttons
+  - insurer-analytics-tab.tsx: 4 metric cards, 3 chart placeholders
+  - insurer-guarantees-tab.tsx: 5 guarantee info cards, table headers
+  - insurer-settings-tab.tsx: Company info, profile, theme, team placeholder
+
+Stage Summary:
+- All 9 insurer tabs functional, same admin-pattern layout
+- Offers and quotes tabs fetch real data from API
+- Responsive with mobile Sheet sidebar
 
 ---
 Task ID: 3
-Agent: main
-Task: Update comparison-form.tsx Step 3 to use dynamic DB categories
+Agent: Main Agent
+Task: Foundation, integration, API fixes, browser verification
 
 Work Log:
-- Removed hardcoded `GUARANTEE_CATEGORIES` constant (8 items)
-- Added `useEffect` to fetch categories from `/api/coverage-categories` on mount
-- Added `CATEGORY_ICON_MAP` mapping DB codes to Lucide icons
-- Step 3 now shows all 12 DB categories dynamically with loading state
-- Selection uses DB codes (e.g., "RESPONSABILITE_CIVILE") instead of old frontend IDs
+- Updated AppView type to add "user-dashboard" and "insurer-dashboard"
+- Added userTab/setUserTab and insurerTab/setInsurerTab to Zustand store
+- Updated page.tsx to render UserLayout and InsurerLayout as full pages
+- Updated all auth redirects (auth-pages.tsx, auth-modals.tsx) for role-based navigation: ADMIN→admin, INSURER→insurer-dashboard, USER→user-dashboard
+- Updated header dropdown and mobile menu to navigate to correct dashboard by role
+- Removed TABLEAU DE BORD from public nav (users have their own sidebar)
+- Fixed /api/quotes to support ?all=true parameter (for insurer access) and include user data
+- Fixed insurer tabs to use ?all=true API parameter
+- Fixed insurer quotes client name extraction from user data
+- Browser-verified: USER login → user dashboard with sidebar, profile with real data, quotes with filters
+- Browser-verified: INSURER login → insurer dashboard with KPIs, offers with real data, quotes with filters
+- Browser-verified: Mobile sidebar Sheet works on both interfaces
 
 Stage Summary:
-- Updated: `src/components/comparison/comparison-form.tsx`
-- Categories now dynamic from database (12 categories vs 8 hardcoded)
+- Complete role-based routing: USER→user-dashboard, INSURER→insurer-dashboard, ADMIN→admin
+- 21 new components created (2 layouts + 19 tabs)
+- All interfaces follow the admin page pattern (sidebar, header, breadcrumb)
+- Lint clean (only pre-existing launch-server.js errors)
 
 ---
-Task ID: 4
-Agent: main
-Task: Rewrite compare API to filter offers by features (not insurer-level coverages)
+Task ID: 2
+Agent: Main Agent
+Task: Upgrade admin interface header bar, breadcrumb, and user dropdown to match User/Insurer layout patterns
 
 Work Log:
-- Removed contractType pre-filtering based on selected categories
-- Now fetches ALL active offers and filters by offer features array
-- Each offer's features are checked against selected category keywords
-- Only offers matching at least 1 selected category are returned
-- `matchedGuarantees` array populated per offer with matched DB codes
-- Updated `CATEGORY_FEATURE_KEYWORDS` to use DB codes as keys
+- Rewrote `/home/z/my-project/src/components/admin/admin-page.tsx` following insurer-layout.tsx as the exact structural reference
+- Added imports: `useTheme` from `next-themes`, `Moon`, `Sun`, `LogOut`, `ChevronRight`, `Bell` from lucide-react, `DropdownMenu*` components, `Badge`, `Avatar/AvatarFallback`
+- Added `getTabLabel()` and `getInitials()` helper functions
+- Added `ThemeToggle` component matching insurer pattern exactly
+- Converted `renderTab` from a method to a standalone function (matching pattern)
+- Added sticky header bar with: current tab title, "Administration" lime badge, notification bell with red "3" badge, theme toggle, avatar dropdown
+- Avatar dropdown items: "Tableau de bord", "Paramètres", "Déconnexion" (with destructive styling)
+- Added breadcrumb navigation: "Accueil > Administration > {currentLabel}"
+- Enhanced mobile top bar with `justify-between`, adding notification bell, theme toggle, and avatar dropdown on the right side
+- Used `useAppStore` state: `adminTab`, `setAdminTab`, `user`, `setUser`, `setView`
+- Kept all 11 existing sidebar items unchanged
+- Kept all 11 existing tab component imports and renderTab switch cases
+- Logout clears user and sets view to "landing"
+- Removed old `pt-16` mobile padding (now handled by header bar taking space naturally)
 
 Stage Summary:
-- Updated: `src/app/api/compare/route.ts`
-- Filtering now works correctly: offers only shown if features match selected guarantees
-- Each result includes `matchedGuarantees` array
+- Admin page now has identical header/breadcrumb/dropdown pattern as Insurer and User layouts
+- Lint clean (only pre-existing launch-server.js warnings remain)
+- Dev server compiles without errors
 
 ---
-Task ID: 5
-Agent: main
-Task: Update results page to display matched guarantees on offer cards
+Task ID: 3
+Agent: Main Agent
+Task: CRUD functionality for insurer offers and guarantees tabs
 
 Work Log:
-- Added `GUARANTEE_LABELS` mapping from DB codes to French display names
-- Added "Garanties correspondantes" section with colored badges on each offer card
-- Badges show which selected guarantees each offer covers
+- Created `/api/insurer/account/route.ts` — GET endpoint to find insurer account for logged-in user by userId query param
+- Created `/api/insurer/offers/route.ts` — GET (list with active filter, includes category) + POST (create offer with features as JSON array)
+- Created `/api/insurer/offers/[id]/route.ts` — GET (single), PUT (update partial fields), DELETE (soft-delete: isActive=false)
+- Created `/api/insurer/coverages/route.ts` — GET (list with category) + POST (create coverage, validates unique code, auto-uppercasing)
+- Created `/api/insurer/coverages/[id]/route.ts` — GET (single), PUT (update with code uniqueness check), DELETE (soft-delete)
+- Rewrote `insurer-offers-tab.tsx`:
+  - Fetches insurerId via `/api/insurer/account?userId=XXX` on mount
+  - Fetches offers via `/api/insurer/offers?insurerId=XXX`
+  - Fetches categories from `/api/admin/coverage-categories` for select dropdown
+  - "Créer une offre" button now enabled, opens Dialog with full form: name, categoryId (select), contractType (select: tiers simple/étendu/tous risques), description, priceMin/Max, coverageAmount, deductible, features (comma-separated → JSON array), isActive (checkbox)
+  - Each card has "Modifier" and "Supprimer" action buttons
+  - Edit dialog pre-fills all fields from existing offer
+  - Delete uses AlertDialog confirmation, then soft-deletes
+  - Toast notifications in French for all operations
+- Rewrote `insurer-guarantees-tab.tsx`:
+  - Kept 5 decorative info cards (RC, Incendie, Vol, DTA, Bris de glace)
+  - Replaced static empty table with real data from `/api/insurer/coverages?insurerId=XXX`
+  - Table shows: code (mono font), name, category, calculationType, isMandatory (Oui/Non badge), isActive status badge, Edit/Delete action buttons
+  - "Ajouter une garantie" button now enabled, opens Dialog with form: code (uppercase hint, disabled on edit), name, categoryId (select from coverage categories), type, calculationType (select: Libre/Montant fixe/Base variable/Basé sur matrice), description, isMandatory (checkbox), metadata (JSON textarea)
+  - Edit/Delete with same pattern as offers tab
+  - Loading skeleton state for table
+  - All text in French, brand colors, shadcn components throughout
+- Lint clean (only pre-existing launch-server.js errors)
+- Dev server compiles without errors
 
 Stage Summary:
-- Updated: `src/components/results/results-page.tsx`
-- Each offer card now shows matched guarantee badges with green check icons
+- 5 new API routes created for insurer CRUD operations
+- Insurer "Offres" tab: full create/edit/delete functionality with Dialog forms
+- Insurer "Mes Garanties" tab: real DB data in table with create/edit/delete
+- Both tabs resolve insurerId automatically from logged-in user via InsurerAccount
+- All operations provide French toast feedback
 
----
-Task ID: 7
-Agent: main
-Task: Fix register page broken checkbox text wrapping on mobile
 
-Work Log:
-- Diagnosed issue: checkbox text "J'accepte les conditions d'utilisation et la politique de confidentialité" wraps mid-phrase on 375px screens
-- VLM confirmed text appeared as garbled: "J'accepte conditions et politique de les d'utilisation la confidentialité"
-- Fix: wrapped each phrase segment in `<span className="whitespace-nowrap">` to prevent mid-phrase line breaks
-- Applied fix to both `auth-pages.tsx` and `auth-modals.tsx`
-
-Stage Summary:
-- Fixed: `src/components/auth/auth-pages.tsx` — checkbox text wrapping
-- Fixed: `src/components/auth/auth-modals.tsx` — same fix
-- Verified via mobile screenshot that text now reads correctly
-
----
-Task ID: 8
-Agent: main
-Task: Verify forgot password page text
-
-Work Log:
-- VLM reported "Mot de passé oublié" but this was a VLM misread
-- Code contains correct "Mot de passe oublié" (\u00e9 = é)
-- Browser accessibility tree confirms correct text
-- No fix needed
 ---
 Task ID: 1
 Agent: Main Agent
-Task: Header on auth pages + Profile management + Insurer logo upload
+Task: Replace icons with NOLI logo in all layouts + add guarantee selection to insurer offers
 
 Work Log:
-- Added `photoUrl String?` to Profile model in Prisma schema, ran db push
-- Added `"profile"` to `AppView` type union
-- Added `avatarUrl?: string` to user state in Zustand store
-- Updated `isFullPage()` to only return true for "admin" (auth pages now show main Header/Footer)
-- Simplified `AuthPages` component to remove its own header/footer (just renders the centered form)
-- Created `/api/upload/route.ts` — POST endpoint for file upload (JPG/PNG/WebP/GIF, max 2MB, configurable folder)
-- Created `/api/profile/route.ts` — GET (fetch profile) and PUT (update name/phone/photo/password) endpoints
-- Created `src/components/profile/profile-page.tsx` — Full profile management page with:
-  - Avatar photo upload with hover overlay
-  - Personal info form (first name, last name, phone, read-only email)
-  - Password change form with current/new/confirm fields
-  - Match/mismatch indicators on confirm password
-- Updated header.tsx:
-  - Avatar image display when `user.avatarUrl` is set (both desktop dropdown trigger and mobile indicator)
-  - "Mon profil" dropdown item → `setView("profile")` instead of `setView("dashboard")`
-  - Added "Mon profil" button to mobile menu
-- Updated auth-pages.tsx:
-  - Login and Register now store `avatarUrl: data.user.photoUrl` on success
-- Updated auth API (`/api/auth/route.ts`):
-  - Both register and login responses now include `photoUrl` field
-- Updated assureurs-tab.tsx:
-  - Added `logoUrl` to Insurer interface and FormData type
-  - Added `handleLogoUpload` function with upload to /api/upload
-  - Added logo upload UI in create/edit dialog (preview, change, remove)
-  - Added logo thumbnails in desktop table rows and mobile cards
-  - Added logo in detail dialog header
-- Updated `page.tsx` to handle `profile` view with ProfilePage component
+- Copied noli_sans_fond.png from upload/ to public/noli-sans-fond.png
+- Updated admin-page.tsx: replaced ShieldCheck icon with Image component in sidebar (desktop) and mobile bar
+- Updated insurer-layout.tsx: replaced Shield icon with Image component in sidebar (desktop) and mobile bar
+- Updated user-layout.tsx: replaced Shield icon with Image component in sidebar (desktop) and mobile bar
+- Rewrote insurer-offers-tab.tsx: replaced comma-separated features text input with checkbox-based guarantee selection (grouped by category) matching admin's pattern
+- Fixed missing ShieldCheck import in admin-page.tsx after initial edit
 
 Stage Summary:
-- Auth pages now show the main Header (with theme toggle and nav) and Footer
-- Users can manage their profile: photo upload, edit name/phone, change password
-- Header avatar shows user photo when uploaded
-- Admin can upload/assign logos to insurers in the create/edit dialog
-- Insurer logos display in table, mobile cards, and detail views
----
-Task ID: 7
-Agent: Main Agent
-Task: Add admin header bar matching reference image + verify zebre icon in auth views
-
-Work Log:
-- Analyzed uploaded reference image of admin header (horizontal bar: home icon + welcome text left; date/time + refresh + bell + user dropdown right)
-- Confirmed zebre_plein_sans_fond.png already used in auth views (login, register, forgot password)
-- Completely rewrote `admin-page.tsx` with new layout:
-  - Full-width top header bar (AdminHeader component) spanning above sidebar + content
-  - Left section: Home icon (retour au site) + "Bienvenue, NOLI Assurance" (brand-colored)
-  - Right section: Theme toggle, live clock (French format), refresh button, notification bell with badge, user avatar dropdown
-  - User dropdown: profile info (name, email, role in green), Mon profil, Tableau de bord, Retour au site, Déconnexion
-  - Simplified sidebar (brand + nav only, no user info at bottom)
-  - Mobile: hamburger menu in header, sidebar in Sheet overlay
-- Fixed lint error (setState in effect) in LiveClock by using tick counter pattern
-- Fixed logout to redirect to landing page (setView("landing") + setUser)
-- Reset admin password for testing
-
-Stage Summary:
-- Admin header matches reference design: home icon, welcome text, date/time, refresh, notifications, user dropdown
-- User dropdown has: Mon profil, Tableau de bord, Retour au site, Déconnexion
-- All interactions verified: login → admin header visible, profile navigation works, logout redirects to landing
-- Mobile responsive: hamburger menu, compact header with bell + avatar
-- Zebre icon confirmed present on login/register/forgot pages
-- Lint clean (only pre-existing launch-server.js errors)
----
-Task ID: 5
-Agent: general-purpose
-Task: Create insurer API routes
-
-Work Log:
-- Created `src/app/api/insurer/me/route.ts` — GET returns insurer profile (id, code, name, logoUrl, contactEmail, phone, website, isActive) via InsurerAccount lookup
-- Created `src/app/api/insurer/stats/route.ts` — GET returns dashboard stats: totalOffers, activeOffers, totalQuotes, pendingQuotes, approvedQuotes, rejectedQuotes, draftQuotes, totalCoverages, recentQuotes (last 5 with userName + vehicleInfo)
-- Created `src/app/api/insurer/offers/route.ts` — GET returns paginated offers with status filter (active/inactive), search, includes category name and quote count
-- Created `src/app/api/insurer/quotes/route.ts` — GET returns paginated quotes for insurer's offers with status/search filters, parsed personalData/vehicleData JSON
-- Created `src/app/api/insurer/quotes/[id]/status/route.ts` — PUT updates quote status (APPROVED/REJECTED/PENDING) with ownership verification; auto-sets finalPrice=estimatedPrice on approval
-- Created `src/app/api/insurer/coverages/route.ts` — GET returns coverages for insurer with optional categoryId and search filters
-- Fixed `findUnique` → `findFirst` on InsurerAccount (Prisma compound unique requires both profileId+insurerId)
-- All routes use French error messages, proper try/catch, and NextResponse.json pattern
-
-Stage Summary:
-- 6 API route files created under `src/app/api/insurer/`
-- All routes resolve insurerId via `InsurerAccount.findFirst({ where: { profileId: userId } })`
-- TypeScript compiles cleanly (only pre-existing errors in unrelated files)
-- Routes ready for frontend insurer dashboard integration
-
----
-Task ID: 6
-Agent: full-stack-developer
-Task: Build insurer UI components
-
-Work Log:
-- Created `src/components/insurer/insurer-page.tsx` — Full admin-style layout replicating admin-page.tsx pattern: sticky top header bar (home icon, welcome text with insurer name, theme toggle, live clock, refresh, notification bell, user avatar dropdown), left sidebar (desktop 256px, mobile Sheet) with 5 nav items (Tableau de bord, Mes Offres, Devis Reçus, Garanties, Mon Profil), main content area with tab routing via `insurerTab`/`setInsurerTab` store state. Fetches insurer name from `/api/insurer/me`. Logout sets `isLoggedIn: false` and redirects to landing. "Mon Profil" navigates to profile view.
-- Created `src/components/insurer/insurer-dashboard.tsx` — Dashboard tab with 4 stat cards (Total Offres, Devis Reçus, En Attente with lime accent, Approuvés with green accent) in 2x2/4x1 responsive grid. Below: "Devis Récents" section with desktop table and mobile card list. Status badges: PENDING=amber, APPROVED=green, REJECTED=red, DRAFT=gray. Loading skeletons while fetching. Fetches from `/api/insurer/stats`.
-- Created `src/components/insurer/insurer-offers.tsx` — Offers tab with search input + status filter (all/active/inactive). Desktop: shadcn Table with 9 columns. Mobile: card list. Click opens detail Dialog showing: name, description, category, price range, deductible, contract type, features (parsed JSON), quote count. Fetches from `/api/insurer/offers`.
-- Created `src/components/insurer/insurer-quotes.tsx` — Quotes tab (most important) with status filter badges (Tous, En attente, Approuvés, Rejetés, Brouillons) + search input. Desktop table + mobile cards. Click opens detail Dialog with: quote info (reference, status, dates, prices), client info (parsed from personalData JSON), vehicle info (parsed from vehicleData JSON — marque, modele, immatriculation, puissance, annee, carburant, valeur), notes. Action buttons "Approuver" (green) and "Rejeter" (red) for PENDING/DRAFT quotes — calls `PUT /api/insurer/quotes/[id]/status` and shows toast on success/error. Fetches from `/api/insurer/quotes`.
-- Created `src/components/insurer/insurer-coverages.tsx` — Coverages tab with search by name/code + category filter dropdown (populated dynamically). Desktop table + mobile cards. Shows: code, name, type, category, obligatory (Oui/Non), status. Client-side filtering. Fetches from `/api/insurer/coverages`.
-- Fixed lint errors: removed synchronous `setState` calls inside effects (moved to async callbacks), matching existing admin component patterns.
-
-Stage Summary:
-- 5 files created: `insurer-page.tsx`, `insurer-dashboard.tsx`, `insurer-offers.tsx`, `insurer-quotes.tsx`, `insurer-coverages.tsx`
-- All components use BLACK + LIME (#B9E54D) brand, French text, FCFA currency formatting
-- Responsive design: desktop tables, mobile card lists
-- Quotes tab supports approve/reject actions with toast feedback
-- Lint passes (only pre-existing launch-server.js warnings remain)
-- Dev server compiles successfully
----
-Task ID: 7
-Agent: Main Agent
-Task: Build complete insurer interface with real data
-
-Work Log:
-- Read Prisma schema, identified InsurerAccount junction table linking Profile to Insurer
-- Created test data: InsurerAccount for assureur@saham.ci → SAHAM Assurances, 5 test quotes with different statuses (PENDING, APPROVED, REJECTED, DRAFT)
-- Added "insurer" to AppView type, insurerTab/setInsurerTab to Zustand store
-- Added "insurer" to isFullPage() in page.tsx, imported InsurerPage
-- Updated auth-pages.tsx login/register to redirect INSURER role to "insurer" view
-- Created 6 API routes under /api/insurer/: me, stats, offers, quotes, quotes/[id]/status, coverages
-- Created 5 UI components: insurer-page, insurer-dashboard, insurer-offers, insurer-quotes, insurer-coverages
-- Fixed multiple bugs: missing useCallback import in dashboard, API response shape mismatches (category as object vs string, priceMin vs minPrice, isActive vs status, _count.quotes vs quoteCount, vehicleData/personalData as parsed objects)
-- Browser verified: all 4 tabs load correctly, quote detail dialog with approve/reject, user dropdown, logout
-
-Stage Summary:
-- Insurer interface fully functional with real data (no mocks)
-- Dashboard: 4 stat cards + recent quotes table with status badges
-- Offers: search + active/inactive filter + detail dialog
-- Quotes: status filter buttons + search + detail dialog with client/vehicle info + Approve/Reject actions
-- Coverages: search + category filter + table
-- Header matches admin style: home icon, insurer name, clock, refresh, bell, avatar dropdown
-- Test account: assureur@saham.ci / saham123
----
-Task ID: user-interface
-Agent: Main Agent
-Task: Develop complete user interface with real DB data
-
-Work Log:
-- Created 3 API routes: GET /api/user/stats, GET /api/user/quotes, GET /api/user/quotes/[id]
-- Rewrote dashboard-page.tsx: 4 stat cards from DB (devis, en attente, approuvés, économies), recent quotes table, quick actions (comparer, mes devis, profil), profile summary card, quote detail dialog with vehicle/personal/coverage data
-- Created my-quotes-page.tsx: full page with status filter badges (Tous/En attente/Approuvés/Rejetés/Brouillons), search, desktop table + mobile cards, quote detail dialog
-- Added "my-quotes" to AppView type and page.tsx routing
-- Fixed login/register redirect: USER role now goes to "dashboard" instead of "landing"
-- Added "Mes devis" link in header dropdown (desktop + mobile)
-- Added "Mes devis" link in mobile sheet menu
-- Fixed logout in header to also redirect to landing
-- Seed script created and run: 7 test quotes for user@test.ci (2 DRAFT, 2 PENDING, 2 APPROVED, 1 REJECTED), 6 insurance offers (3 per NOLIA/SUNU)
-- Fixed React 19 lint errors (set-state-in-effect) using key-based remount pattern
-- Browser verified: login → dashboard with real stats → Mes Devis page → filters → detail dialog → back navigation → mobile responsive → mobile menu → no console errors
-
-Stage Summary:
-- User interface complete with 100% real DB data (no mocks)
-- Test account: user@test.ci / test123 (Kouamé Amadou)
-- 3 new API endpoints serving user-specific data
-- Dashboard shows real-time stats from database
-- My Quotes page with filtering, search, detail views
-- All navigation links working in header/desktop/mobile
-- Lint clean (only pre-existing launch-server.js warnings)
+- All 3 layouts now use the NOLI logo (noli-sans-fond.png) instead of a colored icon box
+- Insurer offer creation form now shows guarantee checkboxes grouped by category (like admin)
+- Features/selectedGuarantees stored as string[] of coverage names
+- All CRUD buttons (create, edit, delete) for offers and guarantees were already functional in code

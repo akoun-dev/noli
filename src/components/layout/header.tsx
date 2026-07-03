@@ -9,7 +9,6 @@ import {
   User,
   LogOut,
   LayoutDashboard,
-  FileText,
   ChevronDown,
 } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -33,7 +32,13 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { useAppStore } from "@/store/app-store";
 
-const navItems = [
+const navItemsPublic = [
+  { label: "ACCUEIL", action: "landing" as const },
+  { label: "À PROPOS", action: "about" as const },
+  { label: "CONTACT", action: "contact" as const },
+];
+
+const navItemsPrivate = [
   { label: "ACCUEIL", action: "landing" as const },
   { label: "À PROPOS", action: "about" as const },
   { label: "CONTACT", action: "contact" as const },
@@ -53,34 +58,21 @@ export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { theme, setTheme } = useTheme();
   // Hydration-safe: returns false on server, true on client.
-  // Avoids setState-in-effect lint error from React 19 compiler.
   const mounted = useSyncExternalStore(
     () => () => {},
     () => true,
     () => false,
   );
 
+  const navItems = user.isLoggedIn ? navItemsPrivate : navItemsPublic;
+
   const handleNav = (action: string) => {
-    switch (action) {
-      case "landing":
-        setView("landing");
-        break;
-      case "compare":
-        setView("compare");
-        break;
-      case "about":
-        setView("about");
-        break;
-      case "contact":
-        setView("contact");
-        break;
-    }
+    setView(action as never);
     setMobileOpen(false);
   };
 
   const isActive = (action: string) => {
-    if (action === "landing" && currentView === "landing") return true;
-    return false;
+    return currentView === action;
   };
 
   return (
@@ -95,7 +87,7 @@ export function Header() {
         </button>
 
         {/* Desktop Navigation (center) */}
-        <nav className="hidden items-center gap-6 lg:flex">
+        <nav className="hidden items-center gap-5 lg:flex">
           {navItems.map((item) => {
             const active = isActive(item.action);
             return (
@@ -146,17 +138,13 @@ export function Header() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-2 rounded-full transition-colors hover:bg-muted">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground overflow-hidden">
-                    {user.avatarUrl ? (
-                      <img src={user.avatarUrl} alt={user.name || ""} className="h-full w-full object-cover" />
-                    ) : (
-                      getUserInitials(user.name)
-                    )}
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
+                    {getUserInitials(user.name)}
                   </div>
                   <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuContent align="end" className="w-52">
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col gap-1">
                     <p className="text-sm font-medium leading-none">
@@ -168,33 +156,29 @@ export function Header() {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => {
-                    setView("dashboard");
-                  }}
-                >
+                <DropdownMenuItem onClick={() => {
+                  const role = useAppStore.getState().user.role;
+                  if (role === "INSURER") setView("insurer-dashboard");
+                  else if (role === "ADMIN") setView("admin");
+                  else setView("user-dashboard");
+                }}>
                   <LayoutDashboard className="h-4 w-4" />
                   Tableau de bord
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => {
-                    setView("my-quotes");
-                  }}
-                >
-                  <FileText className="h-4 w-4" />
-                  Mes devis
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => {
-                    setView("profile");
-                  }}
-                >
+                <DropdownMenuItem onClick={() => {
+                  const role = useAppStore.getState().user.role;
+                  if (role === "INSURER") { useAppStore.getState().setView("insurer-dashboard"); useAppStore.getState().setInsurerTab("settings"); }
+                  else { useAppStore.getState().setView("user-dashboard"); useAppStore.getState().setUserTab("profile"); }
+                }}>
                   <User className="h-4 w-4" />
                   Mon profil
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  onClick={() => { setUser({ isLoggedIn: false }); setView("landing"); }}
+                  onClick={() => {
+                    setUser({ isLoggedIn: false, id: undefined, name: undefined, email: undefined, role: undefined });
+                    setView("landing");
+                  }}
                 >
                   <LogOut className="h-4 w-4" />
                   Déconnexion
@@ -222,12 +206,8 @@ export function Header() {
         {/* Mobile: Hamburger + Auth indicator */}
         <div className="flex items-center gap-2 lg:hidden">
           {user.isLoggedIn ? (
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground overflow-hidden">
-              {user.avatarUrl ? (
-                <img src={user.avatarUrl} alt={user.name || ""} className="h-full w-full object-cover" />
-              ) : (
-                getUserInitials(user.name)
-              )}
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
+              {getUserInitials(user.name)}
             </div>
           ) : null}
 
@@ -256,12 +236,13 @@ export function Header() {
                         animate={{ x: 0, opacity: 1 }}
                         transition={{ delay: i * 0.08, duration: 0.25 }}
                         onClick={() => handleNav(item.action)}
-                        className={`flex items-center rounded-lg px-4 py-3 text-sm font-medium uppercase tracking-wide transition-colors ${
+                        className={`flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium uppercase tracking-wide transition-colors ${
                           active
                             ? "bg-primary/10 text-primary"
                             : "text-muted-foreground hover:bg-muted hover:text-foreground"
                         }`}
                       >
+                        {item.icon && <item.icon className="size-4" />}
                         {item.label}
                       </motion.button>
                     );
@@ -317,31 +298,11 @@ export function Header() {
                   <div className="flex flex-col gap-2 pt-2">
                     <Button
                       variant="outline"
-                      className="w-full font-medium"
+                      className="w-full font-medium justify-start"
                       onClick={() => {
-                        setView("dashboard");
-                        setMobileOpen(false);
-                      }}
-                    >
-                      <LayoutDashboard className="mr-2 h-4 w-4" />
-                      Tableau de bord
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="w-full font-medium"
-                      onClick={() => {
-                        setView("my-quotes");
-                        setMobileOpen(false);
-                      }}
-                    >
-                      <FileText className="mr-2 h-4 w-4" />
-                      Mes devis
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="w-full font-medium"
-                      onClick={() => {
-                        setView("profile");
+                        const role = useAppStore.getState().user.role;
+                        if (role === "INSURER") { useAppStore.getState().setView("insurer-dashboard"); useAppStore.getState().setInsurerTab("settings"); }
+                        else { useAppStore.getState().setView("user-dashboard"); useAppStore.getState().setUserTab("profile"); }
                         setMobileOpen(false);
                       }}
                     >
@@ -350,9 +311,9 @@ export function Header() {
                     </Button>
                     <Button
                       variant="ghost"
-                      className="w-full text-destructive hover:text-destructive"
+                      className="w-full text-destructive hover:text-destructive justify-start"
                       onClick={() => {
-                        setUser({ isLoggedIn: false });
+                        setUser({ isLoggedIn: false, id: undefined, name: undefined, email: undefined, role: undefined });
                         setView("landing");
                         setMobileOpen(false);
                       }}

@@ -3,80 +3,101 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = request.nextUrl;
-    const userId = searchParams.get("userId");
-    const status = searchParams.get("status");
-    const search = searchParams.get("search") || "";
-    const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
-    const limit = Math.max(1, Math.min(100, parseInt(searchParams.get("limit") || "20", 10)));
+    const insurerId = request.nextUrl.searchParams.get("insurerId");
+    const activeOnly = request.nextUrl.searchParams.get("active");
 
-    if (!userId) {
+    if (!insurerId) {
       return NextResponse.json(
-        { error: "Le paramètre userId est requis" },
+        { error: "Le paramètre insurerId est requis" },
         { status: 400 }
       );
     }
 
-    const account = await db.insurerAccount.findFirst({
-      where: { profileId: userId },
-      select: { insurerId: true },
+    const where: Record<string, unknown> = { insurerId };
+    if (activeOnly === "true") {
+      where.isActive = true;
+    }
+
+    const offers = await db.insuranceOffer.findMany({
+      where,
+      include: {
+        category: {
+          select: { id: true, name: true, icon: true },
+        },
+        insurer: {
+          select: { id: true, name: true, code: true, logoUrl: true },
+        },
+      },
+      orderBy: { createdAt: "desc" },
     });
 
-    if (!account) {
+    // Parse features JSON for each offer
+    const parsed = offers.map((o) => ({
+      ...o,
+      features: JSON.parse(o.features || "[]"),
+    }));
+
+    return NextResponse.json({ offers: parsed });
+  } catch (error) {
+    console.error("Erreur insurer/offers GET:", error);
+    return NextResponse.json(
+      { error: "Erreur lors du chargement des offres" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const {
+      insurerId,
+      categoryId,
+      name,
+      description,
+      priceMin,
+      priceMax,
+      coverageAmount,
+      deductible,
+      features,
+      contractType,
+    } = body;
+
+    if (!insurerId || !name) {
       return NextResponse.json(
-        { error: "Aucun compte assureur trouvé pour cet utilisateur" },
-        { status: 404 }
+        { error: "L'identifiant de l'assureur et le nom sont requis" },
+        { status: 400 }
       );
     }
 
-    const where: Record<string, unknown> = { insurerId: account.insurerId };
+    const offer = await db.insuranceOffer.create({
+      data: {
+        insurerId,
+        categoryId: categoryId || null,
+        name,
+        description: description || null,
+        priceMin: priceMin != null ? Number(priceMin) : null,
+        priceMax: priceMax != null ? Number(priceMax) : null,
+        coverageAmount: coverageAmount != null ? Number(coverageAmount) : null,
+        deductible: deductible != null ? Number(deductible) : 0,
+        features: JSON.stringify(features || []),
+        contractType: contractType || null,
+        isActive: true,
+      },
+      include: {
+        category: { select: { id: true, name: true, icon: true } },
+        insurer: { select: { id: true, name: true, code: true, logoUrl: true } },
+      },
+    });
 
-    if (status === "active") {
-      where.isActive = true;
-    } else if (status === "inactive") {
-      where.isActive = false;
-    }
-
-    if (search) {
-      where.OR = [
-        { name: { contains: search } },
-        { description: { contains: search } },
-        { contractType: { contains: search } },
-      ];
-    }
-
-    const [offers, total] = await Promise.all([
-      db.insuranceOffer.findMany({
-        where,
-        include: {
-          category: { select: { name: true } },
-          _count: { select: { quotes: true } },
-        },
-        orderBy: { createdAt: "desc" },
-        skip: (page - 1) * limit,
-        take: limit,
-      }),
-      db.insuranceOffer.count({ where }),
-    ]);
-
-    const formatted = offers.map((o) => ({
-      id: o.id,
-      name: o.name,
-      description: o.description,
-      priceMin: o.priceMin,
-      priceMax: o.priceMax,
-      deductible: o.deductible,
-      contractType: o.contractType,
-      isActive: o.isActive,
-      category: o.category ? { name: o.category.name } : null,
-      _count: { quotes: o._count.quotes },
-    }));
-
-    return NextResponse.json({ offers: formatted, total, page, limit });
-  } catch (error) {
-    console.error("Erreur insurer/offers:", error);
     return NextResponse.json(
-      { error: "Erreur lors du chargement des offres" },
+      { ...offer, features: JSON.parse(offer.features || "[]") },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error("Erreur insurer/offers POST:", error);
+    return NextResponse.json(
+      { error: "Erreur lors de la création de l'offre" },
       { status: 500 }
     );
   }
