@@ -574,3 +574,29 @@ Stage Summary:
 - Coverages: search + category filter + table
 - Header matches admin style: home icon, insurer name, clock, refresh, bell, avatar dropdown
 - Test account: assureur@saham.ci / saham123
+---
+Task ID: user-interface
+Agent: Main Agent
+Task: Develop complete user interface with real DB data
+
+Work Log:
+- Created 3 API routes: GET /api/user/stats, GET /api/user/quotes, GET /api/user/quotes/[id]
+- Rewrote dashboard-page.tsx: 4 stat cards from DB (devis, en attente, approuvés, économies), recent quotes table, quick actions (comparer, mes devis, profil), profile summary card, quote detail dialog with vehicle/personal/coverage data
+- Created my-quotes-page.tsx: full page with status filter badges (Tous/En attente/Approuvés/Rejetés/Brouillons), search, desktop table + mobile cards, quote detail dialog
+- Added "my-quotes" to AppView type and page.tsx routing
+- Fixed login/register redirect: USER role now goes to "dashboard" instead of "landing"
+- Added "Mes devis" link in header dropdown (desktop + mobile)
+- Added "Mes devis" link in mobile sheet menu
+- Fixed logout in header to also redirect to landing
+- Seed script created and run: 7 test quotes for user@test.ci (2 DRAFT, 2 PENDING, 2 APPROVED, 1 REJECTED), 6 insurance offers (3 per NOLIA/SUNU)
+- Fixed React 19 lint errors (set-state-in-effect) using key-based remount pattern
+- Browser verified: login → dashboard with real stats → Mes Devis page → filters → detail dialog → back navigation → mobile responsive → mobile menu → no console errors
+
+Stage Summary:
+- User interface complete with 100% real DB data (no mocks)
+- Test account: user@test.ci / test123 (Kouamé Amadou)
+- 3 new API endpoints serving user-specific data
+- Dashboard shows real-time stats from database
+- My Quotes page with filtering, search, detail views
+- All navigation links working in header/desktop/mobile
+- Lint clean (only pre-existing launch-server.js warnings)

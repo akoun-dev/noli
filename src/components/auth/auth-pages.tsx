@@ -119,7 +119,7 @@ function LoginPage() {
       } else if (data.user.role === "INSURER") {
         setView("insurer");
       } else {
-        setView("landing");
+        setView("dashboard");
       }
     } catch {
       toast({
@@ -325,7 +325,7 @@ function RegisterPage() {
       } else if (data.user.role === "INSURER") {
         setView("insurer");
       } else {
-        setView("landing");
+        setView("dashboard");
       }
     } catch {
       toast({

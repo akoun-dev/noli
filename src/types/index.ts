@@ -10,7 +10,8 @@ export type AppView =
   | "login"
   | "register"
   | "forgot"
-  | "profile";
+  | "profile"
+  | "my-quotes";
 
 export type AuthModal = "none" | "login" | "register" | "forgot";
 

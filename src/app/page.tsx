@@ -14,6 +14,7 @@ import { AboutPage } from "@/components/about/about-page";
 import { ContactPage } from "@/components/contact/contact-page";
 import { AdminPage } from "@/components/admin/admin-page";
 import { InsurerPage } from "@/components/insurer/insurer-page";
+import { MyQuotesPage } from "@/components/user/my-quotes-page";
 import { AnimatePresence, motion } from "framer-motion";
 
 const isFullPage = (view: string) => view === "admin" || view === "insurer";
@@ -57,6 +58,8 @@ export default function Home() {
         return <AdminPage />;
       case "insurer":
         return <InsurerPage />;
+      case "my-quotes":
+        return <MyQuotesPage />;
       case "login":
       case "register":
       case "forgot":

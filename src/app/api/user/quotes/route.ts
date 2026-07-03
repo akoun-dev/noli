@@ -25,21 +25,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const account = await db.insurerAccount.findFirst({
-      where: { profileId: userId },
-      select: { insurerId: true },
-    });
-
-    if (!account) {
-      return NextResponse.json(
-        { error: "Aucun compte assureur trouvé pour cet utilisateur" },
-        { status: 404 }
-      );
-    }
-
-    const where: Record<string, unknown> = {
-      offer: { insurerId: account.insurerId },
-    };
+    const where: Record<string, unknown> = { userId };
 
     if (status) {
       where.status = status;
@@ -48,10 +34,7 @@ export async function GET(request: NextRequest) {
     if (search) {
       (where as Record<string, unknown>).OR = [
         { reference: { contains: search } },
-        { user: { OR: [
-          { firstName: { contains: search } },
-          { lastName: { contains: search } },
-        ] } },
+        { offer: { name: { contains: search } } },
       ];
     }
 
@@ -59,9 +42,13 @@ export async function GET(request: NextRequest) {
       db.quote.findMany({
         where,
         include: {
-          user: { select: { firstName: true, lastName: true, email: true } },
-          offer: { select: { name: true } },
-          category: { select: { name: true } },
+          user: { select: { id: true, firstName: true, lastName: true, email: true } },
+          offer: {
+            include: {
+              insurer: { select: { name: true, logoUrl: true } },
+            },
+          },
+          category: { select: { id: true, name: true } },
         },
         orderBy: { createdAt: "desc" },
         skip: (page - 1) * limit,
@@ -80,17 +67,17 @@ export async function GET(request: NextRequest) {
       createdAt: q.createdAt.toISOString(),
       updatedAt: q.updatedAt.toISOString(),
       offerName: q.offer?.name || null,
+      offerDescription: q.offer?.description || null,
       categoryName: q.category?.name || null,
-      userName: q.user
-        ? `${q.user.firstName || ""} ${q.user.lastName || ""}`.trim()
-        : null,
-      personalData: parseJsonField(q.personalData, {}),
       vehicleData: parseJsonField(q.vehicleData, {}),
+      personalData: parseJsonField(q.personalData, {}),
+      insurerName: q.offer?.insurer?.name || null,
+      insurerLogo: q.offer?.insurer?.logoUrl || null,
     }));
 
     return NextResponse.json({ quotes: formatted, total, page, limit });
   } catch (error) {
-    console.error("Erreur insurer/quotes:", error);
+    console.error("Erreur user/quotes:", error);
     return NextResponse.json(
       { error: "Erreur lors du chargement des devis" },
       { status: 500 }

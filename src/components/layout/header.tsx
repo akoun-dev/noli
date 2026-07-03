@@ -9,6 +9,7 @@ import {
   User,
   LogOut,
   LayoutDashboard,
+  FileText,
   ChevronDown,
 } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -177,6 +178,14 @@ export function Header() {
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => {
+                    setView("my-quotes");
+                  }}
+                >
+                  <FileText className="h-4 w-4" />
+                  Mes devis
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
                     setView("profile");
                   }}
                 >
@@ -185,7 +194,7 @@ export function Header() {
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  onClick={() => setUser({ isLoggedIn: false })}
+                  onClick={() => { setUser({ isLoggedIn: false }); setView("landing"); }}
                 >
                   <LogOut className="h-4 w-4" />
                   Déconnexion
@@ -321,6 +330,17 @@ export function Header() {
                       variant="outline"
                       className="w-full font-medium"
                       onClick={() => {
+                        setView("my-quotes");
+                        setMobileOpen(false);
+                      }}
+                    >
+                      <FileText className="mr-2 h-4 w-4" />
+                      Mes devis
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="w-full font-medium"
+                      onClick={() => {
                         setView("profile");
                         setMobileOpen(false);
                       }}
@@ -333,6 +353,7 @@ export function Header() {
                       className="w-full text-destructive hover:text-destructive"
                       onClick={() => {
                         setUser({ isLoggedIn: false });
+                        setView("landing");
                         setMobileOpen(false);
                       }}
                     >
