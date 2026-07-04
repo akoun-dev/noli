@@ -1078,7 +1078,7 @@ export function SettingsTab() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid gap-2">
+              <div className="grid grid-cols-1 gap-2 w-full">
                 <Label htmlFor="theme-select">Thème</Label>
                 <Select
                   value={mounted ? (theme ?? "system") : "system"}
@@ -1098,7 +1098,7 @@ export function SettingsTab() {
                 </Select>
               </div>
 
-              <div className="grid gap-2">
+              <div className="grid grid-cols-1 gap-2 w-full">
                 <Label htmlFor="lang-select">Langue</Label>
                 <Select
                   value={getSetting("appearance", "language", "fr")}
@@ -1116,7 +1116,7 @@ export function SettingsTab() {
                 </Select>
               </div>
 
-              <div className="grid gap-2">
+              <div className="grid grid-cols-1 gap-2 w-full">
                 <Label htmlFor="date-format-select">Format de date</Label>
                 <Select
                   value={getSetting(
@@ -1139,7 +1139,7 @@ export function SettingsTab() {
                 </Select>
               </div>
 
-              <div className="grid gap-2">
+              <div className="grid grid-cols-1 gap-2 w-full">
                 <Label htmlFor="tz-select">Fuseau horaire</Label>
                 <Select
                   value={getSetting(

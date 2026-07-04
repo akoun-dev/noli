@@ -1,0 +1,1642 @@
+     1→"use client";
+     2→
+     3→import { useEffect, useState, useCallback } from "react";
+     4→import { useTheme } from "next-themes";
+     5→import { useToast } from "@/hooks/use-toast";
+     6→import {
+     7→  Settings,
+     8→  Mail,
+     9→  Users,
+    10→  Shield,
+    11→  Bell,
+    12→  Palette,
+    13→  UserCog,
+    14→  Pencil,
+    15→  Search,
+    16→  Loader2,
+    17→  ChevronDown,
+    18→  ChevronUp,
+    19→  AlertTriangle,
+    20→  Send,
+    21→} from "lucide-react";
+    22→import { Button } from "@/components/ui/button";
+    23→import { Input } from "@/components/ui/input";
+    24→import { Label } from "@/components/ui/label";
+    25→import { Badge } from "@/components/ui/badge";
+    26→import { Switch } from "@/components/ui/switch";
+    27→import { Skeleton } from "@/components/ui/skeleton";
+    28→import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+    29→import {
+    30→  Table,
+    31→  TableBody,
+    32→  TableCell,
+    33→  TableHead,
+    34→  TableHeader,
+    35→  TableRow,
+    36→} from "@/components/ui/table";
+    37→import {
+    38→  Dialog,
+    39→  DialogContent,
+    40→  DialogHeader,
+    41→  DialogTitle,
+    42→  DialogFooter,
+    43→  DialogDescription,
+    44→} from "@/components/ui/dialog";
+    45→import {
+    46→  Select,
+    47→  SelectContent,
+    48→  SelectItem,
+    49→  SelectTrigger,
+    50→  SelectValue,
+    51→} from "@/components/ui/select";
+    52→import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+    53→import { Separator } from "@/components/ui/separator";
+    54→
+    55→/* ------------------------------------------------------------------ */
+    56→/*  Types                                                              */
+    57→/* ------------------------------------------------------------------ */
+    58→
+    59→interface Profile {
+    60→  id: string;
+    61→  email: string;
+    62→  firstName: string | null;
+    63→  lastName: string | null;
+    64→  phone: string | null;
+    65→  role: string;
+    66→  isActive: boolean;
+    67→  _count: { quotes: number };
+    68→  createdAt: string;
+    69→  lastLogin?: string | null;
+    70→}
+    71→
+    72→interface Role {
+    73→  id: string;
+    74→  name: string;
+    75→  label: string;
+    76→}
+    77→
+    78→/* ------------------------------------------------------------------ */
+    79→/*  Constants                                                          */
+    80→/* ------------------------------------------------------------------ */
+    81→
+    82→const roleColors: Record<string, string> = {
+    83→  ADMIN: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300",
+    84→  INSURER: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
+    85→  USER: "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200",
+    86→};
+    87→
+    88→const roleLabels: Record<string, string> = {
+    89→  ADMIN: "Admin",
+    90→  INSURER: "Assureur",
+    91→  USER: "Utilisateur",
+    92→};
+    93→
+    94→/* ------------------------------------------------------------------ */
+    95→/*  Helper: format last login                                          */
+    96→/* ------------------------------------------------------------------ */
+    97→
+    98→function formatLastLogin(dateStr?: string | null): string {
+    99→  if (!dateStr) return "—";
+   100→  const d = new Date(dateStr);
+   101→  const now = new Date();
+   102→  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+   103→  const yesterday = new Date(today);
+   104→  yesterday.setDate(yesterday.getDate() - 1);
+   105→  const target = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+   106→  if (target.getTime() === today.getTime()) return "Aujourd'hui";
+   107→  if (target.getTime() === yesterday.getTime()) return "Hier";
+   108→  return d.toLocaleDateString("fr-FR");
+   109→}
+   110→
+   111→/* ------------------------------------------------------------------ */
+   112→/*  Save button style                                                  */
+   113→/* ------------------------------------------------------------------ */
+   114→
+   115→const saveBtnClass =
+   116→  "bg-[#B9E54D] text-black hover:bg-[#a5d044] font-medium";
+   117→
+   118→/* ================================================================== */
+   119→/*  Component                                                          */
+   120→/* ================================================================== */
+   121→
+   122→export function SettingsTab() {
+   123→  const { toast } = useToast();
+   124→  const { theme, setTheme } = useTheme();
+   125→  const [mounted, setMounted] = useState(false);
+   126→  useEffect(() => { setMounted(true); }, []);
+   127→
+   128→  /* ---------- shared state ---------- */
+   129→  const [settings, setSettings] = useState<Record<string, Record<string, string>>>({});
+   130→  const [settingsLoading, setSettingsLoading] = useState(true);
+   131→
+   132→  /* ---------- profiles state (tabs 3 & 7) ---------- */
+   133→  const [profiles, setProfiles] = useState<Profile[]>([]);
+   134→  const [profilesLoading, setProfilesLoading] = useState(true);
+   135→  const [search, setSearch] = useState("");
+   136→  const [editOpen, setEditOpen] = useState(false);
+   137→  const [edit, setEdit] = useState<Profile | null>(null);
+   138→  const [saving, setSaving] = useState(false);
+   139→
+   140→  /* ---------- roles state (tab 7) ---------- */
+   141→  const [roles, setRoles] = useState<Role[]>([]);
+   142→  const [expandedRow, setExpandedRow] = useState<string | null>(null);
+   143→
+   144→  /* ---------- saving settings state ---------- */
+   145→  const [savingCategory, setSavingCategory] = useState<string | null>(null);
+   146→
+   147→  /* ================================================================ */
+   148→  /*  Fetch helpers                                                     */
+   149→  /* ================================================================ */
+   150→
+   151→  const fetchSettings = useCallback(async () => {
+   152→    try {
+   153→      const res = await fetch("/api/admin/settings");
+   154→      if (res.ok) {
+   155→        const data = await res.json();
+   156→        const grouped: Record<string, Record<string, string>> = {};
+   157→        for (const [cat, arr] of Object.entries(data.settings ?? {})) {
+   158→          grouped[cat] = {};
+   159→          for (const s of arr as { key: string; value: string }[]) {
+   160→            grouped[cat][s.key] = s.value;
+   161→          }
+   162→        }
+   163→        setSettings(grouped);
+   164→      }
+   165→    } catch {
+   166→      /* silent – will show defaults */
+   167→    } finally {
+   168→      setSettingsLoading(false);
+   169→    }
+   170→  }, []);
+   171→
+   172→  const fetchProfiles = useCallback(async () => {
+   173→    try {
+   174→      const res = await fetch(
+   175→        `/api/admin/profiles${search ? `?search=${search}` : ""}`
+   176→      );
+   177→      if (res.ok) setProfiles(await res.json());
+   178→    } finally {
+   179→      setProfilesLoading(false);
+   180→    }
+   181→  }, [search]);
+   182→
+   183→  const fetchRoles = useCallback(async () => {
+   184→    try {
+   185→      const res = await fetch("/api/admin/roles");
+   186→      if (res.ok) {
+   187→        const data = await res.json();
+   188→        setRoles(Array.isArray(data) ? data : (data.roles || []));
+   189→      }
+   190→    } catch {
+   191→      /* silent */
+   192→    }
+   193→  }, []);
+   194→
+   195→  /* ================================================================ */
+   196→  /*  Effects                                                          */
+   197→  /* ================================================================ */
+   198→
+   199→  useEffect(() => {
+   200→    fetchSettings();
+   201→    fetchProfiles();
+   202→    fetchRoles();
+   203→  }, [fetchSettings, fetchProfiles, fetchRoles]);
+   204→
+   205→  /* ================================================================ */
+   206→  /*  Settings helpers                                                  */
+   207→  /* ================================================================ */
+   208→
+   209→  const getSetting = (cat: string, key: string, fallback = "") =>
+   210→    settings[cat]?.[key] ?? fallback;
+   211→
+   212→  const setSettingLocal = (cat: string, key: string, value: string) => {
+   213→    setSettings((prev) => ({
+   214→      ...prev,
+   215→      [cat]: { ...prev[cat], [key]: value },
+   216→    }));
+   217→  };
+   218→
+   219→  const saveSetting = async (key: string, value: string) => {
+   220→    try {
+   221→      const res = await fetch("/api/admin/settings", {
+   222→        method: "PUT",
+   223→        headers: { "Content-Type": "application/json" },
+   224→        body: JSON.stringify({ key, value }),
+   225→      });
+   226→      if (!res.ok) throw new Error();
+   227→    } catch {
+   228→      toast({ title: "Erreur lors de la sauvegarde", variant: "destructive" });
+   229→    }
+   230→  };
+   231→
+   232→  const saveCategory = async (cat: string, fields: Record<string, string>) => {
+   233→    setSavingCategory(cat);
+   234→    try {
+   235→      await Promise.all(
+   236→        Object.entries(fields).map(([key, value]) => saveSetting(key, value))
+   237→      );
+   238→      toast({ title: "Paramètres enregistrés avec succès" });
+   239→    } finally {
+   240→      setSavingCategory(null);
+   241→    }
+   242→  };
+   243→
+   244→  /* ================================================================ */
+   245→  /*  Profile helpers                                                   */
+   246→  /* ================================================================ */
+   247→
+   248→  const openEdit = (p: Profile) => {
+   249→    setEdit({ ...p });
+   250→    setEditOpen(true);
+   251→  };
+   252→
+   253→  const handleSave = async () => {
+   254→    if (!edit) return;
+   255→    setSaving(true);
+   256→    try {
+   257→      const res = await fetch("/api/admin/profiles", {
+   258→        method: "PUT",
+   259→        headers: { "Content-Type": "application/json" },
+   260→        body: JSON.stringify({
+   261→          id: edit.id,
+   262→          firstName: edit.firstName,
+   263→          lastName: edit.lastName,
+   264→          phone: edit.phone,
+   265→          role: edit.role,
+   266→          isActive: edit.isActive,
+   267→        }),
+   268→      });
+   269→      if (!res.ok) {
+   270→        const e = await res.json();
+   271→        throw new Error(e.error || "Erreur");
+   272→      }
+   273→      toast({ title: "Profil mis à jour" });
+   274→      setEditOpen(false);
+   275→      fetchProfiles();
+   276→    } catch (err) {
+   277→      toast({ title: (err as Error).message, variant: "destructive" });
+   278→    } finally {
+   279→      setSaving(false);
+   280→    }
+   281→  };
+   282→
+   283→  const toggleProfileStatus = async (p: Profile) => {
+   284→    try {
+   285→      await fetch("/api/admin/profiles", {
+   286→        method: "PUT",
+   287→        headers: { "Content-Type": "application/json" },
+   288→        body: JSON.stringify({ id: p.id, isActive: !p.isActive }),
+   289→      });
+   290→      fetchProfiles();
+   291→    } catch {
+   292→      toast({ title: "Erreur", variant: "destructive" });
+   293→    }
+   294→  };
+   295→
+   296→  const changeProfileRole = async (p: Profile, newRole: string) => {
+   297→    try {
+   298→      await fetch("/api/admin/profiles", {
+   299→        method: "PUT",
+   300→        headers: { "Content-Type": "application/json" },
+   301→        body: JSON.stringify({ id: p.id, role: newRole }),
+   302→      });
+   303→      fetchProfiles();
+   304→      toast({ title: "Rôle mis à jour" });
+   305→    } catch {
+   306→      toast({ title: "Erreur", variant: "destructive" });
+   307→    }
+   308→  };
+   309→
+   310→  /* ================================================================ */
+   311→  /*  Loading skeleton                                                 */
+   312→  /* ================================================================ */
+   313→
+   314→  if (settingsLoading || profilesLoading) {
+   315→    return (
+   316→      <div className="space-y-6">
+   317→        <Skeleton className="h-8 w-48" />
+   318→        <Skeleton className="h-10 w-full" />
+   319→        <div className="space-y-4">
+   320→          {Array.from({ length: 6 }).map((_, i) => (
+   321→            <Skeleton key={i} className="h-12 rounded-lg" />
+   322→          ))}
+   323→        </div>
+   324→      </div>
+   325→    );
+   326→  }
+   327→
+   328→  /* ================================================================ */
+   329→  /*  Render                                                           */
+   330→  /* ================================================================ */
+   331→
+   332→  if (!mounted) {
+   333→    return (
+   334→      <div>
+   335→        <h1 className="text-2xl font-bold mb-6">Paramètres</h1>
+   336→        <div className="space-y-4">{Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-10 rounded-lg" />)}</div>
+   337→      </div>
+   338→    );
+   339→  }
+   340→
+   341→  return (
+   342→    <div>
+   343→      <h1 className="text-2xl font-bold mb-6">Paramètres</h1>
+   344→
+   345→      <Tabs defaultValue="general" className="w-full">
+   346→        {/* ---------- Tab list (horizontally scrollable on mobile) ---------- */}
+   347→        <TabsList className="overflow-x-auto w-max flex-nowrap mb-6">
+   348→          <TabsTrigger value="general" className="gap-1.5">
+   349→            <Settings className="h-4 w-4" />
+   350→            <span className="hidden sm:inline">Général</span>
+   351→            <span className="sm:hidden">Gén.</span>
+   352→          </TabsTrigger>
+   353→          <TabsTrigger value="email" className="gap-1.5">
+   354→            <Mail className="h-4 w-4" />
+   355→            <span className="hidden sm:inline">Email</span>
+   356→            <span className="sm:hidden">Mel.</span>
+   357→          </TabsTrigger>
+   358→          <TabsTrigger value="users" className="gap-1.5">
+   359→            <Users className="h-4 w-4" />
+   360→            <span className="hidden sm:inline">Utilisateurs</span>
+   361→            <span className="sm:hidden">Util.</span>
+   362→          </TabsTrigger>
+   363→          <TabsTrigger value="security" className="gap-1.5">
+   364→            <Shield className="h-4 w-4" />
+   365→            <span className="hidden sm:inline">Sécurité</span>
+   366→            <span className="sm:hidden">Séc.</span>
+   367→          </TabsTrigger>
+   368→          <TabsTrigger value="notifications" className="gap-1.5">
+   369→            <Bell className="h-4 w-4" />
+   370→            <span className="hidden sm:inline">Notifs</span>
+   371→            <span className="sm:hidden">Not.</span>
+   372→          </TabsTrigger>
+   373→          <TabsTrigger value="appearance" className="gap-1.5">
+   374→            <Palette className="h-4 w-4" />
+   375→            <span className="hidden sm:inline">Apparence</span>
+   376→            <span className="sm:hidden">App.</span>
+   377→          </TabsTrigger>
+   378→          <TabsTrigger value="accounts" className="gap-1.5">
+   379→            <UserCog className="h-4 w-4" />
+   380→            <span className="hidden sm:inline">Comptes</span>
+   381→            <span className="sm:hidden">Cpt.</span>
+   382→          </TabsTrigger>
+   383→        </TabsList>
+   384→
+   385→        {/* ============================================================ */}
+   386→        {/*  TAB 1 – Général                                              */}
+   387→        {/* ============================================================ */}
+   388→        <TabsContent value="general">
+   389→          <Card className="w-full">
+   390→            <CardHeader>
+   391→              <CardTitle className="flex items-center gap-2">
+   392→                <Settings className="h-5 w-5 text-[#B9E54D]" />
+   393→                Paramètres généraux
+   394→              </CardTitle>
+   395→            </CardHeader>
+   396→            <CardContent className="space-y-6">
+   397→              <div className="grid gap-2">
+   398→                <Label htmlFor="site-name">Nom du site</Label>
+   399→                <Input
+   400→                  id="site-name"
+   401→                  value={getSetting("general", "site_name", "NOLI Assurance")}
+   402→                  onChange={(e) =>
+   403→                    setSettingLocal("general", "site_name", e.target.value)
+   404→                  }
+   405→                />
+   406→              </div>
+   407→
+   408→              <div className="grid gap-2">
+   409→                <Label htmlFor="site-email">Email du site</Label>
+   410→                <Input
+   411→                  id="site-email"
+   412→                  type="email"
+   413→                  value={getSetting("general", "site_email", "contact@noli.ci")}
+   414→                  onChange={(e) =>
+   415→                    setSettingLocal("general", "site_email", e.target.value)
+   416→                  }
+   417→                />
+   418→              </div>
+   419→
+   420→              <Separator />
+   421→
+   422→              <div className="flex items-center justify-between">
+   423→                <div>
+   424→                  <Label>Mode maintenance</Label>
+   425→                  <p className="text-sm text-muted-foreground">
+   426→                    Activez pour afficher un message aux visiteurs
+   427→                  </p>
+   428→                </div>
+   429→                <Switch
+   430→                  checked={getSetting("general", "maintenance_mode") === "true"}
+   431→                  onCheckedChange={(v) =>
+   432→                    setSettingLocal("general", "maintenance_mode", String(v))
+   433→                  }
+   434→                />
+   435→              </div>
+   436→
+   437→              {getSetting("general", "maintenance_mode") === "true" && (
+   438→                <div className="flex items-center gap-2 rounded-lg border border-amber-400 bg-amber-50 dark:bg-amber-950/40 p-4 text-amber-700 dark:text-amber-300">
+   439→                  <AlertTriangle className="h-5 w-5 shrink-0" />
+   440→                  <p className="text-sm font-medium">
+   441→                    Le site est actuellement en mode maintenance. Les visiteurs
+   442→                    verront un message d&apos;avertissement.
+   443→                  </p>
+   444→                </div>
+   445→              )}
+   446→
+   447→              <div className="pt-2">
+   448→                <Button
+   449→                  className={saveBtnClass}
+   450→                  disabled={savingCategory === "general"}
+   451→                  onClick={() =>
+   452→                    saveCategory("general", settings["general"] ?? {})
+   453→                  }
+   454→                >
+   455→                  {savingCategory === "general" && (
+   456→                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+   457→                  )}
+   458→                  Enregistrer
+   459→                </Button>
+   460→              </div>
+   461→            </CardContent>
+   462→          </Card>
+   463→        </TabsContent>
+   464→
+   465→        {/* ============================================================ */}
+   466→        {/*  TAB 2 – Email (SMTP)                                         */}
+   467→        {/* ============================================================ */}
+   468→        <TabsContent value="email">
+   469→          <Card className="w-full">
+   470→            <CardHeader>
+   471→              <CardTitle className="flex items-center gap-2">
+   472→                <Mail className="h-5 w-5 text-[#B9E54D]" />
+   473→                Configuration Email (SMTP)
+   474→              </CardTitle>
+   475→            </CardHeader>
+   476→            <CardContent className="space-y-6">
+   477→              <div className="flex items-center justify-between">
+   478→                <div>
+   479→                  <Label>Activer l&apos;envoi d&apos;emails</Label>
+   480→                  <p className="text-sm text-muted-foreground">
+   481→                    Permet l&apos;envoi d&apos;emails via serveur SMTP
+   482→                  </p>
+   483→                </div>
+   484→                <Switch
+   485→                  checked={getSetting("email", "smtp_enabled") === "true"}
+   486→                  onCheckedChange={(v) =>
+   487→                    setSettingLocal("email", "smtp_enabled", String(v))
+   488→                  }
+   489→                />
+   490→              </div>
+   491→
+   492→              <Separator />
+   493→
+   494→              <div className="grid gap-2">
+   495→                <Label htmlFor="smtp-host">Hôte SMTP</Label>
+   496→                <Input
+   497→                  id="smtp-host"
+   498→                  value={getSetting("email", "smtp_host")}
+   499→                  onChange={(e) =>
+   500→                    setSettingLocal("email", "smtp_host", e.target.value)
+   501→                  }
+   502→                  placeholder="smtp.exemple.com"
+   503→                />
+   504→              </div>
+   505→
+   506→              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+   507→                <div className="grid gap-2">
+   508→                  <Label htmlFor="smtp-port">Port SMTP</Label>
+   509→                  <Input
+   510→                    id="smtp-port"
+   511→                    type="number"
+   512→                    value={getSetting("email", "smtp_port", "587")}
+   513→                    onChange={(e) =>
+   514→                      setSettingLocal("email", "smtp_port", e.target.value)
+   515→                    }
+   516→                  />
+   517→                </div>
+   518→                <div className="grid gap-2">
+   519→                  <Label htmlFor="smtp-encryption">Chiffrement</Label>
+   520→                  <Select
+   521→                    value={getSetting("email", "smtp_encryption", "tls")}
+   522→                    onValueChange={(v) =>
+   523→                      setSettingLocal("email", "smtp_encryption", v)
+   524→                    }
+   525→                  >
+   526→                    <SelectTrigger id="smtp-encryption">
+   527→                      <SelectValue />
+   528→                    </SelectTrigger>
+   529→                    <SelectContent>
+   530→                      <SelectItem value="tls">TLS</SelectItem>
+   531→                      <SelectItem value="ssl">SSL</SelectItem>
+   532→                      <SelectItem value="none">Aucun</SelectItem>
+   533→                    </SelectContent>
+   534→                  </Select>
+   535→                </div>
+   536→              </div>
+   537→
+   538→              <div className="grid gap-2">
+   539→                <Label htmlFor="smtp-user">Utilisateur SMTP</Label>
+   540→                <Input
+   541→                  id="smtp-user"
+   542→                  value={getSetting("email", "smtp_user")}
+   543→                  onChange={(e) =>
+   544→                    setSettingLocal("email", "smtp_user", e.target.value)
+   545→                  }
+   546→                  placeholder="user@exemple.com"
+   547→                />
+   548→              </div>
+   549→
+   550→              <div className="grid gap-2">
+   551→                <Label htmlFor="smtp-pass">Mot de passe SMTP</Label>
+   552→                <Input
+   553→                  id="smtp-pass"
+   554→                  type="password"
+   555→                  value={getSetting("email", "smtp_password")}
+   556→                  onChange={(e) =>
+   557→                    setSettingLocal("email", "smtp_password", e.target.value)
+   558→                  }
+   559→                />
+   560→              </div>
+   561→
+   562→              <div className="grid gap-2">
+   563→                <Label htmlFor="smtp-from">Email expéditeur</Label>
+   564→                <Input
+   565→                  id="smtp-from"
+   566→                  type="email"
+   567→                  value={getSetting("email", "smtp_from", "noreply@noli.ci")}
+   568→                  onChange={(e) =>
+   569→                    setSettingLocal("email", "smtp_from", e.target.value)
+   570→                  }
+   571→                />
+   572→              </div>
+   573→
+   574→              <Separator />
+   575→
+   576→              <div className="flex flex-col sm:flex-row gap-3 pt-2">
+   577→                <Button
+   578→                  className={saveBtnClass}
+   579→                  disabled={savingCategory === "email"}
+   580→                  onClick={() =>
+   581→                    saveCategory("email", settings["email"] ?? {})
+   582→                  }
+   583→                >
+   584→                  {savingCategory === "email" && (
+   585→                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+   586→                  )}
+   587→                  Enregistrer
+   588→                </Button>
+   589→                <Button
+   590→                  variant="outline"
+   591→                  onClick={() =>
+   592→                    toast({ title: "Email de test envoyé" })
+   593→                  }
+   594→                >
+   595→                  <Send className="h-4 w-4 mr-2" />
+   596→                  Envoyer un email test
+   597→                </Button>
+   598→              </div>
+   599→            </CardContent>
+   600→          </Card>
+   601→        </TabsContent>
+   602→
+   603→        {/* ============================================================ */}
+   604→        {/*  TAB 3 – Utilisateurs                                         */}
+   605→        {/* ============================================================ */}
+   606→        <TabsContent value="users">
+   607→          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+   608→            <h2 className="text-lg font-semibold">Utilisateurs</h2>
+   609→            <div className="relative flex-1 sm:w-64">
+   610→              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+   611→              <Input
+   612→                placeholder="Rechercher par nom ou email..."
+   613→                value={search}
+   614→                onChange={(e) => setSearch(e.target.value)}
+   615→                className="pl-9"
+   616→              />
+   617→            </div>
+   618→          </div>
+   619→
+   620→          {/* Desktop table */}
+   621→          <div className="hidden md:block rounded-xl border bg-card overflow-hidden">
+   622→            <Table>
+   623→              <TableHeader>
+   624→                <TableRow className="bg-muted/50">
+   625→                  <TableHead>Nom</TableHead>
+   626→                  <TableHead>Email</TableHead>
+   627→                  <TableHead>Téléphone</TableHead>
+   628→                  <TableHead>Rôle</TableHead>
+   629→                  <TableHead className="text-center">Devis</TableHead>
+   630→                  <TableHead>Date</TableHead>
+   631→                  <TableHead className="text-center">Statut</TableHead>
+   632→                  <TableHead className="w-10" />
+   633→                </TableRow>
+   634→              </TableHeader>
+   635→              <TableBody>
+   636→                {profiles.map((p) => (
+   637→                  <TableRow key={p.id}>
+   638→                    <TableCell>
+   639→                      {p.lastName || "—"} {p.firstName || ""}
+   640→                    </TableCell>
+   641→                    <TableCell className="text-sm">{p.email}</TableCell>
+   642→                    <TableCell className="text-sm">{p.phone || "—"}</TableCell>
+   643→                    <TableCell>
+   644→                      <Badge className={roleColors[p.role] || ""}>
+   645→                        {roleLabels[p.role] || p.role}
+   646→                      </Badge>
+   647→                    </TableCell>
+   648→                    <TableCell className="text-center">
+   649→                      {p._count.quotes}
+   650→                    </TableCell>
+   651→                    <TableCell className="text-sm text-muted-foreground">
+   652→                      {p.createdAt
+   653→                        ? new Date(p.createdAt).toLocaleDateString("fr-FR")
+   654→                        : "—"}
+   655→                    </TableCell>
+   656→                    <TableCell className="text-center">
+   657→                      <Switch
+   658→                        checked={p.isActive}
+   659→                        onCheckedChange={() => toggleProfileStatus(p)}
+   660→                      />
+   661→                    </TableCell>
+   662→                    <TableCell>
+   663→                      <Button
+   664→                        variant="ghost"
+   665→                        size="icon"
+   666→                        className="h-8 w-8"
+   667→                        onClick={() => openEdit(p)}
+   668→                      >
+   669→                        <Pencil className="h-4 w-4" />
+   670→                      </Button>
+   671→                    </TableCell>
+   672→                  </TableRow>
+   673→                ))}
+   674→                {profiles.length === 0 && (
+   675→                  <TableRow>
+   676→                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+   677→                      Aucun utilisateur trouvé
+   678→                    </TableCell>
+   679→                  </TableRow>
+   680→                )}
+   681→              </TableBody>
+   682→            </Table>
+   683→          </div>
+   684→
+   685→          {/* Mobile cards */}
+   686→          <div className="md:hidden space-y-3">
+   687→            {profiles.map((p) => (
+   688→              <Card key={p.id}>
+   689→                <CardContent className="p-4 space-y-3">
+   690→                  <div className="flex items-start justify-between">
+   691→                    <div>
+   692→                      <p className="font-medium">
+   693→                        {p.lastName || "—"} {p.firstName || ""}
+   694→                      </p>
+   695→                      <p className="text-sm text-muted-foreground">
+   696→                        {p.email}
+   697→                      </p>
+   698→                    </div>
+   699→                    <Badge className={roleColors[p.role] || ""}>
+   700→                      {roleLabels[p.role] || p.role}
+   701→                    </Badge>
+   702→                  </div>
+   703→                  <div className="flex items-center justify-between text-sm">
+   704→                    <span className="text-muted-foreground">
+   705→                      {p.phone || "—"} · {p._count.quotes} devis
+   706→                    </span>
+   707→                    <span className="text-muted-foreground">
+   708→                      {p.createdAt
+   709→                        ? new Date(p.createdAt).toLocaleDateString("fr-FR")
+   710→                        : "—"}
+   711→                    </span>
+   712→                  </div>
+   713→                  <div className="flex items-center justify-between pt-1">
+   714→                    <div className="flex items-center gap-2">
+   715→                      <Label className="text-sm">Actif</Label>
+   716→                      <Switch
+   717→                        checked={p.isActive}
+   718→                        onCheckedChange={() => toggleProfileStatus(p)}
+   719→                      />
+   720→                    </div>
+   721→                    <Button
+   722→                      variant="outline"
+   723→                      size="sm"
+   724→                      onClick={() => openEdit(p)}
+   725→                    >
+   726→                      <Pencil className="h-3.5 w-3.5 mr-1.5" />
+   727→                      Modifier
+   728→                    </Button>
+   729→                  </div>
+   730→                </CardContent>
+   731→              </Card>
+   732→            ))}
+   733→            {profiles.length === 0 && (
+   734→              <p className="text-center py-8 text-muted-foreground">
+   735→                Aucun utilisateur trouvé
+   736→              </p>
+   737→            )}
+   738→          </div>
+   739→        </TabsContent>
+   740→
+   741→        {/* ============================================================ */}
+   742→        {/*  TAB 4 – Sécurité                                             */}
+   743→        {/* ============================================================ */}
+   744→        <TabsContent value="security">
+   745→          <Card className="w-full">
+   746→            <CardHeader>
+   747→              <CardTitle className="flex items-center gap-2">
+   748→                <Shield className="h-5 w-5 text-[#B9E54D]" />
+   749→                Politique de sécurité
+   750→              </CardTitle>
+   751→            </CardHeader>
+   752→            <CardContent className="space-y-6">
+   753→              <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+   754→                Mot de passe
+   755→              </p>
+   756→
+   757→              <div className="grid gap-2">
+   758→                <Label htmlFor="min-length">
+   759→                  Longueur minimale du mot de passe
+   760→                </Label>
+   761→                <Input
+   762→                  id="min-length"
+   763→                  type="number"
+   764→                  min={6}
+   765→                  max={32}
+   766→                  value={getSetting("security", "password_min_length", "8")}
+   767→                  onChange={(e) =>
+   768→                    setSettingLocal(
+   769→                      "security",
+   770→                      "password_min_length",
+   771→                      e.target.value
+   772→                    )
+   773→                  }
+   774→                />
+   775→              </div>
+   776→
+   777→              <div className="flex items-center justify-between">
+   778→                <Label>Requérir des majuscules</Label>
+   779→                <Switch
+   780→                  checked={
+   781→                    getSetting("security", "password_require_uppercase") ===
+   782→                    "true"
+   783→                  }
+   784→                  onCheckedChange={(v) =>
+   785→                    setSettingLocal(
+   786→                      "security",
+   787→                      "password_require_uppercase",
+   788→                      String(v)
+   789→                    )
+   790→                  }
+   791→                />
+   792→              </div>
+   793→
+   794→              <div className="flex items-center justify-between">
+   795→                <Label>Requérir des minuscules</Label>
+   796→                <Switch
+   797→                  checked={
+   798→                    getSetting("security", "password_require_lowercase") ===
+   799→                    "true"
+   800→                  }
+   801→                  onCheckedChange={(v) =>
+   802→                    setSettingLocal(
+   803→                      "security",
+   804→                      "password_require_lowercase",
+   805→                      String(v)
+   806→                    )
+   807→                  }
+   808→                />
+   809→              </div>
+   810→
+   811→              <div className="flex items-center justify-between">
+   812→                <Label>Requérir des chiffres</Label>
+   813→                <Switch
+   814→                  checked={
+   815→                    getSetting("security", "password_require_numbers") ===
+   816→                    "true"
+   817→                  }
+   818→                  onCheckedChange={(v) =>
+   819→                    setSettingLocal(
+   820→                      "security",
+   821→                      "password_require_numbers",
+   822→                      String(v)
+   823→                    )
+   824→                  }
+   825→                />
+   826→              </div>
+   827→
+   828→              <div className="flex items-center justify-between">
+   829→                <Label>Requérir des caractères spéciaux</Label>
+   830→                <Switch
+   831→                  checked={
+   832→                    getSetting("security", "password_require_special") ===
+   833→                    "true"
+   834→                  }
+   835→                  onCheckedChange={(v) =>
+   836→                    setSettingLocal(
+   837→                      "security",
+   838→                      "password_require_special",
+   839→                      String(v)
+   840→                    )
+   841→                  }
+   842→                />
+   843→              </div>
+   844→
+   845→              <Separator />
+   846→
+   847→              <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+   848→                Connexion et sessions
+   849→              </p>
+   850→
+   851→              <div className="grid gap-2">
+   852→                <Label htmlFor="max-attempts">
+   853→                  Tentatives de connexion max avant verrouillage
+   854→                </Label>
+   855→                <Input
+   856→                  id="max-attempts"
+   857→                  type="number"
+   858→                  value={getSetting("security", "max_login_attempts", "5")}
+   859→                  onChange={(e) =>
+   860→                    setSettingLocal(
+   861→                      "security",
+   862→                      "max_login_attempts",
+   863→                      e.target.value
+   864→                    )
+   865→                  }
+   866→                />
+   867→              </div>
+   868→
+   869→              <div className="grid gap-2">
+   870→                <Label htmlFor="lockout-duration">
+   871→                  Durée de verrouillage (minutes)
+   872→                </Label>
+   873→                <Input
+   874→                  id="lockout-duration"
+   875→                  type="number"
+   876→                  value={getSetting("security", "lockout_duration", "30")}
+   877→                  onChange={(e) =>
+   878→                    setSettingLocal(
+   879→                      "security",
+   880→                      "lockout_duration",
+   881→                      e.target.value
+   882→                    )
+   883→                  }
+   884→                />
+   885→              </div>
+   886→
+   887→              <div className="grid gap-2">
+   888→                <Label htmlFor="session-expiry">
+   889→                  Délai d&apos;expiration de session (minutes)
+   890→                </Label>
+   891→                <Input
+   892→                  id="session-expiry"
+   893→                  type="number"
+   894→                  value={getSetting(
+   895→                    "security",
+   896→                    "session_expiry_minutes",
+   897→                    "60"
+   898→                  )}
+   899→                  onChange={(e) =>
+   900→                    setSettingLocal(
+   901→                      "security",
+   902→                      "session_expiry_minutes",
+   903→                      e.target.value
+   904→                    )
+   905→                  }
+   906→                />
+   907→              </div>
+   908→
+   909→              <div className="pt-2">
+   910→                <Button
+   911→                  className={saveBtnClass}
+   912→                  disabled={savingCategory === "security"}
+   913→                  onClick={() =>
+   914→                    saveCategory("security", settings["security"] ?? {})
+   915→                  }
+   916→                >
+   917→                  {savingCategory === "security" && (
+   918→                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+   919→                  )}
+   920→                  Enregistrer
+   921→                </Button>
+   922→              </div>
+   923→            </CardContent>
+   924→          </Card>
+   925→        </TabsContent>
+   926→
+   927→        {/* ============================================================ */}
+   928→        {/*  TAB 5 – Notifications                                        */}
+   929→        {/* ============================================================ */}
+   930→        <TabsContent value="notifications">
+   931→          <Card className="w-full">
+   932→            <CardHeader>
+   933→              <CardTitle className="flex items-center gap-2">
+   934→                <Bell className="h-5 w-5 text-[#B9E54D]" />
+   935→                Paramètres de notifications
+   936→              </CardTitle>
+   937→            </CardHeader>
+   938→            <CardContent className="space-y-6">
+   939→              <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+   940→                Canaux de notification
+   941→              </p>
+   942→
+   943→              <div className="flex items-center justify-between">
+   944→                <Label>Email</Label>
+   945→                <Switch
+   946→                  checked={
+   947→                    getSetting("notification", "channel_email") !== "false"
+   948→                  }
+   949→                  onCheckedChange={(v) =>
+   950→                    setSettingLocal("notification", "channel_email", String(v))
+   951→                  }
+   952→                />
+   953→              </div>
+   954→
+   955→              <div className="flex items-center justify-between">
+   956→                <Label>SMS</Label>
+   957→                <Switch
+   958→                  checked={getSetting("notification", "channel_sms") === "true"}
+   959→                  onCheckedChange={(v) =>
+   960→                    setSettingLocal("notification", "channel_sms", String(v))
+   961→                  }
+   962→                />
+   963→              </div>
+   964→
+   965→              <div className="flex items-center justify-between">
+   966→                <Label>Push</Label>
+   967→                <Switch
+   968→                  checked={
+   969→                    getSetting("notification", "channel_push") === "true"
+   970→                  }
+   971→                  onCheckedChange={(v) =>
+   972→                    setSettingLocal("notification", "channel_push", String(v))
+   973→                  }
+   974→                />
+   975→              </div>
+   976→
+   977→              <Separator />
+   978→
+   979→              <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+   980→                Événements
+   981→              </p>
+   982→
+   983→              <div className="flex items-center justify-between">
+   984→                <Label>Nouveau devis</Label>
+   985→                <Switch
+   986→                  checked={
+   987→                    getSetting("notification", "event_new_quote") !== "false"
+   988→                  }
+   989→                  onCheckedChange={(v) =>
+   990→                    setSettingLocal(
+   991→                      "notification",
+   992→                      "event_new_quote",
+   993→                      String(v)
+   994→                    )
+   995→                  }
+   996→                />
+   997→              </div>
+   998→
+   999→              <div className="flex items-center justify-between">
+  1000→                <Label>Inscription utilisateur</Label>
+  1001→                <Switch
+  1002→                  checked={
+  1003→                    getSetting("notification", "event_user_signup") !== "false"
+  1004→                  }
+  1005→                  onCheckedChange={(v) =>
+  1006→                    setSettingLocal(
+  1007→                      "notification",
+  1008→                      "event_user_signup",
+  1009→                      String(v)
+  1010→                    )
+  1011→                  }
+  1012→                />
+  1013→              </div>
+  1014→
+  1015→              <div className="flex items-center justify-between">
+  1016→                <Label>Changement de statut de devis</Label>
+  1017→                <Switch
+  1018→                  checked={
+  1019→                    getSetting("notification", "event_quote_status") !==
+  1020→                    "false"
+  1021→                  }
+  1022→                  onCheckedChange={(v) =>
+  1023→                    setSettingLocal(
+  1024→                      "notification",
+  1025→                      "event_quote_status",
+  1026→                      String(v)
+  1027→                    )
+  1028→                  }
+  1029→                />
+  1030→              </div>
+  1031→
+  1032→              <div className="flex items-center justify-between">
+  1033→                <Label>Alertes système</Label>
+  1034→                <Switch
+  1035→                  checked={
+  1036→                    getSetting("notification", "event_system_alert") !== "false"
+  1037→                  }
+  1038→                  onCheckedChange={(v) =>
+  1039→                    setSettingLocal(
+  1040→                      "notification",
+  1041→                      "event_system_alert",
+  1042→                      String(v)
+  1043→                    )
+  1044→                  }
+  1045→                />
+  1046→              </div>
+  1047→
+  1048→              <div className="pt-2">
+  1049→                <Button
+  1050→                  className={saveBtnClass}
+  1051→                  disabled={savingCategory === "notification"}
+  1052→                  onClick={() =>
+  1053→                    saveCategory(
+  1054→                      "notification",
+  1055→                      settings["notification"] ?? {}
+  1056→                    )
+  1057→                  }
+  1058→                >
+  1059→                  {savingCategory === "notification" && (
+  1060→                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+  1061→                  )}
+  1062→                  Enregistrer
+  1063→                </Button>
+  1064→              </div>
+  1065→            </CardContent>
+  1066→          </Card>
+  1067→        </TabsContent>
+  1068→
+  1069→        {/* ============================================================ */}
+  1070→        {/*  TAB 6 – Apparence                                            */}
+  1071→        {/* ============================================================ */}
+  1072→        <TabsContent value="appearance">
+  1073→          <Card className="w-full">
+  1074→            <CardHeader>
+  1075→              <CardTitle className="flex items-center gap-2">
+  1076→                <Palette className="h-5 w-5 text-[#B9E54D]" />
+  1077→                Apparence
+  1078→              </CardTitle>
+  1079→            </CardHeader>
+  1080→            <CardContent className="space-y-6">
+  1081→              <div className="grid gap-2">
+  1082→                <Label htmlFor="theme-select">Thème</Label>
+  1083→                <Select
+  1084→                  value={mounted ? (theme ?? "system") : "system"}
+  1085→                  onValueChange={(v) => {
+  1086→                    setTheme(v);
+  1087→                    setSettingLocal("appearance", "theme", v);
+  1088→                  }}
+  1089→                >
+  1090→                  <SelectTrigger id="theme-select">
+  1091→                    <SelectValue />
+  1092→                  </SelectTrigger>
+  1093→                  <SelectContent>
+  1094→                    <SelectItem value="light">Clair</SelectItem>
+  1095→                    <SelectItem value="dark">Sombre</SelectItem>
+  1096→                    <SelectItem value="system">Système</SelectItem>
+  1097→                  </SelectContent>
+  1098→                </Select>
+  1099→              </div>
+  1100→
+  1101→              <div className="grid gap-2">
+  1102→                <Label htmlFor="lang-select">Langue</Label>
+  1103→                <Select
+  1104→                  value={getSetting("appearance", "language", "fr")}
+  1105→                  onValueChange={(v) =>
+  1106→                    setSettingLocal("appearance", "language", v)
+  1107→                  }
+  1108→                >
+  1109→                  <SelectTrigger id="lang-select">
+  1110→                    <SelectValue />
+  1111→                  </SelectTrigger>
+  1112→                  <SelectContent>
+  1113→                    <SelectItem value="fr">Français</SelectItem>
+  1114→                    <SelectItem value="en">English</SelectItem>
+  1115→                  </SelectContent>
+  1116→                </Select>
+  1117→              </div>
+  1118→
+  1119→              <div className="grid gap-2">
+  1120→                <Label htmlFor="date-format-select">Format de date</Label>
+  1121→                <Select
+  1122→                  value={getSetting(
+  1123→                    "appearance",
+  1124→                    "date_format",
+  1125→                    "dd/MM/yyyy"
+  1126→                  )}
+  1127→                  onValueChange={(v) =>
+  1128→                    setSettingLocal("appearance", "date_format", v)
+  1129→                  }
+  1130→                >
+  1131→                  <SelectTrigger id="date-format-select">
+  1132→                    <SelectValue />
+  1133→                  </SelectTrigger>
+  1134→                  <SelectContent>
+  1135→                    <SelectItem value="dd/MM/yyyy">dd/MM/yyyy</SelectItem>
+  1136→                    <SelectItem value="MM/dd/yyyy">MM/dd/yyyy</SelectItem>
+  1137→                    <SelectItem value="yyyy-MM-dd">yyyy-MM-dd</SelectItem>
+  1138→                  </SelectContent>
+  1139→                </Select>
+  1140→              </div>
+  1141→
+  1142→              <div className="grid gap-2">
+  1143→                <Label htmlFor="tz-select">Fuseau horaire</Label>
+  1144→                <Select
+  1145→                  value={getSetting(
+  1146→                    "appearance",
+  1147→                    "timezone",
+  1148→                    "Africa/Abidjan"
+  1149→                  )}
+  1150→                  onValueChange={(v) =>
+  1151→                    setSettingLocal("appearance", "timezone", v)
+  1152→                  }
+  1153→                >
+  1154→                  <SelectTrigger id="tz-select">
+  1155→                    <SelectValue />
+  1156→                  </SelectTrigger>
+  1157→                  <SelectContent>
+  1158→                    <SelectItem value="Africa/Abidjan">
+  1159→                      Africa/Abidjan
+  1160→                    </SelectItem>
+  1161→                    <SelectItem value="Africa/Lagos">Africa/Lagos</SelectItem>
+  1162→                    <SelectItem value="UTC">UTC</SelectItem>
+  1163→                  </SelectContent>
+  1164→                </Select>
+  1165→              </div>
+  1166→
+  1167→              <div className="pt-2">
+  1168→                <Button
+  1169→                  className={saveBtnClass}
+  1170→                  disabled={savingCategory === "appearance"}
+  1171→                  onClick={() =>
+  1172→                    saveCategory(
+  1173→                      "appearance",
+  1174→                      settings["appearance"] ?? {}
+  1175→                    )
+  1176→                  }
+  1177→                >
+  1178→                  {savingCategory === "appearance" && (
+  1179→                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+  1180→                  )}
+  1181→                  Enregistrer
+  1182→                </Button>
+  1183→              </div>
+  1184→            </CardContent>
+  1185→          </Card>
+  1186→        </TabsContent>
+  1187→
+  1188→        {/* ============================================================ */}
+  1189→        {/*  TAB 7 – Gestion des comptes                                  */}
+  1190→        {/* ============================================================ */}
+  1191→        <TabsContent value="accounts">
+  1192→          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+  1193→            <h2 className="text-lg font-semibold">Gestion des comptes</h2>
+  1194→            <div className="relative flex-1 sm:w-64">
+  1195→              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+  1196→              <Input
+  1197→                placeholder="Rechercher par nom ou email..."
+  1198→                value={search}
+  1199→                onChange={(e) => setSearch(e.target.value)}
+  1200→                className="pl-9"
+  1201→              />
+  1202→            </div>
+  1203→          </div>
+  1204→
+  1205→          {/* Desktop table */}
+  1206→          <div className="hidden md:block rounded-xl border bg-card overflow-hidden">
+  1207→            <Table>
+  1208→              <TableHeader>
+  1209→                <TableRow className="bg-muted/50">
+  1210→                  <TableHead>Nom</TableHead>
+  1211→                  <TableHead>Email</TableHead>
+  1212→                  <TableHead>Rôle</TableHead>
+  1213→                  <TableHead>Rôles personnalisés</TableHead>
+  1214→                  <TableHead>Statut</TableHead>
+  1215→                  <TableHead>Dernière connexion</TableHead>
+  1216→                  <TableHead>Devis</TableHead>
+  1217→                  <TableHead className="w-10" />
+  1218→                </TableRow>
+  1219→              </TableHeader>
+  1220→              <TableBody>
+  1221→                {profiles.map((p) => {
+  1222→                  const isExpanded = expandedRow === p.id;
+  1223→                  return (
+  1224→                    <TableRow
+  1225→                      key={p.id}
+  1226→                      className="cursor-pointer hover:bg-muted/30"
+  1227→                      onClick={() =>
+  1228→                        setExpandedRow(isExpanded ? null : p.id)
+  1229→                      }
+  1230→                    >
+  1231→                      <TableCell className="font-medium">
+  1232→                        {p.lastName || "—"} {p.firstName || ""}
+  1233→                      </TableCell>
+  1234→                      <TableCell className="text-sm">{p.email}</TableCell>
+  1235→                      <TableCell>
+  1236→                        <Badge className={roleColors[p.role] || ""}>
+  1237→                          {roleLabels[p.role] || p.role}
+  1238→                        </Badge>
+  1239→                      </TableCell>
+  1240→                      <TableCell>
+  1241→                        <div className="flex flex-wrap gap-1">
+  1242→                          {p.role === "ADMIN" && (
+  1243→                            <Badge variant="outline" className="text-xs">
+  1244→                              Super Admin
+  1245→                            </Badge>
+  1246→                          )}
+  1247→                          {p.role === "INSURER" && (
+  1248→                            <Badge variant="outline" className="text-xs">
+  1249→                              Gestionnaire
+  1250→                            </Badge>
+  1251→                          )}
+  1252→                          {roles
+  1253→                            .filter((r) => r.name === p.role)
+  1254→                            .map((r) => (
+  1255→                              <Badge
+  1256→                                key={r.id}
+  1257→                                variant="secondary"
+  1258→                                className="text-xs"
+  1259→                              >
+  1260→                                {r.label}
+  1261→                              </Badge>
+  1262→                            ))}
+  1263→                        </div>
+  1264→                      </TableCell>
+  1265→                      <TableCell>
+  1266→                        {p.isActive ? (
+  1267→                          <Badge className="bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300">
+  1268→                            Actif
+  1269→                          </Badge>
+  1270→                        ) : (
+  1271→                          <Badge className="bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300">
+  1272→                            Inactif
+  1273→                          </Badge>
+  1274→                        )}
+  1275→                      </TableCell>
+  1276→                      <TableCell className="text-sm text-muted-foreground">
+  1277→                        {formatLastLogin(p.lastLogin)}
+  1278→                      </TableCell>
+  1279→                      <TableCell className="text-center">
+  1280→                        {p._count.quotes}
+  1281→                      </TableCell>
+  1282→                      <TableCell>
+  1283→                        {isExpanded ? (
+  1284→                          <ChevronUp className="h-4 w-4 text-muted-foreground" />
+  1285→                        ) : (
+  1286→                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+  1287→                        )}
+  1288→                      </TableCell>
+  1289→                    </TableRow>
+  1290→                  );
+  1291→                })}
+  1292→                {profiles.length === 0 && (
+  1293→                  <TableRow>
+  1294→                    <TableCell
+  1295→                      colSpan={8}
+  1296→                      className="text-center py-8 text-muted-foreground"
+  1297→                    >
+  1298→                      Aucun compte trouvé
+  1299→                    </TableCell>
+  1300→                  </TableRow>
+  1301→                )}
+  1302→              </TableBody>
+  1303→            </Table>
+  1304→          </div>
+  1305→
+  1306→          {/* Mobile cards */}
+  1307→          <div className="md:hidden space-y-3">
+  1308→            {profiles.map((p) => {
+  1309→              const isExpanded = expandedRow === p.id;
+  1310→              return (
+  1311→                <Card
+  1312→                  key={p.id}
+  1313→                  className="cursor-pointer"
+  1314→                  onClick={() =>
+  1315→                    setExpandedRow(isExpanded ? null : p.id)
+  1316→                  }
+  1317→                >
+  1318→                  <CardContent className="p-4 space-y-3">
+  1319→                    <div className="flex items-start justify-between">
+  1320→                      <div>
+  1321→                        <p className="font-medium">
+  1322→                          {p.lastName || "—"} {p.firstName || ""}
+  1323→                        </p>
+  1324→                        <p className="text-sm text-muted-foreground">
+  1325→                          {p.email}
+  1326→                        </p>
+  1327→                      </div>
+  1328→                      <div className="flex items-center gap-2">
+  1329→                        {p.isActive ? (
+  1330→                          <Badge className="bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300 text-xs">
+  1331→                            Actif
+  1332→                          </Badge>
+  1333→                        ) : (
+  1334→                          <Badge className="bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300 text-xs">
+  1335→                            Inactif
+  1336→                          </Badge>
+  1337→                        )}
+  1338→                        {isExpanded ? (
+  1339→                          <ChevronUp className="h-4 w-4 text-muted-foreground" />
+  1340→                        ) : (
+  1341→                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+  1342→                        )}
+  1343→                      </div>
+  1344→                    </div>
+  1345→                    <div className="flex items-center gap-2 text-sm">
+  1346→                      <Badge className={roleColors[p.role] || ""}>
+  1347→                        {roleLabels[p.role] || p.role}
+  1348→                      </Badge>
+  1349→                      <span className="text-muted-foreground">
+  1350→                        Dernière connexion : {formatLastLogin(p.lastLogin)}
+  1351→                      </span>
+  1352→                    </div>
+  1353→
+  1354→                    {/* Expanded section */}
+  1355→                    {isExpanded && (
+  1356→                      <div
+  1357→                        className="pt-3 border-t space-y-3"
+  1358→                        onClick={(e) => e.stopPropagation()}
+  1359→                      >
+  1360→                        <div>
+  1361→                          <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">
+  1362→                            Rôles assignés
+  1363→                          </p>
+  1364→                          <div className="flex flex-wrap gap-1">
+  1365→                            <Badge className={roleColors[p.role] || ""}>
+  1366→                              {roleLabels[p.role] || p.role}
+  1367→                            </Badge>
+  1368→                            {roles
+  1369→                              .filter((r) => r.name === p.role)
+  1370→                              .map((r) => (
+  1371→                                <Badge
+  1372→                                  key={r.id}
+  1373→                                  variant="secondary"
+  1374→                                  className="text-xs"
+  1375→                                >
+  1376→                                  {r.label}
+  1377→                                </Badge>
+  1378→                              ))}
+  1379→                          </div>
+  1380→                        </div>
+  1381→
+  1382→                        <div>
+  1383→                          <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">
+  1384→                            Résumé des permissions
+  1385→                          </p>
+  1386→                          <p className="text-sm text-muted-foreground">
+  1387→                            {p.role === "ADMIN"
+  1388→                              ? "Accès complet : gestion des assureurs, offres, garanties, utilisateurs, paramètres."
+  1389→                              : p.role === "INSURER"
+  1390→                                ? "Gestion des offres, garanties et consultation des devis associés."
+  1391→                                : "Consultation des devis et gestion du profil personnel."}
+  1392→                          </p>
+  1393→                        </div>
+  1394→
+  1395→                        <div>
+  1396→                          <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">
+  1397→                            Résumé d&apos;activité
+  1398→                          </p>
+  1399→                          <p className="text-sm text-muted-foreground">
+  1400→                            {p._count.quotes} devis · Inscrit le{" "}
+  1401→                            {p.createdAt
+  1402→                              ? new Date(p.createdAt).toLocaleDateString(
+  1403→                                  "fr-FR"
+  1404→                                )
+  1405→                              : "—"}{" "}
+  1406→                            · Dernière connexion :{" "}
+  1407→                            {formatLastLogin(p.lastLogin)}
+  1408→                          </p>
+  1409→                        </div>
+  1410→
+  1411→                        <Separator />
+  1412→
+  1413→                        <div className="flex flex-col sm:flex-row gap-2">
+  1414→                          <Button
+  1415→                            variant={p.isActive ? "outline" : "default"}
+  1416→                            size="sm"
+  1417→                            className={
+  1418→                              p.isActive ? "" : "bg-[#B9E54D] text-black hover:bg-[#a5d044]"
+  1419→                            }
+  1420→                            onClick={() => toggleProfileStatus(p)}
+  1421→                          >
+  1422→                            {p.isActive ? "Désactiver" : "Activer"}
+  1423→                          </Button>
+  1424→                          <Select
+  1425→                            value={p.role}
+  1426→                            onValueChange={(v) => changeProfileRole(p, v)}
+  1427→                          >
+  1428→                            <SelectTrigger className="h-9 w-full sm:w-44">
+  1429→                              <SelectValue placeholder="Changer le rôle" />
+  1430→                            </SelectTrigger>
+  1431→                            <SelectContent>
+  1432→                              <SelectItem value="USER">Utilisateur</SelectItem>
+  1433→                              <SelectItem value="INSURER">Assureur</SelectItem>
+  1434→                              <SelectItem value="ADMIN">Admin</SelectItem>
+  1435→                            </SelectContent>
+  1436→                          </Select>
+  1437→                        </div>
+  1438→                      </div>
+  1439→                    )}
+  1440→                  </CardContent>
+  1441→                </Card>
+  1442→              );
+  1443→            })}
+  1444→            {profiles.length === 0 && (
+  1445→              <p className="text-center py-8 text-muted-foreground">
+  1446→                Aucun compte trouvé
+  1447→              </p>
+  1448→            )}
+  1449→          </div>
+  1450→
+  1451→          {/* Desktop expanded row panel */}
+  1452→          {expandedRow && (
+  1453→            <div className="hidden md:block mt-4">
+  1454→              <Card className="w-full">
+  1455→                <CardContent className="p-6 space-y-4">
+  1456→                  {(() => {
+  1457→                    const p = profiles.find(
+  1458→                      (pr) => pr.id === expandedRow
+  1459→                    );
+  1460→                    if (!p) return null;
+  1461→                    return (
+  1462→                      <>
+  1463→                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+  1464→                          <div>
+  1465→                            <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">
+  1466→                              Rôles assignés
+  1467→                            </p>
+  1468→                            <div className="flex flex-wrap gap-1">
+  1469→                              <Badge className={roleColors[p.role] || ""}>
+  1470→                                {roleLabels[p.role] || p.role}
+  1471→                              </Badge>
+  1472→                              {roles
+  1473→                                .filter((r) => r.name === p.role)
+  1474→                                .map((r) => (
+  1475→                                  <Badge
+  1476→                                    key={r.id}
+  1477→                                    variant="secondary"
+  1478→                                    className="text-xs"
+  1479→                                  >
+  1480→                                    {r.label}
+  1481→                                  </Badge>
+  1482→                                ))}
+  1483→                            </div>
+  1484→                          </div>
+  1485→
+  1486→                          <div>
+  1487→                            <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">
+  1488→                              Permissions
+  1489→                            </p>
+  1490→                            <p className="text-sm text-muted-foreground">
+  1491→                              {p.role === "ADMIN"
+  1492→                                ? "Accès complet"
+  1493→                                : p.role === "INSURER"
+  1494→                                  ? "Gestion offres/devis"
+  1495→                                  : "Consultation"}
+  1496→                            </p>
+  1497→                          </div>
+  1498→
+  1499→                          <div>
+  1500→                            <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">
+  1501→                              Activité
+  1502→                            </p>
+  1503→                            <p className="text-sm text-muted-foreground">
+  1504→                              {p._count.quotes} devis · Inscrit le{" "}
+  1505→                              {p.createdAt
+  1506→                                ? new Date(p.createdAt).toLocaleDateString(
+  1507→                                    "fr-FR"
+  1508→                                  )
+  1509→                                : "—"}
+  1510→                            </p>
+  1511→                          </div>
+  1512→                        </div>
+  1513→
+  1514→                        <Separator />
+  1515→
+  1516→                        <div className="flex gap-2">
+  1517→                          <Button
+  1518→                            variant={p.isActive ? "outline" : "default"}
+  1519→                            size="sm"
+  1520→                            className={
+  1521→                              p.isActive
+  1522→                                ? ""
+  1523→                                : "bg-[#B9E54D] text-black hover:bg-[#a5d044]"
+  1524→                            }
+  1525→                            onClick={() => toggleProfileStatus(p)}
+  1526→                          >
+  1527→                            {p.isActive ? "Désactiver" : "Activer"}
+  1528→                          </Button>
+  1529→                          <Select
+  1530→                            value={p.role}
+  1531→                            onValueChange={(v) => changeProfileRole(p, v)}
+  1532→                          >
+  1533→                            <SelectTrigger className="h-9 w-44">
+  1534→                              <SelectValue placeholder="Changer le rôle" />
+  1535→                            </SelectTrigger>
+  1536→                            <SelectContent>
+  1537→                              <SelectItem value="USER">Utilisateur</SelectItem>
+  1538→                              <SelectItem value="INSURER">Assureur</SelectItem>
+  1539→                              <SelectItem value="ADMIN">Admin</SelectItem>
+  1540→                            </SelectContent>
+  1541→                          </Select>
+  1542→                        </div>
+  1543→                      </>
+  1544→                    );
+  1545→                  })()}
+  1546→                </CardContent>
+  1547→              </Card>
+  1548→            </div>
+  1549→          )}
+  1550→        </TabsContent>
+  1551→      </Tabs>
+  1552→
+  1553→      {/* ================================================================ */}
+  1554→      {/*  Edit Profile Dialog (shared by tabs 3 & 7)                       */}
+  1555→      {/* ================================================================ */}
+  1556→      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+  1557→        <DialogContent className="max-w-md">
+  1558→          <DialogHeader>
+  1559→            <DialogTitle>Modifier le profil</DialogTitle>
+  1560→            <DialogDescription>
+  1561→              Mettez à jour les informations du profil.
+  1562→            </DialogDescription>
+  1563→          </DialogHeader>
+  1564→          {edit && (
+  1565→            <div className="grid gap-4 py-4">
+  1566→              <div className="grid grid-cols-2 gap-4">
+  1567→                <div className="grid gap-2">
+  1568→                  <Label>Prénom</Label>
+  1569→                  <Input
+  1570→                    className="w-full"
+  1571→                    value={edit.firstName || ""}
+  1572→                    onChange={(e) =>
+  1573→                      setEdit({ ...edit, firstName: e.target.value })
+  1574→                    }
+  1575→                  />
+  1576→                </div>
+  1577→                <div className="grid gap-2">
+  1578→                  <Label>Nom</Label>
+  1579→                  <Input
+  1580→                    className="w-full"
+  1581→                    value={edit.lastName || ""}
+  1582→                    onChange={(e) =>
+  1583→                      setEdit({ ...edit, lastName: e.target.value })
+  1584→                    }
+  1585→                  />
+  1586→                </div>
+  1587→              </div>
+  1588→              <div className="grid grid-cols-2 gap-4">
+  1589→                <div className="grid gap-2">
+  1590→                  <Label>Téléphone</Label>
+  1591→                  <Input
+  1592→                    className="w-full"
+  1593→                    value={edit.phone || ""}
+  1594→                    onChange={(e) =>
+  1595→                      setEdit({ ...edit, phone: e.target.value })
+  1596→                    }
+  1597→                  />
+  1598→                </div>
+  1599→                <div className="grid gap-2">
+  1600→                  <Label>Rôle</Label>
+  1601→                  <Select
+  1602→                    value={edit.role}
+  1603→                    onValueChange={(v) => setEdit({ ...edit, role: v })}
+  1604→                  >
+  1605→                    <SelectTrigger className="w-full">
+  1606→                      <SelectValue />
+  1607→                    </SelectTrigger>
+  1608→                    <SelectContent>
+  1609→                      <SelectItem value="USER">Utilisateur</SelectItem>
+  1610→                      <SelectItem value="INSURER">Assureur</SelectItem>
+  1611→                      <SelectItem value="ADMIN">Admin</SelectItem>
+  1612→                    </SelectContent>
+  1613→                  </Select>
+  1614→                </div>
+  1615→              </div>
+  1616→              <div className="flex items-center justify-between">
+  1617→                <Label>Actif</Label>
+  1618→                <Switch
+  1619→                  checked={edit.isActive}
+  1620→                  onCheckedChange={(v) => setEdit({ ...edit, isActive: v })}
+  1621→                />
+  1622→              </div>
+  1623→            </div>
+  1624→          )}
+  1625→          <DialogFooter>
+  1626→            <Button variant="outline" onClick={() => setEditOpen(false)}>
+  1627→              Annuler
+  1628→            </Button>
+  1629→            <Button
+  1630→              onClick={handleSave}
+  1631→              disabled={saving}
+  1632→              className={saveBtnClass}
+  1633→            >
+  1634→              {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+  1635→              Enregistrer
+  1636→            </Button>
+  1637→          </DialogFooter>
+  1638→        </DialogContent>
+  1639→      </Dialog>
+  1640→    </div>
+  1641→  );
+  1642→}

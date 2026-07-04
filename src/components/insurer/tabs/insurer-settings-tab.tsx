@@ -57,7 +57,7 @@ export function InsurerSettingsTab() {
   };
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6 w-full">
       {/* Header */}
       <div>
         <h2 className="text-2xl font-bold">Paramètres</h2>
