@@ -855,3 +855,25 @@ Stage Summary:
 - Passwords reset for: user@test.ci (User@2025), admin@noli.ci (Admin@2025), assureur@saham.ci (Assureur@2025)
 - All 3 test accounts now work correctly
 
+---
+Task ID: 3
+Agent: Main
+Task: Logo upload for insurers + display in admin lists
+
+Work Log:
+- Created /api/insurer/logo/route.ts: multipart upload endpoint accepting PNG/JPG/WebP/SVG (max 2MB), saves to public/uploads/logos/, updates Insurer.logoUrl in DB
+- Rewrote insurer-settings-tab.tsx: added Logo card section with preview (placeholder icon when no logo, img when uploaded), file input with validation, upload button with loading state, fetches insurer data from /api/insurer/me
+- Updated /api/admin/insurance-offers/route.ts: added logoUrl to insurer select
+- Updated /api/admin/coverages/route.ts: added logoUrl to insurer select
+- Updated insurance-offers-tab.tsx: insurer type now includes logoUrl, desktop table shows 24x24 logo + name in Assureur column, mobile cards show 32x32 logo + name
+- Updated coverages-tab.tsx: InsurerOption type includes logoUrl, added Building2 import, desktop table and mobile cards show insurer logo with fallback placeholder
+
+Stage Summary:
+- Created: src/app/api/insurer/logo/route.ts
+- Modified: insurer-settings-tab.tsx (full rewrite with logo upload UI)
+- Modified: admin/insurance-offers-tab.tsx (logo in table + mobile)
+- Modified: admin/coverages-tab.tsx (logo in table + mobile)
+- Modified: api/admin/insurance-offers/route.ts (logoUrl in select)
+- Modified: api/admin/coverages/route.ts (logoUrl in select)
+- Verified: API upload works, DB updates, logos visible in admin offers + guarantees lists
+

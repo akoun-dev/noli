@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTheme } from "next-themes";
 import { useAppStore } from "@/store/app-store";
 import {
@@ -12,6 +12,9 @@ import {
   Lock,
   Mail,
   Phone,
+  Upload,
+  Loader2,
+  ImageIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,40 +23,102 @@ import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
 
 export function InsurerSettingsTab() {
   const { user } = useAppStore();
   const { theme, setTheme } = useTheme();
+  const { toast } = useToast();
 
   const [companyName, setCompanyName] = useState("");
   const [companyEmail, setCompanyEmail] = useState("");
   const [companyPhone, setCompanyPhone] = useState("");
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [profileName, setProfileName] = useState(user.name || "");
   const [profileEmail, setProfileEmail] = useState(user.email || "");
   const [profilePassword, setProfilePassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // Try to fetch insurer account info
-    fetch("/api/user/profile")
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.firstName) {
+    setLoading(true);
+    Promise.all([
+      fetch("/api/user/profile").then((r) => r.json()).catch(() => ({})),
+      fetch(`/api/insurer/me?userId=${user.id}`).then((r) => r.json()).catch(() => ({})),
+    ])
+      .then(([profileData, insurerData]) => {
+        if (profileData.firstName) {
           setProfileName(
-            [data.firstName, data.lastName].filter(Boolean).join(" ")
+            [profileData.firstName, profileData.lastName].filter(Boolean).join(" ")
           );
         }
-        if (data.email) setProfileEmail(data.email);
-        if (data.phone) setCompanyPhone(data.phone);
+        if (profileData.email) setProfileEmail(profileData.email);
+        if (profileData.phone) setCompanyPhone(profileData.phone);
+        if (insurerData.name) setCompanyName(insurerData.name);
+        if (insurerData.contactEmail) setCompanyEmail(insurerData.contactEmail);
+        if (insurerData.logoUrl) setLogoUrl(insurerData.logoUrl);
       })
-      .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+  }, [user.id]);
 
   const handleSave = () => {
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const allowed = ["image/png", "image/jpeg", "image/webp", "image/svg+xml"];
+    if (!allowed.includes(file.type)) {
+      toast({
+        title: "Format non supporté",
+        description: "Utilisez PNG, JPG, WebP ou SVG.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast({
+        title: "Fichier trop volumineux",
+        description: "La taille maximale est de 2 Mo.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLogoUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("logo", file);
+
+      const res = await fetch("/api/insurer/logo", {
+        method: "POST",
+        headers: { "x-user-id": user.id },
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ title: "Erreur", description: data.error, variant: "destructive" });
+        return;
+      }
+
+      setLogoUrl(data.logoUrl);
+      toast({ title: "Logo mis à jour", description: "Votre logo a été enregistré avec succès." });
+    } catch {
+      toast({ title: "Erreur", description: "Impossible de charger le logo.", variant: "destructive" });
+    } finally {
+      setLogoUploading(false);
+      // Reset input so same file can be re-selected
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   };
 
   return (
@@ -68,6 +133,7 @@ export function InsurerSettingsTab() {
 
       {loading && (
         <div className="space-y-6">
+          <Skeleton className="h-64 w-full" />
           <Skeleton className="h-48 w-full" />
           <Skeleton className="h-48 w-full" />
           <Skeleton className="h-32 w-full" />
@@ -76,6 +142,74 @@ export function InsurerSettingsTab() {
 
       {!loading && (
         <>
+          {/* Logo */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#B9E54D]">
+                  <ImageIcon className="h-5 w-5 text-black" />
+                </div>
+                <div>
+                  <CardTitle className="text-base">
+                    Logo de l&apos;entreprise
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Votre logo sera affiché sur vos offres et garanties
+                  </p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-6">
+                {/* Logo preview */}
+                <div className="relative group">
+                  <div className="h-20 w-20 rounded-xl border-2 border-dashed border-border/60 flex items-center justify-center overflow-hidden bg-muted/30">
+                    {logoUrl ? (
+                      <img
+                        src={logoUrl}
+                        alt="Logo"
+                        className="h-full w-full object-contain p-1"
+                      />
+                    ) : (
+                      <Building2 className="h-8 w-8 text-muted-foreground/50" />
+                    )}
+                  </div>
+                  {logoUploading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-background/70 rounded-xl">
+                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                    </div>
+                  )}
+                </div>
+
+                {/* Upload button */}
+                <div className="flex flex-col gap-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                    className="hidden"
+                    onChange={handleLogoUpload}
+                  />
+                  <Button
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={logoUploading}
+                  >
+                    {logoUploading ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Upload className="h-4 w-4 mr-2" />
+                    )}
+                    {logoUrl ? "Changer le logo" : "Télécharger le logo"}
+                  </Button>
+                  <p className="text-xs text-muted-foreground">
+                    PNG, JPG, WebP ou SVG — Max 2 Mo
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Company info */}
           <Card>
             <CardHeader>

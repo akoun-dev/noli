@@ -28,10 +28,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Search, Plus, MoreHorizontal, Pencil, Trash2, ChevronLeft, ChevronRight, Check, Minus, X, DollarSign, Percent, LayoutGrid, CircleDot } from "lucide-react";
+import { Search, Plus, MoreHorizontal, Pencil, Trash2, ChevronLeft, ChevronRight, Check, Minus, X, DollarSign, Percent, LayoutGrid, CircleDot, Building2 } from "lucide-react";
 
 /* ── Types ─────────────────────────────────────────────────── */
-interface InsurerOption { id: string; name: string; code: string; }
+interface InsurerOption { id: string; name: string; code: string; logoUrl: string | null; }
 interface CatOption { id: string; name: string; code: string; }
 interface InsCatOption { id: string; name: string; }
 
@@ -547,7 +547,16 @@ export function CoveragesTab() {
                     <TableCell className="font-medium">{item.name}</TableCell>
                     <TableCell className="text-sm">{item.type || <span className="text-muted-foreground">—</span>}</TableCell>
                     <TableCell className="text-sm">{item.category?.name || <span className="text-muted-foreground">—</span>}</TableCell>
-                    <TableCell className="text-sm">{item.insurer.name}</TableCell>
+                    <TableCell className="text-sm">
+                    <div className="flex items-center gap-2">
+                      {item.insurer.logoUrl ? (
+                        <img src={item.insurer.logoUrl} alt="" className="h-6 w-6 rounded object-contain bg-white dark:bg-muted p-0.5 border" />
+                      ) : (
+                        <div className="h-6 w-6 rounded bg-muted flex items-center justify-center"><Building2 className="h-3.5 w-3.5 text-muted-foreground" /></div>
+                      )}
+                      {item.insurer.name}
+                    </div>
+                  </TableCell>
                     <TableCell>
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${calcBadge[item.calculationType] ?? ""}`}>
                         {calcLabel[item.calculationType] ?? item.calculationType}
@@ -579,8 +588,17 @@ export function CoveragesTab() {
                 <CardContent className="p-4 space-y-2">
                   <div className="flex items-start justify-between">
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold truncate">{item.name}</p>
-                      <p className="text-xs text-muted-foreground">{item.insurer.name}</p>
+                      <div className="flex items-center gap-2">
+                        {item.insurer.logoUrl ? (
+                          <img src={item.insurer.logoUrl} alt="" className="h-5 w-5 rounded object-contain bg-white dark:bg-muted p-0.5 border shrink-0" />
+                        ) : (
+                          <div className="h-5 w-5 rounded bg-muted flex items-center justify-center shrink-0"><Building2 className="h-3 w-3 text-muted-foreground" /></div>
+                        )}
+                        <div className="min-w-0">
+                          <p className="font-semibold truncate">{item.name}</p>
+                          <p className="text-xs text-muted-foreground">{item.insurer.name}</p>
+                        </div>
+                      </div>
                       <div className="flex flex-wrap gap-1 mt-1">
                         {item.type && <Badge variant="outline" className="text-[10px] px-1.5 py-0">{item.type}</Badge>}
                         {item.category?.name && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{item.category.name}</Badge>}

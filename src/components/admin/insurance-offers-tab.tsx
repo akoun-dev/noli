@@ -45,7 +45,7 @@ interface Offer {
   description: string | null; priceMin: number | null; priceMax: number | null;
   coverageAmount: number | null; deductible: number; features: string[];
   isActive: boolean; createdAt: string;
-  insurer: { id: string; name: string; code: string };
+  insurer: { id: string; name: string; code: string; logoUrl: string | null };
   category?: { id: string; name: string } | null;
   _count?: { quotes: number };
   // Vehicle eligibility fields (optional, from DB)
@@ -307,7 +307,16 @@ export function InsuranceOffersTab() {
             {offers.map((o) => (
               <TableRow key={o.id} className="cursor-pointer hover:bg-muted/30" onClick={() => openDetail(o)}>
                 <TableCell className="font-medium">{o.name}</TableCell>
-                <TableCell className="text-sm">{o.insurer?.name || "—"}</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    {o.insurer?.logoUrl ? (
+                      <img src={o.insurer.logoUrl} alt="" className="h-6 w-6 rounded object-contain bg-white dark:bg-muted p-0.5 border" />
+                    ) : (
+                      <div className="h-6 w-6 rounded bg-muted flex items-center justify-center"><Building2 className="h-3.5 w-3.5 text-muted-foreground" /></div>
+                    )}
+                    <span className="text-sm">{o.insurer?.name || "—"}</span>
+                  </div>
+                </TableCell>
                 <TableCell className="text-right font-mono text-sm">{o.priceMin ? fmtPrice(o.priceMin) : "—"}</TableCell>
                 <TableCell className="text-right font-mono text-sm">{o.priceMax ? fmtPrice(o.priceMax) : "—"}</TableCell>
                 <TableCell className="text-center font-mono text-sm">{o.deductible ? fmtPrice(o.deductible) : "—"}</TableCell>
@@ -333,7 +342,17 @@ export function InsuranceOffersTab() {
       <div className="md:hidden space-y-3">{offers.map((o) => (
         <Card key={o.id} className="p-4 cursor-pointer" onClick={() => openDetail(o)}>
           <div className="flex items-start justify-between mb-1">
-            <div><p className="font-semibold">{o.name}</p><p className="text-sm text-muted-foreground">{o.insurer?.name}</p></div>
+            <div className="flex items-start gap-2">
+              {o.insurer?.logoUrl ? (
+                <img src={o.insurer.logoUrl} alt="" className="h-8 w-8 rounded-lg object-contain bg-white dark:bg-muted p-1 border shrink-0 mt-0.5" />
+              ) : (
+                <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center shrink-0 mt-0.5"><Building2 className="h-4 w-4 text-muted-foreground" /></div>
+              )}
+              <div>
+                <p className="font-semibold">{o.name}</p>
+                <p className="text-sm text-muted-foreground">{o.insurer?.name}</p>
+              </div>
+            </div>
           </div>
           <div className="flex items-center gap-3 mt-2 text-sm">
             {o.priceMin && <span className="font-mono">à partir de {fmtPrice(o.priceMin)}</span>}

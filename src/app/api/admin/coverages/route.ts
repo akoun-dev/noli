@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
         updatedAt: true,
         categoryId: true,
         insurerId: true,
-        insurer: { select: { id: true, name: true, code: true } },
+        insurer: { select: { id: true, name: true, code: true, logoUrl: true } },
         category: { select: { id: true, name: true, code: true } },
         _count: { select: { tariffRules: true } },
       },

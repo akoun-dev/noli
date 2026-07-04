@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     const offers = await db.insuranceOffer.findMany({
       where,
       include: {
-        insurer: { select: { id: true, name: true, code: true } },
+        insurer: { select: { id: true, name: true, code: true, logoUrl: true } },
         category: { select: { id: true, name: true, icon: true } },
       },
       orderBy: { createdAt: "desc" },
