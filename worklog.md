@@ -877,3 +877,19 @@ Stage Summary:
 - Modified: api/admin/coverages/route.ts (logoUrl in select)
 - Verified: API upload works, DB updates, logos visible in admin offers + guarantees lists
 
+---
+Task ID: 4
+Agent: Main
+Task: Landing page cleanup - remove savings text, stats bar, fix footer logo
+
+Work Log:
+- Removed "savings" text ("Jusqu à X% déconomies") from all 6 insurance cards in insuranceCards data array
+- Removed the savings paragraph rendering from the card template
+- Removed the stats bar section (6+ Assureurs / 18 Offres / 40% déconomies) below the hero CTA button
+- Fixed footer logo: changed from "brightness-0 invert-0 dark:brightness-200" (black) to "brightness-0 invert" (white) for proper visibility on the dark teal footer background
+- Verified via VLM screenshot: no savings text, no stats bar, footer logo is white
+
+Stage Summary:
+- Modified: src/components/landing/landing-page.tsx (cards + stats bar)
+- Modified: src/components/layout/footer.tsx (logo filter)
+

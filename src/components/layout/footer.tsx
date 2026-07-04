@@ -38,7 +38,7 @@ export function Footer() {
               transition={{ duration: 0.4 }}
             >
               <div className="mb-4">
-                <img src="/img/noli-vertical.png" alt="NOLI Assurance" className="h-10 w-auto object-contain brightness-0 invert-0 dark:brightness-200" />
+                <img src="/img/noli-vertical.png" alt="NOLI Assurance" className="h-10 w-auto object-contain brightness-0 invert" />
               </div>
               <p className="text-sm leading-relaxed text-secondary-foreground/60">
                 NOLI est votre plateforme de comparaison d&apos;assurances en

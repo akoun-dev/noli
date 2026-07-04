@@ -27,7 +27,6 @@ const insuranceCards = [
     icon: Car,
     color: "#F97316",
     colorBg: "rgba(249,115,22,0.10)",
-    savings: "Jusqu'à 40% d'économies",
     badge: "En service",
     badgeClass: "bg-[#16A34A]/10 text-[#16A34A]",
     available: true,
@@ -37,7 +36,6 @@ const insuranceCards = [
     icon: Bike,
     color: "#3B82F6",
     colorBg: "rgba(59,130,246,0.10)",
-    savings: "Jusqu'à 35% d'économies",
     badge: "Bientôt",
     badgeClass: "bg-muted/30 text-muted-foreground",
     available: false,
@@ -47,7 +45,6 @@ const insuranceCards = [
     icon: Heart,
     color: "#22C55E",
     colorBg: "rgba(34,197,94,0.10)",
-    savings: "Jusqu'à 30% d'économies",
     badge: "Bientôt",
     badgeClass: "bg-muted/30 text-muted-foreground",
     available: false,
@@ -57,7 +54,6 @@ const insuranceCards = [
     icon: Home,
     color: "#EF4444",
     colorBg: "rgba(239,68,68,0.10)",
-    savings: "Jusqu'à 25% d'économies",
     badge: "Bientôt",
     badgeClass: "bg-muted/30 text-muted-foreground",
     available: false,
@@ -67,7 +63,6 @@ const insuranceCards = [
     icon: Shield,
     color: "#A855F7",
     colorBg: "rgba(168,85,247,0.10)",
-    savings: "Jusqu'à 20% d'économies",
     badge: "Bientôt",
     badgeClass: "bg-muted/30 text-muted-foreground",
     available: false,
@@ -77,7 +72,6 @@ const insuranceCards = [
     icon: Zap,
     color: "#EAB308",
     colorBg: "rgba(234,179,8,0.10)",
-    savings: "Jusqu'à 15% d'économies",
     badge: "Bientôt",
     badgeClass: "bg-muted/30 text-muted-foreground",
     available: false,
@@ -314,9 +308,7 @@ export default function LandingPage() {
                       <h3 className="font-semibold text-sm sm:text-base text-foreground leading-snug pr-20">
                         {card.label}
                       </h3>
-                      <p className="text-xs sm:text-sm font-medium text-primary">
-                        {card.savings}
-                      </p>
+
                     </motion.div>
                   );
                 })}
@@ -365,22 +357,7 @@ export default function LandingPage() {
               Comparer maintenant
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
-            <div className="flex items-center gap-4 sm:gap-6 text-sm">
-              <div className="flex items-center gap-1.5">
-                <span className="font-bold text-base text-primary">6+</span>
-                <span className="text-muted-foreground">Assureurs</span>
-              </div>
-              <span className="text-muted/50" aria-hidden="true">•</span>
-              <div className="flex items-center gap-1.5">
-                <span className="font-bold text-base text-primary">18</span>
-                <span className="text-muted-foreground">Offres</span>
-              </div>
-              <span className="text-muted/50" aria-hidden="true">•</span>
-              <div className="flex items-center gap-1.5">
-                <span className="font-bold text-base text-primary">40%</span>
-                <span className="text-muted-foreground">d&apos;économies</span>
-              </div>
-            </div>
+
           </motion.div>
         </div>
       </section>
