@@ -77,25 +77,19 @@ interface Coverage {
 }
 
 interface CoverageFormData {
-  code: string;
-  categoryId: string;
-  type: string;
   name: string;
+  categoryId: string;
   description: string;
   calculationType: string;
   isMandatory: boolean;
-  metadata: string;
 }
 
 const emptyForm: CoverageFormData = {
-  code: "",
-  categoryId: "",
-  type: "",
   name: "",
+  categoryId: "",
   description: "",
   calculationType: "FIXED_AMOUNT",
   isMandatory: false,
-  metadata: "",
 };
 
 const calcTypeLabels: Record<string, string> = {
@@ -229,32 +223,26 @@ export function InsurerGuaranteesTab() {
   const openEdit = (item: Coverage) => {
     setEditingItem(item);
     setForm({
-      code: item.code,
-      categoryId: item.category?.id || "",
-      type: item.type,
       name: item.name,
+      categoryId: item.category?.id || "",
       description: item.description || "",
       calculationType: item.calculationType,
       isMandatory: item.isMandatory,
-      metadata: item.displayOrder !== undefined ? "{}" : "",
     });
     setDialogOpen(true);
   };
 
   const handleSubmit = async () => {
-    if (!form.code.trim() || !form.name.trim() || !insurerId) return;
+    if (!form.name.trim() || !insurerId) return;
     setSubmitting(true);
 
     const payload = {
       insurerId,
       categoryId: form.categoryId || null,
-      code: form.code.trim(),
-      type: form.type.trim() || form.code.trim().toUpperCase(),
       name: form.name.trim(),
       description: form.description.trim() || null,
       calculationType: form.calculationType,
       isMandatory: form.isMandatory,
-      metadata: form.metadata.trim() || "{}",
     };
 
     try {
@@ -504,27 +492,6 @@ export function InsurerGuaranteesTab() {
           </DialogHeader>
 
           <div className="space-y-4 py-2">
-            {/* Code */}
-            <div className="space-y-2">
-              <Label htmlFor="cov-code">Code *</Label>
-              <Input
-                className="w-full"
-                id="cov-code"
-                placeholder="Ex: RC_AUTO"
-                value={form.code}
-                onChange={(e) =>
-                  setForm((f) => ({
-                    ...f,
-                    code: e.target.value.toUpperCase(),
-                  }))
-                }
-                disabled={!!editingItem}
-              />
-              <p className="text-xs text-muted-foreground">
-                Code unique en majuscules. {editingItem && "Non modifiable."}
-              </p>
-            </div>
-
             {/* Name */}
             <div className="space-y-2">
               <Label htmlFor="cov-name">Nom *</Label>
@@ -560,21 +527,6 @@ export function InsurerGuaranteesTab() {
                 </SelectContent>
               </Select>
             </div>
-
-            {/* Type */}
-            <div className="space-y-2">
-              <Label htmlFor="cov-type">Type</Label>
-              <Input
-                className="w-full"
-                id="cov-type"
-                placeholder="Ex: RC, INCENDIE, VOL"
-                value={form.type}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, type: e.target.value }))
-                }
-              />
-            </div>
-
             {/* Calculation Type */}
             <div className="space-y-2">
               <Label>Type de calcul</Label>
@@ -628,26 +580,6 @@ export function InsurerGuaranteesTab() {
                 Garantie obligatoire
               </Label>
             </div>
-
-            {/* Metadata JSON */}
-            <div className="space-y-2">
-              <Label htmlFor="cov-metadata">
-                Métadonnées (JSON){" "}
-                <span className="text-muted-foreground font-normal">
-                  optionnel
-                </span>
-              </Label>
-              <Textarea
-                id="cov-metadata"
-                placeholder='{"taux": 0.5, "minAmount": 5000}'
-                rows={3}
-                className="w-full font-mono text-xs"
-                value={form.metadata}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, metadata: e.target.value }))
-                }
-              />
-            </div>
           </div>
 
           <DialogFooter>
@@ -662,7 +594,7 @@ export function InsurerGuaranteesTab() {
               className="bg-[#B9E54D] text-black hover:bg-[#a5d044]"
               onClick={handleSubmit}
               disabled={
-                submitting || !form.code.trim() || !form.name.trim()
+                submitting || !form.name.trim()
               }
             >
               {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
