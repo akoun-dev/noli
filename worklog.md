@@ -810,3 +810,30 @@ Stage Summary:
 - Files modified: prisma/schema.prisma, 6 API routes, 2 offer form components, types/index.ts
 - Files created: src/lib/pricing-service.ts
 - End-to-end verified: offer creation with eligibility fields via API, compare endpoint with vehicle data returning scored + filtered results
+---
+Task ID: 1
+Agent: Main
+Task: Update "Comparer les garanties" comparison modal to show actual guarantee names from offers
+
+Work Log:
+- Analyzed uploaded screenshot showing desired comparison table layout (guarantee names as rows, ✔️/❌ per offer)
+- Found ComparisonModal component in src/components/results/results-page.tsx (lines 329-509)
+- Identified that current implementation used generic `features` strings instead of actual guarantee names
+- Discovered `pricingBreakdown` array on InsurerOffer type contains `guaranteeName` for each priced guarantee
+- Rewrote ComparisonModal to:
+  - Collect unique guarantee names from `pricingBreakdown` across all compared offers
+  - Fall back to `features` if no `pricingBreakdown` data exists
+  - Build lookup map (offer.id → Set of guarantee names) for efficient O(1) lookups
+  - Replace "Prix mensuel" with "Annuel" (annual price) row
+  - Remove "Note assureur" row (not in reference screenshot)
+  - Use brand lime color (#B9E54D/5) for alternating zebra rows
+  - Show ✔️/❌ circles (green/red) based on guarantee presence per offer
+- Verified via browser: comparison modal opens, shows guarantee names, checkmarks/crosses render correctly
+- VLM analysis confirmed: guarantee names as rows, green/red icons, Annuel+Franchise rows, no visual issues
+
+Stage Summary:
+- Modified: src/components/results/results-page.tsx (ComparisonModal function, lines 329-503)
+- Comparison table now displays actual guarantee/coverage names from offer pricing breakdowns
+- Fallback to generic features when no pricing breakdown data is available
+- Visual style matches reference screenshot (check/X icons, annual price, alternating rows)
+

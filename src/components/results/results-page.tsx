@@ -335,20 +335,47 @@ function ComparisonModal({
   open: boolean;
   onClose: () => void;
 }) {
-  // Collect all unique features across all offers (before early return for hooks rules)
-  const allFeatures = useMemo(() => {
-    const featureSet = new Set<string>();
-    offers.forEach((o) => o.features.forEach((f) => featureSet.add(f)));
-    return Array.from(featureSet);
+  // Collect all unique guarantee names from pricingBreakdown across all offers
+  // Fallback to features if no pricingBreakdown exists
+  const allGuarantees = useMemo(() => {
+    const names = new Set<string>();
+    let hasBreakdowns = false;
+    for (const o of offers) {
+      if (o.pricingBreakdown && o.pricingBreakdown.length > 0) {
+        hasBreakdowns = true;
+        for (const pb of o.pricingBreakdown) {
+          if (pb.guaranteeName) names.add(pb.guaranteeName);
+        }
+      }
+    }
+    // If no offer has pricing breakdown data, fall back to features
+    if (!hasBreakdowns) {
+      for (const o of offers) {
+        for (const f of o.features) names.add(f);
+      }
+    }
+    return Array.from(names);
+  }, [offers]);
+
+  // Build a lookup: offer.id → Set of guarantee names it has
+  const guaranteeLookup = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    for (const o of offers) {
+      const set = new Set<string>();
+      if (o.pricingBreakdown && o.pricingBreakdown.length > 0) {
+        for (const pb of o.pricingBreakdown) {
+          if (pb.guaranteeName) set.add(pb.guaranteeName);
+        }
+      } else {
+        // Fallback: use features
+        for (const f of o.features) set.add(f);
+      }
+      map.set(o.id, set);
+    }
+    return map;
   }, [offers]);
 
   if (!open || offers.length < 2) return null;
-
-  const formatMonthlyPrice = (price: number) => {
-    const val = Math.round(price);
-    if (val % 1 !== 0) return new Intl.NumberFormat("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 3 }).format(val) + " FCFA";
-    return formatFCFA(val);
-  };
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -366,10 +393,10 @@ function ComparisonModal({
         {/* Comparison Table */}
         <div className="overflow-x-auto">
           <table className="w-full min-w-[500px]">
-            {/* Column Headers: Insurers */}
+            {/* Column Headers: Offers (insurer + plan) */}
             <thead>
               <tr>
-                <th className="text-left p-4 w-48 bg-muted/30 sticky left-0 z-10 border-b border-border/60">
+                <th className="text-left p-4 w-52 bg-muted/30 sticky left-0 z-10 border-b border-border/60">
                   <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     Critères
                   </span>
@@ -377,11 +404,11 @@ function ComparisonModal({
                 {offers.map((offer) => (
                   <th
                     key={offer.id}
-                    className="text-center p-4 bg-muted/30 border-b border-border/60"
+                    className="text-center p-4 bg-muted/30 border-b border-border/60 min-w-[150px]"
                   >
-                    <div className="flex flex-col items-center gap-2">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 border-2 border-primary/20">
-                        <Shield className="size-6 text-primary" />
+                    <div className="flex flex-col items-center gap-1.5">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 border-2 border-primary/20">
+                        <Shield className="size-5 text-primary" />
                       </div>
                       <span className="text-sm font-bold text-foreground leading-tight">
                         {offer.insurerName}
@@ -396,17 +423,17 @@ function ComparisonModal({
             </thead>
 
             <tbody>
-              {/* Prix mensuel */}
+              {/* Annuel */}
               <tr className="bg-card">
-                <td className="p-4 text-sm font-medium text-foreground sticky left-0 bg-card border-b border-border/30">
-                  Prix mensuel
+                <td className="p-4 text-sm font-semibold text-foreground sticky left-0 bg-card border-b border-border/30">
+                  Annuel
                 </td>
                 {offers.map((offer) => (
                   <td
                     key={offer.id}
                     className="p-4 text-center text-sm font-bold text-foreground border-b border-border/30"
                   >
-                    {formatMonthlyPrice(offer.monthlyPrice)}
+                    {formatFCFA(offer.annualPrice)}
                   </td>
                 ))}
               </tr>
@@ -421,51 +448,34 @@ function ComparisonModal({
                     key={offer.id}
                     className="p-4 text-center text-sm text-foreground border-b border-border/30"
                   >
-                    {formatFCFA(offer.deductible)}
+                    {offer.deductible ? formatFCFA(offer.deductible) : "—"}
                   </td>
                 ))}
               </tr>
 
-              {/* Note / Rating */}
-              <tr className="bg-card">
-                <td className="p-4 text-sm font-medium text-foreground sticky left-0 bg-card border-b border-border/30">
-                  Note assureur
-                </td>
-                {offers.map((offer) => (
-                  <td
-                    key={offer.id}
-                    className="p-4 text-center border-b border-border/30"
-                  >
-                    <div className="flex items-center justify-center">
-                      <StarRating rating={offer.insurerRating} />
-                    </div>
-                  </td>
-                ))}
-              </tr>
-
-              {/* Features */}
-              {allFeatures.map((feature, idx) => {
+              {/* Guarantee rows */}
+              {allGuarantees.map((guarantee, idx) => {
                 const isZebra = idx % 2 === 1;
                 return (
                   <tr
-                    key={feature}
-                    className={isZebra ? "bg-muted/20" : "bg-card"}
+                    key={guarantee}
+                    className={isZebra ? "bg-[#B9E54D]/5" : "bg-card"}
                   >
                     <td
-                      className={`p-4 text-sm text-foreground sticky left-0 border-b border-border/30 ${
-                        isZebra ? "bg-muted/20" : "bg-card"
+                      className={`p-4 text-sm font-medium text-foreground sticky left-0 border-b border-border/30 ${
+                        isZebra ? "bg-[#B9E54D]/5" : "bg-card"
                       }`}
                     >
-                      {feature}
+                      {guarantee}
                     </td>
                     {offers.map((offer) => {
-                      const hasFeature = offer.features.includes(feature);
+                      const hasGuarantee = guaranteeLookup.get(offer.id)?.has(guarantee) ?? false;
                       return (
                         <td
                           key={offer.id}
                           className="p-4 text-center border-b border-border/30"
                         >
-                          {hasFeature ? (
+                          {hasGuarantee ? (
                             <div className="flex items-center justify-center">
                               <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
                                 <Check className="size-3.5 text-green-600 dark:text-green-400" />
@@ -484,23 +494,6 @@ function ComparisonModal({
                   </tr>
                 );
               })}
-
-              {/* Conditions */}
-              {offers.some((o) => o.conditions) && (
-                <tr className="bg-muted/20">
-                  <td className="p-4 text-sm font-medium text-foreground sticky left-0 bg-muted/20">
-                    Conditions
-                  </td>
-                  {offers.map((offer) => (
-                    <td
-                      key={offer.id}
-                      className="p-4 text-center text-xs text-muted-foreground max-w-[200px]"
-                    >
-                      <span className="line-clamp-2">{offer.conditions || "—"}</span>
-                    </td>
-                  ))}
-                </tr>
-              )}
             </tbody>
           </table>
         </div>
