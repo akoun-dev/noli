@@ -684,3 +684,28 @@ Stage Summary:
 - All 3 layouts (admin, insurer, user) have working notification bell dropdowns
 - User notifications tab now shows real data instead of static placeholder
 - Zero new lint errors (only pre-existing launch-server.js issues)
+---
+Task ID: 1
+Agent: Main
+Task: Apply 4 calculation methods (FREE, FIXED_AMOUNT, VARIABLE_BASED, MATRIX_BASED) to insurer guarantee creation form
+
+Work Log:
+- Read existing insurer-guarantees-tab.tsx (966 lines) and Prisma schema
+- Fixed API POST route `/api/insurer/coverages/route.ts` to save metadata field (was missing)
+- Complete rewrite of insurer-guarantees-tab.tsx with comprehensive Step 3 forms for all 4 methods
+- FREE: Prime = 0 FCFA display + optional capital field
+- FIXED_AMOUNT: fixedAmount, packPriceReduced, capital, minAmount, maxAmount, franchise (PERCENT/AMOUNT radio, value, min, max), requiresGuarantee
+- VARIABLE_BASED: variableSource (VN/VA/PF), ratePercent, conditionedByNewValue with threshold/rates, minAmount/maxAmount, franchise, requiresGuarantee, live calculation examples
+- MATRIX_BASED: dimension selector, 3 accordion sections (Grille tarifaire, Formules IC/IPT, Tarifs catégorie TCM/TCL) with dynamic add/remove rows
+- Enhanced Step 2 with formula descriptions for each type
+- Updated buildMetadata() to properly structure all method data
+- Updated openEdit() to parse and restore metadata + matrix arrays
+- Reset metadata/arrays when switching calculation type in Step 2
+- Browser-tested all 4 types: creation + edit data round-trip verified
+
+Stage Summary:
+- File rewritten: src/components/insurer/tabs/insurer-guarantees-tab.tsx (~900 lines)
+- File fixed: src/app/api/insurer/coverages/route.ts (metadata now saved on POST)
+- All 4 calculation methods fully implemented with proper form fields
+- Metadata stored as JSON in Coverage.metadata field
+- End-to-end verified: create VARIABLE_BASED (Incendie), edit round-trip, create FREE (Assistance Dépannage)

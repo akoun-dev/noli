@@ -89,6 +89,11 @@ export async function POST(request: NextRequest) {
         calculationType: calculationType || "FIXED_AMOUNT",
         isMandatory: Boolean(isMandatory),
         isActive: true,
+        metadata: metadata
+          ? typeof metadata === "string"
+            ? metadata
+            : JSON.stringify(metadata)
+          : "{}",
       },
       include: {
         category: { select: { id: true, name: true, code: true } },
