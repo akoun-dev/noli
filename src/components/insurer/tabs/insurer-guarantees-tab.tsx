@@ -12,6 +12,9 @@ import {
   Pencil,
   Trash2,
   Loader2,
+  ChevronLeft,
+  ChevronRight,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +22,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Table,
   TableBody,
@@ -76,30 +82,69 @@ interface Coverage {
   category: { id: string; name: string; code: string } | null;
 }
 
-interface CoverageFormData {
+type CalculationType = "FREE" | "FIXED_AMOUNT" | "VARIABLE_BASED" | "MATRIX_BASED";
+
+interface Step1Data {
   name: string;
   categoryId: string;
   description: string;
-  calculationType: string;
   isMandatory: boolean;
 }
 
-const emptyForm: CoverageFormData = {
+const emptyStep1: Step1Data = {
   name: "",
   categoryId: "",
   description: "",
-  calculationType: "FIXED_AMOUNT",
   isMandatory: false,
 };
 
-const calcTypeLabels: Record<string, string> = {
-  FREE: "Libre",
-  FIXED_AMOUNT: "Montant fixe",
-  VARIABLE_BASED: "Base variable",
-  MATRIX_BASED: "Basé sur matrice",
+const calcBadge: Record<string, string> = {
+  FREE: "bg-emerald-100 text-emerald-800",
+  FIXED_AMOUNT: "bg-blue-100 text-blue-800",
+  VARIABLE_BASED: "bg-orange-100 text-orange-800",
+  MATRIX_BASED: "bg-purple-100 text-purple-800",
 };
 
-/* ── Decorative info cards (kept from original) ── */
+const calcLabel: Record<string, string> = {
+  FREE: "Gratuit",
+  FIXED_AMOUNT: "Montant fixe",
+  VARIABLE_BASED: "Variable",
+  MATRIX_BASED: "Matrice",
+};
+
+const step2Cards: {
+  type: CalculationType;
+  label: string;
+  color: string;
+  emoji: string;
+}[] = [
+  {
+    type: "FREE",
+    label: "GRATUIT",
+    color: "border-emerald-400 bg-emerald-50",
+    emoji: "🟢",
+  },
+  {
+    type: "FIXED_AMOUNT",
+    label: "MONTANT FIXE",
+    color: "border-blue-400 bg-blue-50",
+    emoji: "🔵",
+  },
+  {
+    type: "VARIABLE_BASED",
+    label: "VARIABLE",
+    color: "border-orange-400 bg-orange-50",
+    emoji: "🟠",
+  },
+  {
+    type: "MATRIX_BASED",
+    label: "MATRICE",
+    color: "border-purple-400 bg-purple-50",
+    emoji: "🟣",
+  },
+];
+
+/* ── Decorative info cards ── */
 const guaranteeCategories = [
   {
     name: "Responsabilité Civile",
@@ -148,11 +193,14 @@ export function InsurerGuaranteesTab() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Dialog state
+  // Wizard state
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Coverage | null>(null);
-  const [form, setForm] = useState<CoverageFormData>(emptyForm);
-  const [submitting, setSubmitting] = useState(false);
+  const [step, setStep] = useState(1);
+  const [step1, setStep1] = useState<Step1Data>(emptyStep1);
+  const [calcType, setCalcType] = useState<CalculationType | "">("");
+  const [metadata, setMetadata] = useState<Record<string, unknown>>({});
+  const [saving, setSaving] = useState(false);
 
   // Delete dialog
   const [deleteTarget, setDeleteTarget] = useState<Coverage | null>(null);
@@ -213,36 +261,89 @@ export function InsurerGuaranteesTab() {
     })();
   }, [user.id]);
 
-  /* ── Form helpers ── */
+  /* ── Wizard ── */
   const openCreate = () => {
     setEditingItem(null);
-    setForm(emptyForm);
+    setStep1(emptyStep1);
+    setCalcType("");
+    setMetadata({});
+    setStep(1);
     setDialogOpen(true);
   };
 
   const openEdit = (item: Coverage) => {
     setEditingItem(item);
-    setForm({
+    setStep1({
       name: item.name,
       categoryId: item.category?.id || "",
       description: item.description || "",
-      calculationType: item.calculationType,
       isMandatory: item.isMandatory,
     });
+    setCalcType(item.calculationType as CalculationType);
+    try {
+      setMetadata(
+        typeof item.metadata === "string"
+          ? JSON.parse(item.metadata)
+          : (item as unknown as { metadata: Record<string, unknown> }).metadata || {}
+      );
+    } catch {
+      setMetadata({});
+    }
+    setStep(1);
     setDialogOpen(true);
   };
 
-  const handleSubmit = async () => {
-    if (!form.name.trim() || !insurerId) return;
-    setSubmitting(true);
+  const buildMetadataFromStep3 = (): Record<string, unknown> => {
+    if (calcType === "FREE") return {};
+    if (calcType === "FIXED_AMOUNT") {
+      return { fixedAmount: (metadata.fixedAmount as number) || 0 };
+    }
+    if (calcType === "VARIABLE_BASED") {
+      const m: Record<string, unknown> = {
+        variable: (metadata.variable as string) || "VN",
+      };
+      if (metadata.hasConditional) {
+        m.hasConditional = true;
+        m.threshold = Number(metadata.threshold) || 0;
+        m.rateBelow = Number(metadata.rateBelow) || 0;
+        m.rateAbove = Number(metadata.rateAbove) || 0;
+      } else {
+        m.rate = Number(metadata.rate) || 0;
+      }
+      if (metadata.franchiseEnabled) {
+        m.franchiseEnabled = true;
+        m.franchisePercent = Number(metadata.franchisePercent) || 0;
+        m.franchiseMin = Number(metadata.franchiseMin) || 0;
+      }
+      return m;
+    }
+    if (calcType === "MATRIX_BASED") {
+      return {
+        matrixType: (metadata.matrixType as string) || "FISCAL_POWER",
+      };
+    }
+    return {};
+  };
+
+  const handleSave = async () => {
+    if (!step1.name.trim() || !insurerId || !calcType) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez remplir tous les champs requis",
+        variant: "destructive",
+      });
+      return;
+    }
+    setSaving(true);
 
     const payload = {
       insurerId,
-      categoryId: form.categoryId || null,
-      name: form.name.trim(),
-      description: form.description.trim() || null,
-      calculationType: form.calculationType,
-      isMandatory: form.isMandatory,
+      categoryId: step1.categoryId || null,
+      name: step1.name.trim(),
+      description: step1.description.trim() || null,
+      calculationType: calcType,
+      isMandatory: step1.isMandatory,
+      metadata: buildMetadataFromStep3(),
     };
 
     try {
@@ -267,8 +368,8 @@ export function InsurerGuaranteesTab() {
           ? "Garantie mise à jour avec succès"
           : "Garantie créée avec succès",
         description: editingItem
-          ? `"${form.name}" a été modifiée.`
-          : `"${form.name}" a été ajoutée à vos garanties.`,
+          ? `"${step1.name}" a été modifiée.`
+          : `"${step1.name}" a été ajoutée à vos garanties.`,
       });
 
       setDialogOpen(false);
@@ -280,7 +381,7 @@ export function InsurerGuaranteesTab() {
         variant: "destructive",
       });
     } finally {
-      setSubmitting(false);
+      setSaving(false);
     }
   };
 
@@ -308,6 +409,224 @@ export function InsurerGuaranteesTab() {
     } finally {
       setDeleting(false);
     }
+  };
+
+  /* ── Render Step 3 ── */
+  const renderStep3 = () => {
+    if (calcType === "FREE") {
+      return (
+        <div className="rounded-lg bg-emerald-50 border border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800 p-6 text-center">
+          <p className="text-emerald-700 dark:text-emerald-400 font-medium text-lg">
+            🟢 Gratuit
+          </p>
+          <p className="text-emerald-600 dark:text-emerald-500 text-sm mt-1">
+            Aucune configuration supplémentaire requise.
+          </p>
+        </div>
+      );
+    }
+    if (calcType === "FIXED_AMOUNT") {
+      return (
+        <div className="space-y-4">
+          <div className="w-full">
+            <Label>Montant fixe (FCFA) *</Label>
+            <Input
+              className="w-full"
+              type="number"
+              value={(metadata.fixedAmount as number) ?? ""}
+              onChange={(e) =>
+                setMetadata({
+                  ...metadata,
+                  fixedAmount: parseFloat(e.target.value) || 0,
+                })
+              }
+              placeholder="Ex: 50000"
+            />
+          </div>
+        </div>
+      );
+    }
+    if (calcType === "VARIABLE_BASED") {
+      return (
+        <div className="space-y-4">
+          <div className="w-full">
+            <Label>Variable</Label>
+            <Select
+              value={(metadata.variable as string) || "VN"}
+              onValueChange={(v) =>
+                setMetadata({ ...metadata, variable: v })
+              }
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="VN">Valeur Neuve (VN)</SelectItem>
+                <SelectItem value="VN_REPLACEMENT_VALUE">
+                  VN / Valeur de remplacement
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="conditional"
+              checked={!!metadata.hasConditional}
+              onCheckedChange={(v) =>
+                setMetadata({ ...metadata, hasConditional: !!v })
+              }
+            />
+            <Label htmlFor="conditional">Taux conditionné par seuil</Label>
+          </div>
+          {metadata.hasConditional ? (
+            <div className="w-full grid grid-cols-1 sm:grid-cols-3 gap-3 rounded-lg border p-4 bg-muted/50">
+              <div>
+                <Label className="text-xs">Seuil (FCFA)</Label>
+                <Input
+                  className="w-full"
+                  type="number"
+                  value={(metadata.threshold as number) ?? ""}
+                  onChange={(e) =>
+                    setMetadata({
+                      ...metadata,
+                      threshold: parseFloat(e.target.value) || 0,
+                    })
+                  }
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Taux sous (%)</Label>
+                <Input
+                  className="w-full"
+                  type="number"
+                  step="0.01"
+                  value={(metadata.rateBelow as number) ?? ""}
+                  onChange={(e) =>
+                    setMetadata({
+                      ...metadata,
+                      rateBelow: parseFloat(e.target.value) || 0,
+                    })
+                  }
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Taux au-dessus (%)</Label>
+                <Input
+                  className="w-full"
+                  type="number"
+                  step="0.01"
+                  value={(metadata.rateAbove as number) ?? ""}
+                  onChange={(e) =>
+                    setMetadata({
+                      ...metadata,
+                      rateAbove: parseFloat(e.target.value) || 0,
+                    })
+                  }
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="w-full">
+              <Label>Taux (%)</Label>
+              <Input
+                className="w-full"
+                type="number"
+                step="0.01"
+                value={(metadata.rate as number) ?? ""}
+                onChange={(e) =>
+                  setMetadata({
+                    ...metadata,
+                    rate: parseFloat(e.target.value) || 0,
+                  })
+                }
+              />
+            </div>
+          )}
+          <Separator />
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="franchise"
+              checked={!!metadata.franchiseEnabled}
+              onCheckedChange={(v) =>
+                setMetadata({ ...metadata, franchiseEnabled: !!v })
+              }
+            />
+            <Label htmlFor="franchise">Appliquer une franchise</Label>
+          </div>
+          {metadata.franchiseEnabled && (
+            <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-lg border p-4 bg-muted/50">
+              <div>
+                <Label className="text-xs">Franchise (%)</Label>
+                <Input
+                  className="w-full"
+                  type="number"
+                  step="0.01"
+                  value={(metadata.franchisePercent as number) ?? ""}
+                  onChange={(e) =>
+                    setMetadata({
+                      ...metadata,
+                      franchisePercent: parseFloat(e.target.value) || 0,
+                    })
+                  }
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Montant min (FCFA)</Label>
+                <Input
+                  className="w-full"
+                  type="number"
+                  value={(metadata.franchiseMin as number) ?? ""}
+                  onChange={(e) =>
+                    setMetadata({
+                      ...metadata,
+                      franchiseMin: parseFloat(e.target.value) || 0,
+                    })
+                  }
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+    if (calcType === "MATRIX_BASED") {
+      return (
+        <div className="space-y-4">
+          <div className="w-full">
+            <Label>Type de matrice</Label>
+            <Select
+              value={(metadata.matrixType as string) || "FISCAL_POWER"}
+              onValueChange={(v) =>
+                setMetadata({ ...metadata, matrixType: v })
+              }
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="FISCAL_POWER">
+                  Puissance fiscale
+                </SelectItem>
+                <SelectItem value="FORMULA">Formule (IC/IPT)</SelectItem>
+                <SelectItem value="TIERCE_COMPLETE">
+                  Tierce complète
+                </SelectItem>
+                <SelectItem value="TIERCE_COLLISION">
+                  Tierce collision
+                </SelectItem>
+                <SelectItem value="FUEL_TYPE">Type carburant</SelectItem>
+                <SelectItem value="SEATS">Nombre de places</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Les règles tarifaires associées définissent les valeurs de la
+            matrice.
+          </p>
+        </div>
+      );
+    }
+    return null;
   };
 
   /* ── Render ── */
@@ -424,8 +743,11 @@ export function InsurerGuaranteesTab() {
                       {cov.category?.name || "—"}
                     </TableCell>
                     <TableCell className="hidden lg:table-cell">
-                      {calcTypeLabels[cov.calculationType] ||
-                        cov.calculationType}
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${calcBadge[cov.calculationType] ?? ""}`}
+                      >
+                        {calcLabel[cov.calculationType] || cov.calculationType}
+                      </span>
                     </TableCell>
                     <TableCell className="text-center">
                       {cov.isMandatory ? (
@@ -477,9 +799,9 @@ export function InsurerGuaranteesTab() {
         </div>
       </div>
 
-      {/* ── Create/Edit Dialog ── */}
+      {/* ── Wizard Dialog ── */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-2xl max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>
               {editingItem ? "Modifier la garantie" : "Nouvelle garantie"}
@@ -487,119 +809,166 @@ export function InsurerGuaranteesTab() {
             <DialogDescription>
               {editingItem
                 ? "Modifiez les informations de la garantie."
-                : "Remplissez les informations pour créer une nouvelle garantie."}
+                : "Configurez votre nouvelle garantie en 3 étapes."}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-2">
-            {/* Name */}
-            <div className="space-y-2">
-              <Label htmlFor="cov-name">Nom *</Label>
-              <Input
-                className="w-full"
-                id="cov-name"
-                placeholder="Ex: Responsabilité Civile Automobile"
-                value={form.name}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, name: e.target.value }))
-                }
-              />
-            </div>
-
-            {/* Category */}
-            <div className="space-y-2">
-              <Label>Catégorie de garantie</Label>
-              <Select
-                value={form.categoryId}
-                onValueChange={(v) =>
-                  setForm((f) => ({ ...f, categoryId: v }))
-                }
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Sélectionner une catégorie" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            {/* Calculation Type */}
-            <div className="space-y-2">
-              <Label>Type de calcul</Label>
-              <Select
-                value={form.calculationType}
-                onValueChange={(v) =>
-                  setForm((f) => ({ ...f, calculationType: v }))
-                }
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="FREE">Libre</SelectItem>
-                  <SelectItem value="FIXED_AMOUNT">Montant fixe</SelectItem>
-                  <SelectItem value="VARIABLE_BASED">
-                    Base variable
-                  </SelectItem>
-                  <SelectItem value="MATRIX_BASED">
-                    Basé sur matrice
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Description */}
-            <div className="space-y-2">
-              <Label htmlFor="cov-desc">Description</Label>
-              <Textarea
-                className="w-full"
-                id="cov-desc"
-                placeholder="Description de la garantie..."
-                rows={3}
-                value={form.description}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, description: e.target.value }))
-                }
-              />
-            </div>
-
-            {/* Mandatory */}
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="cov-mandatory"
-                checked={form.isMandatory}
-                onCheckedChange={(v) =>
-                  setForm((f) => ({ ...f, isMandatory: !!v }))
-                }
-              />
-              <Label htmlFor="cov-mandatory" className="cursor-pointer">
-                Garantie obligatoire
-              </Label>
-            </div>
+          {/* Step indicator */}
+          <div className="flex items-center justify-center gap-2 pb-2">
+            {[1, 2, 3].map((s) => (
+              <div key={s} className="flex items-center gap-2">
+                <div
+                  className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${
+                    step > s
+                      ? "bg-emerald-500 text-white"
+                      : step === s
+                        ? "bg-[#B9E54D] text-black"
+                        : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  {step > s ? <Check className="h-4 w-4" /> : s}
+                </div>
+                {s < 3 && (
+                  <div
+                    className={`h-0.5 w-12 ${step > s ? "bg-emerald-500" : "bg-muted"}`}
+                  />
+                )}
+              </div>
+            ))}
           </div>
 
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setDialogOpen(false)}
-              disabled={submitting}
-            >
-              Annuler
-            </Button>
-            <Button
-              className="bg-[#B9E54D] text-black hover:bg-[#a5d044]"
-              onClick={handleSubmit}
-              disabled={
-                submitting || !form.name.trim()
-              }
-            >
-              {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {editingItem ? "Enregistrer" : "Créer la garantie"}
-            </Button>
+          <ScrollArea className="max-h-[55vh] pr-4">
+            {/* Step 1: Basic info */}
+            {step === 1 && (
+              <div className="space-y-4">
+                <div className="w-full">
+                  <Label htmlFor="cov-name">Nom *</Label>
+                  <Input
+                    className="w-full"
+                    id="cov-name"
+                    placeholder="Ex: Responsabilité Civile Automobile"
+                    value={step1.name}
+                    onChange={(e) =>
+                      setStep1({ ...step1, name: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="w-full">
+                  <Label>Description</Label>
+                  <Textarea
+                    className="w-full"
+                    placeholder="Description de la garantie..."
+                    rows={3}
+                    value={step1.description}
+                    onChange={(e) =>
+                      setStep1({ ...step1, description: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="w-full">
+                  <Label>Catégorie de garantie</Label>
+                  <Select
+                    value={step1.categoryId}
+                    onValueChange={(v) =>
+                      setStep1({ ...step1, categoryId: v })
+                    }
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Sélectionner une catégorie" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center justify-between rounded-lg border p-4">
+                  <Label htmlFor="cov-mandatory" className="cursor-pointer">
+                    Garantie obligatoire
+                  </Label>
+                  <Switch
+                    id="cov-mandatory"
+                    checked={step1.isMandatory}
+                    onCheckedChange={(v) =>
+                      setStep1({ ...step1, isMandatory: v })
+                    }
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Step 2: Calculation type selection */}
+            {step === 2 && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4">
+                {step2Cards.map((c) => (
+                  <button
+                    key={c.type}
+                    type="button"
+                    onClick={() => setCalcType(c.type)}
+                    className={`flex flex-col items-center gap-3 rounded-xl border-2 p-6 transition-all hover:shadow-md ${
+                      calcType === c.type
+                        ? `${c.color} shadow-md ring-2 ring-offset-2 ring-[#B9E54D]`
+                        : "border-border hover:border-muted-foreground/30"
+                    }`}
+                  >
+                    <span className="text-2xl">{c.emoji}</span>
+                    <span className="font-semibold">{c.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Step 3: Calculation config */}
+            {step === 3 && (
+              <div className="py-2">
+                <div className="mb-4 flex items-center gap-2">
+                  <Badge className={calcBadge[calcType] ?? ""}>
+                    {calcLabel[calcType] ?? calcType}
+                  </Badge>
+                  <span className="text-sm text-muted-foreground">
+                    — Configuration
+                  </span>
+                </div>
+                {renderStep3()}
+              </div>
+            )}
+          </ScrollArea>
+
+          <DialogFooter className="gap-2">
+            {step > 1 && (
+              <Button
+                variant="outline"
+                onClick={() => setStep(step - 1)}
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Précédent
+              </Button>
+            )}
+            {step < 3 && (
+              <Button
+                className="bg-[#B9E54D] text-black hover:bg-[#a5d044]"
+                onClick={() => setStep(step + 1)}
+                disabled={step === 1 && !step1.name.trim()}
+              >
+                Suivant
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            )}
+            {step === 3 && (
+              <Button
+                className="bg-[#B9E54D] text-black hover:bg-[#a5d044]"
+                onClick={handleSave}
+                disabled={saving}
+              >
+                {saving ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : null}
+                {editingItem ? "Enregistrer" : "Créer la garantie"}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
