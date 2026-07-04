@@ -559,6 +559,7 @@ export function InsurerOffersTab() {
             <div className="space-y-2">
               <Label htmlFor="offer-name">Nom de l&apos;offre *</Label>
               <Input
+                className="w-full"
                 id="offer-name"
                 placeholder="Ex: Assurance Auto Premium"
                 value={form.name}
@@ -577,7 +578,7 @@ export function InsurerOffersTab() {
                   setForm((f) => ({ ...f, categoryId: v }))
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Sélectionner une catégorie" />
                 </SelectTrigger>
                 <SelectContent>
@@ -599,7 +600,7 @@ export function InsurerOffersTab() {
                   setForm((f) => ({ ...f, contractType: v }))
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Sélectionner un type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -614,6 +615,7 @@ export function InsurerOffersTab() {
             <div className="space-y-2">
               <Label htmlFor="offer-desc">Description</Label>
               <Textarea
+                className="w-full"
                 id="offer-desc"
                 placeholder="Description de l'offre..."
                 rows={3}
@@ -625,10 +627,11 @@ export function InsurerOffersTab() {
             </div>
 
             {/* Price fields */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="w-full grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="price-min">Prix minimum (FCFA)</Label>
                 <Input
+                  className="w-full"
                   id="price-min"
                   type="number"
                   placeholder="0"
@@ -641,6 +644,7 @@ export function InsurerOffersTab() {
               <div className="space-y-2">
                 <Label htmlFor="price-max">Prix maximum (FCFA)</Label>
                 <Input
+                  className="w-full"
                   id="price-max"
                   type="number"
                   placeholder="0"
@@ -652,10 +656,11 @@ export function InsurerOffersTab() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="w-full grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="coverage-amount">Capital garanti (FCFA)</Label>
                 <Input
+                  className="w-full"
                   id="coverage-amount"
                   type="number"
                   placeholder="0"
@@ -668,6 +673,7 @@ export function InsurerOffersTab() {
               <div className="space-y-2">
                 <Label htmlFor="deductible">Franchise (FCFA)</Label>
                 <Input
+                  className="w-full"
                   id="deductible"
                   type="number"
                   placeholder="0"

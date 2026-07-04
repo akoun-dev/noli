@@ -153,7 +153,7 @@ function LoginModal() {
             if (errors.email) setErrors((p) => ({ ...p, email: undefined }));
           }}
           aria-invalid={!!errors.email}
-          className={errors.email ? "border-destructive" : ""}
+          className={`w-full ${errors.email ? "border-destructive" : ""}`}
         />
         {errors.email && (
           <p className="text-xs text-destructive">{errors.email}</p>
@@ -173,7 +173,7 @@ function LoginModal() {
               if (errors.password) setErrors((p) => ({ ...p, password: undefined }));
             }}
             aria-invalid={!!errors.password}
-            className={`pr-10 ${errors.password ? "border-destructive" : ""}`}
+            className={`w-full pr-10 ${errors.password ? "border-destructive" : ""}`}
           />
           <button
             type="button"
@@ -343,7 +343,7 @@ function RegisterModal() {
             clearError("fullName");
           }}
           aria-invalid={!!errors.fullName}
-          className={errors.fullName ? "border-destructive" : ""}
+          className={`w-full ${errors.fullName ? "border-destructive" : ""}`}
         />
         {errors.fullName && (
           <p className="text-xs text-destructive">{errors.fullName}</p>
@@ -362,7 +362,7 @@ function RegisterModal() {
             clearError("email");
           }}
           aria-invalid={!!errors.email}
-          className={errors.email ? "border-destructive" : ""}
+          className={`w-full ${errors.email ? "border-destructive" : ""}`}
         />
         {errors.email && (
           <p className="text-xs text-destructive">{errors.email}</p>
@@ -379,6 +379,7 @@ function RegisterModal() {
           placeholder="+225 07 XX XX XX"
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
+          className="w-full"
         />
       </div>
 
@@ -395,7 +396,7 @@ function RegisterModal() {
               clearError("password");
             }}
             aria-invalid={!!errors.password}
-            className={`pr-10 ${errors.password ? "border-destructive" : ""}`}
+            className={`w-full pr-10 ${errors.password ? "border-destructive" : ""}`}
           />
           <button
             type="button"
@@ -425,7 +426,7 @@ function RegisterModal() {
               clearError("confirmPassword");
             }}
             aria-invalid={!!errors.confirmPassword}
-            className={`pr-10 ${errors.confirmPassword ? "border-destructive" : ""}`}
+            className={`w-full pr-10 ${errors.confirmPassword ? "border-destructive" : ""}`}
           />
           <button
             type="button"
@@ -582,7 +583,7 @@ function ForgotPasswordModal() {
             if (error) setError("");
           }}
           aria-invalid={!!error}
-          className={error ? "border-destructive" : ""}
+          className={`w-full ${error ? "border-destructive" : ""}`}
         />
         {error && <p className="text-xs text-destructive">{error}</p>}
       </div>

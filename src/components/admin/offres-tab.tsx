@@ -453,16 +453,16 @@ export function OffresTab() {
             <div className="grid gap-2">
               <Label>Assureur *</Label>
               <Select value={form.insurerId} onValueChange={(v) => setForm({ ...form, insurerId: v })}>
-                <SelectTrigger><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
+                <SelectTrigger className="w-full"><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
                 <SelectContent>{insurers.map((i) => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2"><Label>Nom *</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
+              <div className="grid gap-2"><Label>Nom *</Label><Input className="w-full" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
               <div className="grid gap-2">
                 <Label>Type de couverture *</Label>
                 <Select value={form.coverageType} onValueChange={(v) => setForm({ ...form, coverageType: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="tiers">Tiers</SelectItem>
                     <SelectItem value="tiers_plus">Tiers+</SelectItem>
@@ -471,17 +471,17 @@ export function OffresTab() {
                 </Select>
               </div>
             </div>
-            <div className="grid gap-2"><Label>Description</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} /></div>
+            <div className="grid gap-2"><Label>Description</Label><Textarea className="w-full" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} /></div>
             <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2"><Label>Prix de base (FCFA/mois) *</Label><Input type="number" value={form.basePrice} onChange={(e) => setForm({ ...form, basePrice: parseFloat(e.target.value) || 0 })} /></div>
-              <div className="grid gap-2"><Label>Prix annuel (FCFA)</Label><Input type="number" value={form.annualPrice ?? ""} onChange={(e) => setForm({ ...form, annualPrice: e.target.value ? parseFloat(e.target.value) : null })} /></div>
+              <div className="grid gap-2"><Label>Prix de base (FCFA/mois) *</Label><Input className="w-full" type="number" value={form.basePrice} onChange={(e) => setForm({ ...form, basePrice: parseFloat(e.target.value) || 0 })} /></div>
+              <div className="grid gap-2"><Label>Prix annuel (FCFA)</Label><Input className="w-full" type="number" value={form.annualPrice ?? ""} onChange={(e) => setForm({ ...form, annualPrice: e.target.value ? parseFloat(e.target.value) : null })} /></div>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2"><Label>Franchise (FCFA)</Label><Input type="number" value={form.deductible ?? ""} onChange={(e) => setForm({ ...form, deductible: e.target.value ? parseFloat(e.target.value) : null })} /></div>
-              <div className="grid gap-2"><Label>Couverture max (FCFA)</Label><Input type="number" value={form.maxCoverage ?? ""} onChange={(e) => setForm({ ...form, maxCoverage: e.target.value ? parseFloat(e.target.value) : null })} /></div>
+              <div className="grid gap-2"><Label>Franchise (FCFA)</Label><Input className="w-full" type="number" value={form.deductible ?? ""} onChange={(e) => setForm({ ...form, deductible: e.target.value ? parseFloat(e.target.value) : null })} /></div>
+              <div className="grid gap-2"><Label>Couverture max (FCFA)</Label><Input className="w-full" type="number" value={form.maxCoverage ?? ""} onChange={(e) => setForm({ ...form, maxCoverage: e.target.value ? parseFloat(e.target.value) : null })} /></div>
             </div>
-            <div className="grid gap-2"><Label>Caractéristiques (JSON)</Label><Textarea value={form.features} onChange={(e) => setForm({ ...form, features: e.target.value })} rows={3} className="font-mono text-xs" /></div>
-            <div className="grid gap-2"><Label>Conditions</Label><Textarea value={form.conditions} onChange={(e) => setForm({ ...form, conditions: e.target.value })} rows={2} /></div>
+            <div className="grid gap-2"><Label>Caractéristiques (JSON)</Label><Textarea value={form.features} onChange={(e) => setForm({ ...form, features: e.target.value })} rows={3} className="w-full font-mono text-xs" /></div>
+            <div className="grid gap-2"><Label>Conditions</Label><Textarea className="w-full" value={form.conditions} onChange={(e) => setForm({ ...form, conditions: e.target.value })} rows={2} /></div>
             <div className="flex items-center justify-between">
               <Label>Active</Label>
               <Switch checked={form.isActive} onCheckedChange={(v) => setForm({ ...form, isActive: v })} />

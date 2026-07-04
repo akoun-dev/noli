@@ -396,9 +396,9 @@ export function CoveragesTab() {
           </div>
           {metadata.hasConditional ? (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 rounded-lg border p-4 bg-muted/50">
-              <div><Label className="text-xs">Seuil (FCFA)</Label><Input type="number" value={(metadata.threshold as number) ?? ""} onChange={(e) => setMetadata({ ...metadata, threshold: parseFloat(e.target.value) || 0 })} /></div>
-              <div><Label className="text-xs">Taux sous (%)</Label><Input type="number" step="0.01" value={(metadata.rateBelow as number) ?? ""} onChange={(e) => setMetadata({ ...metadata, rateBelow: parseFloat(e.target.value) || 0 })} /></div>
-              <div><Label className="text-xs">Taux au-dessus (%)</Label><Input type="number" step="0.01" value={(metadata.rateAbove as number) ?? ""} onChange={(e) => setMetadata({ ...metadata, rateAbove: parseFloat(e.target.value) || 0 })} /></div>
+              <div><Label className="text-xs">Seuil (FCFA)</Label><Input className="w-full" type="number" value={(metadata.threshold as number) ?? ""} onChange={(e) => setMetadata({ ...metadata, threshold: parseFloat(e.target.value) || 0 })} /></div>
+              <div><Label className="text-xs">Taux sous (%)</Label><Input className="w-full" type="number" step="0.01" value={(metadata.rateBelow as number) ?? ""} onChange={(e) => setMetadata({ ...metadata, rateBelow: parseFloat(e.target.value) || 0 })} /></div>
+              <div><Label className="text-xs">Taux au-dessus (%)</Label><Input className="w-full" type="number" step="0.01" value={(metadata.rateAbove as number) ?? ""} onChange={(e) => setMetadata({ ...metadata, rateAbove: parseFloat(e.target.value) || 0 })} /></div>
             </div>
           ) : (
             <div className="w-full"><Label>Taux (%)</Label><Input className="w-full" type="number" step="0.01" value={(metadata.rate as number) ?? ""} onChange={(e) => setMetadata({ ...metadata, rate: parseFloat(e.target.value) || 0 })} /></div>
@@ -410,8 +410,8 @@ export function CoveragesTab() {
           </div>
           {metadata.franchiseEnabled && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-lg border p-4 bg-muted/50">
-              <div><Label className="text-xs">Franchise (%)</Label><Input type="number" step="0.01" value={(metadata.franchisePercent as number) ?? ""} onChange={(e) => setMetadata({ ...metadata, franchisePercent: parseFloat(e.target.value) || 0 })} /></div>
-              <div><Label className="text-xs">Montant min (FCFA)</Label><Input type="number" value={(metadata.franchiseMin as number) ?? ""} onChange={(e) => setMetadata({ ...metadata, franchiseMin: parseFloat(e.target.value) || 0 })} /></div>
+              <div><Label className="text-xs">Franchise (%)</Label><Input className="w-full" type="number" step="0.01" value={(metadata.franchisePercent as number) ?? ""} onChange={(e) => setMetadata({ ...metadata, franchisePercent: parseFloat(e.target.value) || 0 })} /></div>
+              <div><Label className="text-xs">Montant min (FCFA)</Label><Input className="w-full" type="number" value={(metadata.franchiseMin as number) ?? ""} onChange={(e) => setMetadata({ ...metadata, franchiseMin: parseFloat(e.target.value) || 0 })} /></div>
             </div>
           )}
         </div>

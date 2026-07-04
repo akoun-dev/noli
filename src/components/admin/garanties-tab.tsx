@@ -339,21 +339,21 @@ export function GarantiesTab() {
     <div className="space-y-4">
       <div className="grid gap-2">
         <Label>Nom *</Label>
-        <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ex: Responsabilité Civile" />
+        <Input className="w-full" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ex: Responsabilité Civile" />
       </div>
       <div className="grid gap-2">
         <Label>Description</Label>
-        <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} />
+        <Textarea className="w-full" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} />
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="grid gap-2">
           <Label>Icône</Label>
-          <Input value={form.icon} onChange={(e) => setForm({ ...form, icon: e.target.value })} placeholder="Shield" />
+          <Input className="w-full" value={form.icon} onChange={(e) => setForm({ ...form, icon: e.target.value })} placeholder="Shield" />
         </div>
         <div className="grid gap-2">
           <Label>Catégorie</Label>
           <Select value={form.categoryId} onValueChange={(v) => setForm({ ...form, categoryId: v })}>
-            <SelectTrigger><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
+            <SelectTrigger className="w-full"><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
             <SelectContent>
               {categories.map((c) => (
                 <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
@@ -363,7 +363,7 @@ export function GarantiesTab() {
         </div>
         <div className="grid gap-2">
           <Label>Ordre d'affichage</Label>
-          <Input type="number" value={form.sortOrder} onChange={(e) => setForm({ ...form, sortOrder: parseInt(e.target.value) || 0 })} />
+          <Input className="w-full" type="number" value={form.sortOrder} onChange={(e) => setForm({ ...form, sortOrder: parseInt(e.target.value) || 0 })} />
         </div>
       </div>
       <div className="flex items-center justify-between">
@@ -417,7 +417,7 @@ export function GarantiesTab() {
       {form.calcMethod === "FIXED_AMOUNT" && (
         <div className="grid gap-2">
           <Label>Montant fixe (FCFA)</Label>
-          <Input type="number" value={form.fixedPrice} onChange={(e) => setForm({ ...form, fixedPrice: e.target.value })} placeholder="Ex: 15000" />
+          <Input className="w-full" type="number" value={form.fixedPrice} onChange={(e) => setForm({ ...form, fixedPrice: e.target.value })} placeholder="Ex: 15000" />
           <p className="text-xs text-muted-foreground">Prime fixe indépendante du véhicule</p>
         </div>
       )}
@@ -441,7 +441,7 @@ export function GarantiesTab() {
         <div className="grid gap-2">
           <Label>Variable source</Label>
           <Select value={form.variableSource} onValueChange={(v) => setForm({ ...form, variableSource: v })}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="venale">Valeur vénale (taux %)</SelectItem>
             </SelectContent>
@@ -460,21 +460,21 @@ export function GarantiesTab() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pl-4 border-l-2 border-orange-300">
             <div className="grid gap-2">
               <Label className="text-xs">Seuil valeur vénale (FCFA)</Label>
-              <Input type="number" value={form.seuilVN} onChange={(e) => setForm({ ...form, seuilVN: e.target.value })} />
+              <Input className="w-full" type="number" value={form.seuilVN} onChange={(e) => setForm({ ...form, seuilVN: e.target.value })} />
             </div>
             <div className="grid gap-2">
               <Label className="text-xs">Taux si SI ≤ seuil (%)</Label>
-              <Input type="number" step="0.01" value={form.rateBelowThreshold} onChange={(e) => setForm({ ...form, rateBelowThreshold: e.target.value })} placeholder="Ex: 1.10" />
+              <Input className="w-full" type="number" step="0.01" value={form.rateBelowThreshold} onChange={(e) => setForm({ ...form, rateBelowThreshold: e.target.value })} placeholder="Ex: 1.10" />
             </div>
             <div className="grid gap-2">
               <Label className="text-xs">Taux si SI &gt; seuil (%)</Label>
-              <Input type="number" step="0.01" value={form.rateAboveThreshold} onChange={(e) => setForm({ ...form, rateAboveThreshold: e.target.value })} placeholder="Ex: 2.10" />
+              <Input className="w-full" type="number" step="0.01" value={form.rateAboveThreshold} onChange={(e) => setForm({ ...form, rateAboveThreshold: e.target.value })} placeholder="Ex: 2.10" />
             </div>
           </div>
         ) : (
           <div className="grid gap-2 pl-4">
             <Label>Taux (%)</Label>
-            <Input type="number" step="0.01" value={form.singleRate} onChange={(e) => setForm({ ...form, singleRate: e.target.value })} placeholder="Ex: 0.42" className="max-w-xs" />
+            <Input type="number" step="0.01" value={form.singleRate} onChange={(e) => setForm({ ...form, singleRate: e.target.value })} placeholder="Ex: 0.42" className="w-full max-w-xs" />
             <p className="text-xs text-muted-foreground">Taux appliqué sur la Valeur Vénale (VV)</p>
           </div>
         )}
@@ -490,7 +490,7 @@ export function GarantiesTab() {
         <div className="grid gap-2">
           <Label>Dimension de la matrice</Label>
           <Select value={form.matrixDimension} onValueChange={(v) => setForm({ ...form, matrixDimension: v })}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="puissance_fiscale">Puissance fiscale (CV)</SelectItem>
               <SelectItem value="formule">Formule</SelectItem>
@@ -530,8 +530,8 @@ export function GarantiesTab() {
                 <TableBody>
                   {rows.map((r, idx) => (
                     <TableRow key={idx}>
-                      <TableCell><Input value={r.tranche} onChange={(e) => setRows(rows.map((row, i) => i === idx ? { ...row, tranche: e.target.value } : row))} className="h-9" placeholder="Ex: 1-2 CV" /></TableCell>
-                      <TableCell><Input type="number" value={r.tarif} onChange={(e) => setRows(rows.map((row, i) => i === idx ? { ...row, tarif: e.target.value } : row))} className="h-9" placeholder="0" /></TableCell>
+                      <TableCell><Input value={r.tranche} onChange={(e) => setRows(rows.map((row, i) => i === idx ? { ...row, tranche: e.target.value } : row))} className="w-full h-9" placeholder="Ex: 1-2 CV" /></TableCell>
+                      <TableCell><Input type="number" value={r.tarif} onChange={(e) => setRows(rows.map((row, i) => i === idx ? { ...row, tarif: e.target.value } : row))} className="w-full h-9" placeholder="0" /></TableCell>
                       <TableCell>
                         <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setRows(rows.filter((_, i) => i !== idx))}>
                           <X className="h-4 w-4" />
@@ -569,19 +569,19 @@ export function GarantiesTab() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               <div className="grid gap-1">
                 <Label className="text-[10px] text-muted-foreground">Capital Décès (FCFA)</Label>
-                <Input type="number" value={row.capitalDeces} onChange={(e) => setForm({ ...form, formulaRows: form.formulaRows.map((r, i) => i === idx ? { ...r, capitalDeces: e.target.value } : r) })} className="h-8 text-xs" />
+                <Input type="number" value={row.capitalDeces} onChange={(e) => setForm({ ...form, formulaRows: form.formulaRows.map((r, i) => i === idx ? { ...r, capitalDeces: e.target.value } : r) })} className="w-full h-8 text-xs" />
               </div>
               <div className="grid gap-1">
                 <Label className="text-[10px] text-muted-foreground">Capital Invalidité (FCFA)</Label>
-                <Input type="number" value={row.capitalInvalidite} onChange={(e) => setForm({ ...form, formulaRows: form.formulaRows.map((r, i) => i === idx ? { ...r, capitalInvalidite: e.target.value } : r) })} className="h-8 text-xs" />
+                <Input type="number" value={row.capitalInvalidite} onChange={(e) => setForm({ ...form, formulaRows: form.formulaRows.map((r, i) => i === idx ? { ...r, capitalInvalidite: e.target.value } : r) })} className="w-full h-8 text-xs" />
               </div>
               <div className="grid gap-1">
                 <Label className="text-[10px] text-muted-foreground">Frais Médicaux (FCFA)</Label>
-                <Input type="number" value={row.fraisMedicaux} onChange={(e) => setForm({ ...form, formulaRows: form.formulaRows.map((r, i) => i === idx ? { ...r, fraisMedicaux: e.target.value } : r) })} className="h-8 text-xs" />
+                <Input type="number" value={row.fraisMedicaux} onChange={(e) => setForm({ ...form, formulaRows: form.formulaRows.map((r, i) => i === idx ? { ...r, fraisMedicaux: e.target.value } : r) })} className="w-full h-8 text-xs" />
               </div>
               <div className="grid gap-1">
                 <Label className="text-[10px] text-muted-foreground">Prime fixe (FCFA)</Label>
-                <Input type="number" value={row.primeFixe} onChange={(e) => setForm({ ...form, formulaRows: form.formulaRows.map((r, i) => i === idx ? { ...r, primeFixe: e.target.value } : r) })} className="h-8 text-xs" />
+                <Input type="number" value={row.primeFixe} onChange={(e) => setForm({ ...form, formulaRows: form.formulaRows.map((r, i) => i === idx ? { ...r, primeFixe: e.target.value } : r) })} className="w-full h-8 text-xs" />
               </div>
             </div>
           </div>
@@ -608,7 +608,7 @@ export function GarantiesTab() {
       <div className="space-y-3">
         <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Capital couvert</h4>
         <div className="grid gap-2">
-          <Textarea value={form.capitalStr} onChange={(e) => setForm({ ...form, capitalStr: e.target.value })} rows={2} className="font-mono text-xs" placeholder='{"corporel": "7 000 000 000 FCFA"}' />
+          <Textarea value={form.capitalStr} onChange={(e) => setForm({ ...form, capitalStr: e.target.value })} rows={2} className="w-full font-mono text-xs" placeholder='{"corporel": "7 000 000 000 FCFA"}' />
           {form.capitalStr && (() => {
             const parsed = parseJsonSafe(form.capitalStr);
             if (!parsed || typeof parsed !== "object") return <p className="text-xs text-destructive">JSON invalide</p>;
@@ -626,7 +626,7 @@ export function GarantiesTab() {
       <div className="space-y-3">
         <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Franchise</h4>
         <div className="grid gap-2">
-          <Textarea value={form.franchiseStr} onChange={(e) => setForm({ ...form, franchiseStr: e.target.value })} rows={2} className="font-mono text-xs" placeholder='{"percent": 10, "min": 255000}' />
+          <Textarea value={form.franchiseStr} onChange={(e) => setForm({ ...form, franchiseStr: e.target.value })} rows={2} className="w-full font-mono text-xs" placeholder='{"percent": 10, "min": 255000}' />
           {form.franchiseStr && (() => {
             const parsed = parseJsonSafe(form.franchiseStr);
             if (!parsed || typeof parsed !== "object") return <p className="text-xs text-destructive">JSON invalide</p>;

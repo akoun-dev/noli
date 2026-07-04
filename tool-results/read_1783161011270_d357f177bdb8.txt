@@ -1,0 +1,803 @@
+     1→     1→"use client";
+     2→     2→
+     3→     3→import { useEffect, useState, useCallback } from "react";
+     4→     4→import {
+     5→     5→  Car,
+     6→     6→  Plus,
+     7→     7→  CheckCircle2,
+     8→     8→  XCircle,
+     9→     9→  Pencil,
+    10→    10→  Trash2,
+    11→    11→  Loader2,
+    12→    12→} from "lucide-react";
+    13→    13→import { Button } from "@/components/ui/button";
+    14→    14→import { Badge } from "@/components/ui/badge";
+    15→    15→import { Skeleton } from "@/components/ui/skeleton";
+    16→    16→import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+    17→    17→import { Input } from "@/components/ui/input";
+    18→    18→import { Label } from "@/components/ui/label";
+    19→    19→import { Textarea } from "@/components/ui/textarea";
+    20→    20→import { Checkbox } from "@/components/ui/checkbox";
+    21→    21→import {
+    22→    22→  Dialog,
+    23→    23→  DialogContent,
+    24→    24→  DialogHeader,
+    25→    25→  DialogTitle,
+    26→    26→  DialogFooter,
+    27→    27→  DialogDescription,
+    28→    28→} from "@/components/ui/dialog";
+    29→    29→import {
+    30→    30→  AlertDialog,
+    31→    31→  AlertDialogAction,
+    32→    32→  AlertDialogCancel,
+    33→    33→  AlertDialogContent,
+    34→    34→  AlertDialogDescription,
+    35→    35→  AlertDialogFooter,
+    36→    36→  AlertDialogHeader,
+    37→    37→  AlertDialogTitle,
+    38→    38→} from "@/components/ui/alert-dialog";
+    39→    39→import {
+    40→    40→  Select,
+    41→    41→  SelectContent,
+    42→    42→  SelectItem,
+    43→    43→  SelectTrigger,
+    44→    44→  SelectValue,
+    45→    45→} from "@/components/ui/select";
+    46→    46→import {
+    47→    47→  Tooltip,
+    48→    48→  TooltipContent,
+    49→    49→  TooltipProvider,
+    50→    50→  TooltipTrigger,
+    51→    51→} from "@/components/ui/tooltip";
+    52→    52→import { useAppStore } from "@/store/app-store";
+    53→    53→import { useToast } from "@/hooks/use-toast";
+    54→    54→
+    55→    55→/* ── Types ── */
+    56→    56→interface Category {
+    57→    57→  id: string;
+    58→    58→  name: string;
+    59→    59→  icon: string | null;
+    60→    60→}
+    61→    61→
+    62→    62→interface Offer {
+    63→    63→  id: string;
+    64→    64→  name: string;
+    65→    65→  description: string | null;
+    66→    66→  priceMin: number | null;
+    67→    67→  priceMax: number | null;
+    68→    68→  coverageAmount: number | null;
+    69→    69→  deductible: number;
+    70→    70→  contractType: string | null;
+    71→    71→  features: string[];
+    72→    72→  isActive: boolean;
+    73→    73→  category: { id: string; name: string; icon: string | null } | null;
+    74→    74→  createdAt: string;
+    75→    75→}
+    76→    76→
+    77→    77→interface CoverageMini {
+    78→    78→  id: string;
+    79→    79→  code: string;
+    80→    80→  name: string;
+    81→    81→  type: string;
+    82→    82→  calculationType: string;
+    83→    83→  isMandatory: boolean;
+    84→    84→  isActive: boolean;
+    85→    85→  category: { id: string; name: string; code: string } | null;
+    86→    86→}
+    87→    87→
+    88→    88→interface OfferFormData {
+    89→    89→  name: string;
+    90→    90→  categoryId: string;
+    91→    91→  description: string;
+    92→    92→  priceMin: string;
+    93→    93→  priceMax: string;
+    94→    94→  coverageAmount: string;
+    95→    95→  deductible: string;
+    96→    96→  contractType: string;
+    97→    97→  selectedGuarantees: string[]; // coverage names
+    98→    98→  isActive: boolean;
+    99→    99→}
+   100→   100→
+   101→   101→const emptyForm: OfferFormData = {
+   102→   102→  name: "",
+   103→   103→  categoryId: "",
+   104→   104→  description: "",
+   105→   105→  priceMin: "",
+   106→   106→  priceMax: "",
+   107→   107→  coverageAmount: "",
+   108→   108→  deductible: "0",
+   109→   109→  contractType: "",
+   110→   110→  selectedGuarantees: [],
+   111→   111→  isActive: true,
+   112→   112→};
+   113→   113→
+   114→   114→const contractTypeLabels: Record<string, string> = {
+   115→   115→  basic: "Tiers simple",
+   116→   116→  third_party_plus: "Tiers étendu",
+   117→   117→  all_risks: "Tous risques",
+   118→   118→};
+   119→   119→
+   120→   120→const formatPrice = (amount: number | null) =>
+   121→   121→  amount != null
+   122→   122→    ? new Intl.NumberFormat("fr-FR").format(amount) + " FCFA"
+   123→   123→    : "—";
+   124→   124→
+   125→   125→export function InsurerOffersTab() {
+   126→   126→  const { user } = useAppStore();
+   127→   127→  const { toast } = useToast();
+   128→   128→
+   129→   129→  const [insurerId, setInsurerId] = useState<string | null>(null);
+   130→   130→  const [offers, setOffers] = useState<Offer[]>([]);
+   131→   131→  const [categories, setCategories] = useState<Category[]>([]);
+   132→   132→  const [loading, setLoading] = useState(true);
+   133→   133→  const [error, setError] = useState<string | null>(null);
+   134→   134→
+   135→   135→  // Dialog state
+   136→   136→  const [dialogOpen, setDialogOpen] = useState(false);
+   137→   137→  const [editingOffer, setEditingOffer] = useState<Offer | null>(null);
+   138→   138→  const [form, setForm] = useState<OfferFormData>(emptyForm);
+   139→   139→  const [submitting, setSubmitting] = useState(false);
+   140→   140→
+   141→   141→  // Delete dialog
+   142→   142→  const [deleteTarget, setDeleteTarget] = useState<Offer | null>(null);
+   143→   143→  const [deleting, setDeleting] = useState(false);
+   144→   144→
+   145→   145→  // Coverages for guarantee selection
+   146→   146→  const [formCoverages, setFormCoverages] = useState<CoverageMini[]>([]);
+   147→   147→  const [formCoveragesLoading, setFormCoveragesLoading] = useState(false);
+   148→   148→
+   149→   149→  /* ── Fetch helpers ── */
+   150→   150→  const fetchInsurer = useCallback(async (userId: string) => {
+   151→   151→    try {
+   152→   152→      const res = await fetch(`/api/insurer/account?userId=${userId}`);
+   153→   153→      if (!res.ok) throw new Error("Compte assureur non trouvé");
+   154→   154→      const data = await res.json();
+   155→   155→      setInsurerId(data.id);
+   156→   156→      return data.id;
+   157→   157→    } catch {
+   158→   158→      setError("Impossible de charger votre compte assureur");
+   159→   159→      return null;
+   160→   160→    }
+   161→   161→  }, []);
+   162→   162→
+   163→   163→  const fetchOffers = useCallback(async (iid: string) => {
+   164→   164→    try {
+   165→   165→      const res = await fetch(`/api/insurer/offers?insurerId=${iid}`);
+   166→   166→      if (!res.ok) throw new Error();
+   167→   167→      const data = await res.json();
+   168→   168→      setOffers(data.offers || []);
+   169→   169→    } catch {
+   170→   170→      setError("Erreur lors du chargement des offres");
+   171→   171→    }
+   172→   172→  }, []);
+   173→   173→
+   174→   174→  const fetchCategories = useCallback(async () => {
+   175→   175→    try {
+   176→   176→      const res = await fetch("/api/admin/insurance-categories");
+   177→   177→      if (!res.ok) return;
+   178→   178→      const data = await res.json();
+   179→   179→      setCategories(data);
+   180→   180→    } catch {
+   181→   181→      /* ignore */
+   182→   182→    }
+   183→   183→  }, []);
+   184→   184→
+   185→   185→  const refreshData = useCallback(async () => {
+   186→   186→    if (!insurerId) return;
+   187→   187→    await fetchOffers(insurerId);
+   188→   188→  }, [insurerId, fetchOffers]);
+   189→   189→
+   190→   190→  /* ── Init ── */
+   191→   191→  useEffect(() => {
+   192→   192→    if (!user.id) {
+   193→   193→      setLoading(false);
+   194→   194→      return;
+   195→   195→    }
+   196→   196→    (async () => {
+   197→   197→      const iid = await fetchInsurer(user.id!);
+   198→   198→      if (iid) await fetchOffers(iid);
+   199→   199→      await fetchCategories();
+   200→   200→      setLoading(false);
+   201→   201→    })();
+   202→   202→  }, [user.id]);
+   203→   203→
+   204→   204→  /* ── Fetch coverages when insurerId is known (for guarantee selection) ── */
+   205→   205→  useEffect(() => {
+   206→   206→    if (!insurerId) {
+   207→   207→      setFormCoverages([]);
+   208→   208→      return;
+   209→   209→    }
+   210→   210→    setFormCoveragesLoading(true);
+   211→   211→    fetch(`/api/insurer/coverages?insurerId=${insurerId}`)
+   212→   212→      .then((r) => {
+   213→   213→        if (r.ok) return r.json();
+   214→   214→        return { coverages: [] };
+   215→   215→      })
+   216→   216→      .then((data) => setFormCoverages(data.coverages || []))
+   217→   217→      .catch(() => setFormCoverages([]))
+   218→   218→      .finally(() => setFormCoveragesLoading(false));
+   219→   219→  }, [insurerId]);
+   220→   220→
+   221→   221→  /* ── Form helpers ── */
+   222→   222→  const openCreate = () => {
+   223→   223→    setEditingOffer(null);
+   224→   224→    setForm(emptyForm);
+   225→   225→    setDialogOpen(true);
+   226→   226→  };
+   227→   227→
+   228→   228→  const openEdit = (offer: Offer) => {
+   229→   229→    setEditingOffer(offer);
+   230→   230→    setForm({
+   231→   231→      name: offer.name,
+   232→   232→      categoryId: offer.category?.id || "",
+   233→   233→      description: offer.description || "",
+   234→   234→      priceMin: offer.priceMin != null ? String(offer.priceMin) : "",
+   235→   235→      priceMax: offer.priceMax != null ? String(offer.priceMax) : "",
+   236→   236→      coverageAmount:
+   237→   237→        offer.coverageAmount != null ? String(offer.coverageAmount) : "",
+   238→   238→      deductible: String(offer.deductible),
+   239→   239→      contractType: offer.contractType || "",
+   240→   240→      selectedGuarantees: offer.features || [],
+   241→   241→      isActive: offer.isActive,
+   242→   242→    });
+   243→   243→    setDialogOpen(true);
+   244→   244→  };
+   245→   245→
+   246→   246→  const handleSubmit = async () => {
+   247→   247→    if (!form.name.trim() || !insurerId) return;
+   248→   248→    setSubmitting(true);
+   249→   249→
+   250→   250→    const payload = {
+   251→   251→      insurerId,
+   252→   252→      categoryId: form.categoryId || null,
+   253→   253→      name: form.name.trim(),
+   254→   254→      description: form.description.trim() || null,
+   255→   255→      priceMin: form.priceMin ? Number(form.priceMin) : null,
+   256→   256→      priceMax: form.priceMax ? Number(form.priceMax) : null,
+   257→   257→      coverageAmount: form.coverageAmount ? Number(form.coverageAmount) : null,
+   258→   258→      deductible: form.deductible ? Number(form.deductible) : 0,
+   259→   259→      contractType: form.contractType || null,
+   260→   260→      features: form.selectedGuarantees,
+   261→   261→      isActive: form.isActive,
+   262→   262→    };
+   263→   263→
+   264→   264→    try {
+   265→   265→      const url = editingOffer
+   266→   266→        ? `/api/insurer/offers/${editingOffer.id}`
+   267→   267→        : "/api/insurer/offers";
+   268→   268→      const method = editingOffer ? "PUT" : "POST";
+   269→   269→
+   270→   270→      const res = await fetch(url, {
+   271→   271→        method,
+   272→   272→        headers: { "Content-Type": "application/json" },
+   273→   273→        body: JSON.stringify(payload),
+   274→   274→      });
+   275→   275→
+   276→   276→      if (!res.ok) {
+   277→   277→        const err = await res.json();
+   278→   278→        throw new Error(err.error || "Erreur");
+   279→   279→      }
+   280→   280→
+   281→   281→      toast({
+   282→   282→        title: editingOffer
+   283→   283→          ? "Offre mise à jour avec succès"
+   284→   284→          : "Offre créée avec succès",
+   285→   285→        description: editingOffer
+   286→   286→          ? `"${form.name}" a été modifiée.`
+   287→   287→          : `"${form.name}" a été ajoutée à vos offres.`,
+   288→   288→      });
+   289→   289→
+   290→   290→      setDialogOpen(false);
+   291→   291→      await refreshData();
+   292→   292→    } catch (e) {
+   293→   293→      toast({
+   294→   294→        title: "Erreur",
+   295→   295→        description: e instanceof Error ? e.message : "Une erreur est survenue",
+   296→   296→        variant: "destructive",
+   297→   297→      });
+   298→   298→    } finally {
+   299→   299→      setSubmitting(false);
+   300→   300→    }
+   301→   301→  };
+   302→   302→
+   303→   303→  const handleDelete = async () => {
+   304→   304→    if (!deleteTarget) return;
+   305→   305→    setDeleting(true);
+   306→   306→    try {
+   307→   307→      const res = await fetch(`/api/insurer/offers/${deleteTarget.id}`, {
+   308→   308→        method: "DELETE",
+   309→   309→      });
+   310→   310→      if (!res.ok) throw new Error();
+   311→   311→      toast({
+   312→   312→        title: "Offre supprimée",
+   313→   313→        description: `"${deleteTarget.name}" a été désactivée.`,
+   314→   314→      });
+   315→   315→      setDeleteTarget(null);
+   316→   316→      await refreshData();
+   317→   317→    } catch {
+   318→   318→      toast({
+   319→   319→        title: "Erreur",
+   320→   320→        description: "Impossible de supprimer l'offre",
+   321→   321→        variant: "destructive",
+   322→   322→      });
+   323→   323→    } finally {
+   324→   324→      setDeleting(false);
+   325→   325→    }
+   326→   326→  };
+   327→   327→
+   328→   328→  const toggleGuarantee = (coverageName: string, checked: boolean | "indeterminate") => {
+   329→   329→    if (checked === "indeterminate") return;
+   330→   330→    setForm((f) => ({
+   331→   331→      ...f,
+   332→   332→      selectedGuarantees: checked
+   333→   333→        ? [...f.selectedGuarantees, coverageName]
+   334→   334→        : f.selectedGuarantees.filter((n) => n !== coverageName),
+   335→   335→    }));
+   336→   336→  };
+   337→   337→
+   338→   338→  /* ── Group coverages by category for display ── */
+   339→   339→  const groupedCoverages = formCoverages.reduce<
+   340→   340→    Record<string, CoverageMini[]>
+   341→   341→  >((acc, c) => {
+   342→   342→    const key = c.category?.name || "Autre";
+   343→   343→    (acc[key] ??= []).push(c);
+   344→   344→    return acc;
+   345→   345→  }, {});
+   346→   346→
+   347→   347→  /* ── Render ── */
+   348→   348→  return (
+   349→   349→    <div className="space-y-6">
+   350→   350→      {/* Header */}
+   351→   351→      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+   352→   352→        <div>
+   353→   353→          <h2 className="text-2xl font-bold">Mes Offres</h2>
+   354→   354→          <p className="text-muted-foreground mt-1">
+   355→   355→            Gérez vos offres d&apos;assurance disponibles sur NOLI.
+   356→   356→          </p>
+   357→   357→        </div>
+   358→   358→        <Button
+   359→   359→          className="bg-[#B9E54D] text-black hover:bg-[#a5d044]"
+   360→   360→          onClick={openCreate}
+   361→   361→        >
+   362→   362→          <Plus className="mr-2 h-4 w-4" />
+   363→   363→          Créer une offre
+   364→   364→        </Button>
+   365→   365→      </div>
+   366→   366→
+   367→   367→      {/* Loading */}
+   368→   368→      {loading && (
+   369→   369→        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+   370→   370→          {Array.from({ length: 6 }).map((_, i) => (
+   371→   371→            <Card key={i}>
+   372→   372→              <CardHeader className="pb-3">
+   373→   373→                <Skeleton className="h-5 w-3/4" />
+   374→   374→                <Skeleton className="h-4 w-1/2 mt-2" />
+   375→   375→              </CardHeader>
+   376→   376→              <CardContent className="space-y-3">
+   377→   377→                <Skeleton className="h-4 w-full" />
+   378→   378→                <Skeleton className="h-4 w-2/3" />
+   379→   379→                <div className="flex gap-2 pt-2">
+   380→   380→                  <Skeleton className="h-6 w-20 rounded-full" />
+   381→   381→                  <Skeleton className="h-6 w-24 rounded-full" />
+   382→   382→                </div>
+   383→   383→              </CardContent>
+   384→   384→            </Card>
+   385→   385→          ))}
+   386→   386→        </div>
+   387→   387→      )}
+   388→   388→
+   389→   389→      {/* Error */}
+   390→   390→      {error && !loading && (
+   391→   391→        <div className="flex flex-col items-center justify-center py-16 text-center">
+   392→   392→          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30 mb-4">
+   393→   393→            <XCircle className="h-8 w-8 text-red-500" />
+   394→   394→          </div>
+   395→   395→          <h3 className="text-lg font-semibold">Erreur de chargement</h3>
+   396→   396→          <p className="text-sm text-muted-foreground mt-1">{error}</p>
+   397→   397→        </div>
+   398→   398→      )}
+   399→   399→
+   400→   400→      {/* Empty */}
+   401→   401→      {!loading && !error && offers.length === 0 && (
+   402→   402→        <div className="flex flex-col items-center justify-center py-16 text-center">
+   403→   403→          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted mb-4">
+   404→   404→            <Car className="h-8 w-8 text-muted-foreground" />
+   405→   405→          </div>
+   406→   406→          <h3 className="text-lg font-semibold">Aucune offre trouvée</h3>
+   407→   407→          <p className="text-sm text-muted-foreground mt-1 max-w-md">
+   408→   408→            Vous n&apos;avez pas encore d&apos;offres d&apos;assurance.
+   409→   409→            Cliquez sur &quot;Créer une offre&quot; pour commencer.
+   410→   410→          </p>
+   411→   411→        </div>
+   412→   412→      )}
+   413→   413→
+   414→   414→      {/* Offers grid */}
+   415→   415→      {!loading && !error && offers.length > 0 && (
+   416→   416→        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+   417→   417→          {offers.map((offer) => (
+   418→   418→            <Card
+   419→   419→              key={offer.id}
+   420→   420→              className="hover:shadow-md transition-shadow"
+   421→   421→            >
+   422→   422→              <CardHeader className="pb-3">
+   423→   423→                <div className="flex items-start justify-between">
+   424→   424→                  <div className="space-y-1 min-w-0 flex-1">
+   425→   425→                    <CardTitle className="text-base truncate">
+   426→   426→                      {offer.name}
+   427→   427→                    </CardTitle>
+   428→   428→                    <p className="text-xs text-muted-foreground">
+   429→   429→                      {offer.category?.name || "Non catégorisé"}
+   430→   430→                    </p>
+   431→   431→                  </div>
+   432→   432→                  <div className="flex items-center gap-1 shrink-0 ml-2">
+   433→   433→                    {offer.isActive ? (
+   434→   434→                      <Badge className="border-0 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 text-xs">
+   435→   435→                        <CheckCircle2 className="mr-1 h-3 w-3" />
+   436→   436→                        Active
+   437→   437→                      </Badge>
+   438→   438→                    ) : (
+   439→   439→                      <Badge variant="secondary" className="text-xs">
+   440→   440→                        Inactive
+   441→   441→                      </Badge>
+   442→   442→                    )}
+   443→   443→                  </div>
+   444→   444→                </div>
+   445→   445→              </CardHeader>
+   446→   446→              <CardContent className="space-y-3">
+   447→   447→                {/* Price range */}
+   448→   448→                <div className="flex items-baseline gap-1">
+   449→   449→                  <span className="text-xl font-bold">
+   450→   450→                    {formatPrice(offer.priceMin)}
+   451→   451→                  </span>
+   452→   452→                  {offer.priceMax &&
+   453→   453→                    offer.priceMax !== offer.priceMin && (
+   454→   454→                      <span className="text-sm text-muted-foreground">
+   455→   455→                        — {formatPrice(offer.priceMax)}
+   456→   456→                      </span>
+   457→   457→                    )}
+   458→   458→                </div>
+   459→   459→
+   460→   460→                {/* Badges */}
+   461→   461→                <div className="flex gap-2 flex-wrap">
+   462→   462→                  {offer.contractType && (
+   463→   463→                    <Badge variant="outline" className="text-xs">
+   464→   464→                      {contractTypeLabels[offer.contractType] ||
+   465→   465→                        offer.contractType}
+   466→   466→                    </Badge>
+   467→   467→                  )}
+   468→   468→                  {offer.coverageAmount && (
+   469→   469→                    <Badge variant="secondary" className="text-xs">
+   470→   470→                      Capital : {formatPrice(offer.coverageAmount)}
+   471→   471→                    </Badge>
+   472→   472→                  )}
+   473→   473→                </div>
+   474→   474→
+   475→   475→                {/* Description */}
+   476→   476→                {offer.description && (
+   477→   477→                  <p className="text-sm text-muted-foreground line-clamp-2">
+   478→   478→                    {offer.description}
+   479→   479→                  </p>
+   480→   480→                )}
+   481→   481→
+   482→   482→                {/* Features / Guarantees */}
+   483→   483→                {offer.features.length > 0 && (
+   484→   484→                  <div className="space-y-1.5">
+   485→   485→                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+   486→   486→                      Garanties
+   487→   487→                    </p>
+   488→   488→                    <TooltipProvider>
+   489→   489→                      <ul className="space-y-1">
+   490→   490→                        {offer.features.slice(0, 4).map((f, i) => (
+   491→   491→                          <li
+   492→   492→                            key={i}
+   493→   493→                            className="text-sm text-muted-foreground flex items-center gap-2"
+   494→   494→                          >
+   495→   495→                            <span className="h-1.5 w-1.5 rounded-full bg-[#B9E54D] shrink-0" />
+   496→   496→                            <Tooltip>
+   497→   497→                              <TooltipTrigger asChild>
+   498→   498→                                <span className="truncate">{f}</span>
+   499→   499→                              </TooltipTrigger>
+   500→   500→                              <TooltipContent>
+   501→   501→                                <p>{f}</p>
+   502→   502→                              </TooltipContent>
+   503→   503→                            </Tooltip>
+   504→   504→                          </li>
+   505→   505→                        ))}
+   506→   506→                        {offer.features.length > 4 && (
+   507→   507→                          <li className="text-xs text-muted-foreground pl-3.5">
+   508→   508→                            +{offer.features.length - 4} autre(s)...
+   509→   509→                          </li>
+   510→   510→                        )}
+   511→   511→                      </ul>
+   512→   512→                    </TooltipProvider>
+   513→   513→                  </div>
+   514→   514→                )}
+   515→   515→
+   516→   516→                {/* Actions */}
+   517→   517→                <div className="flex items-center gap-2 pt-2 border-t">
+   518→   518→                  <Button
+   519→   519→                    variant="ghost"
+   520→   520→                    size="sm"
+   521→   521→                    className="h-8 text-xs"
+   522→   522→                    onClick={() => openEdit(offer)}
+   523→   523→                  >
+   524→   524→                    <Pencil className="mr-1.5 h-3.5 w-3.5" />
+   525→   525→                    Modifier
+   526→   526→                  </Button>
+   527→   527→                  <Button
+   528→   528→                    variant="ghost"
+   529→   529→                    size="sm"
+   530→   530→                    className="h-8 text-xs text-destructive hover:text-destructive"
+   531→   531→                    onClick={() => setDeleteTarget(offer)}
+   532→   532→                  >
+   533→   533→                    <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+   534→   534→                    Supprimer
+   535→   535→                  </Button>
+   536→   536→                </div>
+   537→   537→              </CardContent>
+   538→   538→            </Card>
+   539→   539→          ))}
+   540→   540→        </div>
+   541→   541→      )}
+   542→   542→
+   543→   543→      {/* ── Create/Edit Dialog ── */}
+   544→   544→      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+   545→   545→        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+   546→   546→          <DialogHeader>
+   547→   547→            <DialogTitle>
+   548→   548→              {editingOffer ? "Modifier l'offre" : "Nouvelle offre"}
+   549→   549→            </DialogTitle>
+   550→   550→            <DialogDescription>
+   551→   551→              {editingOffer
+   552→   552→                ? "Modifiez les informations de votre offre."
+   553→   553→                : "Remplissez les informations pour créer une nouvelle offre."}
+   554→   554→            </DialogDescription>
+   555→   555→          </DialogHeader>
+   556→   556→
+   557→   557→          <div className="space-y-4 py-2">
+   558→   558→            {/* Name */}
+   559→   559→            <div className="space-y-2">
+   560→   560→              <Label htmlFor="offer-name">Nom de l&apos;offre *</Label>
+   561→   561→              <Input
+   562→   562→                id="offer-name"
+   563→   563→                placeholder="Ex: Assurance Auto Premium"
+   564→   564→                value={form.name}
+   565→   565→                onChange={(e) =>
+   566→   566→                  setForm((f) => ({ ...f, name: e.target.value }))
+   567→   567→                }
+   568→   568→              />
+   569→   569→            </div>
+   570→   570→
+   571→   571→            {/* Category */}
+   572→   572→            <div className="space-y-2">
+   573→   573→              <Label>Catégorie de produit</Label>
+   574→   574→              <Select
+   575→   575→                value={form.categoryId}
+   576→   576→                onValueChange={(v) =>
+   577→   577→                  setForm((f) => ({ ...f, categoryId: v }))
+   578→   578→                }
+   579→   579→              >
+   580→   580→                <SelectTrigger>
+   581→   581→                  <SelectValue placeholder="Sélectionner une catégorie" />
+   582→   582→                </SelectTrigger>
+   583→   583→                <SelectContent>
+   584→   584→                  {categories.map((c) => (
+   585→   585→                    <SelectItem key={c.id} value={c.id}>
+   586→   586→                      {c.name}
+   587→   587→                    </SelectItem>
+   588→   588→                  ))}
+   589→   589→                </SelectContent>
+   590→   590→              </Select>
+   591→   591→            </div>
+   592→   592→
+   593→   593→            {/* Contract Type */}
+   594→   594→            <div className="space-y-2">
+   595→   595→              <Label>Type de contrat</Label>
+   596→   596→              <Select
+   597→   597→                value={form.contractType}
+   598→   598→                onValueChange={(v) =>
+   599→   599→                  setForm((f) => ({ ...f, contractType: v }))
+   600→   600→                }
+   601→   601→              >
+   602→   602→                <SelectTrigger>
+   603→   603→                  <SelectValue placeholder="Sélectionner un type" />
+   604→   604→                </SelectTrigger>
+   605→   605→                <SelectContent>
+   606→   606→                  <SelectItem value="basic">Tiers simple</SelectItem>
+   607→   607→                  <SelectItem value="third_party_plus">Tiers étendu</SelectItem>
+   608→   608→                  <SelectItem value="all_risks">Tous risques</SelectItem>
+   609→   609→                </SelectContent>
+   610→   610→              </Select>
+   611→   611→            </div>
+   612→   612→
+   613→   613→            {/* Description */}
+   614→   614→            <div className="space-y-2">
+   615→   615→              <Label htmlFor="offer-desc">Description</Label>
+   616→   616→              <Textarea
+   617→   617→                id="offer-desc"
+   618→   618→                placeholder="Description de l'offre..."
+   619→   619→                rows={3}
+   620→   620→                value={form.description}
+   621→   621→                onChange={(e) =>
+   622→   622→                  setForm((f) => ({ ...f, description: e.target.value }))
+   623→   623→                }
+   624→   624→              />
+   625→   625→            </div>
+   626→   626→
+   627→   627→            {/* Price fields */}
+   628→   628→            <div className="grid grid-cols-2 gap-4">
+   629→   629→              <div className="space-y-2">
+   630→   630→                <Label htmlFor="price-min">Prix minimum (FCFA)</Label>
+   631→   631→                <Input
+   632→   632→                  id="price-min"
+   633→   633→                  type="number"
+   634→   634→                  placeholder="0"
+   635→   635→                  value={form.priceMin}
+   636→   636→                  onChange={(e) =>
+   637→   637→                    setForm((f) => ({ ...f, priceMin: e.target.value }))
+   638→   638→                  }
+   639→   639→                />
+   640→   640→              </div>
+   641→   641→              <div className="space-y-2">
+   642→   642→                <Label htmlFor="price-max">Prix maximum (FCFA)</Label>
+   643→   643→                <Input
+   644→   644→                  id="price-max"
+   645→   645→                  type="number"
+   646→   646→                  placeholder="0"
+   647→   647→                  value={form.priceMax}
+   648→   648→                  onChange={(e) =>
+   649→   649→                    setForm((f) => ({ ...f, priceMax: e.target.value }))
+   650→   650→                  }
+   651→   651→                />
+   652→   652→              </div>
+   653→   653→            </div>
+   654→   654→
+   655→   655→            <div className="grid grid-cols-2 gap-4">
+   656→   656→              <div className="space-y-2">
+   657→   657→                <Label htmlFor="coverage-amount">Capital garanti (FCFA)</Label>
+   658→   658→                <Input
+   659→   659→                  id="coverage-amount"
+   660→   660→                  type="number"
+   661→   661→                  placeholder="0"
+   662→   662→                  value={form.coverageAmount}
+   663→   663→                  onChange={(e) =>
+   664→   664→                    setForm((f) => ({ ...f, coverageAmount: e.target.value }))
+   665→   665→                  }
+   666→   666→                />
+   667→   667→              </div>
+   668→   668→              <div className="space-y-2">
+   669→   669→                <Label htmlFor="deductible">Franchise (FCFA)</Label>
+   670→   670→                <Input
+   671→   671→                  id="deductible"
+   672→   672→                  type="number"
+   673→   673→                  placeholder="0"
+   674→   674→                  value={form.deductible}
+   675→   675→                  onChange={(e) =>
+   676→   676→                    setForm((f) => ({ ...f, deductible: e.target.value }))
+   677→   677→                  }
+   678→   678→                />
+   679→   679→              </div>
+   680→   680→            </div>
+   681→   681→
+   682→   682→            {/* Guarantee selection (like admin) */}
+   683→   683→            <div className="space-y-2">
+   684→   684→              <Label>Garanties</Label>
+   685→   685→              {formCoveragesLoading && (
+   686→   686→                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+   687→   687→              )}
+   688→   688→              {!formCoveragesLoading &&
+   689→   689→                insurerId &&
+   690→   690→                formCoverages.length === 0 && (
+   691→   691→                  <p className="text-sm text-muted-foreground">
+   692→   692→                    Aucune garantie configurée. Créez d&apos;abord des
+   693→   693→                    garanties dans l&apos;onglet &quot;Mes Garanties&quot;.
+   694→   694→                  </p>
+   695→   695→                )}
+   696→   696→              {!formCoveragesLoading && formCoverages.length > 0 && (
+   697→   697→                <div className="border rounded-lg max-h-64 overflow-y-auto p-3 space-y-3">
+   698→   698→                  {Object.entries(groupedCoverages)
+   699→   699→                    .sort(([a], [b]) => a.localeCompare(b))
+   700→   700→                    .map(([cat, covs]) => (
+   701→   701→                      <div key={cat}>
+   702→   702→                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
+   703→   703→                          {cat}
+   704→   704→                        </p>
+   705→   705→                        <div className="space-y-1.5">
+   706→   706→                          {covs.map((c) => (
+   707→   707→                            <div key={c.id} className="flex items-center gap-2">
+   708→   708→                              <Checkbox
+   709→   709→                                id={`cov-${c.id}`}
+   710→   710→                                checked={form.selectedGuarantees.includes(
+   711→   711→                                  c.name
+   712→   712→                                )}
+   713→   713→                                onCheckedChange={(checked) =>
+   714→   714→                                  toggleGuarantee(c.name, checked)
+   715→   715→                                }
+   716→   716→                              />
+   717→   717→                              <Label
+   718→   718→                                htmlFor={`cov-${c.id}`}
+   719→   719→                                className="text-sm font-normal cursor-pointer"
+   720→   720→                              >
+   721→   721→                                {c.name}
+   722→   722→                              </Label>
+   723→   723→                              {c.isMandatory && (
+   724→   724→                                <Badge
+   725→   725→                                  variant="default"
+   726→   726→                                  className="text-[10px] px-1.5 py-0 bg-[#B9E54D] text-black hover:bg-[#a5d044]"
+   727→   727→                                >
+   728→   728→                                  Obligatoire
+   729→   729→                                </Badge>
+   730→   730→                              )}
+   731→   731→                            </div>
+   732→   732→                          ))}
+   733→   733→                        </div>
+   734→   734→                      </div>
+   735→   735→                    ))}
+   736→   736→                </div>
+   737→   737→              )}
+   738→   738→            </div>
+   739→   739→
+   740→   740→            {/* Active toggle */}
+   741→   741→            <div className="flex items-center gap-2">
+   742→   742→              <Checkbox
+   743→   743→                id="offer-active"
+   744→   744→                checked={form.isActive}
+   745→   745→                onCheckedChange={(v) =>
+   746→   746→                  setForm((f) => ({ ...f, isActive: !!v }))
+   747→   747→                }
+   748→   748→              />
+   749→   749→              <Label htmlFor="offer-active" className="cursor-pointer">
+   750→   750→                Offre active
+   751→   751→              </Label>
+   752→   752→            </div>
+   753→   753→          </div>
+   754→   754→
+   755→   755→          <DialogFooter>
+   756→   756→            <Button
+   757→   757→              variant="outline"
+   758→   758→              onClick={() => setDialogOpen(false)}
+   759→   759→              disabled={submitting}
+   760→   760→            >
+   761→   761→              Annuler
+   762→   762→            </Button>
+   763→   763→            <Button
+   764→   764→              className="bg-[#B9E54D] text-black hover:bg-[#a5d044]"
+   765→   765→              onClick={handleSubmit}
+   766→   766→              disabled={submitting || !form.name.trim()}
+   767→   767→            >
+   768→   768→              {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+   769→   769→              {editingOffer ? "Enregistrer" : "Créer l'offre"}
+   770→   770→            </Button>
+   771→   771→          </DialogFooter>
+   772→   772→        </DialogContent>
+   773→   773→      </Dialog>
+   774→   774→
+   775→   775→      {/* ── Delete Confirmation ── */}
+   776→   776→      <AlertDialog
+   777→   777→        open={!!deleteTarget}
+   778→   778→        onOpenChange={(open) => !open && setDeleteTarget(null)}
+   779→   779→      >
+   780→   780→        <AlertDialogContent>
+   781→   781→          <AlertDialogHeader>
+   782→   782→            <AlertDialogTitle>Supprimer cette offre ?</AlertDialogTitle>
+   783→   783→            <AlertDialogDescription>
+   784→   784→              L&apos;offre &quot;{deleteTarget?.name}&quot; sera désactivée.
+   785→   785→              Elle ne sera plus visible par les utilisateurs.
+   786→   786→            </AlertDialogDescription>
+   787→   787→          </AlertDialogHeader>
+   788→   788→          <AlertDialogFooter>
+   789→   789→            <AlertDialogCancel disabled={deleting}>Annuler</AlertDialogCancel>
+   790→   790→            <AlertDialogAction
+   791→   791→              onClick={handleDelete}
+   792→   792→              disabled={deleting}
+   793→   793→              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+   794→   794→            >
+   795→   795→              {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+   796→   796→              Supprimer
+   797→   797→            </AlertDialogAction>
+   798→   798→          </AlertDialogFooter>
+   799→   799→        </AlertDialogContent>
+   800→   800→      </AlertDialog>
+   801→   801→    </div>
+   802→   802→  );
+   803→   803→}

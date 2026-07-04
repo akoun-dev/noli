@@ -261,7 +261,7 @@ export function DevisTab() {
                     handleStatusChange(selected.id, v);
                     setSelected({ ...selected, status: v });
                   }}>
-                    <SelectTrigger className="w-40">
+                    <SelectTrigger className="w-full w-40">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -336,11 +336,11 @@ export function DevisTab() {
                   <div className="grid gap-3">
                     <div className="grid gap-2">
                       <Label>Prix final (FCFA)</Label>
-                      <Input type="number" value={detailFinalPrice} onChange={(e) => setDetailFinalPrice(e.target.value)} placeholder="Ex: 85000" />
+                      <Input className="w-full" type="number" value={detailFinalPrice} onChange={(e) => setDetailFinalPrice(e.target.value)} placeholder="Ex: 85000" />
                     </div>
                     <div className="grid gap-2">
                       <Label>Notes</Label>
-                      <Textarea value={detailNotes} onChange={(e) => setDetailNotes(e.target.value)} rows={3} placeholder="Notes internes..." />
+                      <Textarea className="w-full" value={detailNotes} onChange={(e) => setDetailNotes(e.target.value)} rows={3} placeholder="Notes internes..." />
                     </div>
                   </div>
                 </div>

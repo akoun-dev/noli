@@ -508,6 +508,7 @@ export function InsurerGuaranteesTab() {
             <div className="space-y-2">
               <Label htmlFor="cov-code">Code *</Label>
               <Input
+                className="w-full"
                 id="cov-code"
                 placeholder="Ex: RC_AUTO"
                 value={form.code}
@@ -528,6 +529,7 @@ export function InsurerGuaranteesTab() {
             <div className="space-y-2">
               <Label htmlFor="cov-name">Nom *</Label>
               <Input
+                className="w-full"
                 id="cov-name"
                 placeholder="Ex: Responsabilité Civile Automobile"
                 value={form.name}
@@ -546,7 +548,7 @@ export function InsurerGuaranteesTab() {
                   setForm((f) => ({ ...f, categoryId: v }))
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Sélectionner une catégorie" />
                 </SelectTrigger>
                 <SelectContent>
@@ -563,6 +565,7 @@ export function InsurerGuaranteesTab() {
             <div className="space-y-2">
               <Label htmlFor="cov-type">Type</Label>
               <Input
+                className="w-full"
                 id="cov-type"
                 placeholder="Ex: RC, INCENDIE, VOL"
                 value={form.type}
@@ -581,7 +584,7 @@ export function InsurerGuaranteesTab() {
                   setForm((f) => ({ ...f, calculationType: v }))
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -601,6 +604,7 @@ export function InsurerGuaranteesTab() {
             <div className="space-y-2">
               <Label htmlFor="cov-desc">Description</Label>
               <Textarea
+                className="w-full"
                 id="cov-desc"
                 placeholder="Description de la garantie..."
                 rows={3}
@@ -637,7 +641,7 @@ export function InsurerGuaranteesTab() {
                 id="cov-metadata"
                 placeholder='{"taux": 0.5, "minAmount": 5000}'
                 rows={3}
-                className="font-mono text-xs"
+                className="w-full font-mono text-xs"
                 value={form.metadata}
                 onChange={(e) =>
                   setForm((f) => ({ ...f, metadata: e.target.value }))

@@ -578,6 +578,7 @@ export function RolesTab() {
               <Label htmlFor="role-name">Nom du rôle *</Label>
               <Input
                 id="role-name"
+                className="w-full"
                 value={formName}
                 onChange={(e) => setFormName(e.target.value)}
                 placeholder="Ex: Éditeur"
@@ -587,6 +588,7 @@ export function RolesTab() {
               <Label htmlFor="role-desc">Description</Label>
               <Textarea
                 id="role-desc"
+                className="w-full"
                 value={formDescription}
                 onChange={(e) => setFormDescription(e.target.value)}
                 placeholder="Description du rôle..."

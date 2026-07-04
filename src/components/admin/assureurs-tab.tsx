@@ -256,10 +256,10 @@ export function AssureursTab() {
             <DialogTitle>{editing ? "Modifier l'assureur" : "Nouvel assureur"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <div><Label htmlFor="name">Nom *</Label><Input id="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ex: NOLI Assurance" /></div>
-            <div><Label htmlFor="contactEmail">Email</Label><Input id="contactEmail" type="email" value={form.contactEmail} onChange={(e) => setForm({ ...form, contactEmail: e.target.value })} /></div>
-            <div><Label htmlFor="phone">Téléphone</Label><Input id="phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
-            <div><Label htmlFor="website">Site web</Label><Input id="website" value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} /></div>
+            <div><Label htmlFor="name">Nom *</Label><Input id="name" className="w-full" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ex: NOLI Assurance" /></div>
+            <div><Label htmlFor="contactEmail">Email</Label><Input id="contactEmail" className="w-full" type="email" value={form.contactEmail} onChange={(e) => setForm({ ...form, contactEmail: e.target.value })} /></div>
+            <div><Label htmlFor="phone">Téléphone</Label><Input id="phone" className="w-full" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
+            <div><Label htmlFor="website">Site web</Label><Input id="website" className="w-full" value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} /></div>
             <div className="flex items-center justify-between">
               <Label>Actif</Label>
               <Switch checked={form.isActive} onCheckedChange={(v) => setForm({ ...form, isActive: v })} />

@@ -1567,6 +1567,7 @@ export function SettingsTab() {
                 <div className="grid gap-2">
                   <Label>Prénom</Label>
                   <Input
+                    className="w-full"
                     value={edit.firstName || ""}
                     onChange={(e) =>
                       setEdit({ ...edit, firstName: e.target.value })
@@ -1576,6 +1577,7 @@ export function SettingsTab() {
                 <div className="grid gap-2">
                   <Label>Nom</Label>
                   <Input
+                    className="w-full"
                     value={edit.lastName || ""}
                     onChange={(e) =>
                       setEdit({ ...edit, lastName: e.target.value })
@@ -1587,6 +1589,7 @@ export function SettingsTab() {
                 <div className="grid gap-2">
                   <Label>Téléphone</Label>
                   <Input
+                    className="w-full"
                     value={edit.phone || ""}
                     onChange={(e) =>
                       setEdit({ ...edit, phone: e.target.value })
@@ -1599,7 +1602,7 @@ export function SettingsTab() {
                     value={edit.role}
                     onValueChange={(v) => setEdit({ ...edit, role: v })}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="w-full">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
