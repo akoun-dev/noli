@@ -19,6 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 const fmtPrice = (n: number) => new Intl.NumberFormat("fr-FR").format(n) + " FCFA";
 const fmtDate = (d: string) => (d ? new Date(d).toLocaleDateString("fr-FR") : "—");
@@ -26,6 +27,17 @@ const ctLabels: Record<string, string> = { basic: "Tiers Simple", third_party_pl
 const ctColors: Record<string, string> = { basic: "bg-slate-100 text-slate-800", third_party_plus: "bg-amber-100 text-amber-800", all_risks: "bg-emerald-100 text-emerald-800" };
 const calcBadge: Record<string, string> = { FREE: "bg-emerald-100 text-emerald-800", FIXED_AMOUNT: "bg-blue-100 text-blue-800", VARIABLE_BASED: "bg-orange-100 text-orange-800", MATRIX_BASED: "bg-purple-100 text-purple-800" };
 const calcLabel: Record<string, string> = { FREE: "Gratuit", FIXED_AMOUNT: "Fixe", VARIABLE_BASED: "Variable", MATRIX_BASED: "Matrice" };
+
+const FUEL_OPTIONS = ["Essence", "Diesel", "Hybride", "Électrique"];
+const USAGE_OPTIONS = ["Personnel", "Professionnel", "Taxi/VTC", "Autre"];
+
+const safeJsonParse = (val: unknown): string[] => {
+  if (Array.isArray(val)) return val;
+  if (typeof val === "string") {
+    try { return JSON.parse(val); } catch { return []; }
+  }
+  return [];
+};
 
 interface InsurerMini { id: string; name: string; code: string }
 interface Offer {
@@ -36,6 +48,15 @@ interface Offer {
   insurer: { id: string; name: string; code: string };
   category?: { id: string; name: string } | null;
   _count?: { quotes: number };
+  // Vehicle eligibility fields (optional, from DB)
+  fiscalPowerMin?: number | null;
+  fiscalPowerMax?: number | null;
+  fuelTypes?: string;
+  newValueMin?: number | null;
+  newValueMax?: number | null;
+  venalValueMin?: number | null;
+  venalValueMax?: number | null;
+  vehicleUsage?: string;
 }
 interface CoverageMini {
   id: string; code: string; name: string; type: string;
@@ -45,8 +66,14 @@ interface CoverageMini {
 
 const empty = {
   insurerId: "", name: "", description: "",
-  deductible: 0,
+  deductible: 0, contractType: "", priceMin: "", priceMax: "", coverageAmount: "",
   features: "[]" as string, isActive: true,
+  // Vehicle eligibility
+  fiscalPowerMin: "", fiscalPowerMax: "",
+  fuelTypes: [] as string[],
+  newValueMin: "", newValueMax: "",
+  venalValueMin: "", venalValueMax: "",
+  vehicleUsage: [] as string[],
 };
 
 export function InsuranceOffersTab() {
@@ -108,7 +135,20 @@ export function InsuranceOffersTab() {
     setForm({
       insurerId: o.insurerId, name: o.name,
       description: o.description || "", deductible: o.deductible,
+      contractType: o.contractType || "",
+      priceMin: o.priceMin != null ? String(o.priceMin) : "",
+      priceMax: o.priceMax != null ? String(o.priceMax) : "",
+      coverageAmount: o.coverageAmount != null ? String(o.coverageAmount) : "",
       features: JSON.stringify(o.features), isActive: o.isActive,
+      // Vehicle eligibility
+      fiscalPowerMin: o.fiscalPowerMin != null ? String(o.fiscalPowerMin) : "",
+      fiscalPowerMax: o.fiscalPowerMax != null ? String(o.fiscalPowerMax) : "",
+      fuelTypes: safeJsonParse(o.fuelTypes),
+      newValueMin: o.newValueMin != null ? String(o.newValueMin) : "",
+      newValueMax: o.newValueMax != null ? String(o.newValueMax) : "",
+      venalValueMin: o.venalValueMin != null ? String(o.venalValueMin) : "",
+      venalValueMax: o.venalValueMax != null ? String(o.venalValueMax) : "",
+      vehicleUsage: safeJsonParse(o.vehicleUsage),
     });
     setFormOpen(true);
   };
@@ -143,11 +183,32 @@ export function InsuranceOffersTab() {
     }
     setSaving(true);
     try {
+      const payload = {
+        insurerId: form.insurerId,
+        name: form.name.trim(),
+        description: form.description.trim() || null,
+        deductible: Number(form.deductible) || 0,
+        contractType: form.contractType || null,
+        priceMin: form.priceMin ? Number(form.priceMin) : null,
+        priceMax: form.priceMax ? Number(form.priceMax) : null,
+        coverageAmount: form.coverageAmount ? Number(form.coverageAmount) : null,
+        features: JSON.parse(form.features),
+        isActive: form.isActive,
+        // Vehicle eligibility
+        fiscalPowerMin: form.fiscalPowerMin ? Number(form.fiscalPowerMin) : null,
+        fiscalPowerMax: form.fiscalPowerMax ? Number(form.fiscalPowerMax) : null,
+        fuelTypes: JSON.stringify(form.fuelTypes),
+        newValueMin: form.newValueMin ? Number(form.newValueMin) : null,
+        newValueMax: form.newValueMax ? Number(form.newValueMax) : null,
+        venalValueMin: form.venalValueMin ? Number(form.venalValueMin) : null,
+        venalValueMax: form.venalValueMax ? Number(form.venalValueMax) : null,
+        vehicleUsage: JSON.stringify(form.vehicleUsage),
+      };
       const url = editing ? `/api/admin/insurance-offers/${editing.id}` : "/api/admin/insurance-offers";
       const res = await fetch(url, {
         method: editing ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, features: JSON.parse(form.features) }),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) { const e = await res.json(); throw new Error(e.error || "Erreur"); }
       toast({ title: editing ? "Offre modifiée" : "Offre créée" });
@@ -188,6 +249,27 @@ export function InsuranceOffersTab() {
     { label: "Devis", value: detailQuotesCount, icon: FileText, color: "text-blue-600 bg-blue-50" },
     { label: "Assureur", value: selected?.insurer?.code || "—", icon: Building2, color: "text-purple-600 bg-purple-50" },
   ];
+
+  // Helpers for checkbox toggles in form
+  const toggleFuelType = (fuel: string, checked: boolean | "indeterminate") => {
+    if (checked === "indeterminate") return;
+    setForm((f) => ({
+      ...f,
+      fuelTypes: checked
+        ? [...f.fuelTypes, fuel]
+        : f.fuelTypes.filter((t) => t !== fuel),
+    }));
+  };
+
+  const toggleVehicleUsage = (usage: string, checked: boolean | "indeterminate") => {
+    if (checked === "indeterminate") return;
+    setForm((f) => ({
+      ...f,
+      vehicleUsage: checked
+        ? [...f.vehicleUsage, usage]
+        : f.vehicleUsage.filter((u) => u !== usage),
+    }));
+  };
 
   return (
     <div className="space-y-4">
@@ -289,10 +371,45 @@ export function InsuranceOffersTab() {
               <Label>Description</Label>
               <Textarea className="w-full" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} />
             </div>
+
+            {/* Contract Type */}
             <div className="w-full grid gap-2">
-              <Label>Franchise (FCFA)</Label>
-              <Input className="w-full" type="number" value={form.deductible} onChange={(e) => setForm({ ...form, deductible: parseInt(e.target.value) || 0 })} />
+              <Label>Type de contrat</Label>
+              <Select value={form.contractType} onValueChange={(v) => setForm({ ...form, contractType: v })}>
+                <SelectTrigger className="w-full"><SelectValue placeholder="Sélectionner un type" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="basic">Tiers Simple</SelectItem>
+                  <SelectItem value="third_party_plus">Tiers+</SelectItem>
+                  <SelectItem value="all_risks">Tous Risques</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
+
+            {/* Price min/max */}
+            <div className="w-full grid grid-cols-2 gap-3">
+              <div className="grid gap-2">
+                <Label>Prix min (FCFA)</Label>
+                <Input className="w-full" type="number" placeholder="0" value={form.priceMin} onChange={(e) => setForm({ ...form, priceMin: e.target.value })} />
+              </div>
+              <div className="grid gap-2">
+                <Label>Prix max (FCFA)</Label>
+                <Input className="w-full" type="number" placeholder="0" value={form.priceMax} onChange={(e) => setForm({ ...form, priceMax: e.target.value })} />
+              </div>
+            </div>
+
+            {/* Franchise & Capital garanti */}
+            <div className="w-full grid grid-cols-2 gap-3">
+              <div className="grid gap-2">
+                <Label>Franchise (FCFA)</Label>
+                <Input className="w-full" type="number" value={form.deductible} onChange={(e) => setForm({ ...form, deductible: parseInt(e.target.value) || 0 })} />
+              </div>
+              <div className="grid gap-2">
+                <Label>Capital garanti (FCFA)</Label>
+                <Input className="w-full" type="number" placeholder="0" value={form.coverageAmount} onChange={(e) => setForm({ ...form, coverageAmount: e.target.value })} />
+              </div>
+            </div>
+
+            <Separator />
 
             {/* Guarantee checkboxes */}
             <div className="w-full grid gap-2">
@@ -341,6 +458,104 @@ export function InsuranceOffersTab() {
                 <p className="text-sm text-muted-foreground">Sélectionnez d&apos;abord un assureur.</p>
               )}
             </div>
+
+            <Separator />
+
+            {/* Vehicle Eligibility Accordion */}
+            <Accordion type="multiple" className="w-full">
+              <AccordionItem value="vehicle-eligibility" className="border rounded-lg px-4">
+                <AccordionTrigger className="py-3 hover:no-underline">
+                  <span className="font-semibold text-sm">Éligibilité Véhicule</span>
+                </AccordionTrigger>
+                <AccordionContent className="pb-4 pt-0 space-y-4">
+                  <p className="text-xs text-muted-foreground">Définissez les critères d&apos;éligibilité des véhicules pour cette offre. Laissez vide pour accepter tous les véhicules.</p>
+
+                  {/* Puissance fiscale */}
+                  <div className="w-full grid gap-2">
+                    <Label>Puissance fiscale (CV)</Label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="grid gap-1">
+                        <Label className="text-xs text-muted-foreground">Min</Label>
+                        <Input className="w-full" type="number" placeholder="Min" value={form.fiscalPowerMin} onChange={(e) => setForm({ ...form, fiscalPowerMin: e.target.value })} />
+                      </div>
+                      <div className="grid gap-1">
+                        <Label className="text-xs text-muted-foreground">Max</Label>
+                        <Input className="w-full" type="number" placeholder="Max" value={form.fiscalPowerMax} onChange={(e) => setForm({ ...form, fiscalPowerMax: e.target.value })} />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Carburant */}
+                  <div className="w-full grid gap-2">
+                    <Label>Carburant</Label>
+                    <div className="flex flex-wrap gap-3">
+                      {FUEL_OPTIONS.map((fuel) => (
+                        <div key={fuel} className="flex items-center gap-2">
+                          <Checkbox
+                            id={`fuel-${fuel}`}
+                            checked={form.fuelTypes.includes(fuel)}
+                            onCheckedChange={(checked) => toggleFuelType(fuel, checked)}
+                          />
+                          <Label htmlFor={`fuel-${fuel}`} className="text-sm font-normal cursor-pointer">{fuel}</Label>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground">Laissez vide pour accepter tous les types de carburant.</p>
+                  </div>
+
+                  {/* Valeur à neuf */}
+                  <div className="w-full grid gap-2">
+                    <Label>Valeur à neuf (FCFA)</Label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="grid gap-1">
+                        <Label className="text-xs text-muted-foreground">Min</Label>
+                        <Input className="w-full" type="number" placeholder="0" value={form.newValueMin} onChange={(e) => setForm({ ...form, newValueMin: e.target.value })} />
+                      </div>
+                      <div className="grid gap-1">
+                        <Label className="text-xs text-muted-foreground">Max</Label>
+                        <Input className="w-full" type="number" placeholder="0" value={form.newValueMax} onChange={(e) => setForm({ ...form, newValueMax: e.target.value })} />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Valeur vénale */}
+                  <div className="w-full grid gap-2">
+                    <Label>Valeur vénale (FCFA)</Label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="grid gap-1">
+                        <Label className="text-xs text-muted-foreground">Min</Label>
+                        <Input className="w-full" type="number" placeholder="0" value={form.venalValueMin} onChange={(e) => setForm({ ...form, venalValueMin: e.target.value })} />
+                      </div>
+                      <div className="grid gap-1">
+                        <Label className="text-xs text-muted-foreground">Max</Label>
+                        <Input className="w-full" type="number" placeholder="0" value={form.venalValueMax} onChange={(e) => setForm({ ...form, venalValueMax: e.target.value })} />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Usage */}
+                  <div className="w-full grid gap-2">
+                    <Label>Usage</Label>
+                    <div className="flex flex-wrap gap-3">
+                      {USAGE_OPTIONS.map((usage) => (
+                        <div key={usage} className="flex items-center gap-2">
+                          <Checkbox
+                            id={`usage-${usage}`}
+                            checked={form.vehicleUsage.includes(usage)}
+                            onCheckedChange={(checked) => toggleVehicleUsage(usage, checked)}
+                          />
+                          <Label htmlFor={`usage-${usage}`} className="text-sm font-normal cursor-pointer">{usage}</Label>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground">Laissez vide pour accepter tous les usages.</p>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+
+            <Separator />
+
             <div className="flex items-center justify-between">
               <Label>Active</Label>
               <Switch checked={form.isActive} onCheckedChange={(v) => setForm({ ...form, isActive: v })} />

@@ -145,6 +145,15 @@ model InsuranceOffer {
   features       String   @default("[]") // JSON string[]
   contractType   String?  // basic, third_party_plus, all_risks
   isActive       Boolean  @default(true)
+  // Vehicle eligibility fields
+  fiscalPowerMin Int?
+  fiscalPowerMax Int?
+  fuelTypes      String   @default("[]") // JSON string[] : ["essence","diesel"]
+  newValueMin    Int?
+  newValueMax    Int?
+  venalValueMin  Int?
+  venalValueMax  Int?
+  vehicleUsage   String   @default("[]") // JSON string[] : ["personnel","professionnel","taxi","autre"]
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 

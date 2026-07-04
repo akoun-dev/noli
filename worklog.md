@@ -709,3 +709,104 @@ Stage Summary:
 - All 4 calculation methods fully implemented with proper form fields
 - Metadata stored as JSON in Coverage.metadata field
 - End-to-end verified: create VARIABLE_BASED (Incendie), edit round-trip, create FREE (Assistance Dépannage)
+---
+Task ID: pricing-service-1
+Agent: Main Agent
+Task: Create comprehensive pricing service with 4 calculation methods
+
+Work Log:
+- Created `/home/z/my-project/src/lib/pricing-service.ts` — server-side only module
+- Exported types: `PricingResult`, `VehiclePricingData`, `NetPremiumOptions`, `ScoreResult`
+- Implemented `calculateGuaranteePremium(coverage, vehicleData, options?)`:
+  - FREE → returns 0
+  - FIXED_AMOUNT → returns fixedAmount or packPriceReduced, checks requiresGuarantee, applies min/max
+  - VARIABLE_BASED → resolves variable source (NEW_VALUE/VENAL_VALUE/FISCAL_POWER), handles conditionedByNewValue threshold, applies rate%, rounds to nearest 500, applies min/max
+  - MATRIX_BASED → 7 sub-dimensions:
+    - FISCAL_POWER: tariff lookup by CV range + optional fuelType, fallback to DB tariffRules
+    - FUEL_TYPE: match by fuel type in tariffs array
+    - VEHICLE_CATEGORY: maps usage → VP/VT, matches in tariffs
+    - SEATS: uses fiscalPowerMin/Max fields as seat range, matches in tariffs
+    - FORMULA: tries tariffs by seat label → formulas array by name → fallback first formula; calculates baseRate% × VN with ceiling
+    - TIERCE_COMPLETE / TIERCE_COLLISION: uses VN range classes (A–F) + categoryTariffs, fallback by valueMin/valueMax
+- Implemented `calculateNetPremium(grossPremium, options?)`: taxDiscount = 5% default, fees = 2 500 FCFA default, clamped to ≥ 0
+- Implemented `scoreOffer(offer, vehicleData, matchedGuarantees)`: scores 0–200+ pts across 7 criteria with French-language reasons
+- Implemented `isVehicleEligible(offer, vehicleData)`: checks fiscalPower, fuelTypes, newValue, venalValue, vehicleUsage; empty arrays = all accepted
+- All amounts in FCFA, rounding via `Math.round(value / 500) * 500`
+- All labels and breakdown text in French
+- Safe JSON parsing with try/catch fallback to `{}`
+- No client-side imports used
+- Lint verified (no new errors — only pre-existing launch-server.js warnings)
+
+Stage Summary:
+- New file: src/lib/pricing-service.ts (~440 lines)
+- 4 exported functions: calculateGuaranteePremium, calculateNetPremium, scoreOffer, isVehicleEligible
+- 4 exported types: PricingResult, VehiclePricingData, NetPremiumOptions, ScoreResult
+- Server-side only, ready for import in API routes
+---
+Task ID: 10
+Agent: Main Agent
+Task: Add vehicle eligibility fields and missing fields to admin + insurer offer forms
+
+Work Log:
+- Added `Accordion` import to both offer tab components
+- Added `Separator` import to insurer-offers-tab.tsx
+- Expanded `Offer` interface in admin: added optional fields fiscalPowerMin, fiscalPowerMax, fuelTypes, newValueMin, newValueMax, venalValueMin, venalValueMax, vehicleUsage
+- Expanded `OfferFormData` interface in insurer: added 9 new vehicle eligibility fields (fiscalPowerMin/Max as string, fuelTypes as string[], newValueMin/Max, venalValueMin/Max, vehicleUsage as string[])
+- Expanded `empty` / `emptyForm` state objects with all new fields (4 missing + 9 vehicle eligibility)
+- Updated `openEdit` in admin: parses JSON strings for fuelTypes, vehicleUsage; converts numeric fields to strings for form
+- Updated `openEdit` in insurer: same parsing logic with safeJsonParse helper
+- Updated `handleSave` in admin: builds clean payload with all new fields, JSON.stringify for fuelTypes/vehicleUsage, null for empty number fields
+- Updated `handleSubmit` in insurer: same payload construction
+- Added `safeJsonParse` utility to both files for robust JSON parsing (handles string, array, unknown)
+- Added 4 missing fields to admin form dialog: Type de contrat (Select), Prix min/max (grid-cols-2), Capital garanti (grid with Franchise)
+- Added Accordion "Éligibilité Véhicule" section to both forms with:
+  - Puissance fiscale (CV): min/max grid-cols-2
+  - Carburant: Checkbox group (Essence, Diesel, Hybride, Électrique)
+  - Valeur à neuf (FCFA): min/max grid-cols-2
+  - Valeur vénale (FCFA): min/max grid-cols-2
+  - Usage: Checkbox group (Personnel, Professionnel, Taxi/VTC, Autre)
+- Added helper text (text-xs text-muted-foreground) for carburant and usage sections
+- Added toggleFuelType and toggleVehicleUsage helpers
+- Used Separators between form sections in both dialogs
+- Lint passes (only pre-existing launch-server.js warnings remain)
+- Dev log shows no errors, server running normally
+
+Stage Summary:
+- Both offer forms (admin + insurer) now have complete fields: contractType, priceMin, priceMax, coverageAmount
+- Both forms have collapsible "Éligibilité Véhicule" Accordion with 5 vehicle eligibility field groups
+- Form state properly initializes and restores all fields on edit
+- Save payloads include all new fields with proper type conversion
+---
+Task ID: 2
+Agent: Main
+Task: Apply vehicle data rules — eligibility filtering, scoring, pricing service, offer forms
+
+Work Log:
+- Updated Prisma schema: added fiscalPowerMin/Max, fuelTypes, newValueMin/Max, venalValueMin/Max, vehicleUsage to InsuranceOffer
+- Ran db:push + prisma generate to sync schema and regenerate client
+- Created /src/lib/pricing-service.ts (~440 lines) with 4 calculation methods:
+  - FREE → 0 FCFA
+  - FIXED_AMOUNT → fixedAmount (or packPriceReduced in pack)
+  - VARIABLE_BASED → variableValue × (ratePercent / 100) with conditional threshold support
+  - MATRIX_BASED → 7 dimensions: FISCAL_POWER, FUEL_TYPE, VEHICLE_CATEGORY, SEATS, FORMULA, TIERCE_COMPLETE, TIERCE_COLLISION
+  - Also exports: calculateNetPremium(), scoreOffer(), isVehicleEligible()
+- Rewrote /api/compare/route.ts:
+  - Vehicle eligibility pre-filter using isVehicleEligible()
+  - Feature-based guarantee matching (existing keyword system)
+  - Per-guarantee pricing via PricingService with fallback to legacy multiplier
+  - Net premium calculation (tax discount 5% + fees 2500 FCFA)
+  - Scoring with 7 criteria (guarantees, contract type, price range, CV, fuel, VN, usage)
+  - Results sorted by score desc, then price asc
+- Updated /api/offers/route.ts (public): added vehicle data query params + isVehicleEligible filtering
+- Updated 4 API routes to handle new fields:
+  - /api/admin/insurance-offers (POST + PUT)
+  - /api/insurer/offers (POST)
+  - /api/insurer/offers/[id] (PUT)
+- Updated admin offer form (insurance-offers-tab.tsx): added contractType, priceMin/Max, coverageAmount fields + vehicle eligibility Accordion section
+- Updated insurer offer form (insurer-offers-tab.tsx): same fields + vehicle eligibility Accordion
+- Updated InsurerOffer type: added relevanceScore, matchReasons, pricingBreakdown
+
+Stage Summary:
+- Files modified: prisma/schema.prisma, 6 API routes, 2 offer form components, types/index.ts
+- Files created: src/lib/pricing-service.ts
+- End-to-end verified: offer creation with eligibility fields via API, compare endpoint with vehicle data returning scored + filtered results

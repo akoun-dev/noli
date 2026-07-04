@@ -64,6 +64,14 @@ export async function POST(request: NextRequest) {
       features,
       contractType,
       isActive,
+      fiscalPowerMin,
+      fiscalPowerMax,
+      fuelTypes,
+      newValueMin,
+      newValueMax,
+      venalValueMin,
+      venalValueMax,
+      vehicleUsage,
     } = body;
 
     if (!insurerId) {
@@ -92,6 +100,14 @@ export async function POST(request: NextRequest) {
         features: Array.isArray(features) ? JSON.stringify(features) : (features || "[]"),
         contractType: contractType || null,
         isActive: isActive ?? true,
+        fiscalPowerMin: fiscalPowerMin ? Number(fiscalPowerMin) : null,
+        fiscalPowerMax: fiscalPowerMax ? Number(fiscalPowerMax) : null,
+        fuelTypes: Array.isArray(fuelTypes) ? JSON.stringify(fuelTypes) : (fuelTypes || "[]"),
+        newValueMin: newValueMin ? Number(newValueMin) : null,
+        newValueMax: newValueMax ? Number(newValueMax) : null,
+        venalValueMin: venalValueMin ? Number(venalValueMin) : null,
+        venalValueMax: venalValueMax ? Number(venalValueMax) : null,
+        vehicleUsage: Array.isArray(vehicleUsage) ? JSON.stringify(vehicleUsage) : (vehicleUsage || "[]"),
       },
     });
 

@@ -1,0 +1,774 @@
+     1→"use client";
+     2→
+     3→import { useState, useCallback, useEffect } from "react";
+     4→import { motion, AnimatePresence } from "framer-motion";
+     5→import {
+     6→  User,
+     7→  Car,
+     8→  Shield,
+     9→  Check,
+    10→  ChevronLeft,
+    11→  Loader2,
+    12→  Mail,
+    13→  UserCheck,
+    14→  Users,
+    15→  Banknote,
+    16→  Scale,
+    17→  Lock,
+    18→  FlameKindling,
+    19→  ShieldCheck,
+    20→  CheckCheck,
+    21→  Wrench,
+    22→  CarFront,
+    23→  HandHelping,
+    24→  type LucideIcon,
+    25→} from "lucide-react";
+    26→
+    27→import { useAppStore } from "@/store/app-store";
+    28→import { Button } from "@/components/ui/button";
+    29→import { Input } from "@/components/ui/input";
+    30→import { Label } from "@/components/ui/label";
+    31→import {
+    32→  Select,
+    33→  SelectTrigger,
+    34→  SelectValue,
+    35→  SelectContent,
+    36→  SelectItem,
+    37→} from "@/components/ui/select";
+    38→import { Checkbox } from "@/components/ui/checkbox";
+    39→import { Progress } from "@/components/ui/progress";
+    40→import { useToast } from "@/hooks/use-toast";
+    41→
+    42→// ─── Icon mapping for DB coverage category codes ──────────────────
+    43→const CATEGORY_ICON_MAP: Record<string, LucideIcon> = {
+    44→  RESPONSABILITE_CIVILE: Shield,
+    45→  DEFENSE_RECOURS: Scale,
+    46→  INDIVIDUELLE_CONDUCTEUR: UserCheck,
+    47→  INDIVIDUELLE_PASSAGERS: Users,
+    48→  INCENDIE: FlameKindling,
+    49→  VOL: Lock,
+    50→  BRIS_GLACES: CarFront,
+    51→  TIERCE_COMPLETE: Car,
+    52→  TIERCE_COLLISION: CarFront,
+    53→  ASSISTANCE: HandHelping,
+    54→  AVANCE_RECOURS: Banknote,
+    55→  ACCESSOIRES: Wrench,
+    56→};
+    57→
+    58→const DEFAULT_ICON = Shield;
+    59→
+    60→// ─── Types ────────────────────────────────────────────────────────
+    61→interface DBCoverageCategory {
+    62→  id: string;
+    63→  code: string;
+    64→  name: string;
+    65→  description: string | null;
+    66→  displayOrder: number;
+    67→}
+    68→
+    69→// ─── Constants ─────────────────────────────────────────────────────
+    70→const STEPS = [
+    71→  { id: 1, label: "Profil assuré", icon: User },
+    72→  { id: 2, label: "Informations véhicule", icon: Car },
+    73→  { id: 3, label: "Catégories de garanties", icon: Shield },
+    74→];
+    75→
+    76→const FUEL_OPTIONS = [
+    77→  { value: "essence", label: "Essence" },
+    78→  { value: "diesel", label: "Diesel" },
+    79→];
+    80→
+    81→const CV_OPTIONS = Array.from({ length: 12 }, (_, i) => ({
+    82→  value: String(i + 1),
+    83→  label: i < 11 ? `${i + 1} CV` : "12 CV et plus",
+    84→}));
+    85→
+    86→const SEAT_OPTIONS = [
+    87→  "2", "3", "4", "5", "6", "7", "8", "9+",
+    88→].map((v) => ({ value: v, label: v }));
+    89→
+    90→const USAGE_OPTIONS = [
+    91→  { value: "personnel", label: "Personnel" },
+    92→  { value: "professionnel", label: "Professionnel" },
+    93→  { value: "taxi_vtc", label: "Taxi / VTC" },
+    94→  { value: "autre", label: "Autre" },
+    95→];
+    96→
+    97→// ─── Animation ──────────────────────────────────────────────────────
+    98→const slideVariants = {
+    99→  enter: (d: number) => ({ x: d > 0 ? 200 : -200, opacity: 0 }),
+   100→  center: { x: 0, opacity: 1 },
+   101→  exit: (d: number) => ({ x: d < 0 ? 200 : -200, opacity: 0 }),
+   102→};
+   103→
+   104→// ─── Component ──────────────────────────────────────────────────────
+   105→export function ComparisonForm() {
+   106→  const {
+   107→    comparisonStep, setComparisonStep,
+   108→    personalInfo, setPersonalInfo,
+   109→    vehicleInfo, setVehicleInfo,
+   110→    coverageNeeds, setCoverageNeeds,
+   111→    setView, setIsComparing, setComparisonResults,
+   112→    isComparing, user,
+   113→  } = useAppStore();
+   114→  const { toast } = useToast();
+   115→  const [direction, setDirection] = useState(0);
+   116→  const [errors, setErrors] = useState<Record<string, string>>({});
+   117→
+   118→  // Dynamic coverage categories from DB
+   119→  const [dbCategories, setDbCategories] = useState<DBCoverageCategory[]>([]);
+   120→  const [categoriesLoading, setCategoriesLoading] = useState(false);
+   121→
+   122→  // Fetch coverage categories when component mounts (or step reaches 3)
+   123→  useEffect(() => {
+   124→    if (dbCategories.length > 0) return;
+   125→    setCategoriesLoading(true);
+   126→    fetch("/api/coverage-categories")
+   127→      .then((res) => res.json())
+   128→      .then((data) => {
+   129→        if (Array.isArray(data)) setDbCategories(data);
+   130→      })
+   131→      .catch(() => {
+   132→        // Fallback: empty — user will see error on submit
+   133→      })
+   134→      .finally(() => setCategoriesLoading(false));
+   135→  }, [dbCategories.length]);
+   136→
+   137→  const goNext = useCallback(() => {
+   138→    if (comparisonStep < 3) {
+   139→      setDirection(1);
+   140→      setComparisonStep(comparisonStep + 1);
+   141→      setErrors({});
+   142→    }
+   143→  }, [comparisonStep, setComparisonStep]);
+   144→
+   145→  const goBack = useCallback(() => {
+   146→    if (comparisonStep === 1) { setView("landing"); return; }
+   147→    setDirection(-1);
+   148→    setComparisonStep(comparisonStep - 1);
+   149→    setErrors({});
+   150→  }, [comparisonStep, setComparisonStep, setView]);
+   151→
+   152→  // ─── Validation ─────────────────────────────────────────────────
+   153→  const validateStep1 = (): boolean => {
+   154→    const e: Record<string, string> = {};
+   155→    if (!personalInfo.lastName.trim()) e.lastName = "Le nom est requis";
+   156→    if (!personalInfo.firstName.trim()) e.firstName = "Le prénom est requis";
+   157→    if (!personalInfo.email.trim()) e.email = "L'email est requis";
+   158→    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(personalInfo.email))
+   159→      e.email = "Email invalide";
+   160→    if (!personalInfo.phone.trim()) e.phone = "Le téléphone est requis";
+   161→    setErrors(e);
+   162→    return Object.keys(e).length === 0;
+   163→  };
+   164→
+   165→  const validateStep2 = (): boolean => {
+   166→    const e: Record<string, string> = {};
+   167→    if (!vehicleInfo.fuelType) e.fuelType = "Requis";
+   168→    if (!vehicleInfo.fiscalPower) e.fiscalPower = "Requis";
+   169→    if (!vehicleInfo.seats) e.seats = "Requis";
+   170→    if (!vehicleInfo.year) e.year = "Requis";
+   171→    if (!vehicleInfo.newValue.trim()) e.newValue = "Requis";
+   172→    if (!vehicleInfo.currentValue.trim()) e.currentValue = "Requis";
+   173→    if (!vehicleInfo.usage) e.usage = "Requis";
+   174→    setErrors(e);
+   175→    return Object.keys(e).length === 0;
+   176→  };
+   177→
+   178→  const validateStep3 = (): boolean => {
+   179→    const e: Record<string, string> = {};
+   180→    if (!coverageNeeds.guaranteeCategories?.length)
+   181→      e.categories = "Sélectionnez au moins une catégorie";
+   182→    setErrors(e);
+   183→    return Object.keys(e).length === 0;
+   184→  };
+   185→
+   186→  // ─── Submit ─────────────────────────────────────────────────────
+   187→  const handleSubmit = async () => {
+   188→    if (!validateStep1() || !validateStep2() || !validateStep3()) {
+   189→      setComparisonStep(1);
+   190→      setDirection(0);
+   191→      return;
+   192→    }
+   193→    setIsComparing(true);
+   194→    try {
+   195→      const res = await fetch("/api/compare", {
+   196→        method: "POST",
+   197→        headers: { "Content-Type": "application/json" },
+   198→        body: JSON.stringify({
+   199→          personalInfo, vehicleInfo, coverageNeeds,
+   200→          userId: user.id,
+   201→        }),
+   202→      });
+   203→      if (!res.ok) throw new Error("Erreur lors de la comparaison");
+   204→      const data = await res.json();
+   205→      setComparisonResults(data.results ?? []);
+   206→      setView("results");
+   207→    } catch (err) {
+   208→      toast({
+   209→        title: "Erreur",
+   210→        description: err instanceof Error ? err.message : "Veuillez réessayer.",
+   211→        variant: "destructive",
+   212→      });
+   213→    } finally {
+   214→      setIsComparing(false);
+   215→    }
+   216→  };
+   217→
+   218→  const toggleCategory = (id: string) => {
+   219→    const cats = coverageNeeds.guaranteeCategories || [];
+   220→    setCoverageNeeds({
+   221→      guaranteeCategories: cats.includes(id)
+   222→        ? cats.filter((c) => c !== id)
+   223→        : [...cats, id],
+   224→    });
+   225→  };
+   226→
+   227→  const toggleAllCategories = () => {
+   228→    const allIds = dbCategories.map((c) => c.code);
+   229→    const current = coverageNeeds.guaranteeCategories || [];
+   230→    if (current.length === allIds.length && allIds.length > 0) {
+   231→      setCoverageNeeds({ guaranteeCategories: [] });
+   232→    } else {
+   233→      setCoverageNeeds({ guaranteeCategories: allIds });
+   234→    }
+   235→  };
+   236→
+   237→  const progressValue = (comparisonStep / 3) * 100;
+   238→
+   239→  const FieldError = ({ field }: { field: string }) =>
+   240→    errors[field] ? (
+   241→      <p className="mt-1 text-xs text-destructive">{errors[field]}</p>
+   242→    ) : null;
+   243→
+   244→  return (
+   245→    <div className="min-h-[70vh] flex flex-col items-center justify-start px-4 sm:px-6 py-6 sm:py-8">
+   246→      <div className="w-full max-w-2xl mx-auto">
+   247→        {/* Progress bar */}
+   248→        <div className="mb-8">
+   249→          <Progress value={progressValue} className="h-1.5" />
+   250→          <div className="flex justify-between mt-3">
+   251→            {STEPS.map((step) => (
+   252→              <button
+   253→                key={step.id}
+   254→                onClick={() => {
+   255→                  if (step.id < comparisonStep) {
+   256→                    setDirection(-1);
+   257→                    setComparisonStep(step.id);
+   258→                    setErrors({});
+   259→                  }
+   260→                }}
+   261→                className={`flex items-center gap-2 text-sm font-medium transition-colors ${
+   262→                  step.id === comparisonStep
+   263→                    ? "text-primary"
+   264→                    : step.id < comparisonStep
+   265→                    ? "text-muted-foreground hover:text-foreground cursor-pointer"
+   266→                    : "text-muted-foreground/50"
+   267→                }`}
+   268→              >
+   269→                <span
+   270→                  className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
+   271→                    step.id < comparisonStep
+   272→                      ? "bg-primary text-primary-foreground"
+   273→                      : step.id === comparisonStep
+   274→                      ? "bg-primary/10 text-primary border-2 border-primary"
+   275→                      : "bg-muted text-muted-foreground"
+   276→                  }`}
+   277→                >
+   278→                  {step.id < comparisonStep ? (
+   279→                    <Check className="w-3.5 h-3.5" />
+   280→                  ) : (
+   281→                    step.id
+   282→                  )}
+   283→                </span>
+   284→                <span className="hidden sm:inline">{step.label}</span>
+   285→              </button>
+   286→            ))}
+   287→          </div>
+   288→        </div>
+   289→
+   290→        {/* Steps content */}
+   291→        <AnimatePresence mode="wait" custom={direction}>
+   292→          <motion.div
+   293→            key={comparisonStep}
+   294→            custom={direction}
+   295→            variants={slideVariants}
+   296→            initial="enter"
+   297→            animate="center"
+   298→            exit="exit"
+   299→            transition={{ duration: 0.3, ease: "easeInOut" }}
+   300→          >
+   301→            {comparisonStep === 1 && (
+   302→              <Step1
+   303→                personalInfo={personalInfo}
+   304→                setPersonalInfo={setPersonalInfo}
+   305→                errors={errors}
+   306→                FieldError={FieldError}
+   307→              />
+   308→            )}
+   309→            {comparisonStep === 2 && (
+   310→              <Step2
+   311→                vehicleInfo={vehicleInfo}
+   312→                setVehicleInfo={setVehicleInfo}
+   313→                errors={errors}
+   314→                FieldError={FieldError}
+   315→              />
+   316→            )}
+   317→            {comparisonStep === 3 && (
+   318→              <Step3
+   319→                categories={dbCategories}
+   320→                loading={categoriesLoading}
+   321→                selected={coverageNeeds.guaranteeCategories || []}
+   322→                onToggle={toggleCategory}
+   323→                onToggleAll={toggleAllCategories}
+   324→                error={errors.categories}
+   325→              />
+   326→            )}
+   327→          </motion.div>
+   328→        </AnimatePresence>
+   329→
+   330→        {/* Navigation buttons */}
+   331→        <div className="flex items-center justify-between mt-8 pt-6 border-t border-border">
+   332→          <Button
+   333→            variant="outline"
+   334→            onClick={goBack}
+   335→            className="rounded-full px-4 sm:px-6"
+   336→          >
+   337→            <ChevronLeft className="w-4 h-4 mr-1" />
+   338→            <span className="hidden sm:inline">Retour</span>
+   339→          </Button>
+   340→
+   341→          {comparisonStep < 3 ? (
+   342→            <Button
+   343→              onClick={() => {
+   344→                if (comparisonStep === 1 && !validateStep1()) return;
+   345→                if (comparisonStep === 2 && !validateStep2()) return;
+   346→                goNext();
+   347→              }}
+   348→              className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full px-4 sm:px-6"
+   349→            >
+   350→              Étape suivante
+   351→            </Button>
+   352→          ) : (
+   353→            <Button
+   354→              onClick={handleSubmit}
+   355→              disabled={isComparing}
+   356→              className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full px-4 sm:px-6"
+   357→            >
+   358→              {isComparing ? (
+   359→                <>
+   360→                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+   361→                  <span className="hidden sm:inline">Comparaison...</span>
+   362→                </>
+   363→              ) : (
+   364→                "Comparer mes offres"
+   365→              )}
+   366→            </Button>
+   367→          )}
+   368→        </div>
+   369→      </div>
+   370→    </div>
+   371→  );
+   372→}
+   373→
+   374→/* ─── Step 1 ────────────────────────────────────────────────────── */
+   375→function Step1({
+   376→  personalInfo,
+   377→  setPersonalInfo,
+   378→  errors,
+   379→  FieldError,
+   380→}: {
+   381→  personalInfo: { lastName: string; firstName: string; email: string; phone: string; whatsappOptIn: boolean };
+   382→  setPersonalInfo: (info: Record<string, unknown>) => void;
+   383→  errors: Record<string, string>;
+   384→  FieldError: ({ field }: { field: string }) => React.ReactNode | null;
+   385→}) {
+   386→  return (
+   387→    <div className="space-y-5 animate-fade-in">
+   388→      <div>
+   389→        <h2 className="font-[family-name:var(--font-space-grotesk)] text-xl font-bold text-foreground">
+   390→          Profil assuré
+   391→        </h2>
+   392→        <p className="text-sm text-muted-foreground mt-1">
+   393→          Pour identifier et éditer votre contrat d&apos;assurance
+   394→        </p>
+   395→      </div>
+   396→
+   397→      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+   398→        <div className="space-y-2">
+   399→          <Label htmlFor="lastName">Nom *</Label>
+   400→          <Input
+   401→            id="lastName"
+   402→            placeholder="Aboa"
+   403→            value={personalInfo.lastName}
+   404→            onChange={(e) => setPersonalInfo({ lastName: e.target.value })}
+   405→            aria-invalid={!!errors.lastName}
+   406→            className={`w-full ${errors.lastName ? "border-destructive" : ""}`}
+   407→          />
+   408→          <FieldError field="lastName" />
+   409→        </div>
+   410→        <div className="space-y-2">
+   411→          <Label htmlFor="firstName">Prénom *</Label>
+   412→          <Input
+   413→            id="firstName"
+   414→            placeholder="Akoun Bernard"
+   415→            value={personalInfo.firstName}
+   416→            onChange={(e) => setPersonalInfo({ firstName: e.target.value })}
+   417→            aria-invalid={!!errors.firstName}
+   418→            className={`w-full ${errors.firstName ? "border-destructive" : ""}`}
+   419→          />
+   420→          <FieldError field="firstName" />
+   421→        </div>
+   422→      </div>
+   423→
+   424→      <div className="space-y-2">
+   425→        <Label htmlFor="email">Email *</Label>
+   426→        <div className="relative">
+   427→          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+   428→          <Input
+   429→            id="email"
+   430→            type="email"
+   431→            placeholder="aboa.akoun40@gmail.com"
+   432→            className="w-full pl-10"
+   433→            value={personalInfo.email}
+   434→            onChange={(e) => setPersonalInfo({ email: e.target.value })}
+   435→            aria-invalid={!!errors.email}
+   436→          />
+   437→        </div>
+   438→        <FieldError field="email" />
+   439→      </div>
+   440→
+   441→      <div className="space-y-2">
+   442→        <Label htmlFor="phone">Numéro de téléphone *</Label>
+   443→        <div className="flex w-full">
+   444→          <div className="flex items-center bg-primary text-primary-foreground px-3 sm:px-4 rounded-l-lg text-sm font-semibold shrink-0 border border-input border-r-0">
+   445→            🇨🇮 +225
+   446→          </div>
+   447→          <Input
+   448→            id="phone"
+   449→            placeholder="01 40 98 49 43"
+   450→            className="w-full rounded-l-none"
+   451→            value={personalInfo.phone}
+   452→            onChange={(e) => setPersonalInfo({ phone: e.target.value })}
+   453→            aria-invalid={!!errors.phone}
+   454→          />
+   455→        </div>
+   456→        <FieldError field="phone" />
+   457→      </div>
+   458→
+   459→      <div className="flex items-center gap-3">
+   460→        <Checkbox
+   461→          id="whatsapp"
+   462→          checked={personalInfo.whatsappOptIn}
+   463→          onCheckedChange={(checked) =>
+   464→            setPersonalInfo({ whatsappOptIn: !!checked })
+   465→          }
+   466→        />
+   467→        <Label htmlFor="whatsapp" className="text-sm font-normal cursor-pointer">
+   468→          Recevoir les résultats par WhatsApp
+   469→        </Label>
+   470→      </div>
+   471→    </div>
+   472→  );
+   473→}
+   474→
+   475→/* ─── Step 2 ────────────────────────────────────────────────────── */
+   476→function Step2({
+   477→  vehicleInfo,
+   478→  setVehicleInfo,
+   479→  errors,
+   480→  FieldError,
+   481→}: {
+   482→  vehicleInfo: Record<string, string>;
+   483→  setVehicleInfo: (info: Record<string, unknown>) => void;
+   484→  errors: Record<string, string>;
+   485→  FieldError: ({ field }: { field: string }) => React.ReactNode | null;
+   486→}) {
+   487→  return (
+   488→    <div className="space-y-5 animate-fade-in">
+   489→      <div>
+   490→        <h2 className="font-[family-name:var(--font-space-grotesk)] text-xl font-bold text-foreground">
+   491→          Informations véhicule
+   492→        </h2>
+   493→        <p className="text-sm text-muted-foreground mt-1">
+   494→          Pour obtenir un devis personnalisé
+   495→        </p>
+   496→      </div>
+   497→
+   498→      {/* Carburant */}
+   499→      <div className="space-y-2">
+   500→        <Label>Carburant *</Label>
+   501→        <Select
+   502→          value={vehicleInfo.fuelType}
+   503→          onValueChange={(v) => setVehicleInfo({ fuelType: v })}
+   504→        >
+   505→          <SelectTrigger className={`w-full ${errors.fuelType ? "border-destructive" : ""}`}>
+   506→            <SelectValue placeholder="Sélectionnez le type de carburant" />
+   507→          </SelectTrigger>
+   508→          <SelectContent>
+   509→            {FUEL_OPTIONS.map((o) => (
+   510→              <SelectItem key={o.value} value={o.value}>
+   511→                {o.label}
+   512→              </SelectItem>
+   513→            ))}
+   514→          </SelectContent>
+   515→        </Select>
+   516→        <FieldError field="fuelType" />
+   517→      </div>
+   518→
+   519→      {/* Puissance fiscale */}
+   520→      <div className="space-y-2">
+   521→        <Label>Puissance fiscale *</Label>
+   522→        <Select
+   523→          value={vehicleInfo.fiscalPower}
+   524→          onValueChange={(v) => setVehicleInfo({ fiscalPower: v })}
+   525→        >
+   526→          <SelectTrigger className={`w-full ${errors.fiscalPower ? "border-destructive" : ""}`}>
+   527→            <SelectValue placeholder="Sélectionnez la puissance fiscale" />
+   528→          </SelectTrigger>
+   529→          <SelectContent>
+   530→            {CV_OPTIONS.map((o) => (
+   531→              <SelectItem key={o.value} value={o.value}>
+   532→                {o.label}
+   533→              </SelectItem>
+   534→            ))}
+   535→          </SelectContent>
+   536→        </Select>
+   537→        <FieldError field="fiscalPower" />
+   538→      </div>
+   539→
+   540→      {/* Nombre de places */}
+   541→      <div className="space-y-2">
+   542→        <Label>Nombre de places *</Label>
+   543→        <Select
+   544→          value={vehicleInfo.seats}
+   545→          onValueChange={(v) => setVehicleInfo({ seats: v })}
+   546→        >
+   547→          <SelectTrigger className={`w-full ${errors.seats ? "border-destructive" : ""}`}>
+   548→            <SelectValue placeholder="Sélectionnez le nombre de places" />
+   549→          </SelectTrigger>
+   550→          <SelectContent>
+   551→            {SEAT_OPTIONS.map((o) => (
+   552→              <SelectItem key={o.value} value={o.value}>
+   553→                {o.label}
+   554→              </SelectItem>
+   555→            ))}
+   556→          </SelectContent>
+   557→        </Select>
+   558→        <FieldError field="seats" />
+   559→      </div>
+   560→
+   561→      {/* Année de mise en circulation */}
+   562→      <div className="space-y-2">
+   563→        <Label htmlFor="circulationDate">Année de mise en circulation *</Label>
+   564→        <Input
+   565→          id="circulationDate"
+   566→          type="month"
+   567→          className={`w-full ${errors.year ? "border-destructive" : ""}`}
+   568→          value={vehicleInfo.year}
+   569→          onChange={(e) => setVehicleInfo({ year: e.target.value })}
+   570→          aria-invalid={!!errors.year}
+   571→          max={new Date().toISOString().slice(0, 7)}
+   572→        />
+   573→        <FieldError field="year" />
+   574→      </div>
+   575→
+   576→      {/* Valeur neuve & actuelle */}
+   577→      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+   578→        <div className="space-y-2">
+   579→          <Label htmlFor="newValue">Valeur neuve (FCFA) *</Label>
+   580→          <div className="relative">
+   581→            <Input
+   582→              id="newValue"
+   583→              type="number"
+   584→              placeholder="15 000 000"
+   585→              value={vehicleInfo.newValue}
+   586→              onChange={(e) => setVehicleInfo({ newValue: e.target.value })}
+   587→              aria-invalid={!!errors.newValue}
+   588→              className="w-full pr-16"
+   589→            />
+   590→            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+   591→              FCFA
+   592→            </span>
+   593→          </div>
+   594→          <FieldError field="newValue" />
+   595→        </div>
+   596→
+   597→        <div className="space-y-2">
+   598→          <Label htmlFor="currentValue">Valeur actuelle (FCFA) *</Label>
+   599→          <div className="relative">
+   600→            <Input
+   601→              id="currentValue"
+   602→              type="number"
+   603→              placeholder="10 000 000"
+   604→              value={vehicleInfo.currentValue}
+   605→              onChange={(e) => setVehicleInfo({ currentValue: e.target.value })}
+   606→              aria-invalid={!!errors.currentValue}
+   607→              className="w-full pr-16"
+   608→            />
+   609→            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+   610→              FCFA
+   611→            </span>
+   612→          </div>
+   613→          <FieldError field="currentValue" />
+   614→        </div>
+   615→      </div>
+   616→
+   617→      {/* Usage */}
+   618→      <div className="space-y-2">
+   619→        <Label>Usage du véhicule *</Label>
+   620→        <Select
+   621→          value={vehicleInfo.usage}
+   622→          onValueChange={(v) => setVehicleInfo({ usage: v })}
+   623→        >
+   624→          <SelectTrigger className={`w-full ${errors.usage ? "border-destructive" : ""}`}>
+   625→            <SelectValue placeholder="Sélectionnez l'usage du véhicule" />
+   626→          </SelectTrigger>
+   627→          <SelectContent>
+   628→            {USAGE_OPTIONS.map((o) => (
+   629→              <SelectItem key={o.value} value={o.value}>
+   630→                {o.label}
+   631→              </SelectItem>
+   632→            ))}
+   633→          </SelectContent>
+   634→        </Select>
+   635→        <FieldError field="usage" />
+   636→      </div>
+   637→    </div>
+   638→  );
+   639→}
+   640→
+   641→/* ─── Step 3 — Dynamic categories from DB ──────────────────────── */
+   642→function Step3({
+   643→  categories,
+   644→  loading,
+   645→  selected,
+   646→  onToggle,
+   647→  onToggleAll,
+   648→  error,
+   649→}: {
+   650→  categories: DBCoverageCategory[];
+   651→  loading: boolean;
+   652→  selected: string[];
+   653→  onToggle: (id: string) => void;
+   654→  onToggleAll: () => void;
+   655→  error?: string;
+   656→}) {
+   657→  const allIds = categories.map((c) => c.code);
+   658→  const allSelected = allIds.length > 0 && selected.length === allIds.length;
+   659→
+   660→  if (loading) {
+   661→    return (
+   662→      <div className="space-y-5 animate-fade-in">
+   663→        <div>
+   664→          <h2 className="font-[family-name:var(--font-space-grotesk)] text-xl font-bold text-foreground">
+   665→            Catégories de garanties
+   666→          </h2>
+   667→          <p className="text-sm text-muted-foreground mt-1">
+   668→            Chargement des garanties disponibles...
+   669→          </p>
+   670→        </div>
+   671→        <div className="flex items-center justify-center py-12">
+   672→          <Loader2 className="w-6 h-6 animate-spin text-primary" />
+   673→        </div>
+   674→      </div>
+   675→    );
+   676→  }
+   677→
+   678→  if (categories.length === 0) {
+   679→    return (
+   680→      <div className="space-y-5 animate-fade-in">
+   681→        <div>
+   682→          <h2 className="font-[family-name:var(--font-space-grotesk)] text-xl font-bold text-foreground">
+   683→            Catégories de garanties
+   684→          </h2>
+   685→          <p className="text-sm text-muted-foreground mt-1">
+   686→            Aucune catégorie de garantie disponible.
+   687→          </p>
+   688→        </div>
+   689→      </div>
+   690→    );
+   691→  }
+   692→
+   693→  return (
+   694→    <div className="space-y-5 animate-fade-in">
+   695→      <div className="flex items-start justify-between gap-4">
+   696→        <div>
+   697→          <h2 className="font-[family-name:var(--font-space-grotesk)] text-xl font-bold text-foreground">
+   698→            Catégories de garanties
+   699→          </h2>
+   700→          <p className="text-sm text-muted-foreground mt-1">
+   701→            Sélectionnez les catégories de garanties qui vous intéressent.
+   702→          </p>
+   703→        </div>
+   704→        <span className="text-sm text-muted-foreground shrink-0 mt-1 whitespace-nowrap">
+   705→          {selected.length}/{allIds.length}
+   706→        </span>
+   707→      </div>
+   708→
+   709→      {/* Toggle all */}
+   710→      <button
+   711→        type="button"
+   712→        onClick={onToggleAll}
+   713→        className={`flex items-center gap-2 w-full p-3 rounded-xl border-2 transition-all text-sm font-medium ${
+   714→          allSelected
+   715→            ? "border-primary bg-primary/5 text-primary"
+   716→            : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
+   717→        }`}
+   718→      >
+   719→        <CheckCheck className={`w-4 h-4 ${allSelected ? "text-primary" : ""}`} />
+   720→        {allSelected ? "Tout désélectionner" : "Tout sélectionner"}
+   721→      </button>
+   722→
+   723→      {error && (
+   724→        <p className="text-sm text-destructive">{error}</p>
+   725→      )}
+   726→
+   727→      <div className="grid grid-cols-1 gap-3 max-h-[50vh] overflow-y-auto pr-1">
+   728→        {categories.map((cat, i) => {
+   729→          const isSelected = selected.includes(cat.code);
+   730→          const Icon = CATEGORY_ICON_MAP[cat.code] || DEFAULT_ICON;
+   731→          return (
+   732→            <motion.button
+   733→              type="button"
+   734→              key={cat.code}
+   735→              initial={{ opacity: 0, y: 10 }}
+   736→              animate={{ opacity: 1, y: 0 }}
+   737→              transition={{ delay: i * 0.03 }}
+   738→              onClick={() => onToggle(cat.code)}
+   739→              className={`flex items-center gap-4 w-full p-4 rounded-xl border-2 transition-all text-left cursor-pointer bg-card ${
+   740→                isSelected
+   741→                  ? "border-primary bg-primary/5"
+   742→                  : "border-border hover:border-primary/40"
+   743→              }`}
+   744→            >
+   745→              <div
+   746→                className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
+   747→                  isSelected
+   748→                    ? "bg-primary/15"
+   749→                    : "bg-muted"
+   750→                }`}
+   751→              >
+   752→                <Icon
+   753→                  className={`w-5 h-5 transition-colors ${
+   754→                    isSelected ? "text-primary" : "text-muted-foreground"
+   755→                  }`}
+   756→                />
+   757→              </div>
+   758→              <span
+   759→                className={`text-sm font-medium transition-colors flex-1 ${
+   760→                  isSelected ? "text-primary" : "text-foreground"
+   761→                }`}
+   762→              >
+   763→                {cat.name}
+   764→              </span>
+   765→              {isSelected && (
+   766→                <ShieldCheck className="w-4 h-4 text-primary ml-auto shrink-0" />
+   767→              )}
+   768→            </motion.button>
+   769→          );
+   770→        })}
+   771→      </div>
+   772→    </div>
+   773→  );
+   774→}

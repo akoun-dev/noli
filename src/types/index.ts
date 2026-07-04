@@ -58,6 +58,17 @@ export interface InsurerOffer {
   features: string[];
   conditions: string | null;
   matchedGuarantees?: string[];
+  relevanceScore?: number;
+  matchReasons?: string[];
+  pricingBreakdown?: PricingBreakdown[];
+}
+
+export interface PricingBreakdown {
+  guaranteeName: string;
+  guaranteeCode: string;
+  amount: number;
+  method: string;
+  breakdown: string;
 }
 
 export interface QuoteRecord {

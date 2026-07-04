@@ -54,6 +54,14 @@ export async function PUT(
       features,
       contractType,
       isActive,
+      fiscalPowerMin,
+      fiscalPowerMax,
+      fuelTypes,
+      newValueMin,
+      newValueMax,
+      venalValueMin,
+      venalValueMax,
+      vehicleUsage,
     } = body;
 
     const existing = await db.insuranceOffer.findUnique({ where: { id } });
@@ -77,6 +85,14 @@ export async function PUT(
         ...(features !== undefined ? { features: JSON.stringify(features) } : {}),
         ...(contractType !== undefined ? { contractType: contractType || null } : {}),
         ...(isActive !== undefined ? { isActive: Boolean(isActive) } : {}),
+        ...(fiscalPowerMin !== undefined ? { fiscalPowerMin: fiscalPowerMin ? Number(fiscalPowerMin) : null } : {}),
+        ...(fiscalPowerMax !== undefined ? { fiscalPowerMax: fiscalPowerMax ? Number(fiscalPowerMax) : null } : {}),
+        ...(fuelTypes !== undefined ? { fuelTypes: Array.isArray(fuelTypes) ? JSON.stringify(fuelTypes) : (fuelTypes || "[]") } : {}),
+        ...(newValueMin !== undefined ? { newValueMin: newValueMin ? Number(newValueMin) : null } : {}),
+        ...(newValueMax !== undefined ? { newValueMax: newValueMax ? Number(newValueMax) : null } : {}),
+        ...(venalValueMin !== undefined ? { venalValueMin: venalValueMin ? Number(venalValueMin) : null } : {}),
+        ...(venalValueMax !== undefined ? { venalValueMax: venalValueMax ? Number(venalValueMax) : null } : {}),
+        ...(vehicleUsage !== undefined ? { vehicleUsage: Array.isArray(vehicleUsage) ? JSON.stringify(vehicleUsage) : (vehicleUsage || "[]") } : {}),
       },
       include: {
         category: { select: { id: true, name: true, icon: true } },
