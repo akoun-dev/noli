@@ -5,13 +5,6 @@ import { MapPin, Phone, Mail } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useAppStore } from "@/store/app-store";
 
-const assuranceLinks = [
-  { label: "Tiers simple", href: "#" },
-  { label: "Tiers+", href: "#" },
-  { label: "Tous risques", href: "#" },
-  { label: "Assistance", href: "#" },
-];
-
 const noliLinks = [
   { label: "À propos", href: "#" },
   { label: "Contact", href: "#" },
@@ -27,8 +20,8 @@ export function Footer() {
       <div className="h-1 w-full bg-accent" />
 
       <div className="mx-auto max-w-[1400px] px-8 py-12">
-        {/* 4-column responsive grid */}
-        <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
+        {/* 3-column responsive grid */}
+        <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-3 lg:gap-8">
           {/* Col 1: Logo + Description */}
           <div className="sm:col-span-2 lg:col-span-1">
             <motion.div
@@ -48,37 +41,12 @@ export function Footer() {
             </motion.div>
           </div>
 
-          {/* Col 2: Assurance Auto */}
+          {/* Col 2: NOLI */}
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.4, delay: 0.1 }}
-          >
-            <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-secondary-foreground/40">
-              Assurance Auto
-            </h3>
-            <ul className="flex flex-col gap-3">
-              {assuranceLinks.map((link) => (
-                <li key={link.label}>
-                  <a
-                    href={link.href}
-                    className="group inline-flex items-center gap-1.5 text-sm text-secondary-foreground/70 transition-colors hover:text-accent"
-                  >
-                    <span className="inline-block h-1 w-1 rounded-full bg-accent/40 transition-colors group-hover:bg-accent" />
-                    {link.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </motion.div>
-
-          {/* Col 3: NOLI */}
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.4, delay: 0.2 }}
           >
             <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-secondary-foreground/40">
               NOLI
@@ -103,7 +71,7 @@ export function Footer() {
             initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.4, delay: 0.3 }}
+            transition={{ duration: 0.4, delay: 0.2 }}
           >
             <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-secondary-foreground/40">
               Contact
