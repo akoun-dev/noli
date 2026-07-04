@@ -4,17 +4,16 @@ import { useEffect, useState, useCallback } from "react";
 import {
   ShieldCheck,
   Plus,
-  Flame,
-  Lock,
-  Car,
-  Eye,
-  Scale,
   Pencil,
   Trash2,
   Loader2,
   ChevronLeft,
   ChevronRight,
   Check,
+  DollarSign,
+  Percent,
+  LayoutGrid,
+  CircleDot,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -33,7 +32,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -112,74 +110,35 @@ const calcLabel: Record<string, string> = {
   MATRIX_BASED: "Matrice",
 };
 
-const step2Cards: {
+const step2Options: {
   type: CalculationType;
   label: string;
-  color: string;
-  emoji: string;
+  description: string;
+  icon: typeof DollarSign;
 }[] = [
   {
     type: "FREE",
-    label: "GRATUIT",
-    color: "border-emerald-400 bg-emerald-50",
-    emoji: "🟢",
+    label: "Gratuit",
+    description: "Aucun frais additionnel. La garantie est incluse sans calcul de prime supplémentaire.",
+    icon: CircleDot,
   },
   {
     type: "FIXED_AMOUNT",
-    label: "MONTANT FIXE",
-    color: "border-blue-400 bg-blue-50",
-    emoji: "🔵",
+    label: "Montant fixe",
+    description: "Un montant fixe est appliqué pour cette garantie, indépendamment des autres paramètres.",
+    icon: DollarSign,
   },
   {
     type: "VARIABLE_BASED",
-    label: "VARIABLE",
-    color: "border-orange-400 bg-orange-50",
-    emoji: "🟠",
+    label: "Variable",
+    description: "Le montant est calculé en pourcentage ou selon une formule basée sur des variables dynamiques.",
+    icon: Percent,
   },
   {
     type: "MATRIX_BASED",
-    label: "MATRICE",
-    color: "border-purple-400 bg-purple-50",
-    emoji: "🟣",
-  },
-];
-
-/* ── Decorative info cards ── */
-const guaranteeCategories = [
-  {
-    name: "Responsabilité Civile",
-    description:
-      "Couverture des dommages causés aux tiers. Obligatoire pour tous les véhicules.",
-    icon: Scale,
-    color: "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400",
-  },
-  {
-    name: "Incendie",
-    description:
-      "Indemnisation en cas de destruction ou de dommages causés par un incendie.",
-    icon: Flame,
-    color: "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400",
-  },
-  {
-    name: "Vol",
-    description:
-      "Protection contre le vol, la tentative de vol et les actes de vandalisme.",
-    icon: Lock,
-    color: "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400",
-  },
-  {
-    name: "Dommages tous accidents",
-    description:
-      "Prise en charge des dommages subis par le véhicule quel que soit le responsable.",
-    icon: Car,
-    color: "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400",
-  },
-  {
-    name: "Bris de glace",
-    description:
-      "Réparation ou remplacement des vitrages, pare-brise et lunettes endommagés.",
-    icon: Eye,
-    color: "bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400",
+    label: "Matrice tarifaire",
+    description: "Le montant est déterminé par une matrice de tarification (puissance fiscale, carburant, etc.).",
+    icon: LayoutGrid,
   },
 ];
 
@@ -649,32 +608,6 @@ export function InsurerGuaranteesTab() {
         </Button>
       </div>
 
-      {/* Decorative info cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {guaranteeCategories.map((cat) => {
-          const Icon = cat.icon;
-          return (
-            <Card key={cat.name}>
-              <CardHeader className="pb-3">
-                <div className="flex items-center gap-3">
-                  <div
-                    className={`flex h-10 w-10 items-center justify-center rounded-lg ${cat.color}`}
-                  >
-                    <Icon className="h-5 w-5" />
-                  </div>
-                  <CardTitle className="text-base">{cat.name}</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">
-                  {cat.description}
-                </p>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-
       {/* Guarantees table */}
       <div className="rounded-xl border bg-card">
         <div className="p-6 pb-4">
@@ -902,22 +835,51 @@ export function InsurerGuaranteesTab() {
 
             {/* Step 2: Calculation type selection */}
             {step === 2 && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4">
-                {step2Cards.map((c) => (
-                  <button
-                    key={c.type}
-                    type="button"
-                    onClick={() => setCalcType(c.type)}
-                    className={`flex flex-col items-center gap-3 rounded-xl border-2 p-6 transition-all hover:shadow-md ${
-                      calcType === c.type
-                        ? `${c.color} shadow-md ring-2 ring-offset-2 ring-[#B9E54D]`
-                        : "border-border hover:border-muted-foreground/30"
-                    }`}
-                  >
-                    <span className="text-2xl">{c.emoji}</span>
-                    <span className="font-semibold">{c.label}</span>
-                  </button>
-                ))}
+              <div className="space-y-3 py-2">
+                <p className="text-sm text-muted-foreground mb-4">
+                  Sélectionnez le mode de calcul de la prime pour cette garantie.
+                </p>
+                <div className="space-y-3">
+                  {step2Options.map((opt) => {
+                    const Icon = opt.icon;
+                    const isSelected = calcType === opt.type;
+                    return (
+                      <button
+                        key={opt.type}
+                        type="button"
+                        onClick={() => setCalcType(opt.type)}
+                        className={`w-full flex items-start gap-4 rounded-xl border-2 p-4 text-left transition-all ${
+                          isSelected
+                            ? "border-[#B9E54D] bg-[#B9E54D]/5 shadow-sm"
+                            : "border-border hover:border-muted-foreground/30 bg-card"
+                        }`}
+                      >
+                        <div
+                          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors ${
+                            isSelected
+                              ? "bg-[#B9E54D] text-black"
+                              : "bg-muted text-muted-foreground"
+                          }`}
+                        >
+                          <Icon className="h-5 w-5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-sm">
+                              {opt.label}
+                            </span>
+                            {isSelected && (
+                              <Check className="h-4 w-4 text-[#B9E54D]" />
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                            {opt.description}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             )}
 

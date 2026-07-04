@@ -638,3 +638,24 @@ Stage Summary:
 - Insurer offer creation form now shows guarantee checkboxes grouped by category (like admin)
 - Features/selectedGuarantees stored as string[] of coverage names
 - All CRUD buttons (create, edit, delete) for offers and guarantees were already functional in code
+---
+Task ID: 2
+Agent: Main Agent
+Task: Remove decorative cards section from insurer guarantees tab and redesign "Étape 2 — Type de calcul"
+
+Work Log:
+- Analyzed uploaded screenshot showing 5 decorative info cards (Responsabilité Civile, Incendie, Vol, Dommages tous accidents, Bris de glace)
+- Identified the `guaranteeCategories` constant and the decorative cards grid (lines 147-184, 652-676) in `insurer-guarantees-tab.tsx`
+- Removed the decorative info cards section from the guarantees tab page
+- Removed the `guaranteeCategories` constant array
+- Redesigned Step 2 ("Type de calcul") from emoji-based colored cards to a professional list-based selector with:
+  - Lucide icons (CircleDot, DollarSign, Percent, LayoutGrid) replacing emojis
+  - Descriptive text for each calculation type
+  - Brand-colored (#B9E54D) selection state with checkmark indicator
+  - Full-width cards with icon + label + description layout
+- Cleaned up unused imports (Flame, Lock, Car, Eye, Scale, Hash, Card components)
+
+Stage Summary:
+- Removed 5 static decorative cards from guarantees page
+- Step 2 redesigned from 2x2 emoji grid to vertical list with icons + descriptions
+- Verified via browser: decorative cards gone, new Step 2 works with proper selected state

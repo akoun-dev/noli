@@ -1,0 +1,1004 @@
+     1→"use client";
+     2→
+     3→import { useEffect, useState, useCallback } from "react";
+     4→import {
+     5→  ShieldCheck,
+     6→  Plus,
+     7→  Flame,
+     8→  Lock,
+     9→  Car,
+    10→  Eye,
+    11→  Scale,
+    12→  Pencil,
+    13→  Trash2,
+    14→  Loader2,
+    15→  ChevronLeft,
+    16→  ChevronRight,
+    17→  Check,
+    18→} from "lucide-react";
+    19→import { Button } from "@/components/ui/button";
+    20→import { Badge } from "@/components/ui/badge";
+    21→import { Input } from "@/components/ui/input";
+    22→import { Label } from "@/components/ui/label";
+    23→import { Textarea } from "@/components/ui/textarea";
+    24→import { Checkbox } from "@/components/ui/checkbox";
+    25→import { Switch } from "@/components/ui/switch";
+    26→import { Separator } from "@/components/ui/separator";
+    27→import { ScrollArea } from "@/components/ui/scroll-area";
+    28→import {
+    29→  Table,
+    30→  TableBody,
+    31→  TableCell,
+    32→  TableHead,
+    33→  TableHeader,
+    34→  TableRow,
+    35→} from "@/components/ui/table";
+    36→import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+    37→import {
+    38→  Dialog,
+    39→  DialogContent,
+    40→  DialogHeader,
+    41→  DialogTitle,
+    42→  DialogFooter,
+    43→  DialogDescription,
+    44→} from "@/components/ui/dialog";
+    45→import {
+    46→  AlertDialog,
+    47→  AlertDialogAction,
+    48→  AlertDialogCancel,
+    49→  AlertDialogContent,
+    50→  AlertDialogDescription,
+    51→  AlertDialogFooter,
+    52→  AlertDialogHeader,
+    53→  AlertDialogTitle,
+    54→} from "@/components/ui/alert-dialog";
+    55→import {
+    56→  Select,
+    57→  SelectContent,
+    58→  SelectItem,
+    59→  SelectTrigger,
+    60→  SelectValue,
+    61→} from "@/components/ui/select";
+    62→import { useAppStore } from "@/store/app-store";
+    63→import { useToast } from "@/hooks/use-toast";
+    64→
+    65→/* ── Types ── */
+    66→interface CoverageCategory {
+    67→  id: string;
+    68→  name: string;
+    69→  code: string;
+    70→}
+    71→
+    72→interface Coverage {
+    73→  id: string;
+    74→  code: string;
+    75→  type: string;
+    76→  name: string;
+    77→  description: string | null;
+    78→  calculationType: string;
+    79→  isMandatory: boolean;
+    80→  isActive: boolean;
+    81→  displayOrder: number;
+    82→  category: { id: string; name: string; code: string } | null;
+    83→}
+    84→
+    85→type CalculationType = "FREE" | "FIXED_AMOUNT" | "VARIABLE_BASED" | "MATRIX_BASED";
+    86→
+    87→interface Step1Data {
+    88→  name: string;
+    89→  categoryId: string;
+    90→  description: string;
+    91→  isMandatory: boolean;
+    92→}
+    93→
+    94→const emptyStep1: Step1Data = {
+    95→  name: "",
+    96→  categoryId: "",
+    97→  description: "",
+    98→  isMandatory: false,
+    99→};
+   100→
+   101→const calcBadge: Record<string, string> = {
+   102→  FREE: "bg-emerald-100 text-emerald-800",
+   103→  FIXED_AMOUNT: "bg-blue-100 text-blue-800",
+   104→  VARIABLE_BASED: "bg-orange-100 text-orange-800",
+   105→  MATRIX_BASED: "bg-purple-100 text-purple-800",
+   106→};
+   107→
+   108→const calcLabel: Record<string, string> = {
+   109→  FREE: "Gratuit",
+   110→  FIXED_AMOUNT: "Montant fixe",
+   111→  VARIABLE_BASED: "Variable",
+   112→  MATRIX_BASED: "Matrice",
+   113→};
+   114→
+   115→const step2Cards: {
+   116→  type: CalculationType;
+   117→  label: string;
+   118→  color: string;
+   119→  emoji: string;
+   120→}[] = [
+   121→  {
+   122→    type: "FREE",
+   123→    label: "GRATUIT",
+   124→    color: "border-emerald-400 bg-emerald-50",
+   125→    emoji: "🟢",
+   126→  },
+   127→  {
+   128→    type: "FIXED_AMOUNT",
+   129→    label: "MONTANT FIXE",
+   130→    color: "border-blue-400 bg-blue-50",
+   131→    emoji: "🔵",
+   132→  },
+   133→  {
+   134→    type: "VARIABLE_BASED",
+   135→    label: "VARIABLE",
+   136→    color: "border-orange-400 bg-orange-50",
+   137→    emoji: "🟠",
+   138→  },
+   139→  {
+   140→    type: "MATRIX_BASED",
+   141→    label: "MATRICE",
+   142→    color: "border-purple-400 bg-purple-50",
+   143→    emoji: "🟣",
+   144→  },
+   145→];
+   146→
+   147→/* ── Decorative info cards ── */
+   148→const guaranteeCategories = [
+   149→  {
+   150→    name: "Responsabilité Civile",
+   151→    description:
+   152→      "Couverture des dommages causés aux tiers. Obligatoire pour tous les véhicules.",
+   153→    icon: Scale,
+   154→    color: "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400",
+   155→  },
+   156→  {
+   157→    name: "Incendie",
+   158→    description:
+   159→      "Indemnisation en cas de destruction ou de dommages causés par un incendie.",
+   160→    icon: Flame,
+   161→    color: "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400",
+   162→  },
+   163→  {
+   164→    name: "Vol",
+   165→    description:
+   166→      "Protection contre le vol, la tentative de vol et les actes de vandalisme.",
+   167→    icon: Lock,
+   168→    color: "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400",
+   169→  },
+   170→  {
+   171→    name: "Dommages tous accidents",
+   172→    description:
+   173→      "Prise en charge des dommages subis par le véhicule quel que soit le responsable.",
+   174→    icon: Car,
+   175→    color: "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400",
+   176→  },
+   177→  {
+   178→    name: "Bris de glace",
+   179→    description:
+   180→      "Réparation ou remplacement des vitrages, pare-brise et lunettes endommagés.",
+   181→    icon: Eye,
+   182→    color: "bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400",
+   183→  },
+   184→];
+   185→
+   186→export function InsurerGuaranteesTab() {
+   187→  const { user } = useAppStore();
+   188→  const { toast } = useToast();
+   189→
+   190→  const [insurerId, setInsurerId] = useState<string | null>(null);
+   191→  const [coverages, setCoverages] = useState<Coverage[]>([]);
+   192→  const [categories, setCategories] = useState<CoverageCategory[]>([]);
+   193→  const [loading, setLoading] = useState(true);
+   194→  const [error, setError] = useState<string | null>(null);
+   195→
+   196→  // Wizard state
+   197→  const [dialogOpen, setDialogOpen] = useState(false);
+   198→  const [editingItem, setEditingItem] = useState<Coverage | null>(null);
+   199→  const [step, setStep] = useState(1);
+   200→  const [step1, setStep1] = useState<Step1Data>(emptyStep1);
+   201→  const [calcType, setCalcType] = useState<CalculationType | "">("");
+   202→  const [metadata, setMetadata] = useState<Record<string, unknown>>({});
+   203→  const [saving, setSaving] = useState(false);
+   204→
+   205→  // Delete dialog
+   206→  const [deleteTarget, setDeleteTarget] = useState<Coverage | null>(null);
+   207→  const [deleting, setDeleting] = useState(false);
+   208→
+   209→  /* ── Fetch helpers ── */
+   210→  const fetchInsurer = useCallback(async (userId: string) => {
+   211→    try {
+   212→      const res = await fetch(`/api/insurer/account?userId=${userId}`);
+   213→      if (!res.ok) throw new Error();
+   214→      const data = await res.json();
+   215→      setInsurerId(data.id);
+   216→      return data.id;
+   217→    } catch {
+   218→      setError("Impossible de charger votre compte assureur");
+   219→      return null;
+   220→    }
+   221→  }, []);
+   222→
+   223→  const fetchCoverages = useCallback(async (iid: string) => {
+   224→    try {
+   225→      const res = await fetch(`/api/insurer/coverages?insurerId=${iid}`);
+   226→      if (!res.ok) throw new Error();
+   227→      const data = await res.json();
+   228→      setCoverages(data.coverages || []);
+   229→    } catch {
+   230→      setError("Erreur lors du chargement des garanties");
+   231→    }
+   232→  }, []);
+   233→
+   234→  const fetchCategories = useCallback(async () => {
+   235→    try {
+   236→      const res = await fetch("/api/admin/coverage-categories");
+   237→      if (!res.ok) return;
+   238→      const data = await res.json();
+   239→      setCategories(data);
+   240→    } catch {
+   241→      /* ignore */
+   242→    }
+   243→  }, []);
+   244→
+   245→  const refreshData = useCallback(async () => {
+   246→    if (!insurerId) return;
+   247→    await fetchCoverages(insurerId);
+   248→  }, [insurerId, fetchCoverages]);
+   249→
+   250→  /* ── Init ── */
+   251→  useEffect(() => {
+   252→    if (!user.id) {
+   253→      setLoading(false);
+   254→      return;
+   255→    }
+   256→    (async () => {
+   257→      const iid = await fetchInsurer(user.id!);
+   258→      if (iid) await fetchCoverages(iid);
+   259→      await fetchCategories();
+   260→      setLoading(false);
+   261→    })();
+   262→  }, [user.id]);
+   263→
+   264→  /* ── Wizard ── */
+   265→  const openCreate = () => {
+   266→    setEditingItem(null);
+   267→    setStep1(emptyStep1);
+   268→    setCalcType("");
+   269→    setMetadata({});
+   270→    setStep(1);
+   271→    setDialogOpen(true);
+   272→  };
+   273→
+   274→  const openEdit = (item: Coverage) => {
+   275→    setEditingItem(item);
+   276→    setStep1({
+   277→      name: item.name,
+   278→      categoryId: item.category?.id || "",
+   279→      description: item.description || "",
+   280→      isMandatory: item.isMandatory,
+   281→    });
+   282→    setCalcType(item.calculationType as CalculationType);
+   283→    try {
+   284→      setMetadata(
+   285→        typeof item.metadata === "string"
+   286→          ? JSON.parse(item.metadata)
+   287→          : (item as unknown as { metadata: Record<string, unknown> }).metadata || {}
+   288→      );
+   289→    } catch {
+   290→      setMetadata({});
+   291→    }
+   292→    setStep(1);
+   293→    setDialogOpen(true);
+   294→  };
+   295→
+   296→  const buildMetadataFromStep3 = (): Record<string, unknown> => {
+   297→    if (calcType === "FREE") return {};
+   298→    if (calcType === "FIXED_AMOUNT") {
+   299→      return { fixedAmount: (metadata.fixedAmount as number) || 0 };
+   300→    }
+   301→    if (calcType === "VARIABLE_BASED") {
+   302→      const m: Record<string, unknown> = {
+   303→        variable: (metadata.variable as string) || "VN",
+   304→      };
+   305→      if (metadata.hasConditional) {
+   306→        m.hasConditional = true;
+   307→        m.threshold = Number(metadata.threshold) || 0;
+   308→        m.rateBelow = Number(metadata.rateBelow) || 0;
+   309→        m.rateAbove = Number(metadata.rateAbove) || 0;
+   310→      } else {
+   311→        m.rate = Number(metadata.rate) || 0;
+   312→      }
+   313→      if (metadata.franchiseEnabled) {
+   314→        m.franchiseEnabled = true;
+   315→        m.franchisePercent = Number(metadata.franchisePercent) || 0;
+   316→        m.franchiseMin = Number(metadata.franchiseMin) || 0;
+   317→      }
+   318→      return m;
+   319→    }
+   320→    if (calcType === "MATRIX_BASED") {
+   321→      return {
+   322→        matrixType: (metadata.matrixType as string) || "FISCAL_POWER",
+   323→      };
+   324→    }
+   325→    return {};
+   326→  };
+   327→
+   328→  const handleSave = async () => {
+   329→    if (!step1.name.trim() || !insurerId || !calcType) {
+   330→      toast({
+   331→        title: "Erreur",
+   332→        description: "Veuillez remplir tous les champs requis",
+   333→        variant: "destructive",
+   334→      });
+   335→      return;
+   336→    }
+   337→    setSaving(true);
+   338→
+   339→    const payload = {
+   340→      insurerId,
+   341→      categoryId: step1.categoryId || null,
+   342→      name: step1.name.trim(),
+   343→      description: step1.description.trim() || null,
+   344→      calculationType: calcType,
+   345→      isMandatory: step1.isMandatory,
+   346→      metadata: buildMetadataFromStep3(),
+   347→    };
+   348→
+   349→    try {
+   350→      const url = editingItem
+   351→        ? `/api/insurer/coverages/${editingItem.id}`
+   352→        : "/api/insurer/coverages";
+   353→      const method = editingItem ? "PUT" : "POST";
+   354→
+   355→      const res = await fetch(url, {
+   356→        method,
+   357→        headers: { "Content-Type": "application/json" },
+   358→        body: JSON.stringify(payload),
+   359→      });
+   360→
+   361→      if (!res.ok) {
+   362→        const err = await res.json();
+   363→        throw new Error(err.error || "Erreur");
+   364→      }
+   365→
+   366→      toast({
+   367→        title: editingItem
+   368→          ? "Garantie mise à jour avec succès"
+   369→          : "Garantie créée avec succès",
+   370→        description: editingItem
+   371→          ? `"${step1.name}" a été modifiée.`
+   372→          : `"${step1.name}" a été ajoutée à vos garanties.`,
+   373→      });
+   374→
+   375→      setDialogOpen(false);
+   376→      await refreshData();
+   377→    } catch (e) {
+   378→      toast({
+   379→        title: "Erreur",
+   380→        description: e instanceof Error ? e.message : "Une erreur est survenue",
+   381→        variant: "destructive",
+   382→      });
+   383→    } finally {
+   384→      setSaving(false);
+   385→    }
+   386→  };
+   387→
+   388→  const handleDelete = async () => {
+   389→    if (!deleteTarget) return;
+   390→    setDeleting(true);
+   391→    try {
+   392→      const res = await fetch(
+   393→        `/api/insurer/coverages/${deleteTarget.id}`,
+   394→        { method: "DELETE" }
+   395→      );
+   396→      if (!res.ok) throw new Error();
+   397→      toast({
+   398→        title: "Garantie supprimée",
+   399→        description: `"${deleteTarget.name}" a été désactivée.`,
+   400→      });
+   401→      setDeleteTarget(null);
+   402→      await refreshData();
+   403→    } catch {
+   404→      toast({
+   405→        title: "Erreur",
+   406→        description: "Impossible de supprimer la garantie",
+   407→        variant: "destructive",
+   408→      });
+   409→    } finally {
+   410→      setDeleting(false);
+   411→    }
+   412→  };
+   413→
+   414→  /* ── Render Step 3 ── */
+   415→  const renderStep3 = () => {
+   416→    if (calcType === "FREE") {
+   417→      return (
+   418→        <div className="rounded-lg bg-emerald-50 border border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800 p-6 text-center">
+   419→          <p className="text-emerald-700 dark:text-emerald-400 font-medium text-lg">
+   420→            🟢 Gratuit
+   421→          </p>
+   422→          <p className="text-emerald-600 dark:text-emerald-500 text-sm mt-1">
+   423→            Aucune configuration supplémentaire requise.
+   424→          </p>
+   425→        </div>
+   426→      );
+   427→    }
+   428→    if (calcType === "FIXED_AMOUNT") {
+   429→      return (
+   430→        <div className="space-y-4">
+   431→          <div className="w-full">
+   432→            <Label>Montant fixe (FCFA) *</Label>
+   433→            <Input
+   434→              className="w-full"
+   435→              type="number"
+   436→              value={(metadata.fixedAmount as number) ?? ""}
+   437→              onChange={(e) =>
+   438→                setMetadata({
+   439→                  ...metadata,
+   440→                  fixedAmount: parseFloat(e.target.value) || 0,
+   441→                })
+   442→              }
+   443→              placeholder="Ex: 50000"
+   444→            />
+   445→          </div>
+   446→        </div>
+   447→      );
+   448→    }
+   449→    if (calcType === "VARIABLE_BASED") {
+   450→      return (
+   451→        <div className="space-y-4">
+   452→          <div className="w-full">
+   453→            <Label>Variable</Label>
+   454→            <Select
+   455→              value={(metadata.variable as string) || "VN"}
+   456→              onValueChange={(v) =>
+   457→                setMetadata({ ...metadata, variable: v })
+   458→              }
+   459→            >
+   460→              <SelectTrigger className="w-full">
+   461→                <SelectValue />
+   462→              </SelectTrigger>
+   463→              <SelectContent>
+   464→                <SelectItem value="VN">Valeur Neuve (VN)</SelectItem>
+   465→                <SelectItem value="VN_REPLACEMENT_VALUE">
+   466→                  VN / Valeur de remplacement
+   467→                </SelectItem>
+   468→              </SelectContent>
+   469→            </Select>
+   470→          </div>
+   471→          <div className="flex items-center gap-2">
+   472→            <Checkbox
+   473→              id="conditional"
+   474→              checked={!!metadata.hasConditional}
+   475→              onCheckedChange={(v) =>
+   476→                setMetadata({ ...metadata, hasConditional: !!v })
+   477→              }
+   478→            />
+   479→            <Label htmlFor="conditional">Taux conditionné par seuil</Label>
+   480→          </div>
+   481→          {metadata.hasConditional ? (
+   482→            <div className="w-full grid grid-cols-1 sm:grid-cols-3 gap-3 rounded-lg border p-4 bg-muted/50">
+   483→              <div>
+   484→                <Label className="text-xs">Seuil (FCFA)</Label>
+   485→                <Input
+   486→                  className="w-full"
+   487→                  type="number"
+   488→                  value={(metadata.threshold as number) ?? ""}
+   489→                  onChange={(e) =>
+   490→                    setMetadata({
+   491→                      ...metadata,
+   492→                      threshold: parseFloat(e.target.value) || 0,
+   493→                    })
+   494→                  }
+   495→                />
+   496→              </div>
+   497→              <div>
+   498→                <Label className="text-xs">Taux sous (%)</Label>
+   499→                <Input
+   500→                  className="w-full"
+   501→                  type="number"
+   502→                  step="0.01"
+   503→                  value={(metadata.rateBelow as number) ?? ""}
+   504→                  onChange={(e) =>
+   505→                    setMetadata({
+   506→                      ...metadata,
+   507→                      rateBelow: parseFloat(e.target.value) || 0,
+   508→                    })
+   509→                  }
+   510→                />
+   511→              </div>
+   512→              <div>
+   513→                <Label className="text-xs">Taux au-dessus (%)</Label>
+   514→                <Input
+   515→                  className="w-full"
+   516→                  type="number"
+   517→                  step="0.01"
+   518→                  value={(metadata.rateAbove as number) ?? ""}
+   519→                  onChange={(e) =>
+   520→                    setMetadata({
+   521→                      ...metadata,
+   522→                      rateAbove: parseFloat(e.target.value) || 0,
+   523→                    })
+   524→                  }
+   525→                />
+   526→              </div>
+   527→            </div>
+   528→          ) : (
+   529→            <div className="w-full">
+   530→              <Label>Taux (%)</Label>
+   531→              <Input
+   532→                className="w-full"
+   533→                type="number"
+   534→                step="0.01"
+   535→                value={(metadata.rate as number) ?? ""}
+   536→                onChange={(e) =>
+   537→                  setMetadata({
+   538→                    ...metadata,
+   539→                    rate: parseFloat(e.target.value) || 0,
+   540→                  })
+   541→                }
+   542→              />
+   543→            </div>
+   544→          )}
+   545→          <Separator />
+   546→          <div className="flex items-center gap-2">
+   547→            <Checkbox
+   548→              id="franchise"
+   549→              checked={!!metadata.franchiseEnabled}
+   550→              onCheckedChange={(v) =>
+   551→                setMetadata({ ...metadata, franchiseEnabled: !!v })
+   552→              }
+   553→            />
+   554→            <Label htmlFor="franchise">Appliquer une franchise</Label>
+   555→          </div>
+   556→          {metadata.franchiseEnabled && (
+   557→            <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-lg border p-4 bg-muted/50">
+   558→              <div>
+   559→                <Label className="text-xs">Franchise (%)</Label>
+   560→                <Input
+   561→                  className="w-full"
+   562→                  type="number"
+   563→                  step="0.01"
+   564→                  value={(metadata.franchisePercent as number) ?? ""}
+   565→                  onChange={(e) =>
+   566→                    setMetadata({
+   567→                      ...metadata,
+   568→                      franchisePercent: parseFloat(e.target.value) || 0,
+   569→                    })
+   570→                  }
+   571→                />
+   572→              </div>
+   573→              <div>
+   574→                <Label className="text-xs">Montant min (FCFA)</Label>
+   575→                <Input
+   576→                  className="w-full"
+   577→                  type="number"
+   578→                  value={(metadata.franchiseMin as number) ?? ""}
+   579→                  onChange={(e) =>
+   580→                    setMetadata({
+   581→                      ...metadata,
+   582→                      franchiseMin: parseFloat(e.target.value) || 0,
+   583→                    })
+   584→                  }
+   585→                />
+   586→              </div>
+   587→            </div>
+   588→          )}
+   589→        </div>
+   590→      );
+   591→    }
+   592→    if (calcType === "MATRIX_BASED") {
+   593→      return (
+   594→        <div className="space-y-4">
+   595→          <div className="w-full">
+   596→            <Label>Type de matrice</Label>
+   597→            <Select
+   598→              value={(metadata.matrixType as string) || "FISCAL_POWER"}
+   599→              onValueChange={(v) =>
+   600→                setMetadata({ ...metadata, matrixType: v })
+   601→              }
+   602→            >
+   603→              <SelectTrigger className="w-full">
+   604→                <SelectValue />
+   605→              </SelectTrigger>
+   606→              <SelectContent>
+   607→                <SelectItem value="FISCAL_POWER">
+   608→                  Puissance fiscale
+   609→                </SelectItem>
+   610→                <SelectItem value="FORMULA">Formule (IC/IPT)</SelectItem>
+   611→                <SelectItem value="TIERCE_COMPLETE">
+   612→                  Tierce complète
+   613→                </SelectItem>
+   614→                <SelectItem value="TIERCE_COLLISION">
+   615→                  Tierce collision
+   616→                </SelectItem>
+   617→                <SelectItem value="FUEL_TYPE">Type carburant</SelectItem>
+   618→                <SelectItem value="SEATS">Nombre de places</SelectItem>
+   619→              </SelectContent>
+   620→            </Select>
+   621→          </div>
+   622→          <p className="text-sm text-muted-foreground">
+   623→            Les règles tarifaires associées définissent les valeurs de la
+   624→            matrice.
+   625→          </p>
+   626→        </div>
+   627→      );
+   628→    }
+   629→    return null;
+   630→  };
+   631→
+   632→  /* ── Render ── */
+   633→  return (
+   634→    <div className="space-y-6">
+   635→      {/* Header */}
+   636→      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+   637→        <div>
+   638→          <h2 className="text-2xl font-bold">Mes Garanties</h2>
+   639→          <p className="text-muted-foreground mt-1">
+   640→            Gérez les garanties et couvertures proposées dans vos offres.
+   641→          </p>
+   642→        </div>
+   643→        <Button
+   644→          className="bg-[#B9E54D] text-black hover:bg-[#a5d044]"
+   645→          onClick={openCreate}
+   646→        >
+   647→          <Plus className="mr-2 h-4 w-4" />
+   648→          Ajouter une garantie
+   649→        </Button>
+   650→      </div>
+   651→
+   652→      {/* Decorative info cards */}
+   653→      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+   654→        {guaranteeCategories.map((cat) => {
+   655→          const Icon = cat.icon;
+   656→          return (
+   657→            <Card key={cat.name}>
+   658→              <CardHeader className="pb-3">
+   659→                <div className="flex items-center gap-3">
+   660→                  <div
+   661→                    className={`flex h-10 w-10 items-center justify-center rounded-lg ${cat.color}`}
+   662→                  >
+   663→                    <Icon className="h-5 w-5" />
+   664→                  </div>
+   665→                  <CardTitle className="text-base">{cat.name}</CardTitle>
+   666→                </div>
+   667→              </CardHeader>
+   668→              <CardContent>
+   669→                <p className="text-sm text-muted-foreground">
+   670→                  {cat.description}
+   671→                </p>
+   672→              </CardContent>
+   673→            </Card>
+   674→          );
+   675→        })}
+   676→      </div>
+   677→
+   678→      {/* Guarantees table */}
+   679→      <div className="rounded-xl border bg-card">
+   680→        <div className="p-6 pb-4">
+   681→          <h3 className="text-lg font-semibold">Liste des garanties</h3>
+   682→          <p className="text-sm text-muted-foreground">
+   683→            Toutes vos garanties configurées
+   684→          </p>
+   685→        </div>
+   686→        <div className="max-h-96 overflow-y-auto">
+   687→          {loading ? (
+   688→            <div className="p-8 space-y-3">
+   689→              {Array.from({ length: 5 }).map((_, i) => (
+   690→                <div key={i} className="flex items-center gap-4">
+   691→                  <div className="h-4 w-20 bg-muted rounded animate-pulse" />
+   692→                  <div className="h-4 w-32 bg-muted rounded animate-pulse" />
+   693→                  <div className="h-4 w-24 bg-muted rounded animate-pulse" />
+   694→                  <div className="flex-1" />
+   695→                </div>
+   696→              ))}
+   697→            </div>
+   698→          ) : error ? (
+   699→            <div className="flex flex-col items-center justify-center py-16 text-center">
+   700→              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30 mb-4">
+   701→                <ShieldCheck className="h-8 w-8 text-red-500" />
+   702→              </div>
+   703→              <p className="text-sm text-muted-foreground">{error}</p>
+   704→            </div>
+   705→          ) : coverages.length === 0 ? (
+   706→            <div className="flex flex-col items-center justify-center py-16 text-center">
+   707→              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted mb-4">
+   708→                <ShieldCheck className="h-8 w-8 text-muted-foreground" />
+   709→              </div>
+   710→              <h3 className="text-lg font-semibold">
+   711→                Aucune garantie configurée
+   712→              </h3>
+   713→              <p className="text-sm text-muted-foreground mt-1 max-w-md">
+   714→                Cliquez sur &quot;Ajouter une garantie&quot; pour créer votre
+   715→                première garantie.
+   716→              </p>
+   717→            </div>
+   718→          ) : (
+   719→            <Table>
+   720→              <TableHeader>
+   721→                <TableRow>
+   722→                  <TableHead>Code</TableHead>
+   723→                  <TableHead>Nom</TableHead>
+   724→                  <TableHead className="hidden md:table-cell">
+   725→                    Catégorie
+   726→                  </TableHead>
+   727→                  <TableHead className="hidden lg:table-cell">
+   728→                    Type de calcul
+   729→                  </TableHead>
+   730→                  <TableHead className="text-center">Obligatoire</TableHead>
+   731→                  <TableHead>Statut</TableHead>
+   732→                  <TableHead className="text-right">Actions</TableHead>
+   733→                </TableRow>
+   734→              </TableHeader>
+   735→              <TableBody>
+   736→                {coverages.map((cov) => (
+   737→                  <TableRow key={cov.id}>
+   738→                    <TableCell className="font-mono text-xs">
+   739→                      {cov.code}
+   740→                    </TableCell>
+   741→                    <TableCell className="font-medium">{cov.name}</TableCell>
+   742→                    <TableCell className="hidden md:table-cell">
+   743→                      {cov.category?.name || "—"}
+   744→                    </TableCell>
+   745→                    <TableCell className="hidden lg:table-cell">
+   746→                      <span
+   747→                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${calcBadge[cov.calculationType] ?? ""}`}
+   748→                      >
+   749→                        {calcLabel[cov.calculationType] || cov.calculationType}
+   750→                      </span>
+   751→                    </TableCell>
+   752→                    <TableCell className="text-center">
+   753→                      {cov.isMandatory ? (
+   754→                        <Badge className="border-0 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 text-xs">
+   755→                          Oui
+   756→                        </Badge>
+   757→                      ) : (
+   758→                        <Badge variant="secondary" className="text-xs">
+   759→                          Non
+   760→                        </Badge>
+   761→                      )}
+   762→                    </TableCell>
+   763→                    <TableCell>
+   764→                      {cov.isActive ? (
+   765→                        <Badge className="border-0 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 text-xs">
+   766→                          Active
+   767→                        </Badge>
+   768→                      ) : (
+   769→                        <Badge variant="secondary" className="text-xs">
+   770→                          Inactive
+   771→                        </Badge>
+   772→                      )}
+   773→                    </TableCell>
+   774→                    <TableCell className="text-right">
+   775→                      <div className="flex items-center justify-end gap-1">
+   776→                        <Button
+   777→                          variant="ghost"
+   778→                          size="icon"
+   779→                          className="h-8 w-8"
+   780→                          onClick={() => openEdit(cov)}
+   781→                        >
+   782→                          <Pencil className="h-3.5 w-3.5" />
+   783→                        </Button>
+   784→                        <Button
+   785→                          variant="ghost"
+   786→                          size="icon"
+   787→                          className="h-8 w-8 text-destructive hover:text-destructive"
+   788→                          onClick={() => setDeleteTarget(cov)}
+   789→                        >
+   790→                          <Trash2 className="h-3.5 w-3.5" />
+   791→                        </Button>
+   792→                      </div>
+   793→                    </TableCell>
+   794→                  </TableRow>
+   795→                ))}
+   796→              </TableBody>
+   797→            </Table>
+   798→          )}
+   799→        </div>
+   800→      </div>
+   801→
+   802→      {/* ── Wizard Dialog ── */}
+   803→      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+   804→        <DialogContent className="sm:max-w-2xl max-h-[90vh]">
+   805→          <DialogHeader>
+   806→            <DialogTitle>
+   807→              {editingItem ? "Modifier la garantie" : "Nouvelle garantie"}
+   808→            </DialogTitle>
+   809→            <DialogDescription>
+   810→              {editingItem
+   811→                ? "Modifiez les informations de la garantie."
+   812→                : "Configurez votre nouvelle garantie en 3 étapes."}
+   813→            </DialogDescription>
+   814→          </DialogHeader>
+   815→
+   816→          {/* Step indicator */}
+   817→          <div className="flex items-center justify-center gap-2 pb-2">
+   818→            {[1, 2, 3].map((s) => (
+   819→              <div key={s} className="flex items-center gap-2">
+   820→                <div
+   821→                  className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${
+   822→                    step > s
+   823→                      ? "bg-emerald-500 text-white"
+   824→                      : step === s
+   825→                        ? "bg-[#B9E54D] text-black"
+   826→                        : "bg-muted text-muted-foreground"
+   827→                  }`}
+   828→                >
+   829→                  {step > s ? <Check className="h-4 w-4" /> : s}
+   830→                </div>
+   831→                {s < 3 && (
+   832→                  <div
+   833→                    className={`h-0.5 w-12 ${step > s ? "bg-emerald-500" : "bg-muted"}`}
+   834→                  />
+   835→                )}
+   836→              </div>
+   837→            ))}
+   838→          </div>
+   839→
+   840→          <ScrollArea className="max-h-[55vh] pr-4">
+   841→            {/* Step 1: Basic info */}
+   842→            {step === 1 && (
+   843→              <div className="space-y-4">
+   844→                <div className="w-full">
+   845→                  <Label htmlFor="cov-name">Nom *</Label>
+   846→                  <Input
+   847→                    className="w-full"
+   848→                    id="cov-name"
+   849→                    placeholder="Ex: Responsabilité Civile Automobile"
+   850→                    value={step1.name}
+   851→                    onChange={(e) =>
+   852→                      setStep1({ ...step1, name: e.target.value })
+   853→                    }
+   854→                  />
+   855→                </div>
+   856→                <div className="w-full">
+   857→                  <Label>Description</Label>
+   858→                  <Textarea
+   859→                    className="w-full"
+   860→                    placeholder="Description de la garantie..."
+   861→                    rows={3}
+   862→                    value={step1.description}
+   863→                    onChange={(e) =>
+   864→                      setStep1({ ...step1, description: e.target.value })
+   865→                    }
+   866→                  />
+   867→                </div>
+   868→                <div className="w-full">
+   869→                  <Label>Catégorie de garantie</Label>
+   870→                  <Select
+   871→                    value={step1.categoryId}
+   872→                    onValueChange={(v) =>
+   873→                      setStep1({ ...step1, categoryId: v })
+   874→                    }
+   875→                  >
+   876→                    <SelectTrigger className="w-full">
+   877→                      <SelectValue placeholder="Sélectionner une catégorie" />
+   878→                    </SelectTrigger>
+   879→                    <SelectContent>
+   880→                      {categories.map((c) => (
+   881→                        <SelectItem key={c.id} value={c.id}>
+   882→                          {c.name}
+   883→                        </SelectItem>
+   884→                      ))}
+   885→                    </SelectContent>
+   886→                  </Select>
+   887→                </div>
+   888→                <div className="flex items-center justify-between rounded-lg border p-4">
+   889→                  <Label htmlFor="cov-mandatory" className="cursor-pointer">
+   890→                    Garantie obligatoire
+   891→                  </Label>
+   892→                  <Switch
+   893→                    id="cov-mandatory"
+   894→                    checked={step1.isMandatory}
+   895→                    onCheckedChange={(v) =>
+   896→                      setStep1({ ...step1, isMandatory: v })
+   897→                    }
+   898→                  />
+   899→                </div>
+   900→              </div>
+   901→            )}
+   902→
+   903→            {/* Step 2: Calculation type selection */}
+   904→            {step === 2 && (
+   905→              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4">
+   906→                {step2Cards.map((c) => (
+   907→                  <button
+   908→                    key={c.type}
+   909→                    type="button"
+   910→                    onClick={() => setCalcType(c.type)}
+   911→                    className={`flex flex-col items-center gap-3 rounded-xl border-2 p-6 transition-all hover:shadow-md ${
+   912→                      calcType === c.type
+   913→                        ? `${c.color} shadow-md ring-2 ring-offset-2 ring-[#B9E54D]`
+   914→                        : "border-border hover:border-muted-foreground/30"
+   915→                    }`}
+   916→                  >
+   917→                    <span className="text-2xl">{c.emoji}</span>
+   918→                    <span className="font-semibold">{c.label}</span>
+   919→                  </button>
+   920→                ))}
+   921→              </div>
+   922→            )}
+   923→
+   924→            {/* Step 3: Calculation config */}
+   925→            {step === 3 && (
+   926→              <div className="py-2">
+   927→                <div className="mb-4 flex items-center gap-2">
+   928→                  <Badge className={calcBadge[calcType] ?? ""}>
+   929→                    {calcLabel[calcType] ?? calcType}
+   930→                  </Badge>
+   931→                  <span className="text-sm text-muted-foreground">
+   932→                    — Configuration
+   933→                  </span>
+   934→                </div>
+   935→                {renderStep3()}
+   936→              </div>
+   937→            )}
+   938→          </ScrollArea>
+   939→
+   940→          <DialogFooter className="gap-2">
+   941→            {step > 1 && (
+   942→              <Button
+   943→                variant="outline"
+   944→                onClick={() => setStep(step - 1)}
+   945→              >
+   946→                <ChevronLeft className="h-4 w-4 mr-1" />
+   947→                Précédent
+   948→              </Button>
+   949→            )}
+   950→            {step < 3 && (
+   951→              <Button
+   952→                className="bg-[#B9E54D] text-black hover:bg-[#a5d044]"
+   953→                onClick={() => setStep(step + 1)}
+   954→                disabled={step === 1 && !step1.name.trim()}
+   955→              >
+   956→                Suivant
+   957→                <ChevronRight className="h-4 w-4 ml-1" />
+   958→              </Button>
+   959→            )}
+   960→            {step === 3 && (
+   961→              <Button
+   962→                className="bg-[#B9E54D] text-black hover:bg-[#a5d044]"
+   963→                onClick={handleSave}
+   964→                disabled={saving}
+   965→              >
+   966→                {saving ? (
+   967→                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+   968→                ) : null}
+   969→                {editingItem ? "Enregistrer" : "Créer la garantie"}
+   970→              </Button>
+   971→            )}
+   972→          </DialogFooter>
+   973→        </DialogContent>
+   974→      </Dialog>
+   975→
+   976→      {/* ── Delete Confirmation ── */}
+   977→      <AlertDialog
+   978→        open={!!deleteTarget}
+   979→        onOpenChange={(open) => !open && setDeleteTarget(null)}
+   980→      >
+   981→        <AlertDialogContent>
+   982→          <AlertDialogHeader>
+   983→            <AlertDialogTitle>Supprimer cette garantie ?</AlertDialogTitle>
+   984→            <AlertDialogDescription>
+   985→              La garantie &quot;{deleteTarget?.name}&quot; ({deleteTarget?.code})
+   986→              sera désactivée. Elle ne sera plus disponible dans vos offres.
+   987→            </AlertDialogDescription>
+   988→          </AlertDialogHeader>
+   989→          <AlertDialogFooter>
+   990→            <AlertDialogCancel disabled={deleting}>Annuler</AlertDialogCancel>
+   991→            <AlertDialogAction
+   992→              onClick={handleDelete}
+   993→              disabled={deleting}
+   994→              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+   995→            >
+   996→              {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+   997→              Supprimer
+   998→            </AlertDialogAction>
+   999→          </AlertDialogFooter>
+  1000→        </AlertDialogContent>
+  1001→      </AlertDialog>
+  1002→    </div>
+  1003→  );
+  1004→}
