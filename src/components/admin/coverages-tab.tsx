@@ -235,9 +235,11 @@ export function CoveragesTab() {
 
   const openEdit = (item: Coverage) => {
     setEditing(item);
+    // Resolve insuranceCategoryId from type field
+    const insCat = insuranceCategories.find((c) => c.name === item.type);
     setStep1({
       name: item.name,
-      insuranceCategoryId: "", // will be resolved after insuranceCategories load
+      insuranceCategoryId: insCat?.id || "",
       description: item.description ?? "",
       insurerId: item.insurerId,
       categoryId: item.categoryId ?? "",
@@ -526,11 +528,11 @@ export function CoveragesTab() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Nom</TableHead>
-                  <TableHead>Type</TableHead>
+                  <TableHead>Cat. Produit</TableHead>
+                  <TableHead>Catégorie</TableHead>
                   <TableHead>Assureur</TableHead>
                   <TableHead>Méthode</TableHead>
                   <TableHead className="text-center">Obligatoire</TableHead>
-                  <TableHead className="text-center">Ordre</TableHead>
                   <TableHead>Statut</TableHead>
                   <TableHead className="w-12"></TableHead>
                 </TableRow>
@@ -543,7 +545,8 @@ export function CoveragesTab() {
                     onClick={() => handleRowClick(item.id)}
                   >
                     <TableCell className="font-medium">{item.name}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{item.type}</TableCell>
+                    <TableCell className="text-sm">{item.type || <span className="text-muted-foreground">—</span>}</TableCell>
+                    <TableCell className="text-sm">{item.category?.name || <span className="text-muted-foreground">—</span>}</TableCell>
                     <TableCell className="text-sm">{item.insurer.name}</TableCell>
                     <TableCell>
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${calcBadge[item.calculationType] ?? ""}`}>
@@ -551,7 +554,6 @@ export function CoveragesTab() {
                       </span>
                     </TableCell>
                     <TableCell className="text-center">{item.isMandatory ? <Check className="h-4 w-4 text-emerald-600 mx-auto" /> : <Minus className="h-4 w-4 text-muted-foreground mx-auto" />}</TableCell>
-                    <TableCell className="text-center">{item.displayOrder}</TableCell>
                     <TableCell><Switch checked={item.isActive} onCheckedChange={async (v) => {
                       try { await fetch(`/api/admin/coverages/${item.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isActive: v }) }); fetchItems(); }
                       catch { toast({ title: "Erreur", variant: "destructive" }); }
@@ -576,11 +578,15 @@ export function CoveragesTab() {
               <Card key={item.id} className={`rounded-xl border shadow-sm cursor-pointer transition-colors ${selectedId === item.id ? "ring-2 ring-[#B9E54D]" : ""}`} onClick={() => handleRowClick(item.id)}>
                 <CardContent className="p-4 space-y-2">
                   <div className="flex items-start justify-between">
-                    <div>
-                      <p className="font-semibold">{item.name}</p>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold truncate">{item.name}</p>
                       <p className="text-xs text-muted-foreground">{item.insurer.name}</p>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {item.type && <Badge variant="outline" className="text-[10px] px-1.5 py-0">{item.type}</Badge>}
+                        {item.category?.name && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{item.category.name}</Badge>}
+                      </div>
                     </div>
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${calcBadge[item.calculationType] ?? ""}`}>
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium shrink-0 ml-2 ${calcBadge[item.calculationType] ?? ""}`}>
                       {calcLabel[item.calculationType] ?? item.calculationType}
                     </span>
                   </div>

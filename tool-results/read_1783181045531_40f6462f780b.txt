@@ -1,0 +1,856 @@
+     1→"use client";
+     2→
+     3→import { useEffect, useState, useCallback } from "react";
+     4→import { useToast } from "@/hooks/use-toast";
+     5→import { Button } from "@/components/ui/button";
+     6→import { Input } from "@/components/ui/input";
+     7→import { Label } from "@/components/ui/label";
+     8→import { Badge } from "@/components/ui/badge";
+     9→import { Switch } from "@/components/ui/switch";
+    10→import { Checkbox } from "@/components/ui/checkbox";
+    11→import { Textarea } from "@/components/ui/textarea";
+    12→import { Skeleton } from "@/components/ui/skeleton";
+    13→import { Separator } from "@/components/ui/separator";
+    14→import {
+    15→  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+    16→} from "@/components/ui/table";
+    17→import {
+    18→  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+    19→} from "@/components/ui/dialog";
+    20→import {
+    21→  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+    22→} from "@/components/ui/alert-dialog";
+    23→import {
+    24→  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+    25→} from "@/components/ui/dropdown-menu";
+    26→import { Card, CardContent } from "@/components/ui/card";
+    27→import { ScrollArea } from "@/components/ui/scroll-area";
+    28→import {
+    29→  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+    30→} from "@/components/ui/select";
+    31→import { Search, Plus, MoreHorizontal, Pencil, Trash2, ChevronLeft, ChevronRight, Check, Minus, X, DollarSign, Percent, LayoutGrid, CircleDot } from "lucide-react";
+    32→
+    33→/* ── Types ─────────────────────────────────────────────────── */
+    34→interface InsurerOption { id: string; name: string; code: string; }
+    35→interface CatOption { id: string; name: string; code: string; }
+    36→interface InsCatOption { id: string; name: string; }
+    37→
+    38→interface Coverage {
+    39→  id: string;
+    40→  code: string;
+    41→  type: string;
+    42→  name: string;
+    43→  description: string | null;
+    44→  calculationType: string;
+    45→  isMandatory: boolean;
+    46→  isActive: boolean;
+    47→  displayOrder: number;
+    48→  metadata: Record<string, unknown>;
+    49→  insurerId: string;
+    50→  categoryId: string | null;
+    51→  insurer: InsurerOption;
+    52→  category: CatOption | null;
+    53→  _count: { tariffRules: number };
+    54→}
+    55→
+    56→interface TariffRule {
+    57→  id: string;
+    58→  coverageId: string;
+    59→  fuelType: string | null;
+    60→  minFiscalPower: number | null;
+    61→  maxFiscalPower: number | null;
+    62→  baseRate: number | null;
+    63→  fixedAmount: number | null;
+    64→  minAmount: number | null;
+    65→  maxAmount: number | null;
+    66→  formulaName: string | null;
+    67→}
+    68→
+    69→/* ── Constants ─────────────────────────────────────────────── */
+    70→const calcBadge: Record<string, string> = {
+    71→  FREE: "bg-emerald-100 text-emerald-800",
+    72→  FIXED_AMOUNT: "bg-blue-100 text-blue-800",
+    73→  VARIABLE_BASED: "bg-orange-100 text-orange-800",
+    74→  MATRIX_BASED: "bg-purple-100 text-purple-800",
+    75→};
+    76→const calcLabel: Record<string, string> = {
+    77→  FREE: "Gratuit",
+    78→  FIXED_AMOUNT: "Montant fixe",
+    79→  VARIABLE_BASED: "Variable",
+    80→  MATRIX_BASED: "Matrice",
+    81→};
+    82→
+    83→type CalculationType = "FREE" | "FIXED_AMOUNT" | "VARIABLE_BASED" | "MATRIX_BASED";
+    84→
+    85→interface Step1Data {
+    86→  name: string;
+    87→  insuranceCategoryId: string;
+    88→  description: string;
+    89→  insurerId: string;
+    90→  categoryId: string;
+    91→  isMandatory: boolean;
+    92→  displayOrder: string;
+    93→  isActive: boolean;
+    94→}
+    95→
+    96→const emptyStep1: Step1Data = {
+    97→  name: "", insuranceCategoryId: "", description: "", insurerId: "", categoryId: "",
+    98→  isMandatory: false, displayOrder: "0", isActive: true,
+    99→};
+   100→
+   101→const step2Options: {
+   102→  type: CalculationType;
+   103→  label: string;
+   104→  description: string;
+   105→  icon: typeof DollarSign;
+   106→  formula: string;
+   107→}[] = [
+   108→  {
+   109→    type: "FREE",
+   110→    label: "Gratuit",
+   111→    description: "Aucun frais additionnel. Prime = 0 FCFA. Idéal pour les garanties promotionnelles ou incluses.",
+   112→    icon: CircleDot,
+   113→    formula: "Prime = 0 FCFA",
+   114→  },
+   115→  {
+   116→    type: "FIXED_AMOUNT",
+   117→    label: "Montant fixe",
+   118→    description: "Un montant fixe est appliqué indépendamment des paramètres du véhicule. Ex: Assistance à 5 000 FCFA.",
+   119→    icon: DollarSign,
+   120→    formula: "Prime = Montant fixe (ou prix réduit en pack)",
+   121→  },
+   122→  {
+   123→    type: "VARIABLE_BASED",
+   124→    label: "Basé sur une variable du véhicule",
+   125→    description: "Le montant est calculé en pourcentage d'une variable (VN, VA, Puissance fiscale) avec option de seuil conditionnel.",
+   126→    icon: Percent,
+   127→    formula: "Prime = Variable × (Taux / 100)",
+   128→  },
+   129→  {
+   130→    type: "MATRIX_BASED",
+   131→    label: "Matrice tarifaire",
+   132→    description: "Le montant est déterminé par lookup dans une grille multi-dimensionnelle (PF, carburant, catégorie, formule).",
+   133→    icon: LayoutGrid,
+   134→    formula: "Prime = lookup dans la grille",
+   135→  },
+   136→];
+   137→
+   138→/* ── Component ─────────────────────────────────────────────── */
+   139→export function CoveragesTab() {
+   140→  const { toast } = useToast();
+   141→  const [items, setItems] = useState<Coverage[]>([]);
+   142→  const [insurers, setInsurers] = useState<InsurerOption[]>([]);
+   143→  const [categories, setCategories] = useState<CatOption[]>([]);
+   144→  const [insuranceCategories, setInsuranceCategories] = useState<InsCatOption[]>([]);
+   145→  const [search, setSearch] = useState("");
+   146→  const [filterInsurer, setFilterInsurer] = useState("");
+   147→  const [filterCategory, setFilterCategory] = useState("");
+   148→  const [filterCalcType, setFilterCalcType] = useState("");
+   149→  const [loading, setLoading] = useState(true);
+   150→  const [dialogOpen, setDialogOpen] = useState(false);
+   151→  const [editing, setEditing] = useState<Coverage | null>(null);
+   152→  const [step, setStep] = useState(1);
+   153→  const [step1, setStep1] = useState<Step1Data>(emptyStep1);
+   154→  const [calcType, setCalcType] = useState<CalculationType | "">("");
+   155→  const [metadata, setMetadata] = useState<Record<string, unknown>>({});
+   156→  const [saving, setSaving] = useState(false);
+   157→  const [deleteId, setDeleteId] = useState<string | null>(null);
+   158→
+   159→  // Tariff rules panel
+   160→  const [selectedId, setSelectedId] = useState<string | null>(null);
+   161→  const [tariffRules, setTariffRules] = useState<TariffRule[]>([]);
+   162→  const [trLoading, setTrLoading] = useState(false);
+   163→  const [trDialogOpen, setTrDialogOpen] = useState(false);
+   164→  const [trEditing, setTrEditing] = useState<TariffRule | null>(null);
+   165→  const [trDeleteId, setTrDeleteId] = useState<string | null>(null);
+   166→  const [trForm, setTrForm] = useState({
+   167→    fuelType: "", minFiscalPower: "", maxFiscalPower: "", baseRate: "", fixedAmount: "", minAmount: "", maxAmount: "", formulaName: "",
+   168→  });
+   169→  const [trSaving, setTrSaving] = useState(false);
+   170→
+   171→  const fetchItems = useCallback(async () => {
+   172→    try {
+   173→      const params = new URLSearchParams();
+   174→      if (search) params.set("search", search);
+   175→      if (filterInsurer) params.set("insurerId", filterInsurer);
+   176→      if (filterCategory) params.set("categoryId", filterCategory);
+   177→      if (filterCalcType) params.set("calculationType", filterCalcType);
+   178→      const res = await fetch(`/api/admin/coverages?${params}`);
+   179→      if (!res.ok) throw new Error();
+   180→      setItems(await res.json());
+   181→    } catch {
+   182→      toast({ title: "Erreur", description: "Impossible de charger les garanties", variant: "destructive" });
+   183→    } finally {
+   184→      setLoading(false);
+   185→    }
+   186→  }, [search, filterInsurer, filterCategory, filterCalcType, toast]);
+   187→
+   188→  const fetchLookups = useCallback(async () => {
+   189→    try {
+   190→      const [insRes, catRes, insCatRes] = await Promise.all([
+   191→        fetch("/api/admin/insurers"),
+   192→        fetch("/api/admin/coverage-categories"),
+   193→        fetch("/api/admin/insurance-categories"),
+   194→      ]);
+   195→      if (insRes.ok) setInsurers(await insRes.json());
+   196→      if (catRes.ok) setCategories(await catRes.json());
+   197→      if (insCatRes.ok) setInsuranceCategories(await insCatRes.json());
+   198→    } catch { /* silent */ }
+   199→  }, []);
+   200→
+   201→  useEffect(() => { fetchLookups(); }, [fetchLookups]);
+   202→  useEffect(() => { setLoading(true); fetchItems(); }, [fetchItems]);
+   203→
+   204→  const fetchTariffRules = useCallback(async (coverageId: string) => {
+   205→    setTrLoading(true);
+   206→    try {
+   207→      const res = await fetch(`/api/admin/coverages/${coverageId}/tariff-rules`);
+   208→      if (!res.ok) throw new Error();
+   209→      setTariffRules(await res.json());
+   210→    } catch {
+   211→      toast({ title: "Erreur", description: "Impossible de charger les règles", variant: "destructive" });
+   212→    } finally {
+   213→      setTrLoading(false);
+   214→    }
+   215→  }, [toast]);
+   216→
+   217→  const handleRowClick = (id: string) => {
+   218→    if (selectedId === id) {
+   219→      setSelectedId(null);
+   220→      return;
+   221→    }
+   222→    setSelectedId(id);
+   223→    fetchTariffRules(id);
+   224→  };
+   225→
+   226→  /* ── Wizard ─────────────────────────────────────────────── */
+   227→  const openCreate = () => {
+   228→    setEditing(null);
+   229→    setStep1(emptyStep1);
+   230→    setCalcType("");
+   231→    setMetadata({});
+   232→    setStep(1);
+   233→    setDialogOpen(true);
+   234→  };
+   235→
+   236→  const openEdit = (item: Coverage) => {
+   237→    setEditing(item);
+   238→    setStep1({
+   239→      name: item.name,
+   240→      insuranceCategoryId: "", // will be resolved after insuranceCategories load
+   241→      description: item.description ?? "",
+   242→      insurerId: item.insurerId,
+   243→      categoryId: item.categoryId ?? "",
+   244→      isMandatory: item.isMandatory,
+   245→      displayOrder: item.displayOrder.toString(),
+   246→      isActive: item.isActive,
+   247→    });
+   248→    setCalcType(item.calculationType as CalculationType);
+   249→    setMetadata(item.metadata);
+   250→    setStep(1);
+   251→    setDialogOpen(true);
+   252→  };
+   253→
+   254→  const buildMetadataFromStep3 = (): Record<string, unknown> => {
+   255→    if (calcType === "FREE") return {};
+   256→    if (calcType === "FIXED_AMOUNT") {
+   257→      return { fixedAmount: (metadata.fixedAmount as number) || 0 };
+   258→    }
+   259→    if (calcType === "VARIABLE_BASED") {
+   260→      const m: Record<string, unknown> = { variable: (metadata.variable as string) || "VN" };
+   261→      if (metadata.hasConditional) {
+   262→        m.hasConditional = true;
+   263→        m.threshold = Number(metadata.threshold) || 0;
+   264→        m.rateBelow = Number(metadata.rateBelow) || 0;
+   265→        m.rateAbove = Number(metadata.rateAbove) || 0;
+   266→      } else {
+   267→        m.rate = Number(metadata.rate) || 0;
+   268→      }
+   269→      if (metadata.franchiseEnabled) {
+   270→        m.franchiseEnabled = true;
+   271→        m.franchisePercent = Number(metadata.franchisePercent) || 0;
+   272→        m.franchiseMin = Number(metadata.franchiseMin) || 0;
+   273→      }
+   274→      return m;
+   275→    }
+   276→    if (calcType === "MATRIX_BASED") {
+   277→      return { matrixType: (metadata.matrixType as string) || "FISCAL_POWER" };
+   278→    }
+   279→    return {};
+   280→  };
+   281→
+   282→  const handleSave = async () => {
+   283→    if (!step1.name.trim() || !step1.insurerId || !calcType) {
+   284→      toast({ title: "Erreur", description: "Veuillez remplir tous les champs requis", variant: "destructive" });
+   285→      return;
+   286→    }
+   287→    setSaving(true);
+   288→    try {
+   289→      const url = editing ? `/api/admin/coverages/${editing.id}` : "/api/admin/coverages";
+   290→      const method = editing ? "PUT" : "POST";
+   291→      // Resolve insurance category name for the `type` field
+   292→      const insCat = insuranceCategories.find((c) => c.id === step1.insuranceCategoryId);
+   293→      const body = {
+   294→        name: step1.name,
+   295→        type: insCat?.name || "",
+   296→        description: step1.description,
+   297→        insurerId: step1.insurerId,
+   298→        categoryId: step1.categoryId || null,
+   299→        isMandatory: step1.isMandatory,
+   300→        displayOrder: parseInt(step1.displayOrder, 10) || 0,
+   301→        isActive: step1.isActive,
+   302→        calculationType: calcType,
+   303→        metadata: buildMetadataFromStep3(),
+   304→      };
+   305→      const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+   306→      if (!res.ok) {
+   307→        const data = await res.json();
+   308→        throw new Error(data.error || "Erreur");
+   309→      }
+   310→      toast({ title: editing ? "Garantie modifiée" : "Garantie créée" });
+   311→      setDialogOpen(false);
+   312→      fetchItems();
+   313→    } catch (e) {
+   314→      toast({ title: "Erreur", description: e instanceof Error ? e.message : "Erreur", variant: "destructive" });
+   315→    } finally {
+   316→      setSaving(false);
+   317→    }
+   318→  };
+   319→
+   320→  const handleDelete = async () => {
+   321→    if (!deleteId) return;
+   322→    try {
+   323→      const res = await fetch(`/api/admin/coverages/${deleteId}`, { method: "DELETE" });
+   324→      if (!res.ok) throw new Error();
+   325→      toast({ title: "Garantie supprimée" });
+   326→      setDeleteId(null);
+   327→      if (selectedId === deleteId) setSelectedId(null);
+   328→      fetchItems();
+   329→    } catch {
+   330→      toast({ title: "Erreur", variant: "destructive" });
+   331→    }
+   332→  };
+   333→
+   334→  /* ── Tariff Rule CRUD ────────────────────────────────────── */
+   335→  const openTrCreate = () => {
+   336→    setTrEditing(null);
+   337→    setTrForm({ fuelType: "", minFiscalPower: "", maxFiscalPower: "", baseRate: "", fixedAmount: "", minAmount: "", maxAmount: "", formulaName: "" });
+   338→    setTrDialogOpen(true);
+   339→  };
+   340→
+   341→  const openTrEdit = (rule: TariffRule) => {
+   342→    setTrEditing(rule);
+   343→    setTrForm({
+   344→      fuelType: rule.fuelType ?? "", minFiscalPower: rule.minFiscalPower?.toString() ?? "", maxFiscalPower: rule.maxFiscalPower?.toString() ?? "",
+   345→      baseRate: rule.baseRate?.toString() ?? "", fixedAmount: rule.fixedAmount?.toString() ?? "", minAmount: rule.minAmount?.toString() ?? "",
+   346→      maxAmount: rule.maxAmount?.toString() ?? "", formulaName: rule.formulaName ?? "",
+   347→    });
+   348→    setTrDialogOpen(true);
+   349→  };
+   350→
+   351→  const saveTr = async () => {
+   352→    if (!selectedId) return;
+   353→    setTrSaving(true);
+   354→    try {
+   355→      const body = {
+   356→        fuelType: trForm.fuelType || null,
+   357→        minFiscalPower: trForm.minFiscalPower ? parseInt(trForm.minFiscalPower, 10) : null,
+   358→        maxFiscalPower: trForm.maxFiscalPower ? parseInt(trForm.maxFiscalPower, 10) : null,
+   359→        baseRate: trForm.baseRate ? parseFloat(trForm.baseRate) : null,
+   360→        fixedAmount: trForm.fixedAmount ? parseFloat(trForm.fixedAmount) : null,
+   361→        minAmount: trForm.minAmount ? parseFloat(trForm.minAmount) : null,
+   362→        maxAmount: trForm.maxAmount ? parseFloat(trForm.maxAmount) : null,
+   363→        formulaName: trForm.formulaName || null,
+   364→      };
+   365→      const res = await fetch(`/api/admin/coverages/${selectedId}/tariff-rules`, {
+   366→        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+   367→      });
+   368→      if (!res.ok) throw new Error();
+   369→      toast({ title: "Règle ajoutée" });
+   370→      setTrDialogOpen(false);
+   371→      fetchTariffRules(selectedId);
+   372→    } catch {
+   373→      toast({ title: "Erreur", variant: "destructive" });
+   374→    } finally {
+   375→      setTrSaving(false);
+   376→    }
+   377→  };
+   378→
+   379→  const handleTrDelete = async () => {
+   380→    if (!trDeleteId || !selectedId) return;
+   381→    try {
+   382→      const res = await fetch(`/api/admin/tariff-rules/${trDeleteId}`, { method: "DELETE" });
+   383→      if (!res.ok) throw new Error();
+   384→      toast({ title: "Règle tarifaire supprimée" });
+   385→      setTrDeleteId(null);
+   386→      fetchTariffRules(selectedId);
+   387→    } catch {
+   388→      toast({ title: "Erreur", variant: "destructive" });
+   389→    }
+   390→  };
+   391→
+   392→  /* ── Render Step 3 ──────────────────────────────────────── */
+   393→  const renderStep3 = () => {
+   394→    if (calcType === "FREE") {
+   395→      return (
+   396→        <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-6 text-center">
+   397→          <p className="text-emerald-700 font-medium text-lg">🟢 Gratuit</p>
+   398→          <p className="text-emerald-600 text-sm mt-1">Aucune configuration supplémentaire requise.</p>
+   399→        </div>
+   400→      );
+   401→    }
+   402→    if (calcType === "FIXED_AMOUNT") {
+   403→      return (
+   404→        <div className="space-y-4">
+   405→          <Label>Montant fixe (FCFA) *</Label>
+   406→          <Input className="w-full" type="number" value={(metadata.fixedAmount as number) ?? ""} onChange={(e) => setMetadata({ ...metadata, fixedAmount: parseFloat(e.target.value) || 0 })} placeholder="Ex: 50000" />
+   407→        </div>
+   408→      );
+   409→    }
+   410→    if (calcType === "VARIABLE_BASED") {
+   411→      return (
+   412→        <div className="space-y-4">
+   413→          <div>
+   414→            <Label>Variable</Label>
+   415→            <Select value={(metadata.variable as string) || "VN"} onValueChange={(v) => setMetadata({ ...metadata, variable: v })}>
+   416→              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+   417→              <SelectContent>
+   418→                <SelectItem value="VN">Valeur Neuve (VN)</SelectItem>
+   419→                <SelectItem value="VN_REPLACEMENT_VALUE">VN / Valeur de remplacement</SelectItem>
+   420→              </SelectContent>
+   421→            </Select>
+   422→          </div>
+   423→          <div className="flex items-center gap-2">
+   424→            <Checkbox id="conditional" checked={!!metadata.hasConditional} onCheckedChange={(v) => setMetadata({ ...metadata, hasConditional: !!v })} />
+   425→            <Label htmlFor="conditional">Taux conditionné par seuil</Label>
+   426→          </div>
+   427→          {metadata.hasConditional ? (
+   428→            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 rounded-lg border p-4 bg-muted/50">
+   429→              <div><Label className="text-xs">Seuil (FCFA)</Label><Input className="w-full" type="number" value={(metadata.threshold as number) ?? ""} onChange={(e) => setMetadata({ ...metadata, threshold: parseFloat(e.target.value) || 0 })} /></div>
+   430→              <div><Label className="text-xs">Taux sous (%)</Label><Input className="w-full" type="number" step="0.01" value={(metadata.rateBelow as number) ?? ""} onChange={(e) => setMetadata({ ...metadata, rateBelow: parseFloat(e.target.value) || 0 })} /></div>
+   431→              <div><Label className="text-xs">Taux au-dessus (%)</Label><Input className="w-full" type="number" step="0.01" value={(metadata.rateAbove as number) ?? ""} onChange={(e) => setMetadata({ ...metadata, rateAbove: parseFloat(e.target.value) || 0 })} /></div>
+   432→            </div>
+   433→          ) : (
+   434→            <div className="w-full"><Label>Taux (%)</Label><Input className="w-full" type="number" step="0.01" value={(metadata.rate as number) ?? ""} onChange={(e) => setMetadata({ ...metadata, rate: parseFloat(e.target.value) || 0 })} /></div>
+   435→          )}
+   436→          <Separator />
+   437→          <div className="flex items-center gap-2">
+   438→            <Checkbox id="franchise" checked={!!metadata.franchiseEnabled} onCheckedChange={(v) => setMetadata({ ...metadata, franchiseEnabled: !!v })} />
+   439→            <Label htmlFor="franchise">Appliquer une franchise</Label>
+   440→          </div>
+   441→          {metadata.franchiseEnabled && (
+   442→            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-lg border p-4 bg-muted/50">
+   443→              <div><Label className="text-xs">Franchise (%)</Label><Input className="w-full" type="number" step="0.01" value={(metadata.franchisePercent as number) ?? ""} onChange={(e) => setMetadata({ ...metadata, franchisePercent: parseFloat(e.target.value) || 0 })} /></div>
+   444→              <div><Label className="text-xs">Montant min (FCFA)</Label><Input className="w-full" type="number" value={(metadata.franchiseMin as number) ?? ""} onChange={(e) => setMetadata({ ...metadata, franchiseMin: parseFloat(e.target.value) || 0 })} /></div>
+   445→            </div>
+   446→          )}
+   447→        </div>
+   448→      );
+   449→    }
+   450→    if (calcType === "MATRIX_BASED") {
+   451→      return (
+   452→        <div className="space-y-4">
+   453→          <div>
+   454→            <Label>Type de matrice</Label>
+   455→            <Select value={(metadata.matrixType as string) || "FISCAL_POWER"} onValueChange={(v) => setMetadata({ ...metadata, matrixType: v })}>
+   456→              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+   457→              <SelectContent>
+   458→                <SelectItem value="FISCAL_POWER">Puissance fiscale</SelectItem>
+   459→                <SelectItem value="FORMULA">Formule (IC/IPT)</SelectItem>
+   460→                <SelectItem value="TIERCE_COMPLETE">Tierce complète</SelectItem>
+   461→                <SelectItem value="TIERCE_COLLISION">Tierce collision</SelectItem>
+   462→                <SelectItem value="FUEL_TYPE">Type carburant</SelectItem>
+   463→                <SelectItem value="SEATS">Nombre de places</SelectItem>
+   464→              </SelectContent>
+   465→            </Select>
+   466→          </div>
+   467→          <p className="text-sm text-muted-foreground">
+   468→            Les règles tarifaires associées définissent les valeurs de la matrice. Utilisez la section ci-dessous pour les gérer.
+   469→          </p>
+   470→        </div>
+   471→      );
+   472→    }
+   473→    return null;
+   474→  };
+   475→
+   476→  const selectedCoverage = items.find((c) => c.id === selectedId);
+   477→
+   478→  return (
+   479→    <div className="space-y-4">
+   480→      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+   481→        <h1 className="text-2xl font-bold">Garanties</h1>
+   482→        <div className="flex items-center gap-2 flex-wrap">
+   483→          <div className="relative">
+   484→            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+   485→            <Input placeholder="Rechercher..." value={search} onChange={(e) => { setSearch(e.target.value); setLoading(true); }} className="pl-9 w-44" />
+   486→          </div>
+   487→          <Select value={filterInsurer} onValueChange={(v) => { setFilterInsurer(v === "__all__" ? "" : v); setLoading(true); }}>
+   488→            <SelectTrigger className="w-36"><SelectValue placeholder="Assureur" /></SelectTrigger>
+   489→            <SelectContent>
+   490→              <SelectItem value="__all__">Tous</SelectItem>
+   491→              {insurers.map((i) => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}
+   492→            </SelectContent>
+   493→          </Select>
+   494→          <Select value={filterCategory} onValueChange={(v) => { setFilterCategory(v === "__all__" ? "" : v); setLoading(true); }}>
+   495→            <SelectTrigger className="w-36"><SelectValue placeholder="Catégorie" /></SelectTrigger>
+   496→            <SelectContent>
+   497→              <SelectItem value="__all__">Toutes</SelectItem>
+   498→              {categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+   499→            </SelectContent>
+   500→          </Select>
+   501→          <Select value={filterCalcType} onValueChange={(v) => { setFilterCalcType(v === "__all__" ? "" : v); setLoading(true); }}>
+   502→            <SelectTrigger className="w-36"><SelectValue placeholder="Méthode" /></SelectTrigger>
+   503→            <SelectContent>
+   504→              <SelectItem value="__all__">Toutes</SelectItem>
+   505→              <SelectItem value="FREE">Gratuit</SelectItem>
+   506→              <SelectItem value="FIXED_AMOUNT">Montant fixe</SelectItem>
+   507→              <SelectItem value="VARIABLE_BASED">Variable</SelectItem>
+   508→              <SelectItem value="MATRIX_BASED">Matrice</SelectItem>
+   509→            </SelectContent>
+   510→          </Select>
+   511→          <Button className="bg-[#B9E54D] text-black hover:bg-[#a5d044]" onClick={openCreate}>
+   512→            <Plus className="h-4 w-4 mr-2" />Ajouter
+   513→          </Button>
+   514→        </div>
+   515→      </div>
+   516→
+   517→      {loading ? (
+   518→        <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-14 rounded-lg" />)}</div>
+   519→      ) : items.length === 0 ? (
+   520→        <Card className="rounded-xl border-0 shadow-sm"><CardContent className="p-8 text-center text-muted-foreground">Aucune garantie trouvée</CardContent></Card>
+   521→      ) : (
+   522→        <>
+   523→          {/* Desktop table */}
+   524→          <div className="hidden md:block rounded-xl border shadow-sm overflow-hidden">
+   525→            <Table>
+   526→              <TableHeader>
+   527→                <TableRow>
+   528→                  <TableHead>Nom</TableHead>
+   529→                  <TableHead>Type</TableHead>
+   530→                  <TableHead>Assureur</TableHead>
+   531→                  <TableHead>Méthode</TableHead>
+   532→                  <TableHead className="text-center">Obligatoire</TableHead>
+   533→                  <TableHead className="text-center">Ordre</TableHead>
+   534→                  <TableHead>Statut</TableHead>
+   535→                  <TableHead className="w-12"></TableHead>
+   536→                </TableRow>
+   537→              </TableHeader>
+   538→              <TableBody>
+   539→                {items.map((item) => (
+   540→                  <TableRow
+   541→                    key={item.id}
+   542→                    className={`cursor-pointer ${selectedId === item.id ? "bg-muted/60" : ""}`}
+   543→                    onClick={() => handleRowClick(item.id)}
+   544→                  >
+   545→                    <TableCell className="font-medium">{item.name}</TableCell>
+   546→                    <TableCell className="text-sm text-muted-foreground">{item.type}</TableCell>
+   547→                    <TableCell className="text-sm">{item.insurer.name}</TableCell>
+   548→                    <TableCell>
+   549→                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${calcBadge[item.calculationType] ?? ""}`}>
+   550→                        {calcLabel[item.calculationType] ?? item.calculationType}
+   551→                      </span>
+   552→                    </TableCell>
+   553→                    <TableCell className="text-center">{item.isMandatory ? <Check className="h-4 w-4 text-emerald-600 mx-auto" /> : <Minus className="h-4 w-4 text-muted-foreground mx-auto" />}</TableCell>
+   554→                    <TableCell className="text-center">{item.displayOrder}</TableCell>
+   555→                    <TableCell><Switch checked={item.isActive} onCheckedChange={async (v) => {
+   556→                      try { await fetch(`/api/admin/coverages/${item.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isActive: v }) }); fetchItems(); }
+   557→                      catch { toast({ title: "Erreur", variant: "destructive" }); }
+   558→                    }} onClick={(e) => e.stopPropagation()} /></TableCell>
+   559→                    <TableCell>
+   560→                      <DropdownMenu>
+   561→                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+   562→                        <DropdownMenuContent align="end">
+   563→                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openEdit(item); }}><Pencil className="h-4 w-4 mr-2" />Modifier</DropdownMenuItem>
+   564→                          <DropdownMenuItem className="text-destructive" onClick={(e) => { e.stopPropagation(); setDeleteId(item.id); }}><Trash2 className="h-4 w-4 mr-2" />Supprimer</DropdownMenuItem>
+   565→                        </DropdownMenuContent>
+   566→                      </DropdownMenu>
+   567→                    </TableCell>
+   568→                  </TableRow>
+   569→                ))}
+   570→              </TableBody>
+   571→            </Table>
+   572→          </div>
+   573→          {/* Mobile cards */}
+   574→          <div className="md:hidden space-y-3">
+   575→            {items.map((item) => (
+   576→              <Card key={item.id} className={`rounded-xl border shadow-sm cursor-pointer transition-colors ${selectedId === item.id ? "ring-2 ring-[#B9E54D]" : ""}`} onClick={() => handleRowClick(item.id)}>
+   577→                <CardContent className="p-4 space-y-2">
+   578→                  <div className="flex items-start justify-between">
+   579→                    <div>
+   580→                      <p className="font-semibold">{item.name}</p>
+   581→                      <p className="text-xs text-muted-foreground">{item.insurer.name}</p>
+   582→                    </div>
+   583→                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${calcBadge[item.calculationType] ?? ""}`}>
+   584→                      {calcLabel[item.calculationType] ?? item.calculationType}
+   585→                    </span>
+   586→                  </div>
+   587→                  <div className="flex gap-2">
+   588→                    <Button variant="outline" size="sm" className="flex-1" onClick={(e) => { e.stopPropagation(); openEdit(item); }}><Pencil className="h-3 w-3 mr-1" />Modifier</Button>
+   589→                    <Button variant="outline" size="sm" className="text-destructive" onClick={(e) => { e.stopPropagation(); setDeleteId(item.id); }}><Trash2 className="h-3 w-3" /></Button>
+   590→                  </div>
+   591→                </CardContent>
+   592→              </Card>
+   593→            ))}
+   594→          </div>
+   595→        </>
+   596→      )}
+   597→
+   598→      {/* Tariff Rules Panel */}
+   599→      {selectedId && selectedCoverage && (
+   600→        <Card className="rounded-xl border shadow-sm">
+   601→          <CardContent className="p-4 space-y-4">
+   602→            <div className="flex items-center justify-between">
+   603→              <div>
+   604→                <h2 className="text-lg font-semibold">Règles tarifaires</h2>
+   605→                <p className="text-sm text-muted-foreground">{selectedCoverage.code} — {selectedCoverage.name}</p>
+   606→              </div>
+   607→              <div className="flex items-center gap-2">
+   608→                <Button variant="outline" size="sm" onClick={() => setSelectedId(null)}><X className="h-4 w-4 mr-1" />Fermer</Button>
+   609→                <Button className="bg-[#B9E54D] text-black hover:bg-[#a5d044]" size="sm" onClick={openTrCreate}>
+   610→                  <Plus className="h-4 w-4 mr-1" />Ajouter
+   611→                </Button>
+   612→              </div>
+   613→            </div>
+   614→            {trLoading ? (
+   615→              <Skeleton className="h-24 rounded-lg" />
+   616→            ) : tariffRules.length === 0 ? (
+   617→              <p className="text-sm text-muted-foreground text-center py-6">Aucune règle tarifaire</p>
+   618→            ) : (
+   619→              <div className="max-h-96 overflow-y-auto rounded-xl border">
+   620→                <Table>
+   621→                  <TableHeader>
+   622→                    <TableRow>
+   623→                      <TableHead>Carburant</TableHead>
+   624→                      <TableHead className="text-center">Min CV</TableHead>
+   625→                      <TableHead className="text-center">Max CV</TableHead>
+   626→                      <TableHead className="text-right">Taux (%)</TableHead>
+   627→                      <TableHead className="text-right">Montant fixe</TableHead>
+   628→                      <TableHead className="w-12"></TableHead>
+   629→                    </TableRow>
+   630→                  </TableHeader>
+   631→                  <TableBody>
+   632→                    {tariffRules.map((rule) => (
+   633→                      <TableRow key={rule.id}>
+   634→                        <TableCell className="text-sm">{rule.fuelType ?? "—"}</TableCell>
+   635→                        <TableCell className="text-center text-sm">{rule.minFiscalPower ?? "—"}</TableCell>
+   636→                        <TableCell className="text-center text-sm">{rule.maxFiscalPower ?? "—"}</TableCell>
+   637→                        <TableCell className="text-right text-sm">{rule.baseRate != null ? `${rule.baseRate}%` : "—"}</TableCell>
+   638→                        <TableCell className="text-right text-sm">{rule.fixedAmount != null ? new Intl.NumberFormat("fr-FR").format(rule.fixedAmount) + " FCFA" : "—"}</TableCell>
+   639→                        <TableCell>
+   640→                          <DropdownMenu>
+   641→                            <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+   642→                            <DropdownMenuContent align="end">
+   643→                              <DropdownMenuItem onClick={() => openTrEdit(rule)}><Pencil className="h-4 w-4 mr-2" />Modifier</DropdownMenuItem>
+   644→                              <DropdownMenuItem className="text-destructive" onClick={() => setTrDeleteId(rule.id)}><Trash2 className="h-4 w-4 mr-2" />Supprimer</DropdownMenuItem>
+   645→                            </DropdownMenuContent>
+   646→                          </DropdownMenu>
+   647→                        </TableCell>
+   648→                      </TableRow>
+   649→                    ))}
+   650→                  </TableBody>
+   651→                </Table>
+   652→              </div>
+   653→            )}
+   654→          </CardContent>
+   655→        </Card>
+   656→      )}
+   657→
+   658→      {/* ── Wizard Dialog ──────────────────────────────────── */}
+   659→      <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) setDialogOpen(false); }}>
+   660→        <DialogContent className="sm:max-w-3xl max-h-[90vh]">
+   661→          <DialogHeader>
+   662→            <DialogTitle>{editing ? "Modifier la garantie" : "Nouvelle garantie"}</DialogTitle>
+   663→          </DialogHeader>
+   664→
+   665→          {/* Step indicator */}
+   666→          <div className="flex items-center justify-center gap-2 pb-2">
+   667→            {[1, 2, 3].map((s) => (
+   668→              <div key={s} className="flex items-center gap-2">
+   669→                <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${step > s ? "bg-emerald-500 text-white" : step === s ? "bg-[#B9E54D] text-black" : "bg-muted text-muted-foreground"}`}>
+   670→                  {step > s ? <Check className="h-4 w-4" /> : s}
+   671→                </div>
+   672→                {s < 3 && <div className={`h-0.5 w-12 ${step > s ? "bg-emerald-500" : "bg-muted"}`} />}
+   673→              </div>
+   674→            ))}
+   675→          </div>
+   676→
+   677→          <ScrollArea className="max-h-[60vh] pr-4">
+   678→            {step === 1 && (
+   679→              <div className="space-y-4">
+   680→                <div className="w-full">
+   681→                  <Label>Catégorie Produit</Label>
+   682→                  <Select value={step1.insuranceCategoryId} onValueChange={(v) => setStep1({ ...step1, insuranceCategoryId: v })}>
+   683→                    <SelectTrigger className="w-full"><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
+   684→                    <SelectContent>
+   685→                      {insuranceCategories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+   686→                    </SelectContent>
+   687→                  </Select>
+   688→                </div>
+   689→                <div className="w-full"><Label>Nom *</Label><Input className="w-full" value={step1.name} onChange={(e) => setStep1({ ...step1, name: e.target.value })} /></div>
+   690→                <div className="w-full"><Label>Description</Label><Textarea className="w-full" value={step1.description} onChange={(e) => setStep1({ ...step1, description: e.target.value })} rows={2} /></div>
+   691→                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+   692→                  <div className="w-full">
+   693→                    <Label>Assureur *</Label>
+   694→                    <Select value={step1.insurerId} onValueChange={(v) => setStep1({ ...step1, insurerId: v })}>
+   695→                      <SelectTrigger className="w-full"><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
+   696→                      <SelectContent>{insurers.map((i) => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}</SelectContent>
+   697→                    </Select>
+   698→                  </div>
+   699→                  <div className="w-full">
+   700→                    <Label>Cat. Garantie</Label>
+   701→                    <Select value={step1.categoryId} onValueChange={(v) => setStep1({ ...step1, categoryId: v })}>
+   702→                      <SelectTrigger className="w-full"><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
+   703→                      <SelectContent>
+   704→                        <SelectItem value="__none__">Aucune</SelectItem>
+   705→                        {categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+   706→                      </SelectContent>
+   707→                    </Select>
+   708→                  </div>
+   709→                </div>
+   710→                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+   711→                  <div className="w-full"><Label>Ordre d'affichage</Label><Input className="w-full" type="number" value={step1.displayOrder} onChange={(e) => setStep1({ ...step1, displayOrder: e.target.value })} /></div>
+   712→                  <div className="flex items-center justify-between h-full pt-6">
+   713→                    <Label>Obligatoire</Label>
+   714→                    <Switch checked={step1.isMandatory} onCheckedChange={(v) => setStep1({ ...step1, isMandatory: v })} />
+   715→                  </div>
+   716→                </div>
+   717→              </div>
+   718→            )}
+   719→
+   720→            {step === 2 && (
+   721→              <div className="space-y-3 py-2">
+   722→                <p className="text-sm text-muted-foreground mb-4">
+   723→                  Sélectionnez le mode de calcul de la prime pour cette garantie.
+   724→                </p>
+   725→                <div className="space-y-3">
+   726→                  {step2Options.map((opt) => {
+   727→                    const Icon = opt.icon;
+   728→                    const isSelected = calcType === opt.type;
+   729→                    return (
+   730→                      <button
+   731→                        key={opt.type}
+   732→                        type="button"
+   733→                        onClick={() => {
+   734→                          setCalcType(opt.type);
+   735→                          setMetadata({});
+   736→                        }}
+   737→                        className={`w-full flex items-start gap-4 rounded-xl border-2 p-4 text-left transition-all ${
+   738→                          isSelected
+   739→                            ? "border-[#B9E54D] bg-[#B9E54D]/5 shadow-sm"
+   740→                            : "border-border hover:border-muted-foreground/30 bg-card"
+   741→                        }`}
+   742→                      >
+   743→                        <div
+   744→                          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors ${
+   745→                            isSelected
+   746→                              ? "bg-[#B9E54D] text-black"
+   747→                              : "bg-muted text-muted-foreground"
+   748→                          }`}
+   749→                        >
+   750→                          <Icon className="h-5 w-5" />
+   751→                        </div>
+   752→                        <div className="flex-1 min-w-0">
+   753→                          <div className="flex items-center gap-2">
+   754→                            <span className="font-semibold text-sm">
+   755→                              {opt.label}
+   756→                            </span>
+   757→                            {isSelected && (
+   758→                              <Check className="h-4 w-4 text-[#B9E54D]" />
+   759→                            )}
+   760→                          </div>
+   761→                          <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+   762→                            {opt.description}
+   763→                          </p>
+   764→                          <p className="font-mono text-[11px] text-muted-foreground/70 mt-1">
+   765→                            {opt.formula}
+   766→                          </p>
+   767→                        </div>
+   768→                      </button>
+   769→                    );
+   770→                  })}
+   771→                </div>
+   772→              </div>
+   773→            )}
+   774→
+   775→            {step === 3 && (
+   776→              <div className="py-2">
+   777→                <div className="mb-4 flex items-center gap-2">
+   778→                  <Badge className={calcBadge[calcType] ?? ""}>{calcLabel[calcType] ?? calcType}</Badge>
+   779→                  <span className="text-sm text-muted-foreground">— Configuration</span>
+   780→                </div>
+   781→                {renderStep3()}
+   782→              </div>
+   783→            )}
+   784→          </ScrollArea>
+   785→
+   786→          <DialogFooter className="gap-2">
+   787→            {step > 1 && (
+   788→              <Button variant="outline" onClick={() => setStep(step - 1)}><ChevronLeft className="h-4 w-4 mr-1" />Précédent</Button>
+   789→            )}
+   790→            {step < 3 && (
+   791→              <Button className="bg-[#B9E54D] text-black hover:bg-[#a5d044]" onClick={() => setStep(step + 1)} disabled={step === 1 && (!step1.name.trim() || !step1.insurerId)}>
+   792→                Suivant<ChevronRight className="h-4 w-4 ml-1" />
+   793→              </Button>
+   794→            )}
+   795→            {step === 3 && (
+   796→              <Button className="bg-[#B9E54D] text-black hover:bg-[#a5d044]" onClick={handleSave} disabled={saving}>
+   797→                {saving ? "Enregistrement..." : editing ? "Modifier" : "Créer"}
+   798→              </Button>
+   799→            )}
+   800→          </DialogFooter>
+   801→        </DialogContent>
+   802→      </Dialog>
+   803→
+   804→      {/* Tariff Rule Dialog */}
+   805→      <Dialog open={trDialogOpen} onOpenChange={setTrDialogOpen}>
+   806→        <DialogContent className="sm:max-w-lg max-w-[95vw]">
+   807→          <DialogHeader><DialogTitle>{trEditing ? "Modifier la règle" : "Nouvelle règle tarifaire"}</DialogTitle></DialogHeader>
+   808→          <div className="space-y-4 py-2">
+   809→            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+   810→              <div><Label>Carburant</Label><Input className="w-full" value={trForm.fuelType} onChange={(e) => setTrForm({ ...trForm, fuelType: e.target.value })} placeholder="ESSENCE, DIESEL" /></div>
+   811→              <div><Label>Formule</Label><Input className="w-full" value={trForm.formulaName} onChange={(e) => setTrForm({ ...trForm, formulaName: e.target.value })} placeholder="Formule 1" /></div>
+   812→            </div>
+   813→            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+   814→              <div><Label>Min CV</Label><Input className="w-full" type="number" value={trForm.minFiscalPower} onChange={(e) => setTrForm({ ...trForm, minFiscalPower: e.target.value })} /></div>
+   815→              <div><Label>Max CV</Label><Input className="w-full" type="number" value={trForm.maxFiscalPower} onChange={(e) => setTrForm({ ...trForm, maxFiscalPower: e.target.value })} /></div>
+   816→            </div>
+   817→            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+   818→              <div><Label>Taux (%)</Label><Input className="w-full" type="number" step="0.01" value={trForm.baseRate} onChange={(e) => setTrForm({ ...trForm, baseRate: e.target.value })} /></div>
+   819→              <div><Label>Montant fixe (FCFA)</Label><Input className="w-full" type="number" value={trForm.fixedAmount} onChange={(e) => setTrForm({ ...trForm, fixedAmount: e.target.value })} /></div>
+   820→            </div>
+   821→            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+   822→              <div><Label>Montant min (FCFA)</Label><Input className="w-full" type="number" value={trForm.minAmount} onChange={(e) => setTrForm({ ...trForm, minAmount: e.target.value })} /></div>
+   823→              <div><Label>Montant max (FCFA)</Label><Input className="w-full" type="number" value={trForm.maxAmount} onChange={(e) => setTrForm({ ...trForm, maxAmount: e.target.value })} /></div>
+   824→            </div>
+   825→          </div>
+   826→          <DialogFooter>
+   827→            <Button variant="outline" onClick={() => setTrDialogOpen(false)}>Annuler</Button>
+   828→            <Button className="bg-[#B9E54D] text-black hover:bg-[#a5d044]" onClick={saveTr} disabled={trSaving}>{trSaving ? "..." : trEditing ? "Modifier" : "Ajouter"}</Button>
+   829→          </DialogFooter>
+   830→        </DialogContent>
+   831→      </Dialog>
+   832→
+   833→      {/* Delete AlertDialog */}
+   834→      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+   835→        <AlertDialogContent>
+   836→          <AlertDialogHeader><AlertDialogTitle>Supprimer la garantie ?</AlertDialogTitle><AlertDialogDescription>Cette action est irréversible. Les règles tarifaires associées seront également supprimées.</AlertDialogDescription></AlertDialogHeader>
+   837→          <AlertDialogFooter>
+   838→            <AlertDialogCancel>Annuler</AlertDialogCancel>
+   839→            <AlertDialogAction className="bg-destructive text-white hover:bg-destructive/90" onClick={handleDelete}>Supprimer</AlertDialogAction>
+   840→          </AlertDialogFooter>
+   841→        </AlertDialogContent>
+   842→      </AlertDialog>
+   843→
+   844→      {/* ── Tariff Rule Delete Dialog ──────────────────────── */}
+   845→      <AlertDialog open={!!trDeleteId} onOpenChange={() => setTrDeleteId(null)}>
+   846→        <AlertDialogContent>
+   847→          <AlertDialogHeader><AlertDialogTitle>Supprimer la règle tarifaire ?</AlertDialogTitle><AlertDialogDescription>Cette action est irréversible.</AlertDialogDescription></AlertDialogHeader>
+   848→          <AlertDialogFooter>
+   849→            <AlertDialogCancel>Annuler</AlertDialogCancel>
+   850→            <AlertDialogAction className="bg-destructive text-white hover:bg-destructive/90" onClick={handleTrDelete}>Supprimer</AlertDialogAction>
+   851→          </AlertDialogFooter>
+   852→        </AlertDialogContent>
+   853→      </AlertDialog>
+   854→    </div>
+   855→  );
+   856→}
