@@ -23,6 +23,7 @@ model Profile {
   quotes          Quote[]
   insurerAccounts InsurerAccount[]
   customRoles     ProfileRole[]
+  notifications   Notification[]
 }
 
 // ── 2. ASSUREURS ──────────────────────────────────────────────
@@ -257,7 +258,22 @@ model Backup {
   createdAt   DateTime @default(now())
 }
 
-// ── 13. RÔLES PERSONNALISÉS ──────────────────────────────────
+// ── 13. NOTIFICATIONS ─────────────────────────────────────
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String   @default("INFO") // INFO, SUCCESS, WARNING, ERROR
+  title     String
+  message   String
+  link      String?  // optional navigation link
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, isRead])
+}
+
+// ── 14. RÔLES PERSONNALISÉS ──────────────────────────────────
 model Role {
   id          String   @id @default(cuid())
   name        String   @unique

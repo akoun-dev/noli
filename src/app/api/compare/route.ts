@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import type { PersonalInfo, VehicleInfo, CoverageNeeds, InsurerOffer } from "@/types";
+import { createNotification } from "@/lib/notifications";
 
 function calculatePrice(
   basePrice: number,
@@ -179,6 +180,28 @@ export async function POST(request: NextRequest) {
             estimatedPrice: results.length > 0 ? results[0].monthlyPrice : 0,
           },
         });
+
+        // Notify the user
+        createNotification({
+          userId: body.userId,
+          type: "SUCCESS",
+          title: "Devis envoyé",
+          message: `Votre devis ${ref} a été envoyé avec succès. ${results.length} offre(s) trouvée(s).`,
+        });
+
+        // Notify all active insurer account holders
+        const insurerProfiles = await db.insurerAccount.findMany({
+          where: { insurer: { isActive: true } },
+          select: { profileId: true },
+        });
+        for (const ip of insurerProfiles) {
+          createNotification({
+            userId: ip.profileId,
+            type: "INFO",
+            title: "Nouveau devis reçu",
+            message: `Un nouveau devis (${ref}) a été soumis et attend votre traitement.`,
+          });
+        }
       } catch { /* non-critical */ }
     }
 

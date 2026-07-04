@@ -659,3 +659,28 @@ Stage Summary:
 - Removed 5 static decorative cards from guarantees page
 - Step 2 redesigned from 2x2 emoji grid to vertical list with icons + descriptions
 - Verified via browser: decorative cards gone, new Step 2 works with proper selected state
+---
+Task ID: 3
+Agent: Main Agent
+Task: Full system check — fix toast system, build real notification system, verify all flows
+
+Work Log:
+- Fixed toast system: TOAST_LIMIT 1→5, TOAST_REMOVE_DELAY 1000000ms→5000ms
+- Added Notification model to Prisma schema (id, userId, type, title, message, link, isRead, createdAt)
+- Created server helper: src/lib/notifications.ts (createNotification)
+- Created API routes: GET/POST /api/notifications, PUT /api/notifications/[id], PUT /api/notifications/read-all
+- Built reusable NotificationDropdown component (src/components/shared/notification-dropdown.tsx) with Popover, unread badge, mark-all-read, relative time in French
+- Wired NotificationDropdown into admin-page.tsx (desktop + mobile), insurer-layout.tsx, user-layout.tsx
+- Rewrote UserNotificationsTab to fetch real data from API with loading/empty/list states
+- Auto-notification triggers: compare API creates user+insurer notifications on quote, insurer quote status change notifies user
+- Installed shadcn popover component
+- Fixed Bell import accidentally removed from user-layout.tsx
+- Restarted dev server to refresh Prisma client cache for new Notification model
+- Browser-verified: notification popover shows 3 test notifications, red badge "3", green unread dots, "Tout marquer comme lu" clears all, admin dropdown shows empty state, guarantee 3-step wizard still works
+
+Stage Summary:
+- Complete notification system built from scratch (DB model → API → UI → auto-triggers)
+- Toast system fixed (was limited to 1 toast with 16min cleanup delay)
+- All 3 layouts (admin, insurer, user) have working notification bell dropdowns
+- User notifications tab now shows real data instead of static placeholder
+- Zero new lint errors (only pre-existing launch-server.js issues)

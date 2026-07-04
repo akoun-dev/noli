@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
+import { createNotification } from "@/lib/notifications";
 
 const VALID_STATUSES = ["APPROVED", "REJECTED", "PENDING"];
 
@@ -72,6 +73,25 @@ export async function PUT(
       where: { id },
       data: updateData,
     });
+
+    // Notify the quote owner
+    if (quote.userId) {
+      if (status === "APPROVED") {
+        createNotification({
+          userId: quote.userId,
+          type: "SUCCESS",
+          title: "Devis approuvé",
+          message: `Votre devis ${quote.reference} a été approuvé par l'assureur.`,
+        });
+      } else if (status === "REJECTED") {
+        createNotification({
+          userId: quote.userId,
+          type: "WARNING",
+          title: "Devis rejeté",
+          message: `Votre devis ${quote.reference} a été rejeté par l'assureur.`,
+        });
+      }
+    }
 
     return NextResponse.json(updated);
   } catch (error) {

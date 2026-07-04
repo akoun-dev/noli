@@ -46,6 +46,7 @@ import { UserDocumentsTab } from "./tabs/user-documents-tab";
 import { UserReviewsTab } from "./tabs/user-reviews-tab";
 import { UserPaymentsTab } from "./tabs/user-payments-tab";
 import { UserHistoryTab } from "./tabs/user-history-tab";
+import { NotificationDropdown } from "@/components/shared/notification-dropdown";
 import { UserNotificationsTab } from "./tabs/user-notifications-tab";
 import { UserProfileTab } from "./tabs/user-profile-tab";
 import { UserSettingsTab } from "./tabs/user-settings-tab";
@@ -257,15 +258,7 @@ export function UserLayout() {
 
             {/* Right: Actions */}
             <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-9 w-9"
-                onClick={() => setUserTab("notifications")}
-                aria-label="Notifications"
-              >
-                <Bell className="h-4 w-4" />
-              </Button>
+              {user.id && <NotificationDropdown userId={user.id} />}
               <ThemeToggle />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

@@ -19,9 +19,9 @@ import {
   Sun,
   LogOut,
   ChevronRight,
-  Bell,
   Building2,
 } from "lucide-react";
+import { NotificationDropdown } from "@/components/shared/notification-dropdown";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -255,17 +255,7 @@ export function InsurerLayout() {
 
             {/* Right: Actions */}
             <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-9 w-9 relative"
-                aria-label="Notifications"
-              >
-                <Bell className="h-4 w-4" />
-                <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white font-bold">
-                  3
-                </span>
-              </Button>
+              {user.id && <NotificationDropdown userId={user.id} />}
               <ThemeToggle />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
