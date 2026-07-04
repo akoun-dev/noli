@@ -28,7 +28,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Search, Plus, MoreHorizontal, Pencil, Trash2, ChevronLeft, ChevronRight, Check, Minus, X } from "lucide-react";
+import { Search, Plus, MoreHorizontal, Pencil, Trash2, ChevronLeft, ChevronRight, Check, Minus, X, DollarSign, Percent, LayoutGrid, CircleDot } from "lucide-react";
 
 /* ── Types ─────────────────────────────────────────────────── */
 interface InsurerOption { id: string; name: string; code: string; }
@@ -98,11 +98,41 @@ const emptyStep1: Step1Data = {
   isMandatory: false, displayOrder: "0", isActive: true,
 };
 
-const step2Cards: { type: CalculationType; label: string; color: string; emoji: string }[] = [
-  { type: "FREE", label: "GRATUIT", color: "border-emerald-400 bg-emerald-50", emoji: "🟢" },
-  { type: "FIXED_AMOUNT", label: "MONTANT FIXE", color: "border-blue-400 bg-blue-50", emoji: "🔵" },
-  { type: "VARIABLE_BASED", label: "VARIABLE", color: "border-orange-400 bg-orange-50", emoji: "🟠" },
-  { type: "MATRIX_BASED", label: "MATRICE", color: "border-purple-400 bg-purple-50", emoji: "🟣" },
+const step2Options: {
+  type: CalculationType;
+  label: string;
+  description: string;
+  icon: typeof DollarSign;
+  formula: string;
+}[] = [
+  {
+    type: "FREE",
+    label: "Gratuit",
+    description: "Aucun frais additionnel. Prime = 0 FCFA. Idéal pour les garanties promotionnelles ou incluses.",
+    icon: CircleDot,
+    formula: "Prime = 0 FCFA",
+  },
+  {
+    type: "FIXED_AMOUNT",
+    label: "Montant fixe",
+    description: "Un montant fixe est appliqué indépendamment des paramètres du véhicule. Ex: Assistance à 5 000 FCFA.",
+    icon: DollarSign,
+    formula: "Prime = Montant fixe (ou prix réduit en pack)",
+  },
+  {
+    type: "VARIABLE_BASED",
+    label: "Basé sur une variable du véhicule",
+    description: "Le montant est calculé en pourcentage d'une variable (VN, VA, Puissance fiscale) avec option de seuil conditionnel.",
+    icon: Percent,
+    formula: "Prime = Variable × (Taux / 100)",
+  },
+  {
+    type: "MATRIX_BASED",
+    label: "Matrice tarifaire",
+    description: "Le montant est déterminé par lookup dans une grille multi-dimensionnelle (PF, carburant, catégorie, formule).",
+    icon: LayoutGrid,
+    formula: "Prime = lookup dans la grille",
+  },
 ];
 
 /* ── Component ─────────────────────────────────────────────── */
@@ -688,18 +718,57 @@ export function CoveragesTab() {
             )}
 
             {step === 2 && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4">
-                {step2Cards.map((c) => (
-                  <button
-                    key={c.type}
-                    type="button"
-                    onClick={() => setCalcType(c.type)}
-                    className={`flex flex-col items-center gap-3 rounded-xl border-2 p-6 transition-all hover:shadow-md ${calcType === c.type ? `${c.color} shadow-md ring-2 ring-offset-2 ring-[#B9E54D]` : "border-border hover:border-muted-foreground/30"}`}
-                  >
-                    <span className="text-2xl">{c.emoji}</span>
-                    <span className="font-semibold">{c.label}</span>
-                  </button>
-                ))}
+              <div className="space-y-3 py-2">
+                <p className="text-sm text-muted-foreground mb-4">
+                  Sélectionnez le mode de calcul de la prime pour cette garantie.
+                </p>
+                <div className="space-y-3">
+                  {step2Options.map((opt) => {
+                    const Icon = opt.icon;
+                    const isSelected = calcType === opt.type;
+                    return (
+                      <button
+                        key={opt.type}
+                        type="button"
+                        onClick={() => {
+                          setCalcType(opt.type);
+                          setMetadata({});
+                        }}
+                        className={`w-full flex items-start gap-4 rounded-xl border-2 p-4 text-left transition-all ${
+                          isSelected
+                            ? "border-[#B9E54D] bg-[#B9E54D]/5 shadow-sm"
+                            : "border-border hover:border-muted-foreground/30 bg-card"
+                        }`}
+                      >
+                        <div
+                          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors ${
+                            isSelected
+                              ? "bg-[#B9E54D] text-black"
+                              : "bg-muted text-muted-foreground"
+                          }`}
+                        >
+                          <Icon className="h-5 w-5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-sm">
+                              {opt.label}
+                            </span>
+                            {isSelected && (
+                              <Check className="h-4 w-4 text-[#B9E54D]" />
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                            {opt.description}
+                          </p>
+                          <p className="font-mono text-[11px] text-muted-foreground/70 mt-1">
+                            {opt.formula}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             )}
 

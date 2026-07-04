@@ -3,7 +3,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Plus, Pencil, Trash2, Search, Loader2, MoreHorizontal, Check, ChevronLeft, ChevronRight, X, Info,
+  Plus, Pencil, Trash2, Search, Loader2, MoreHorizontal, Check, ChevronLeft, ChevronRight, X,
+  DollarSign, Percent, LayoutGrid, CircleDot,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -71,13 +72,43 @@ const calcLabels: Record<string, string> = {
   FREE: "Gratuit", FIXED_AMOUNT: "Montant fixe", VARIABLE_BASED: "Taux variable", MATRIX_BASED: "Matrice",
 };
 
-// ── Calc method card data ─────────────────────────────────────────
-const calcMethods = [
-  { id: "FREE", emoji: "🟢", label: "GRATUIT", desc: "Prime nulle (gratuite) — Aucun frais pour cette garantie", borderColor: "border-emerald-500", bgSelected: "bg-emerald-50" },
-  { id: "FIXED_AMOUNT", emoji: "🔵", label: "MONTANT FIXE", desc: "Prime fixe indépendante du véhicule — Ex: 15 000 FCFA", borderColor: "border-blue-500", bgSelected: "bg-blue-50" },
-  { id: "VARIABLE_BASED", emoji: "🟠", label: "BASÉ SUR UNE VARIABLE", desc: "Pourcentage sur une valeur du véhicule — Ex: 0.42% de la valeur vénale", borderColor: "border-orange-500", bgSelected: "bg-orange-50" },
-  { id: "MATRIX_BASED", emoji: "🟣", label: "BASÉ SUR UNE MATRICE", desc: "Grille de tarification — Ex: par puissance fiscale ou carburant", borderColor: "border-orange-500", bgSelected: "bg-purple-50" },
-] as const;
+// ── Calc method card data (matching insurer style) ───────────────
+const step2Options: {
+  type: string;
+  label: string;
+  description: string;
+  icon: typeof DollarSign;
+  formula: string;
+}[] = [
+  {
+    type: "FREE",
+    label: "Gratuit",
+    description: "Aucun frais additionnel. Prime = 0 FCFA. Idéal pour les garanties promotionnelles ou incluses.",
+    icon: CircleDot,
+    formula: "Prime = 0 FCFA",
+  },
+  {
+    type: "FIXED_AMOUNT",
+    label: "Montant fixe",
+    description: "Un montant fixe est appliqué indépendamment des paramètres du véhicule. Ex: Assistance à 5 000 FCFA.",
+    icon: DollarSign,
+    formula: "Prime = Montant fixe (ou prix réduit en pack)",
+  },
+  {
+    type: "VARIABLE_BASED",
+    label: "Basé sur une variable du véhicule",
+    description: "Le montant est calculé en pourcentage d'une variable (VN, VA, Puissance fiscale) avec option de seuil conditionnel.",
+    icon: Percent,
+    formula: "Prime = Variable × (Taux / 100)",
+  },
+  {
+    type: "MATRIX_BASED",
+    label: "Matrice tarifaire",
+    description: "Le montant est déterminé par lookup dans une grille multi-dimensionnelle (PF, carburant, catégorie, formule).",
+    icon: LayoutGrid,
+    formula: "Prime = lookup dans la grille",
+  },
+];
 
 // ── Form state type ──────────────────────────────────────────────
 interface WizardForm {
@@ -373,54 +404,56 @@ export function GarantiesTab() {
     </div>
   );
 
-  // ── Step 2: Calc method ─────────────────────────────────────────
+  // ── Step 2: Calc method (insurer-style cards) ──────────────────
   const renderStep2 = () => (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {calcMethods.map((m) => {
-          const isSelected = form.calcMethod === m.id;
+    <div className="space-y-3 py-2">
+      <p className="text-sm text-muted-foreground mb-4">
+        Sélectionnez le mode de calcul de la prime pour cette garantie.
+      </p>
+      <div className="space-y-3">
+        {step2Options.map((opt) => {
+          const Icon = opt.icon;
+          const isSelected = form.calcMethod === opt.type;
           return (
             <button
-              key={m.id}
+              key={opt.type}
               type="button"
-              onClick={() => setForm({ ...form, calcMethod: m.id })}
-              className={`text-left rounded-xl border-2 p-4 transition-all hover:shadow-md ${isSelected ? `${m.borderColor} ${m.bgSelected}` : "border-muted hover:border-muted-foreground/30"}`}
+              onClick={() => setForm({ ...form, calcMethod: opt.type })}
+              className={`w-full flex items-start gap-4 rounded-xl border-2 p-4 text-left transition-all ${
+                isSelected
+                  ? "border-[#B9E54D] bg-[#B9E54D]/5 shadow-sm"
+                  : "border-border hover:border-muted-foreground/30 bg-card"
+              }`}
             >
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-lg">{m.emoji}</span>
-                <span className="font-bold text-sm">{m.label}</span>
+              <div
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors ${
+                  isSelected
+                    ? "bg-[#B9E54D] text-black"
+                    : "bg-muted text-muted-foreground"
+                }`}
+              >
+                <Icon className="h-5 w-5" />
               </div>
-              <p className="text-xs text-muted-foreground leading-relaxed">{m.desc}</p>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-sm">
+                    {opt.label}
+                  </span>
+                  {isSelected && (
+                    <Check className="h-4 w-4 text-[#B9E54D]" />
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                  {opt.description}
+                </p>
+                <p className="font-mono text-[11px] text-muted-foreground/70 mt-1">
+                  {opt.formula}
+                </p>
+              </div>
             </button>
           );
         })}
       </div>
-
-      {form.calcMethod && (
-        <div className="rounded-lg border-l-4 border-l-blue-500 bg-blue-50 p-3">
-          <p className="text-sm font-medium text-blue-800">
-            {form.calcMethod === "FREE" && "Gratuit : Aucun frais pour cette garantie"}
-            {form.calcMethod === "FIXED_AMOUNT" && "Montant Fixe : Prime fixe indépendante du véhicule"}
-            {form.calcMethod === "VARIABLE_BASED" && "Basé sur une variable : Pourcentage sur une valeur du véhicule"}
-            {form.calcMethod === "MATRIX_BASED" && "Basé sur une matrice : Grille de tarification"}
-          </p>
-        </div>
-      )}
-
-      {form.calcMethod === "FREE" && (
-        <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-4 text-sm text-emerald-800">
-          <Info className="h-4 w-4 inline mr-2" />
-          Cette garantie est gratuite : aucun taux ni montant à saisir ici
-        </div>
-      )}
-
-      {form.calcMethod === "FIXED_AMOUNT" && (
-        <div className="grid gap-2">
-          <Label>Montant fixe (FCFA)</Label>
-          <Input className="w-full" type="number" value={form.fixedPrice} onChange={(e) => setForm({ ...form, fixedPrice: e.target.value })} placeholder="Ex: 15000" />
-          <p className="text-xs text-muted-foreground">Prime fixe indépendante du véhicule</p>
-        </div>
-      )}
     </div>
   );
 
