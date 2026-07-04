@@ -837,3 +837,21 @@ Stage Summary:
 - Fallback to generic features when no pricing breakdown data is available
 - Visual style matches reference screenshot (check/X icons, annual price, alternating rows)
 
+---
+Task ID: 2
+Agent: Main
+Task: Fix user@test.ci test account login not working
+
+Work Log:
+- Verified profile user@test.ci exists in DB (active, USER role)
+- Tested login API: POST /api/auth returned 401 "Email ou mot de passe incorrect"
+- Compared stored bcrypt hash against "User@2025" — no match
+- Root cause: seed file was modified after initial DB population, so password hashes are stale
+- Reset passwords for all 3 test accounts using bcrypt.hashSync with correct values
+- Verified all 3 accounts work via curl: user@test.ci, admin@noli.ci, assureur@saham.ci
+- Verified user@test.ci login via browser — successfully redirects to user dashboard
+
+Stage Summary:
+- Passwords reset for: user@test.ci (User@2025), admin@noli.ci (Admin@2025), assureur@saham.ci (Assureur@2025)
+- All 3 test accounts now work correctly
+
