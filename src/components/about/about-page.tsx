@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Eye, Zap, Shield, Heart } from "lucide-react";
 
@@ -54,14 +55,29 @@ const values = [
   },
 ];
 
-const stats = [
-  { value: "6+", label: "Assureurs partenaires" },
-  { value: "18+", label: "Offres disponibles" },
-  { value: "40%", label: "D'économies moyennes" },
-];
-
 /* ─── Component ────────────────────────────────────────────────── */
 export function AboutPage() {
+  const [stats, setStats] = useState<{ value: string; label: string }[]>([]);
+
+  useEffect(() => {
+    fetch("/api/stats")
+      .then((r) => r.json())
+      .then((data) => {
+        const items = [
+          { value: `${data.insurers}+`, label: "Assureurs partenaires" },
+          { value: `${data.offers}+`, label: "Offres disponibles" },
+          { value: `${data.users}+`, label: "Utilisateurs inscrits" },
+        ];
+        setStats(items);
+      })
+      .catch(() => {
+        setStats([
+          { value: "—", label: "Assureurs partenaires" },
+          { value: "—", label: "Offres disponibles" },
+          { value: "—", label: "Utilisateurs inscrits" },
+        ]);
+      });
+  }, []);
   return (
     <main className="min-h-screen">
       {/* ─── Hero ────────────────────────────────────────────── */}

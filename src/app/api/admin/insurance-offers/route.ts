@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth-guard";
 
 function parseFeatures(offer: Record<string, unknown>) {
   try {
@@ -10,6 +11,7 @@ function parseFeatures(offer: Record<string, unknown>) {
 }
 
 export async function GET(request: NextRequest) {
+  const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
   try {
     const { searchParams } = request.nextUrl;
     const insurerId = searchParams.get("insurerId");
@@ -50,6 +52,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
   try {
     const body = await request.json();
     const {

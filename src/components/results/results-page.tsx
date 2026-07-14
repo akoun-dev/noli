@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useCallback } from "react";
+import React, { useMemo, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
@@ -25,6 +25,8 @@ import {
 } from "lucide-react";
 import { useAppStore } from "@/store/app-store";
 import type { InsurerOffer } from "@/types";
+import { formatFCFA } from "@/lib/utils";
+import { MAX_COMPARE, COVERAGE_OPTIONS, BUDGET_MAX, BUDGET_STEP, resolveCoverageName } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -32,19 +34,16 @@ import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 /* ──────────────────────────── helpers ──────────────────────────── */
-
-const formatFCFA = (amount: number) =>
-  new Intl.NumberFormat("fr-FR").format(amount) + " FCFA";
-
-const COVERAGE_OPTIONS = ["Tous", "Tiers", "Tiers+", "Tous Risques"] as const;
 
 const coverageBadgeStyle = (type: string) => {
   switch (type) {
@@ -58,8 +57,6 @@ const coverageBadgeStyle = (type: string) => {
       return "bg-muted/60 text-muted-foreground border-border";
   }
 };
-
-const MAX_COMPARE = 4;
 
 // Map DB coverage category codes to French display labels
 const GUARANTEE_LABELS: Record<string, string> = {
@@ -131,7 +128,7 @@ function FiltersSidebar({
   const allChecked = uncheckedInsurers.size === 0;
 
   return (
-    <aside className="bg-muted/30 rounded-xl p-4 lg:p-5 space-y-6 lg:sticky lg:top-20">
+    <aside className="bg-white dark:bg-card rounded-xl p-4 lg:p-5 space-y-6 lg:sticky lg:top-20 shadow-sm border border-border/60">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -234,8 +231,8 @@ function FiltersSidebar({
             value={[budgetMax]}
             onValueChange={([v]) => setBudgetMax(v)}
             min={0}
-            max={300000}
-            step={5000}
+            max={BUDGET_MAX}
+            step={BUDGET_STEP}
             className="w-full"
           />
           <p className="text-xs text-muted-foreground text-center">
@@ -270,7 +267,7 @@ function ComparisonBar({
       animate={{ y: 0, opacity: 1 }}
       exit={{ y: -60, opacity: 0 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
-      className="sticky top-16 z-40 bg-muted/80 backdrop-blur-md border-b border-border/60 shadow-sm"
+      className="sticky top-16 z-40 bg-muted/80 backdrop-blur-md border-b border-border/60 shadow-md"
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 py-3 flex flex-col sm:flex-row items-start sm:items-center gap-3">
         <div className="flex items-center gap-2 shrink-0">
@@ -335,26 +332,42 @@ function ComparisonModal({
   open: boolean;
   onClose: () => void;
 }) {
-  // Collect all unique guarantee names from pricingBreakdown across all offers
-  // Fallback to features if no pricingBreakdown exists
-  const allGuarantees = useMemo(() => {
-    const names = new Set<string>();
+  // Build category → guarantees structure from pricingBreakdown
+  const categories = useMemo(() => {
+    const catMap = new Map<string, { name: string; guarantees: string[] }>();
     let hasBreakdowns = false;
+
     for (const o of offers) {
       if (o.pricingBreakdown && o.pricingBreakdown.length > 0) {
         hasBreakdowns = true;
         for (const pb of o.pricingBreakdown) {
-          if (pb.guaranteeName) names.add(pb.guaranteeName);
+          const catKey = pb.categoryCode || "AUTRES";
+          if (!catMap.has(catKey)) {
+            catMap.set(catKey, { name: pb.categoryName || "Autres", guarantees: [] });
+          }
+          const entry = catMap.get(catKey)!;
+          if (!entry.guarantees.includes(pb.guaranteeName)) {
+            entry.guarantees.push(pb.guaranteeName);
+          }
         }
       }
     }
-    // If no offer has pricing breakdown data, fall back to features
+
+    // Fallback: use features if no breakdowns
     if (!hasBreakdowns) {
+      catMap.set("GARANTIES", { name: "Garanties incluses", guarantees: [] });
       for (const o of offers) {
-        for (const f of o.features) names.add(f);
+        for (const f of o.features) {
+          const name = resolveCoverageName(f);
+          const entry = catMap.get("GARANTIES")!;
+          if (!entry.guarantees.includes(name)) {
+            entry.guarantees.push(name);
+          }
+        }
       }
     }
-    return Array.from(names);
+
+    return Array.from(catMap.entries());
   }, [offers]);
 
   // Build a lookup: offer.id → Set of guarantee names it has
@@ -367,8 +380,7 @@ function ComparisonModal({
           if (pb.guaranteeName) set.add(pb.guaranteeName);
         }
       } else {
-        // Fallback: use features
-        for (const f of o.features) set.add(f);
+        for (const f of o.features) set.add(resolveCoverageName(f));
       }
       map.set(o.id, set);
     }
@@ -381,10 +393,15 @@ function ComparisonModal({
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto p-0">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border/60 bg-muted/30 sticky top-0 z-10">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border/60 bg-muted/30 sticky top-0 z-20">
           <DialogTitle className="text-lg font-bold text-foreground">
             Comparer les garanties
           </DialogTitle>
+          <DialogClose className="ring-offset-background focus:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none" asChild>
+            <button type="button" aria-label="Fermer">
+              <X className="size-4" />
+            </button>
+          </DialogClose>
           <DialogDescription className="sr-only">
             Comparaison détaillée de {offers.length} offres d&apos;assurance
           </DialogDescription>
@@ -453,47 +470,76 @@ function ComparisonModal({
                 ))}
               </tr>
 
-              {/* Guarantee rows */}
-              {allGuarantees.map((guarantee, idx) => {
-                const isZebra = idx % 2 === 1;
-                return (
-                  <tr
-                    key={guarantee}
-                    className={isZebra ? "bg-[#B9E54D]/5" : "bg-card"}
-                  >
+              {/* Guarantee rows grouped by category */}
+              {categories.map(([catKey, catData], catIdx) => (
+                <React.Fragment key={catKey}>
+                  {/* Category header with background badge */}
+                  <tr>
                     <td
-                      className={`p-4 text-sm font-medium text-foreground sticky left-0 border-b border-border/30 ${
-                        isZebra ? "bg-[#B9E54D]/5" : "bg-card"
-                      }`}
+                      className="p-0"
+                      colSpan={offers.length + 1}
                     >
-                      {guarantee}
+                      <div className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-muted/60 via-muted/30 to-transparent border-b border-t border-border/30">
+                        <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/10">
+                          <Shield className="size-3.5 text-primary" />
+                        </div>
+                        <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                          {catData.name}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground/50 ml-auto">
+                          {catData.guarantees.length} garanti{catData.guarantees.length > 1 ? 'es' : 'e'}
+                        </span>
+                      </div>
                     </td>
-                    {offers.map((offer) => {
-                      const hasGuarantee = guaranteeLookup.get(offer.id)?.has(guarantee) ?? false;
-                      return (
-                        <td
-                          key={offer.id}
-                          className="p-4 text-center border-b border-border/30"
-                        >
-                          {hasGuarantee ? (
-                            <div className="flex items-center justify-center">
-                              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
-                                <Check className="size-3.5 text-green-600 dark:text-green-400" />
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="flex items-center justify-center">
-                              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
-                                <X className="size-3.5 text-red-500 dark:text-red-400" />
-                              </div>
-                            </div>
-                          )}
-                        </td>
-                      );
-                    })}
                   </tr>
-                );
-              })}
+                  {/* Guarantees within this category */}
+                  {catData.guarantees.map((guarantee, idx) => {
+                    const isZebra = catIdx % 2 === 0 ? idx % 2 === 1 : idx % 2 === 0;
+                    return (
+                      <tr
+                        key={guarantee}
+                        className={`transition-colors ${
+                          isZebra ? "bg-[#B9E54D]/5" : "bg-card"
+                        } hover:bg-muted/20`}
+                      >
+                        <td
+                          className={`p-3 pl-6 text-sm text-foreground sticky left-0 border-b border-border/20 font-medium ${
+                            isZebra ? "bg-[#B9E54D]/5" : "bg-card"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <div className="w-1.5 h-1.5 rounded-full bg-primary/40 shrink-0" />
+                            {guarantee}
+                          </div>
+                        </td>
+                        {offers.map((offer) => {
+                          const hasGuarantee = guaranteeLookup.get(offer.id)?.has(guarantee) ?? false;
+                          return (
+                            <td
+                              key={offer.id}
+                              className="p-3 text-center border-b border-border/20"
+                            >
+                              {hasGuarantee ? (
+                                <div className="flex items-center justify-center">
+                                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30 ring-1 ring-green-200 dark:ring-green-800/50">
+                                    <Check className="size-3.5 text-green-600 dark:text-green-400" />
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="flex items-center justify-center">
+                                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-red-50 dark:bg-red-900/20 ring-1 ring-red-200 dark:ring-red-800/30">
+                                    <X className="size-3.5 text-red-400 dark:text-red-400" />
+                                  </div>
+                                </div>
+                              )}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
+                </React.Fragment>
+              ))}
             </tbody>
           </table>
         </div>
@@ -524,14 +570,23 @@ function SummaryPanels({ offers }: { offers: InsurerOffer[] }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
       {/* Left panel: Cheapest offers */}
-      <div className="bg-card rounded-xl border border-border/60 overflow-hidden">
+      <div className="bg-white dark:bg-card rounded-xl border border-border/60 shadow-sm overflow-hidden">
         {/* Panel header */}
         <div className="flex items-center justify-between px-4 py-3 bg-muted/30 border-b border-border/40">
           <TrendingDown className="size-4 text-primary" />
           <h3 className="text-sm font-semibold text-foreground text-center flex-1">
             Offres les moins chères
           </h3>
-          <Info className="size-4 text-muted-foreground" />
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button type="button" className="cursor-help">
+                <Info className="size-4 text-muted-foreground" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="left">
+              Les 3 offres les plus économiques parmi les résultats
+            </TooltipContent>
+          </Tooltip>
         </div>
         {/* Offer rows */}
         <div className="divide-y divide-border/30">
@@ -578,7 +633,16 @@ function SummaryPanels({ offers }: { offers: InsurerOffer[] }) {
           <h3 className="text-sm font-semibold text-foreground text-center flex-1">
             Assureurs les mieux notés
           </h3>
-          <Info className="size-4 text-muted-foreground" />
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button type="button" className="cursor-help">
+                <Info className="size-4 text-muted-foreground" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="left">
+              Les 3 assureurs les mieux notés par nos utilisateurs
+            </TooltipContent>
+          </Tooltip>
         </div>
         {/* Offer rows */}
         <div className="divide-y divide-border/30">
@@ -647,7 +711,7 @@ function OfferCard({
       layout
       className="space-y-0"
     >
-      <div className="bg-card rounded-xl border border-border/60 shadow-sm hover:shadow-lg transition-shadow duration-300 overflow-visible relative">
+      <div className="bg-white dark:bg-card rounded-xl border border-border/70 shadow-md hover:shadow-xl transition-all duration-300 overflow-visible relative hover:-translate-y-0.5">
         {/* Heart icon top-right */}
         <button
           className="absolute top-3 right-3 z-10 text-muted-foreground/50 hover:text-red-500 transition-colors"
@@ -824,7 +888,7 @@ function OfferCard({
                     {offer.features.map((feature, idx) => (
                       <li key={idx} className="flex items-start gap-2 text-sm">
                         <CheckCircle2 className="size-4 text-green-600 mt-0.5 shrink-0" />
-                        <span className="text-foreground/90">{feature}</span>
+                        <span className="text-foreground/90">{resolveCoverageName(feature)}</span>
                       </li>
                     ))}
                   </ul>
@@ -924,7 +988,7 @@ export function ResultsPage() {
     new Set()
   );
   const [coverageFilter, setCoverageFilter] = useState<string>("all");
-  const [budgetMax, setBudgetMax] = useState<number>(300000);
+  const [budgetMax, setBudgetMax] = useState<number>(BUDGET_MAX);
   const [priceMode, setPriceMode] = useState<"annual" | "monthly">("annual");
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
@@ -1030,7 +1094,7 @@ export function ResultsPage() {
   const handleRequestQuote = (offer: InsurerOffer) => {
     toast({
       title: "Devis enregistré",
-      description: `Votre demande de devis pour ${offer.name} a été enregistrée.`,
+      description: "Votre demande de devis a bien été enregistrée. Un conseiller vous contactera prochainement.",
     });
 
     const quote: import("@/types").QuoteRecord = {
@@ -1053,7 +1117,7 @@ export function ResultsPage() {
   const handleRequestCall = (offer: InsurerOffer) => {
     toast({
       title: "Demande de rappel envoyée",
-      description: `${offer.insurerName} vous rappellera sous 24h concernant l'offre ${offer.name}.`,
+      description: "Votre demande de rappel a bien été prise en compte. Un conseiller vous contactera prochainement.",
     });
   };
 
@@ -1068,7 +1132,7 @@ export function ResultsPage() {
   const resetFilters = () => {
     setCoverageFilter("all");
     setUncheckedInsurers(new Set());
-    setBudgetMax(300000);
+    setBudgetMax(BUDGET_MAX);
     setSortBy("price_asc");
   };
 
@@ -1085,7 +1149,7 @@ export function ResultsPage() {
 
   /* ── main render ── */
   return (
-    <div>
+    <div className="h-[calc(100vh-4rem)] flex flex-col">
       {/* ── Comparison Bar (sticky) ── */}
       <AnimatePresence>
         {offersToCompare.length > 0 && (
@@ -1099,85 +1163,110 @@ export function ResultsPage() {
         )}
       </AnimatePresence>
 
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
-        {/* ── Top Bar ── */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="-ml-2 text-muted-foreground hover:text-foreground shrink-0"
-            onClick={() => setView("compare")}
-          >
-            <ArrowLeft className="size-4 mr-1.5" />
-            <span className="hidden sm:inline">Retour au formulaire</span>
-            <span className="sm:hidden">Retour</span>
-          </Button>
-
-          <h1 className="text-xl sm:text-2xl font-bold text-foreground flex-1">
-            {filteredAndSorted.length} offre
-            {filteredAndSorted.length !== 1 ? "s" : ""} trouvée
-            {filteredAndSorted.length !== 1 ? "s" : ""}
-          </h1>
-
-          {/* Price mode toggle */}
-          <div className="flex items-center bg-muted/30 rounded-full p-0.5 shrink-0 self-start sm:self-auto">
-            <button
-              onClick={() => setPriceMode("annual")}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
-                priceMode === "annual"
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
+      {/* ── Scrolling content below ── */}
+      <div className="flex-1 overflow-y-auto">
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+          {/* ── Top Bar ── */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="-ml-2 text-muted-foreground hover:text-foreground shrink-0"
+              onClick={() => setView("compare")}
             >
-              Par an
-            </button>
-            <button
-              onClick={() => setPriceMode("monthly")}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
-                priceMode === "monthly"
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              Par mois
-            </button>
-          </div>
-        </div>
+              <ArrowLeft className="size-4 mr-1.5" />
+              <span className="hidden sm:inline">Retour au formulaire</span>
+              <span className="sm:hidden">Retour</span>
+            </Button>
 
-        {/* ── Mobile Filter Toggle ── */}
-        <div className="lg:hidden mb-4">
-          <Button
-            variant="outline"
-            className="w-full justify-between rounded-xl border-border"
-            onClick={() => setMobileFiltersOpen(!mobileFiltersOpen)}
-          >
-            <div className="flex items-center gap-2">
-              <Filter className="size-4" />
-              <span className="font-medium">Filtres</span>
-              {activeFilterCount > 0 && (
-                <Badge className="bg-primary text-primary-foreground rounded-full px-1.5 text-xs min-w-5 h-5 flex items-center justify-center">
-                  {activeFilterCount}
-                </Badge>
-              )}
+            <h1 className="text-xl sm:text-2xl font-bold text-foreground flex-1">
+              {filteredAndSorted.length} offre
+              {filteredAndSorted.length !== 1 ? "s" : ""} trouvée
+              {filteredAndSorted.length !== 1 ? "s" : ""}
+            </h1>
+
+            {/* Price mode toggle */}
+            <div className="flex items-center bg-muted/30 rounded-full p-0.5 shrink-0 self-start sm:self-auto">
+              <button
+                onClick={() => setPriceMode("annual")}
+                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
+                  priceMode === "annual"
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Par an
+              </button>
+              <button
+                onClick={() => setPriceMode("monthly")}
+                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
+                  priceMode === "monthly"
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Par mois
+              </button>
             </div>
-            <ChevronDown
-              className={`size-4 text-muted-foreground transition-transform duration-200 ${
-                mobileFiltersOpen ? "rotate-180" : ""
-              }`}
-            />
-          </Button>
-        </div>
+          </div>
 
-        {/* ── Mobile Filters (collapsible) ── */}
-        <AnimatePresence>
-          {mobileFiltersOpen && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.25 }}
-              className="overflow-hidden lg:hidden mb-6"
+          {/* ── Mobile Filter Toggle ── */}
+          <div className="lg:hidden mb-4">
+            <Button
+              variant="outline"
+              className="w-full justify-between rounded-xl border-border"
+              onClick={() => setMobileFiltersOpen(!mobileFiltersOpen)}
             >
+              <div className="flex items-center gap-2">
+                <Filter className="size-4" />
+                <span className="font-medium">Filtres</span>
+                {activeFilterCount > 0 && (
+                  <Badge className="bg-primary text-primary-foreground rounded-full px-1.5 text-xs min-w-5 h-5 flex items-center justify-center">
+                    {activeFilterCount}
+                  </Badge>
+                )}
+              </div>
+              <ChevronDown
+                className={`size-4 text-muted-foreground transition-transform duration-200 ${
+                  mobileFiltersOpen ? "rotate-180" : ""
+                }`}
+              />
+            </Button>
+          </div>
+
+          {/* ── Mobile Filters (collapsible) ── */}
+          <AnimatePresence>
+            {mobileFiltersOpen && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.25 }}
+                className="overflow-hidden lg:hidden mb-6"
+              >
+                <FiltersSidebar
+                  coverageFilter={coverageFilter}
+                  setCoverageFilter={setCoverageFilter}
+                  uncheckedInsurers={uncheckedInsurers}
+                  toggleInsurer={toggleInsurer}
+                  onToggleAllInsurers={handleToggleAllInsurers}
+                  uniqueInsurers={uniqueInsurers}
+                  budgetMax={budgetMax}
+                  setBudgetMax={setBudgetMax}
+                  onReset={resetFilters}
+                  totalOffers={comparisonResults.length}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* ── Summary Panels ── */}
+          <SummaryPanels offers={comparisonResults} />
+
+          {/* ── Two-column layout ── */}
+          <div className="flex gap-6 items-start">
+            {/* Desktop Sidebar */}
+            <div className="hidden lg:block w-72 shrink-0">
               <FiltersSidebar
                 coverageFilter={coverageFilter}
                 setCoverageFilter={setCoverageFilter}
@@ -1190,77 +1279,55 @@ export function ResultsPage() {
                 onReset={resetFilters}
                 totalOffers={comparisonResults.length}
               />
-            </motion.div>
-          )}
-        </AnimatePresence>
+            </div>
 
-        {/* ── Summary Panels ── */}
-        <SummaryPanels offers={comparisonResults} />
-
-        {/* ── Two-column layout ── */}
-        <div className="flex gap-6 items-start">
-          {/* Desktop Sidebar */}
-          <div className="hidden lg:block w-72 shrink-0">
-            <FiltersSidebar
-              coverageFilter={coverageFilter}
-              setCoverageFilter={setCoverageFilter}
-              uncheckedInsurers={uncheckedInsurers}
-              toggleInsurer={toggleInsurer}
-              onToggleAllInsurers={handleToggleAllInsurers}
-              uniqueInsurers={uniqueInsurers}
-              budgetMax={budgetMax}
-              setBudgetMax={setBudgetMax}
-              onReset={resetFilters}
-              totalOffers={comparisonResults.length}
-            />
+            {/* Main Content */}
+            <main className="flex-1 min-w-0 space-y-4">
+              {filteredAndSorted.length > 0 ? (
+                <AnimatePresence mode="popLayout">
+                  {filteredAndSorted.map((offer) => (
+                    <OfferCard
+                      key={offer.id}
+                      offer={offer}
+                      onRequestQuote={handleRequestQuote}
+                      onRequestCall={handleRequestCall}
+                      onAddToCompare={handleToggleCompare}
+                      isCompared={isOfferCompared(offer.id)}
+                    />
+                  ))}
+                </AnimatePresence>
+              ) : (
+                <div className="text-center py-16">
+                  <div className="rounded-full bg-muted/40 p-6 mb-4 inline-block">
+                    <SearchX className="size-10 text-muted-foreground" />
+                  </div>
+                  <h3 className="text-lg font-semibold mb-2">
+                    Aucune offre ne correspond à vos critères
+                  </h3>
+                  <p className="text-muted-foreground mb-6 text-sm">
+                    Essayez d&apos;élargir vos filtres ou de modifier le budget.
+                  </p>
+                  <Button
+                    variant="outline"
+                    className="rounded-full"
+                    onClick={resetFilters}
+                  >
+                    <RotateCcw className="size-4 mr-2" />
+                    Réinitialiser les filtres
+                  </Button>
+                </div>
+              )}
+            </main>
           </div>
 
-          {/* Main Content */}
-          <main className="flex-1 min-w-0 space-y-4">
-            {filteredAndSorted.length > 0 ? (
-              <AnimatePresence mode="popLayout">
-                {filteredAndSorted.map((offer) => (
-                  <OfferCard
-                    key={offer.id}
-                    offer={offer}
-                    onRequestQuote={handleRequestQuote}
-                    onRequestCall={handleRequestCall}
-                    onAddToCompare={handleToggleCompare}
-                    isCompared={isOfferCompared(offer.id)}
-                  />
-                ))}
-              </AnimatePresence>
-            ) : (
-              <div className="text-center py-16">
-                <div className="rounded-full bg-muted/40 p-6 mb-4 inline-block">
-                  <SearchX className="size-10 text-muted-foreground" />
-                </div>
-                <h3 className="text-lg font-semibold mb-2">
-                  Aucune offre ne correspond à vos critères
-                </h3>
-                <p className="text-muted-foreground mb-6 text-sm">
-                  Essayez d&apos;élargir vos filtres ou de modifier le budget.
-                </p>
-                <Button
-                  variant="outline"
-                  className="rounded-full"
-                  onClick={resetFilters}
-                >
-                  <RotateCcw className="size-4 mr-2" />
-                  Réinitialiser les filtres
-                </Button>
-              </div>
-            )}
-          </main>
-        </div>
-
-        {/* Comparison modal */}
-        <ComparisonModal
-          offers={offersToCompare}
-          open={comparisonModalOpen}
-          onClose={() => setComparisonModalOpen(false)}
-        />
-      </section>
+          {/* Comparison modal */}
+          <ComparisonModal
+            offers={offersToCompare}
+            open={comparisonModalOpen}
+            onClose={() => setComparisonModalOpen(false)}
+          />
+        </section>
+      </div>
     </div>
   );
 }

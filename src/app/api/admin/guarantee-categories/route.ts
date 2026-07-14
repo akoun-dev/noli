@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth-guard";
 
 function slugify(text: string): string {
   return text
@@ -11,6 +12,7 @@ function slugify(text: string): string {
 }
 
 export async function GET() {
+  const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
   try {
     const categories = await db.guaranteeCategory.findMany({
       orderBy: { sortOrder: "asc" },
@@ -32,6 +34,7 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
   try {
     const body = await request.json();
 

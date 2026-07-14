@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth-guard";
 
 /* ── Default settings (seeded if missing) ─────────────────────── */
 
@@ -62,6 +63,7 @@ async function ensureDefaults() {
 /* ── GET ──────────────────────────────────────────────────────── */
 
 export async function GET() {
+  const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
   try {
     await ensureDefaults();
     const all = await db.systemSetting.findMany({ orderBy: { category: "asc" } });
@@ -87,6 +89,7 @@ export async function GET() {
 /* ── PUT ──────────────────────────────────────────────────────── */
 
 export async function PUT(req: NextRequest) {
+  const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
   try {
     const body = await req.json();
     const { key, value } = body as { key?: string; value?: string };

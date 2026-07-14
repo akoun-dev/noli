@@ -5,6 +5,8 @@ export type AppView =
   | "results"
   | "about"
   | "contact"
+  | "faq"
+  | "mentions-legales"
   | "admin"
   | "user-dashboard"
   | "insurer-dashboard"
@@ -66,6 +68,8 @@ export interface InsurerOffer {
 export interface PricingBreakdown {
   guaranteeName: string;
   guaranteeCode: string;
+  categoryCode?: string;
+  categoryName?: string;
   amount: number;
   method: string;
   breakdown: string;

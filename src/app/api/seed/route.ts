@@ -1,11 +1,34 @@
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import { COVERAGE_CODE_MAP } from "@/lib/constants";
 
 export async function POST() {
   try {
     if ((await db.insurer.count()) > 0) {
-      return NextResponse.json({ message: "Déjà initialisé" });
+      // Update coverage names: replace abbreviations with full names
+      const nameFixes: Record<string, string> = {
+        "IC Formule 1": "Individuelle Conducteur Formule 1",
+        "IC Formule 2": "Individuelle Conducteur Formule 2",
+        "IC Formule 3": "Individuelle Conducteur Formule 3",
+        "Extension BDG toit ouvrant": "Extension Bris de Glaces toit ouvrant",
+      };
+      for (const [oldName, newName] of Object.entries(nameFixes)) {
+        await db.coverage.updateMany({ where: { name: oldName }, data: { name: newName } });
+      }
+      // Update offer features: resolve codes to names
+      const allOffers = await db.insuranceOffer.findMany();
+      for (const o of allOffers) {
+        const features: string[] = JSON.parse(o.features || "[]");
+        const resolved = features.map((f: string) => COVERAGE_CODE_MAP[f] || nameFixes[f] || f);
+        if (JSON.stringify(resolved) !== o.features) {
+          await db.insuranceOffer.update({
+            where: { id: o.id },
+            data: { features: JSON.stringify(resolved) },
+          });
+        }
+      }
+      return NextResponse.json({ message: "Déjà initialisé — noms mis à jour" });
     }
 
     // ── Insurance Categories ──────────────────────────────────
@@ -36,18 +59,26 @@ export async function POST() {
     const catMap = new Map(cats.map((c) => [c.code, c.id]));
 
     // ── Insurers ────────────────────────────────────────────────
+    const pricing: Record<string, [number, number, number]> = {
+      GNA:   [18000,   48000,   88000],
+      NOLIA: [21000,   55000,   100000],
+      NSIA:  [25000,   65000,   120000],
+      SUNU:  [28000,   72000,   135000],
+      SAHAM: [32000,   82000,   155000],
+    };
+
     const insurerData = [
-      { code: "GNA", name: "GNA Assurances", contactEmail: "contact@gna.ci", phone: "+225 27 20 30 40 50", website: "https://www.gna.ci", mult: 0.9 },
-      { code: "NSIA", name: "NSIA Assurances", contactEmail: "contact@nsia.ci", phone: "+225 27 20 30 40 51", website: "https://www.nsiabenin.com", mult: 0.95 },
-      { code: "NOLIA", name: "NOLIA Assurances", contactEmail: "contact@nolia.ci", phone: "+225 27 20 30 40 52", website: "https://www.nolia.ci", mult: 1.0 },
-      { code: "SUNU", name: "SUNU Assurances", contactEmail: "info@sunu.ci", phone: "+225 27 20 41 42 43", website: "https://www.sunu.com", mult: 1.1 },
-      { code: "SAHAM", name: "SAHAM Assurances", contactEmail: "contact@saham.ci", phone: "+225 27 20 51 52 53", website: "https://www.saham.com", mult: 1.15 },
+      { code: "GNA", name: "GNA Assurances", contactEmail: "contact@gna.ci", phone: "+225 27 20 30 40 50", website: "https://www.gna.ci" },
+      { code: "NSIA", name: "NSIA Assurances", contactEmail: "contact@nsia.ci", phone: "+225 27 20 30 40 51", website: "https://www.nsiabenin.com" },
+      { code: "NOLIA", name: "NOLIA Assurances", contactEmail: "contact@nolia.ci", phone: "+225 27 20 30 40 52", website: "https://www.nolia.ci" },
+      { code: "SUNU", name: "SUNU Assurances", contactEmail: "info@sunu.ci", phone: "+225 27 20 41 42 43", website: "https://www.sunu.com" },
+      { code: "SAHAM", name: "SAHAM Assurances", contactEmail: "contact@saham.ci", phone: "+225 27 20 51 52 53", website: "https://www.saham.com" },
     ];
-    const insurers: { id: string; code: string; mult: number }[] = [];
+    const insurers: { id: string; code: string; name: string; mult: number }[] = [];
     for (const i of insurerData) {
-      const { mult: _, ...rest } = i;
-      const created = await db.insurer.create({ data: rest });
-      insurers.push({ id: created.id, code: created.code, mult: i.mult });
+      const created = await db.insurer.create({ data: i });
+      const p = pricing[i.code];
+      insurers.push({ id: created.id, code: created.code, name: created.name, mult: p ? p[0] / 25000 : 1 });
     }
 
     // ── Coverages (per insurer) ───────────────────────────────
@@ -56,11 +87,11 @@ export async function POST() {
         meta: { matrixType: "FISCAL_POWER", capital: { corporel: "7 000 000 000 FCFA", materiel: "500 000 000 FCFA" } } },
       { code: "DR", type: "DR", name: "Défense & Recours", calcType: "FIXED_AMOUNT", catCode: "DEFENSE_RECOURS",
         meta: { fixedAmount: 7950, capital: "1 000 000 FCFA" } },
-      { code: "IC_F1", type: "IC", name: "IC Formule 1", calcType: "MATRIX_BASED", catCode: "INDIVIDUELLE_CONDUCTEUR",
+      { code: "IC_F1", type: "IC", name: "Individuelle Conducteur Formule 1", calcType: "MATRIX_BASED", catCode: "INDIVIDUELLE_CONDUCTEUR",
         meta: { matrixType: "FORMULA", formulas: [{ name: "Formule 1", capitalDeces: 1000000, capitalInvalidite: 2000000, fraisMedicaux: 100000, primeFixe: 5500 }] } },
-      { code: "IC_F2", type: "IC", name: "IC Formule 2", calcType: "MATRIX_BASED", catCode: "INDIVIDUELLE_CONDUCTEUR",
+      { code: "IC_F2", type: "IC", name: "Individuelle Conducteur Formule 2", calcType: "MATRIX_BASED", catCode: "INDIVIDUELLE_CONDUCTEUR",
         meta: { matrixType: "FORMULA", formulas: [{ name: "Formule 2", capitalDeces: 3000000, capitalInvalidite: 6000000, fraisMedicaux: 400000, primeFixe: 8400 }] } },
-      { code: "IC_F3", type: "IC", name: "IC Formule 3", calcType: "MATRIX_BASED", catCode: "INDIVIDUELLE_CONDUCTEUR",
+      { code: "IC_F3", type: "IC", name: "Individuelle Conducteur Formule 3", calcType: "MATRIX_BASED", catCode: "INDIVIDUELLE_CONDUCTEUR",
         meta: { matrixType: "FORMULA", formulas: [{ name: "Formule 3", capitalDeces: 5000000, capitalInvalidite: 10000000, fraisMedicaux: 500000, primeFixe: 15900 }] } },
       { code: "IPT", type: "IPT", name: "Individuelle Passagers", calcType: "MATRIX_BASED", catCode: "INDIVIDUELLE_PASSAGERS",
         meta: { matrixType: "FORMULA", useSeats: true, formulas: [
@@ -76,7 +107,7 @@ export async function POST() {
         meta: { variable: "VN", conditional: { threshold: 25000000, rateBelow: 1.6, rateAbove: 2.2 }, franchise: { percent: 10, min: 255000 } } },
       { code: "BDG", type: "BDG", name: "Bris de glaces", calcType: "VARIABLE_BASED", catCode: "BRIS_GLACES",
         meta: { variable: "REPLACEMENT_VALUE", rate: 0.4 } },
-      { code: "EXT_BDG", type: "EXT_BDG", name: "Extension BDG toit ouvrant", calcType: "VARIABLE_BASED", catCode: "BRIS_GLACES",
+      { code: "EXT_BDG", type: "EXT_BDG", name: "Extension Bris de Glaces toit ouvrant", calcType: "VARIABLE_BASED", catCode: "BRIS_GLACES",
         meta: { variable: "REPLACEMENT_VALUE", rate: 0.42, incompatibleWith: "BDG" } },
       { code: "TCM", type: "TCM", name: "Tierce Complète", calcType: "MATRIX_BASED", catCode: "TIERCE_COMPLETE",
         meta: { matrixType: "TIERCE_COMPLETE" } },
@@ -134,23 +165,31 @@ export async function POST() {
     }
 
     // ── Insurance Offers (3 per insurer) ────────────────────────
-    const offerTemplates = [
-      { name: "Économique", contractType: "basic", features: ["RC", "Défense & Recours", "Assistance"], deductible: 0, basePrice: 25000 },
-      { name: "Équilibre", contractType: "third_party_plus", features: ["RC", "DR", "IC", "Incendie", "Vol", "Assistance"], deductible: 50000, basePrice: 65000 },
-      { name: "Sérénité", contractType: "all_risks", features: ["RC", "DR", "IC", "IPT", "Incendie", "Vol", "BDG", "TCM", "Assistance"], deductible: 50000, basePrice: 120000 },
-    ];
+    const contractTypes = ["basic", "third_party_plus", "all_risks"];
+    const margins: Record<string, number> = { basic: 0.15, third_party_plus: 0.18, all_risks: 0.20 };
 
     for (const ins of insurers) {
-      for (const tpl of offerTemplates) {
-        const price = Math.round(tpl.basePrice * ins.mult);
+      const basePrices = pricing[ins.code] || [25000, 65000, 120000];
+      const names = ["Économique", "Équilibre", "Sérénité"];
+      const featureSets = [
+        ["Responsabilité Civile", "Défense et Recours", "Assistance"],
+        ["Responsabilité Civile", "Défense et Recours", "Individuelle Conducteur", "Incendie", "Vol", "Assistance"],
+        ["Responsabilité Civile", "Défense et Recours", "Individuelle Conducteur", "Individuelle Passagers", "Incendie", "Vol", "Bris de Glaces", "Tierce Complète", "Assistance"],
+      ];
+      const deductibles = [0, 50000, 50000];
+
+      for (let i = 0; i < names.length; i++) {
+        const minPrice = basePrices[i];
+        const margin = margins[contractTypes[i]];
+        const maxPrice = Math.round(minPrice * (1 + margin));
         await db.insuranceOffer.create({
           data: {
-            insurerId: ins.id, categoryId: autoCat.id, name: tpl.name,
-            description: `Offre ${tpl.name} — ${ins.name}`,
-            priceMin: Math.round(price * 0.9), priceMax: Math.round(price * 1.1),
-            deductible: tpl.deductible,
-            features: JSON.stringify(tpl.features),
-            contractType: tpl.contractType,
+            insurerId: ins.id, categoryId: autoCat.id, name: names[i],
+            description: `Offre ${names[i]} — ${ins.name}`,
+            priceMin: minPrice, priceMax: maxPrice,
+            deductible: deductibles[i],
+            features: JSON.stringify(featureSets[i]),
+            contractType: contractTypes[i],
           },
         });
       }

@@ -24,6 +24,17 @@ model Profile {
   insurerAccounts InsurerAccount[]
   customRoles     ProfileRole[]
   notifications   Notification[]
+  sessions        Session[]
+}
+
+// ── 1b. SESSIONS ──────────────────────────────────────────────
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  profileId String
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
 }
 
 // ── 2. ASSUREURS ──────────────────────────────────────────────
@@ -97,9 +108,27 @@ model Coverage {
   insurerId      String
   insurer        Insurer  @relation(fields: [insurerId], references: [id])
   isMandatory    Boolean  @default(false)
+  isOptional     Boolean  @default(false)
+  conditions     String   @default("{}") // JSON: conditions d'application
   isActive       Boolean  @default(true)
   displayOrder   Int      @default(0)
-  metadata       String   @default("{}") // JSON: config calcul (matrice, taux, franchises, etc.)
+
+  // Structured config columns (replacing flat JSON metadata for common fields)
+  variableSource         String?  // NEW_VALUE | VENAL_VALUE | FISCAL_POWER
+  ratePercent            Float?   // Taux en % (VARIABLE_BASED)
+  conditionedByNewValue  Boolean  @default(false)
+  newValueThreshold      Float?   // Seuil VN (défaut 25M FCFA)
+  rateBelowThreshold     Float?   // Taux si VN ≤ seuil
+  rateAboveThreshold     Float?   // Taux si VN > seuil
+  fixedAmount            Float?   // Montant fixe (FIXED_AMOUNT)
+  packPriceReduced       Float?   // Prix réduit en pack
+  capital                Float?   // Capital (ex: Avance sur recours)
+  minAmount              Float?   // Montant minimum de la prime
+  maxAmount              Float?   // Montant maximum de la prime
+  matrixDimension        String?  // FISCAL_POWER | FORMULA | VEHICLE_CATEGORY | etc.
+  requiresGuarantee      String?  // Code garantie requise (ex: 'BDG')
+
+  metadata       String   @default("{}") // JSON: config avancée (tarifs matrice, franchises, etc.)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 

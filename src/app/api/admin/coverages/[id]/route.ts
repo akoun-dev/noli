@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth-guard";
 
 function parseMetadata(obj: Record<string, unknown>) {
   try {
@@ -14,6 +15,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
     const { id } = await params;
 
     const coverage = await db.coverage.findUnique({
@@ -47,6 +49,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
     const { id } = await params;
     const body = await request.json();
     const {
@@ -58,9 +61,24 @@ export async function PUT(
       categoryId,
       insurerId,
       isMandatory,
+      isOptional,
+      conditions,
       isActive,
       displayOrder,
       metadata,
+      variableSource,
+      ratePercent,
+      conditionedByNewValue,
+      newValueThreshold,
+      rateBelowThreshold,
+      rateAboveThreshold,
+      fixedAmount,
+      packPriceReduced,
+      capital,
+      minAmount,
+      maxAmount,
+      matrixDimension,
+      requiresGuarantee,
     } = body;
 
     const existing = await db.coverage.findUnique({ where: { id } });
@@ -89,14 +107,29 @@ export async function PUT(
         ...(name !== undefined && { name }),
         ...(description !== undefined && { description: description || null }),
         ...(calculationType !== undefined && { calculationType }),
-        ...(categoryId !== undefined && { categoryId: categoryId || null }),
+        ...(categoryId !== undefined && { categoryId: categoryId && categoryId !== "__none__" ? categoryId : null }),
         ...(insurerId !== undefined && { insurerId }),
         ...(isMandatory !== undefined && { isMandatory }),
+        ...(isOptional !== undefined && { isOptional }),
+        ...(conditions !== undefined && { conditions: typeof conditions === "string" ? conditions : (conditions ? JSON.stringify(conditions) : "{}") }),
         ...(isActive !== undefined && { isActive }),
         ...(displayOrder !== undefined && { displayOrder }),
         ...(metadata !== undefined && {
           metadata: typeof metadata === "object" ? JSON.stringify(metadata) : (metadata || "{}"),
         }),
+        ...(variableSource !== undefined && { variableSource }),
+        ...(ratePercent !== undefined && { ratePercent }),
+        ...(conditionedByNewValue !== undefined && { conditionedByNewValue }),
+        ...(newValueThreshold !== undefined && { newValueThreshold }),
+        ...(rateBelowThreshold !== undefined && { rateBelowThreshold }),
+        ...(rateAboveThreshold !== undefined && { rateAboveThreshold }),
+        ...(fixedAmount !== undefined && { fixedAmount }),
+        ...(packPriceReduced !== undefined && { packPriceReduced }),
+        ...(capital !== undefined && { capital }),
+        ...(minAmount !== undefined && { minAmount }),
+        ...(maxAmount !== undefined && { maxAmount }),
+        ...(matrixDimension !== undefined && { matrixDimension }),
+        ...(requiresGuarantee !== undefined && { requiresGuarantee }),
       },
     });
 
@@ -107,8 +140,9 @@ export async function PUT(
     return NextResponse.json(parseMetadata(coverage as unknown as Record<string, unknown>));
   } catch (error) {
     console.error("Erreur coverage PUT:", error);
+    const msg = error instanceof Error ? error.message : String(error);
     return NextResponse.json(
-      { error: "Erreur lors de la mise à jour de la garantie" },
+      { error: "Erreur lors de la mise à jour de la garantie", details: msg },
       { status: 500 }
     );
   }
@@ -119,6 +153,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
     const { id } = await params;
 
     const existing = await db.coverage.findUnique({ where: { id } });

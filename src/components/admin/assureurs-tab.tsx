@@ -18,16 +18,17 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+
 } from "@/components/ui/dropdown-menu";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, Plus, MoreHorizontal, Eye, Pencil, Trash2, Building2, FileText, Shield, Users, Mail, Phone, Globe } from "lucide-react";
+import { Search, Plus, Eye, Pencil, Trash2, Building2, FileText, Shield, Users, Mail, Phone, Globe } from "lucide-react";
 
 interface Insurer {
   id: string;
   code: string;
   name: string;
+  logoUrl: string | null;
   contactEmail: string | null;
   phone: string | null;
   website: string | null;
@@ -43,13 +44,14 @@ interface InsurerDetail extends Omit<Insurer, "_count"> {
 
 type FormData = {
   name: string;
+  logoUrl: string;
   contactEmail: string;
   phone: string;
   website: string;
   isActive: boolean;
 };
 
-const emptyForm: FormData = { name: "", contactEmail: "", phone: "", website: "", isActive: true };
+const emptyForm: FormData = { name: "", logoUrl: "", contactEmail: "", phone: "", website: "", isActive: true };
 
 export function AssureursTab() {
   const { toast } = useToast();
@@ -84,7 +86,7 @@ export function AssureursTab() {
   const openCreate = () => { setEditing(null); setForm(emptyForm); setDialogOpen(true); };
   const openEdit = (item: Insurer) => {
     setEditing(item);
-    setForm({ name: item.name, contactEmail: item.contactEmail ?? "", phone: item.phone ?? "", website: item.website ?? "", isActive: item.isActive });
+    setForm({ name: item.name, logoUrl: item.logoUrl ?? "", contactEmail: item.contactEmail ?? "", phone: item.phone ?? "", website: item.website ?? "", isActive: item.isActive });
     setDialogOpen(true);
   };
 
@@ -198,8 +200,8 @@ export function AssureursTab() {
               </TableHeader>
               <TableBody>
                 {items.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="font-medium">{item.name}</TableCell>
+                    <TableRow key={item.id}>
+                    <TableCell className="font-medium"><div className="flex items-center gap-2">{item.logoUrl ? <img src={item.logoUrl} alt="" className="h-7 w-7 rounded object-contain bg-muted/30 p-0.5 border" /> : <Building2 className="h-5 w-5 text-muted-foreground/50" />}{item.name}</div></TableCell>
                     <TableCell className="text-muted-foreground text-sm">{item.contactEmail ?? "—"}</TableCell>
                     <TableCell className="text-muted-foreground text-sm">{item.phone ?? "—"}</TableCell>
                     <TableCell className="text-center">{item._count.offers}</TableCell>
@@ -207,14 +209,17 @@ export function AssureursTab() {
                     <TableCell className="text-center">{item._count.accounts}</TableCell>
                     <TableCell><Switch checked={item.isActive} onCheckedChange={() => toggleActive(item)} /></TableCell>
                     <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => openDetail(item.id)}><Eye className="h-4 w-4 mr-2" />Voir</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => openEdit(item)}><Pencil className="h-4 w-4 mr-2" />Modifier</DropdownMenuItem>
-                          <DropdownMenuItem className="text-destructive" onClick={() => setDeleteId(item.id)}><Trash2 className="h-4 w-4 mr-2" />Supprimer</DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openDetail(item.id)} title="Voir">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(item)} title="Modifier">
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteId(item.id)} title="Supprimer">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -227,7 +232,8 @@ export function AssureursTab() {
               <Card key={item.id} className="rounded-xl border shadow-sm">
                 <CardContent className="p-4 space-y-3">
                   <div className="flex items-start justify-between">
-                    <div>
+                    <div className="flex items-center gap-2">
+                      {item.logoUrl ? <img src={item.logoUrl} alt="" className="h-8 w-8 rounded object-contain bg-muted/30 p-0.5 border" /> : <Building2 className="h-5 w-5 text-muted-foreground/50" />}
                       <p className="font-semibold">{item.name}</p>
                     </div>
                     <Switch checked={item.isActive} onCheckedChange={() => toggleActive(item)} />
@@ -257,7 +263,7 @@ export function AssureursTab() {
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div><Label htmlFor="name">Nom *</Label><Input id="name" className="w-full" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ex: NOLI Assurance" /></div>
-            <div><Label htmlFor="contactEmail">Email</Label><Input id="contactEmail" className="w-full" type="email" value={form.contactEmail} onChange={(e) => setForm({ ...form, contactEmail: e.target.value })} /></div>
+            <div><Label>Logo</Label><div className="flex items-center gap-3"><div className="shrink-0 w-12 h-12 rounded-lg border border-border/60 flex items-center justify-center bg-muted/20 overflow-hidden">{form.logoUrl ? <img src={form.logoUrl} alt="" className="w-full h-full object-contain" /> : <Building2 className="h-6 w-6 text-muted-foreground/50" />}</div><div className="flex-1"><Input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" onChange={async (e) => { const f = e.target.files?.[0]; if (!f) return; const fd = new FormData(); fd.set("file", f); const res = await fetch("/api/upload", { method: "POST", body: fd }); if (!res.ok) return; const data = await res.json(); setForm({ ...form, logoUrl: data.url }); }} className="text-sm file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-primary/10 file:text-primary file:text-sm file:font-medium hover:file:bg-primary/20" /></div></div></div><div><Label htmlFor="contactEmail">Email</Label><Input id="contactEmail" className="w-full" type="email" value={form.contactEmail} onChange={(e) => setForm({ ...form, contactEmail: e.target.value })} /></div>
             <div><Label htmlFor="phone">Téléphone</Label><Input id="phone" className="w-full" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
             <div><Label htmlFor="website">Site web</Label><Input id="website" className="w-full" value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} /></div>
             <div className="flex items-center justify-between">

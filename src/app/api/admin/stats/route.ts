@@ -1,7 +1,9 @@
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth-guard";
 
 export async function GET() {
+  const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
   try {
     const [
       totalInsurers,

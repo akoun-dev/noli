@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, Search, Loader2, MoreHorizontal } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,7 +14,7 @@ import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+
 
 interface Cat { id: string; code: string; name: string; description: string | null; displayOrder: number; isActive: boolean; _count: { coverages: number }; }
 
@@ -75,7 +75,7 @@ export function CoverageCategoriesTab() {
         <Table><TableHeader><TableRow className="bg-muted/50"><TableHead>Nom</TableHead><TableHead>Description</TableHead><TableHead className="text-center">Garanties</TableHead><TableHead className="text-center">Ordre</TableHead><TableHead className="text-center">Statut</TableHead><TableHead className="w-10" /></TableRow></TableHeader>
         <TableBody>{items.map((i) => (
           <TableRow key={i.id}><TableCell className="font-medium">{i.name}</TableCell><TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">{i.description || "—"}</TableCell><TableCell className="text-center">{i._count.coverages}</TableCell><TableCell className="text-center">{i.displayOrder}</TableCell><TableCell className="text-center"><Switch checked={i.isActive} onCheckedChange={async () => { await fetch(`/api/admin/coverage-categories/${i.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isActive: !i.isActive }) }); fetchItems(); }} /></TableCell>
-          <TableCell><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onClick={() => openEdit(i)}><Pencil className="h-4 w-4 mr-2" /> Modifier</DropdownMenuItem><DropdownMenuItem className="text-destructive" onClick={() => setDeleteId(i.id)}><Trash2 className="h-4 w-4 mr-2" /> Supprimer</DropdownMenuItem></DropdownMenuContent></DropdownMenu></TableCell></TableRow>
+          <TableCell><div className="flex items-center gap-1"><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(i)} title="Modifier"><Pencil className="h-4 w-4" /></Button><Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteId(i.id)} title="Supprimer"><Trash2 className="h-4 w-4" /></Button></div></TableCell></TableRow>
         ))}</TableBody></Table>
         {items.length === 0 && <p className="text-center py-8 text-muted-foreground text-sm">Aucune catégorie.</p>}
       </div>

@@ -273,7 +273,7 @@ function EmptyState({ onClear }: { onClear: () => void }) {
 
 /* ─── Main Component ────────────────────────────────────────────── */
 
-export default function OffersPage() {
+export function OffersPage() {
   const { resetComparison, setView, setSelectedOffer } = useAppStore();
 
   /* ── State ──────────────────────────────────────────────── */

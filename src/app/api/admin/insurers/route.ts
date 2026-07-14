@@ -1,7 +1,9 @@
 import { db } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth-guard";
 
 export async function GET(request: NextRequest) {
+  const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
   try {
     const { searchParams } = request.nextUrl;
     const search = searchParams.get("search") || "";
@@ -37,6 +39,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
   try {
     const body = await request.json();
     const { code, name, logoUrl, contactEmail, phone, website, isActive } =

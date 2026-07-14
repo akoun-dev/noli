@@ -612,7 +612,7 @@ function calculateTierceAmount(
     const amount = roundTo500(match.prime);
     return {
       amount,
-      breakdown: `${code} — Classe VN ${vnClass} (${nvBounds.min.toLocaleString("fr-FR")} – ${vnBounds.max === Infinity ? "∞" : vnBounds.max.toLocaleString("fr-FR")} FCFA), catégorie « ${match.category} » → prime ${match.prime.toLocaleString("fr-FR")} FCFA (arrondi ${amount.toLocaleString("fr-FR")} FCFA)`,
+      breakdown: `${code} — Classe VN ${vnClass} (${vnBounds.min.toLocaleString("fr-FR")} – ${vnBounds.max === Infinity ? "∞" : vnBounds.max.toLocaleString("fr-FR")} FCFA), catégorie « ${match.category} » → prime ${match.prime.toLocaleString("fr-FR")} FCFA (arrondi ${amount.toLocaleString("fr-FR")} FCFA)`,
     };
   }
 

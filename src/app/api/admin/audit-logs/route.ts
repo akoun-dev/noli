@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 
 export async function GET(request: NextRequest) {
+  const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
   try {
     const { searchParams } = new URL(request.url)
     const action = searchParams.get('action') || undefined

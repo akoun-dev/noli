@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Plus, Pencil, Trash2, Search, Loader2, MoreHorizontal, Check, ChevronLeft, ChevronRight, X,
+  Plus, Pencil, Trash2, Search, Loader2, Check, ChevronLeft, ChevronRight, X,
   DollarSign, Percent, LayoutGrid, CircleDot,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -25,7 +25,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+
 } from "@/components/ui/dropdown-menu";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -726,7 +726,7 @@ export function GarantiesTab() {
                 <TableHead>Franchise</TableHead>
                 <TableHead className="text-center">Ordre</TableHead>
                 <TableHead className="text-center">Statut</TableHead>
-                <TableHead className="w-10"></TableHead>
+                <TableHead className="w-24 text-center">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -755,13 +755,14 @@ export function GarantiesTab() {
                   <TableCell className="text-center">{g.sortOrder}</TableCell>
                   <TableCell className="text-center"><Switch checked={g.isActive} onCheckedChange={async () => { try { await fetch(`/api/admin/guarantees/${g.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isActive: !g.isActive }) }); fetchGuarantees(); } catch {} }} /></TableCell>
                   <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => openEdit(g)}><Pencil className="h-4 w-4 mr-2" /> Modifier</DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive" onClick={() => setDeleteId(g.id)}><Trash2 className="h-4 w-4 mr-2" /> Supprimer</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <div className="flex items-center gap-1">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(g)} title="Modifier">
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteId(g.id)} title="Supprimer">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

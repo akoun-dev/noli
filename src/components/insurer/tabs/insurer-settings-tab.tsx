@@ -398,8 +398,8 @@ export function InsurerSettingsTab() {
           <Card>
             <CardHeader>
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
-                  <Users className="h-5 w-5 text-muted-foreground" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500/10 to-purple-500/10">
+                  <Users className="h-5 w-5 text-blue-500" />
                 </div>
                 <div>
                   <CardTitle className="text-base">Équipe</CardTitle>
@@ -410,15 +410,26 @@ export function InsurerSettingsTab() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-col items-center justify-center py-8 text-center">
-                <Users className="h-10 w-10 text-muted-foreground mb-3" />
-                <p className="text-sm font-medium">
+              <div className="rounded-xl border border-dashed bg-card/40 p-6 text-center">
+                <div className="rounded-full bg-gradient-to-br from-blue-500/10 to-purple-500/10 p-3 mx-auto w-fit mb-3">
+                  <Users className="h-6 w-6 text-blue-500" />
+                </div>
+                <p className="text-sm font-medium mb-1">
                   Gestion d&apos;équipe bientôt disponible
                 </p>
-                <p className="text-xs text-muted-foreground mt-1 max-w-sm">
-                  Vous pourrez inviter des collaborateurs, attribuer des rôles
-                  et gérer les permissions d&apos;accès.
+                <p className="text-xs text-muted-foreground max-w-sm mx-auto mb-4">
+                  Invitez des collaborateurs, attribuez des rôles et gérez les permissions d&apos;accès à votre espace assureur.
                 </p>
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  {["Administrateur", "Gestionnaire", "Lecteur"].map((role) => (
+                    <span
+                      key={role}
+                      className="text-[10px] px-2 py-1 rounded-full bg-muted text-muted-foreground border border-border/40"
+                    >
+                      {role}
+                    </span>
+                  ))}
+                </div>
               </div>
             </CardContent>
           </Card>

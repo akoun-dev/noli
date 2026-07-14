@@ -1,6 +1,8 @@
 import { db } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import { registerSchema, loginSchema, emailSchema } from "@/lib/validation";
+import { createSession, destroySession } from "@/lib/auth-guard";
 
 function hashPassword(password: string): string {
   return bcrypt.hashSync(password, 10);
@@ -15,13 +17,11 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { action, email, name, phone, password } = body;
 
-    /* ── REGISTER ── */
     if (action === "register") {
-      if (!email || !name || !password) {
-        return NextResponse.json({ error: "Champs requis manquants" }, { status: 400 });
-      }
-      if (password.length < 6) {
-        return NextResponse.json({ error: "Le mot de passe doit contenir au moins 6 caractères" }, { status: 400 });
+      const parsed = registerSchema.safeParse({ email, name, password, phone });
+      if (!parsed.success) {
+        const firstError = parsed.error.issues[0]?.message || "Champs requis manquants";
+        return NextResponse.json({ error: firstError }, { status: 400 });
       }
 
       const existing = await db.profile.findUnique({ where: { email } });
@@ -29,7 +29,6 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Cet email est déjà utilisé" }, { status: 409 });
       }
 
-      // Split "Jean Dupont" into firstName/lastName
       const parts = name.trim().split(/\s+/);
       const firstName = parts[0] || "";
       const lastName = parts.slice(1).join(" ") || "";
@@ -45,6 +44,8 @@ export async function POST(request: NextRequest) {
         },
       });
 
+      await createSession(profile.id);
+
       return NextResponse.json({
         user: {
           id: profile.id,
@@ -55,10 +56,11 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    /* ── LOGIN ── */
     if (action === "login") {
-      if (!email || !password) {
-        return NextResponse.json({ error: "Email et mot de passe requis" }, { status: 400 });
+      const parsed = loginSchema.safeParse({ email, password });
+      if (!parsed.success) {
+        const firstError = parsed.error.issues[0]?.message || "Email et mot de passe requis";
+        return NextResponse.json({ error: firstError }, { status: 400 });
       }
 
       const profile = await db.profile.findUnique({ where: { email } });
@@ -75,6 +77,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Compte désactivé. Contactez le support." }, { status: 403 });
       }
 
+      await createSession(profile.id);
+
       return NextResponse.json({
         user: {
           id: profile.id,
@@ -85,13 +89,33 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    /* ── FORGOT PASSWORD ── */
+    if (action === "logout") {
+      await destroySession();
+      return NextResponse.json({ message: "Déconnecté" });
+    }
+
     if (action === "forgot") {
-      if (!email) {
-        return NextResponse.json({ error: "L'email est requis" }, { status: 400 });
+      const parsed = emailSchema.safeParse(email);
+      if (!parsed.success) {
+        return NextResponse.json({ error: "Adresse email invalide" }, { status: 400 });
       }
-      // In production, send a reset email. For now, always return success to avoid email enumeration.
       return NextResponse.json({ message: "Si un compte existe avec cet email, un lien de réinitialisation a été envoyé." });
+    }
+
+    if (action === "me") {
+      const { getSessionProfile } = await import("@/lib/auth-guard");
+      const profile = await getSessionProfile();
+      if (!profile) {
+        return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+      }
+      return NextResponse.json({
+        user: {
+          id: profile.id,
+          email: profile.email,
+          name: [profile.firstName, profile.lastName].filter(Boolean).join(" "),
+          role: profile.role,
+        },
+      });
     }
 
     return NextResponse.json({ error: "Action non reconnue" }, { status: 400 });

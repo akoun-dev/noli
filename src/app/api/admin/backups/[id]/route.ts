@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth } from '@/lib/auth-guard'
 import { db } from '@/lib/db'
 import { existsSync, unlinkSync, copyFileSync } from 'fs'
 import { join } from 'path'
@@ -8,6 +9,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
     const { id } = await params
 
     const backup = await db.backup.findUnique({
@@ -23,6 +25,7 @@ export async function DELETE(
 
     if (backup.path && existsSync(backup.path)) {
       try {
+    const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
         unlinkSync(backup.path)
       } catch {
         // Le fichier peut ne plus exister
@@ -58,6 +61,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
     const { id } = await params
     const requestUrl = _request.url
     const { searchParams } = new URL(requestUrl)

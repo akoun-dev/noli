@@ -31,27 +31,21 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { useAppStore } from "@/store/app-store";
+import { getInitials } from "@/lib/utils";
 
 const navItemsPublic = [
   { label: "ACCUEIL", action: "landing" as const },
   { label: "À PROPOS", action: "about" as const },
+  { label: "FAQ", action: "faq" as const },
   { label: "CONTACT", action: "contact" as const },
 ];
 
 const navItemsPrivate = [
   { label: "ACCUEIL", action: "landing" as const },
   { label: "À PROPOS", action: "about" as const },
+  { label: "FAQ", action: "faq" as const },
   { label: "CONTACT", action: "contact" as const },
 ];
-
-function getUserInitials(name?: string): string {
-  if (!name) return "U";
-  const parts = name.trim().split(/\s+/);
-  if (parts.length >= 2) {
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-  }
-  return name.slice(0, 2).toUpperCase();
-}
 
 export function Header() {
   const { currentView, setView, user, setUser } = useAppStore();
@@ -139,7 +133,7 @@ export function Header() {
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-2 rounded-full transition-colors hover:bg-muted">
                   <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
-                    {getUserInitials(user.name)}
+                    {getInitials(user.name)}
                   </div>
                   <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
                 </button>
@@ -175,7 +169,8 @@ export function Header() {
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  onClick={() => {
+                  onClick={async () => {
+                    await fetch("/api/auth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "logout" }) });
                     setUser({ isLoggedIn: false, id: undefined, name: undefined, email: undefined, role: undefined });
                     setView("landing");
                   }}
@@ -207,7 +202,7 @@ export function Header() {
         <div className="flex items-center gap-2 lg:hidden">
           {user.isLoggedIn ? (
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
-              {getUserInitials(user.name)}
+              {getInitials(user.name)}
             </div>
           ) : null}
 
@@ -312,7 +307,8 @@ export function Header() {
                     <Button
                       variant="ghost"
                       className="w-full text-destructive hover:text-destructive justify-start"
-                      onClick={() => {
+                      onClick={async () => {
+                        await fetch("/api/auth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "logout" }) });
                         setUser({ isLoggedIn: false, id: undefined, name: undefined, email: undefined, role: undefined });
                         setView("landing");
                         setMobileOpen(false);

@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth-guard";
 
 // PUT /api/admin/offers/[id]/guarantees
 // Body: { guarantees: [{ guaranteeId, isIncluded }] }
@@ -10,6 +11,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
     const { id } = await params;
     const body = await request.json();
 
@@ -72,6 +74,22 @@ export async function PUT(
       include: { guarantee: true },
       orderBy: { createdAt: "asc" },
     });
+
+    // Also update InsuranceOffer.features with included guarantee names
+    try {
+    const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
+      const includedNames = updatedLinks
+        .filter((l: { isIncluded: boolean }) => l.isIncluded)
+        .map((l: { guarantee: { name: string } }) => l.guarantee.name);
+      if (includedNames.length > 0) {
+        await db.insuranceOffer.update({
+          where: { id },
+          data: { features: JSON.stringify(includedNames) },
+        });
+      }
+    } catch (err) {
+      console.error("Erreur lors de la synchro features InsuranceOffer:", err);
+    }
 
     return NextResponse.json(updatedLinks);
   } catch (error) {

@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, copyFileSync, statSync } from 'fs'
 import { join } from 'path'
 
 export async function GET() {
+  const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
   try {
     const backups = await db.backup.findMany({
       orderBy: { createdAt: 'desc' },
@@ -20,6 +21,7 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
   try {
     const { searchParams } = new URL(request.url)
     const action = searchParams.get('action')

@@ -1,11 +1,13 @@
 import { db } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth-guard";
 
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
     const { id } = await params;
 
     const category = await db.coverageCategory.findUnique({
@@ -37,6 +39,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
     const { id } = await params;
     const body = await request.json();
     const { code, name, description, displayOrder, isActive } = body;
@@ -89,6 +92,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
     const { id } = await params;
 
     const existing = await db.coverageCategory.findUnique({ where: { id } });

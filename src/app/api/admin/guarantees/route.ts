@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth-guard";
 
 function slugify(text: string): string {
   return text
@@ -30,6 +31,7 @@ function parseGuaranteeJson(guarantee: Record<string, unknown>) {
 }
 
 export async function GET(request: NextRequest) {
+  const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
   try {
     const { searchParams } = new URL(request.url);
     const active = searchParams.get("active");
@@ -61,6 +63,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
   try {
     const body = await request.json();
 

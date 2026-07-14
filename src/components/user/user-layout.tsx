@@ -1,7 +1,6 @@
 "use client";
 
 import { useAppStore } from "@/store/app-store";
-import { useTheme } from "next-themes";
 import Image from "next/image";
 import {
   LayoutDashboard,
@@ -16,11 +15,11 @@ import {
   Settings,
   Menu,
   ArrowLeft,
-  Moon,
-  Sun,
   LogOut,
   ChevronRight,
 } from "lucide-react";
+import { ThemeToggle } from "@/components/shared/theme-toggle";
+import { getInitials } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -69,13 +68,6 @@ const sidebarItems = [
 const getTabLabel = (id: string) =>
   sidebarItems.find((i) => i.id === id)?.label ?? "Tableau de bord";
 
-const getInitials = (name?: string) => {
-  if (!name) return "U";
-  const parts = name.trim().split(/\s+/);
-  if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-  return name.slice(0, 2).toUpperCase();
-};
-
 /* ── Sidebar content (shared between desktop & mobile) ── */
 function SidebarContent({
   activeTab,
@@ -113,7 +105,7 @@ function SidebarContent({
                 onClick={() => onSelect(item.id)}
                 className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                   isActive
-                    ? "bg-[#B9E54D] text-black"
+                    ? "bg-brand text-black"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
               >
@@ -137,23 +129,6 @@ function SidebarContent({
         </Button>
       </div>
     </div>
-  );
-}
-
-/* ── Theme toggle button ── */
-function ThemeToggle() {
-  const { theme, setTheme } = useTheme();
-  return (
-    <Button
-      variant="ghost"
-      size="icon"
-      className="h-9 w-9"
-      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-      aria-label="Changer le thème"
-    >
-      <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-      <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-    </Button>
   );
 }
 
@@ -190,7 +165,8 @@ export function UserLayout() {
   const { userTab, setUserTab, user, setUser, setView } = useAppStore();
   const currentLabel = getTabLabel(userTab);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await fetch("/api/auth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "logout" }) });
     setUser({
       isLoggedIn: false,
       id: undefined,
@@ -251,7 +227,7 @@ export function UserLayout() {
             {/* Left: Title + badge */}
             <div className="flex items-center gap-3">
               <h1 className="text-lg font-semibold">{currentLabel}</h1>
-              <Badge className="bg-[#B9E54D] text-black hover:bg-[#a5d044] text-xs font-medium">
+              <Badge className="bg-brand text-black hover:bg-brand-hover text-xs font-medium">
                 Client
               </Badge>
             </div>
@@ -264,7 +240,7 @@ export function UserLayout() {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full">
                     <Avatar className="h-8 w-8">
-                      <AvatarFallback className="bg-[#B9E54D] text-black text-xs font-bold">
+                      <AvatarFallback className="bg-brand text-black text-xs font-bold">
                         {getInitials(user.name)}
                       </AvatarFallback>
                     </Avatar>

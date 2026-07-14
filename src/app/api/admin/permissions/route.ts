@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth-guard";
 
 /* ── Permissions par défaut ──────────────────────────────────── */
 const DEFAULT_PERMISSIONS = [
@@ -87,6 +88,7 @@ async function ensureDefaults() {
 
 /* ── GET ──────────────────────────────────────────────────────── */
 export async function GET() {
+  const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
   try {
     await ensureDefaults();
     const all = await db.permission.findMany({ orderBy: [{ category: "asc" }, { code: "asc" }] });

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, Search, Loader2, MoreHorizontal, Eye, FileText, Shield, Building2, Calendar } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Loader2, Eye, FileText, Shield, Building2, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,12 +14,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+
 
 const fmtPrice = (n: number) => new Intl.NumberFormat("fr-FR").format(n) + " FCFA";
 const fmtDate = (d: string) => (d ? new Date(d).toLocaleDateString("fr-FR") : "—");
@@ -323,13 +323,17 @@ export function InsuranceOffersTab() {
                 <TableCell className="text-sm">{o.category?.name || "—"}</TableCell>
                 <TableCell className="text-center"><Switch checked={o.isActive} onCheckedChange={(e) => { e.stopPropagation(); handleToggle(o); }} onClick={(e) => e.stopPropagation()} /></TableCell>
                 <TableCell>
-                  <DropdownMenu><DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => openDetail(o)}><Eye className="h-4 w-4 mr-2" /> Voir</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => openEdit(o)}><Pencil className="h-4 w-4 mr-2" /> Modifier</DropdownMenuItem>
-                      <DropdownMenuItem className="text-destructive" onClick={() => setDeleteId(o.id)}><Trash2 className="h-4 w-4 mr-2" /> Supprimer</DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openDetail(o)} title="Voir">
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(o)} title="Modifier">
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteId(o.id)} title="Supprimer">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
@@ -368,7 +372,7 @@ export function InsuranceOffersTab() {
 
       {/* Create/Edit Dialog */}
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-4xl max-h-[92vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editing ? "Modifier l'offre" : "Nouvelle offre"}</DialogTitle>
             <DialogDescription>Configurez les détails de l'offre.</DialogDescription>
@@ -477,101 +481,6 @@ export function InsuranceOffersTab() {
                 <p className="text-sm text-muted-foreground">Sélectionnez d&apos;abord un assureur.</p>
               )}
             </div>
-
-            <Separator />
-
-            {/* Vehicle Eligibility Accordion */}
-            <Accordion type="multiple" className="w-full">
-              <AccordionItem value="vehicle-eligibility" className="border rounded-lg px-4">
-                <AccordionTrigger className="py-3 hover:no-underline">
-                  <span className="font-semibold text-sm">Éligibilité Véhicule</span>
-                </AccordionTrigger>
-                <AccordionContent className="pb-4 pt-0 space-y-4">
-                  <p className="text-xs text-muted-foreground">Définissez les critères d&apos;éligibilité des véhicules pour cette offre. Laissez vide pour accepter tous les véhicules.</p>
-
-                  {/* Puissance fiscale */}
-                  <div className="w-full grid gap-2">
-                    <Label>Puissance fiscale (CV)</Label>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="grid gap-1">
-                        <Label className="text-xs text-muted-foreground">Min</Label>
-                        <Input className="w-full" type="number" placeholder="Min" value={form.fiscalPowerMin} onChange={(e) => setForm({ ...form, fiscalPowerMin: e.target.value })} />
-                      </div>
-                      <div className="grid gap-1">
-                        <Label className="text-xs text-muted-foreground">Max</Label>
-                        <Input className="w-full" type="number" placeholder="Max" value={form.fiscalPowerMax} onChange={(e) => setForm({ ...form, fiscalPowerMax: e.target.value })} />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Carburant */}
-                  <div className="w-full grid gap-2">
-                    <Label>Carburant</Label>
-                    <div className="flex flex-wrap gap-3">
-                      {FUEL_OPTIONS.map((fuel) => (
-                        <div key={fuel} className="flex items-center gap-2">
-                          <Checkbox
-                            id={`fuel-${fuel}`}
-                            checked={form.fuelTypes.includes(fuel)}
-                            onCheckedChange={(checked) => toggleFuelType(fuel, checked)}
-                          />
-                          <Label htmlFor={`fuel-${fuel}`} className="text-sm font-normal cursor-pointer">{fuel}</Label>
-                        </div>
-                      ))}
-                    </div>
-                    <p className="text-xs text-muted-foreground">Laissez vide pour accepter tous les types de carburant.</p>
-                  </div>
-
-                  {/* Valeur à neuf */}
-                  <div className="w-full grid gap-2">
-                    <Label>Valeur à neuf (FCFA)</Label>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="grid gap-1">
-                        <Label className="text-xs text-muted-foreground">Min</Label>
-                        <Input className="w-full" type="number" placeholder="0" value={form.newValueMin} onChange={(e) => setForm({ ...form, newValueMin: e.target.value })} />
-                      </div>
-                      <div className="grid gap-1">
-                        <Label className="text-xs text-muted-foreground">Max</Label>
-                        <Input className="w-full" type="number" placeholder="0" value={form.newValueMax} onChange={(e) => setForm({ ...form, newValueMax: e.target.value })} />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Valeur vénale */}
-                  <div className="w-full grid gap-2">
-                    <Label>Valeur vénale (FCFA)</Label>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="grid gap-1">
-                        <Label className="text-xs text-muted-foreground">Min</Label>
-                        <Input className="w-full" type="number" placeholder="0" value={form.venalValueMin} onChange={(e) => setForm({ ...form, venalValueMin: e.target.value })} />
-                      </div>
-                      <div className="grid gap-1">
-                        <Label className="text-xs text-muted-foreground">Max</Label>
-                        <Input className="w-full" type="number" placeholder="0" value={form.venalValueMax} onChange={(e) => setForm({ ...form, venalValueMax: e.target.value })} />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Usage */}
-                  <div className="w-full grid gap-2">
-                    <Label>Usage</Label>
-                    <div className="flex flex-wrap gap-3">
-                      {USAGE_OPTIONS.map((usage) => (
-                        <div key={usage} className="flex items-center gap-2">
-                          <Checkbox
-                            id={`usage-${usage}`}
-                            checked={form.vehicleUsage.includes(usage)}
-                            onCheckedChange={(checked) => toggleVehicleUsage(usage, checked)}
-                          />
-                          <Label htmlFor={`usage-${usage}`} className="text-sm font-normal cursor-pointer">{usage}</Label>
-                        </div>
-                      ))}
-                    </div>
-                    <p className="text-xs text-muted-foreground">Laissez vide pour accepter tous les usages.</p>
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
 
             <Separator />
 

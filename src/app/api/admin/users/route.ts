@@ -1,12 +1,39 @@
 import { db } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
+import { updateUserSchema } from "@/lib/validation";
+import { requireAuth } from "@/lib/auth-guard";
+
+const userSelect = {
+  id: true,
+  email: true,
+  firstName: true,
+  lastName: true,
+  phone: true,
+  role: true,
+  isActive: true,
+  createdAt: true,
+  updatedAt: true,
+  _count: { select: { quotes: true } },
+} as const;
 
 export async function GET() {
+  const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
   try {
-    const users = await db.user.findMany({
+    const profiles = await db.profile.findMany({
+      select: userSelect,
       orderBy: { createdAt: "desc" },
-      include: { _count: { select: { quotes: true } } },
     });
+    const users = profiles.map((p) => ({
+      id: p.id,
+      email: p.email,
+      name: [p.firstName, p.lastName].filter(Boolean).join(" "),
+      phone: p.phone,
+      role: p.role,
+      isActive: p.isActive,
+      createdAt: p.createdAt,
+      updatedAt: p.updatedAt,
+      _count: p._count,
+    }));
     return NextResponse.json(users);
   } catch (error) {
     console.error("Erreur utilisateurs:", error);
@@ -18,29 +45,57 @@ export async function GET() {
 }
 
 export async function PUT(request: NextRequest) {
+  const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
   try {
     const body = await request.json();
-    if (!body.id) {
-      return NextResponse.json({ error: "L'ID est obligatoire" }, { status: 400 });
+
+    const parsed = updateUserSchema.safeParse(body);
+    if (!parsed.success) {
+      const firstError = parsed.error.issues[0]?.message || "Données invalides";
+      return NextResponse.json({ error: firstError }, { status: 400 });
     }
-    const existing = await db.user.findUnique({ where: { id: body.id } });
+
+    const existing = await db.profile.findUnique({
+      where: { id: parsed.data.id },
+      select: { id: true },
+    });
     if (!existing) {
       return NextResponse.json({ error: "Utilisateur non trouvé" }, { status: 404 });
     }
-    const updateData: Record<string, unknown> = {};
-    if (body.name !== undefined) updateData.name = body.name;
-    if (body.phone !== undefined) updateData.phone = body.phone;
-    if (body.role !== undefined) updateData.role = body.role;
-    if (body.isActive !== undefined) updateData.isActive = body.isActive;
 
-    const user = await db.user.update({
-      where: { id: body.id },
+    const updateData: Record<string, unknown> = {};
+    if (parsed.data.name !== undefined) {
+      const parts = parsed.data.name.trim().split(/\s+/);
+      updateData.firstName = parts[0] || "";
+      updateData.lastName = parts.slice(1).join(" ") || "";
+    }
+    if (parsed.data.phone !== undefined) updateData.phone = parsed.data.phone;
+    if (parsed.data.role !== undefined) updateData.role = parsed.data.role;
+    if (parsed.data.isActive !== undefined) updateData.isActive = parsed.data.isActive;
+
+    const profile = await db.profile.update({
+      where: { id: parsed.data.id },
       data: updateData,
-      include: { _count: { select: { quotes: true } } },
+      select: userSelect,
     });
+
+    const user = {
+      id: profile.id,
+      email: profile.email,
+      name: [profile.firstName, profile.lastName].filter(Boolean).join(" "),
+      phone: profile.phone,
+      role: profile.role,
+      isActive: profile.isActive,
+      createdAt: profile.createdAt,
+      updatedAt: profile.updatedAt,
+      _count: profile._count,
+    };
     return NextResponse.json(user);
   } catch (error) {
     console.error("Erreur mise à jour utilisateur:", error);
-    return NextResponse.json({ error: "Erreur lors de la mise à jour" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Erreur lors de la mise à jour" },
+      { status: 500 }
+    );
   }
 }

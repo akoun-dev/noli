@@ -1,14 +1,19 @@
 import { db } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import { getSessionProfile } from "@/lib/auth-guard";
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId");
+    const sessionProfile = await getSessionProfile();
+    if (!sessionProfile) {
+      return NextResponse.json({ error: "Authentification requise" }, { status: 401 });
+    }
 
-    if (!userId) {
-      return NextResponse.json({ error: "userId requis" }, { status: 400 });
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get("userId") || sessionProfile.id;
+    if (userId !== sessionProfile.id && sessionProfile.role !== "ADMIN") {
+      return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
     }
 
     const profile = await db.profile.findUnique({
@@ -46,14 +51,20 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
+    const sessionProfile = await getSessionProfile();
+    if (!sessionProfile) {
+      return NextResponse.json({ error: "Authentification requise" }, { status: 401 });
+    }
+
     const body = await request.json();
     const { userId, firstName, lastName, phone, currentPassword, newPassword } = body;
 
-    if (!userId) {
-      return NextResponse.json({ error: "userId requis" }, { status: 400 });
+    const targetId = userId || sessionProfile.id;
+    if (targetId !== sessionProfile.id && sessionProfile.role !== "ADMIN") {
+      return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
     }
 
-    const profile = await db.profile.findUnique({ where: { id: userId } });
+    const profile = await db.profile.findUnique({ where: { id: targetId } });
     if (!profile) {
       return NextResponse.json({ error: "Profil non trouvé" }, { status: 404 });
     }
@@ -64,7 +75,6 @@ export async function PUT(request: NextRequest) {
       phone: phone ?? profile.phone,
     };
 
-    // Password change
     if (currentPassword && newPassword) {
       const valid = bcrypt.compareSync(currentPassword, profile.password);
       if (!valid) {
@@ -83,7 +93,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const updated = await db.profile.update({
-      where: { id: userId },
+      where: { id: targetId },
       data: updateData,
       select: {
         id: true,

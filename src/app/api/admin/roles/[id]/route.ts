@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth-guard";
 
 /* ── GET : Rôle unique avec permissions ──────────────────────── */
 export async function GET(
@@ -7,6 +8,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
     const { id } = await params;
     const role = await db.role.findUnique({
       where: { id },
@@ -47,6 +49,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
     const { id } = await params;
     const body = await request.json();
     const { name, description, permissionIds } = body as {
@@ -102,6 +105,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
     const { id } = await params;
     const role = await db.role.findUnique({ where: { id } });
 

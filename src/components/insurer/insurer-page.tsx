@@ -22,6 +22,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAppStore } from "@/store/app-store";
+import { getInitials } from "@/lib/utils";
 import { InsurerDashboard } from "./insurer-dashboard";
 import { InsurerOffers } from "./insurer-offers";
 import { InsurerQuotes } from "./insurer-quotes";
@@ -34,15 +35,6 @@ const sidebarItems = [
   { id: "coverages", label: "Garanties", icon: Shield },
   { id: "profile", label: "Mon Profil", icon: User },
 ] as const;
-
-function getUserInitials(name?: string): string {
-  if (!name) return "A";
-  const parts = name.trim().split(/\s+/);
-  if (parts.length >= 2) {
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-  }
-  return name.slice(0, 2).toUpperCase();
-}
 
 /* ── Live Clock ── */
 function LiveClock() {
@@ -157,7 +149,7 @@ function InsurerHeader({
           aria-label="Notifications"
         >
           <Bell className="h-4 w-4" />
-          <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#B9E54D] text-[10px] font-bold text-black">
+          <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-brand text-[10px] font-bold text-black">
             3
           </span>
         </button>
@@ -168,8 +160,8 @@ function InsurerHeader({
             <button className="flex items-center gap-2 rounded-lg px-1.5 py-1 transition-colors hover:bg-muted">
               <Avatar className="h-8 w-8">
                 {user.avatarUrl && <AvatarImage src={user.avatarUrl} alt={user.name || ""} />}
-                <AvatarFallback className="bg-[#B9E54D] text-black text-xs font-bold">
-                  {getUserInitials(insurerName)}
+                <AvatarFallback className="bg-brand text-black text-xs font-bold">
+                  {getInitials(insurerName)}
                 </AvatarFallback>
               </Avatar>
               <div className="hidden md:flex flex-col items-start">
@@ -207,7 +199,7 @@ function InsurerHeader({
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              onClick={() => { setUser({ isLoggedIn: false }); setView("landing"); }}
+              onClick={async () => { await fetch("/api/auth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "logout" }) }); setUser({ isLoggedIn: false }); setView("landing"); }}
               className="text-destructive focus:text-destructive"
             >
               <LogOut className="h-4 w-4" />
@@ -233,7 +225,7 @@ function SidebarContent({
       {/* Sidebar brand */}
       <div className="p-4">
         <div className="flex items-center gap-3 mb-6">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#B9E54D] shrink-0">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand shrink-0">
             <Building2 className="h-5 w-5 text-black" />
           </div>
           <div>
@@ -252,7 +244,7 @@ function SidebarContent({
                 onClick={() => onSelect(item.id)}
                 className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                   isActive
-                    ? "bg-[#B9E54D] text-black"
+                    ? "bg-brand text-black"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
               >

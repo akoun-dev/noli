@@ -1,19 +1,25 @@
 import { db } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
+import { getSessionProfile } from "@/lib/auth-guard";
 
 export async function GET(request: NextRequest) {
   try {
-    const userId = request.nextUrl.searchParams.get("userId");
+    const sessionProfile = await getSessionProfile();
+    if (!sessionProfile) {
+      return NextResponse.json({ error: "Authentification requise" }, { status: 401 });
+    }
+    if (sessionProfile.role !== "INSURER") {
+      return NextResponse.json({ error: "Accès réservé aux assureurs" }, { status: 403 });
+    }
 
-    if (!userId) {
-      return NextResponse.json(
-        { error: "Le paramètre userId est requis" },
-        { status: 400 }
-      );
+    const userId = request.nextUrl.searchParams.get("userId");
+    const profileId = userId || sessionProfile.id;
+    if (profileId !== sessionProfile.id && sessionProfile.role !== "ADMIN") {
+      return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
     }
 
     const account = await db.insurerAccount.findFirst({
-      where: { profileId: userId },
+      where: { profileId },
       include: { insurer: true },
     });
 

@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth-guard";
 
 function parseMetadata(coverage: Record<string, unknown>) {
   try {
@@ -10,6 +11,7 @@ function parseMetadata(coverage: Record<string, unknown>) {
 }
 
 export async function GET(request: NextRequest) {
+  const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
   try {
     const { searchParams } = request.nextUrl;
     const insurerId = searchParams.get("insurerId");
@@ -44,9 +46,24 @@ export async function GET(request: NextRequest) {
         description: true,
         calculationType: true,
         isMandatory: true,
+        isOptional: true,
+        conditions: true,
         isActive: true,
         displayOrder: true,
         metadata: true,
+        variableSource: true,
+        ratePercent: true,
+        conditionedByNewValue: true,
+        newValueThreshold: true,
+        rateBelowThreshold: true,
+        rateAboveThreshold: true,
+        fixedAmount: true,
+        packPriceReduced: true,
+        capital: true,
+        minAmount: true,
+        maxAmount: true,
+        matrixDimension: true,
+        requiresGuarantee: true,
         createdAt: true,
         updatedAt: true,
         categoryId: true,
@@ -70,6 +87,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
   try {
     const body = await request.json();
     const {
@@ -81,9 +99,24 @@ export async function POST(request: NextRequest) {
       categoryId,
       insurerId,
       isMandatory,
+      isOptional,
+      conditions,
       isActive,
       displayOrder,
       metadata,
+      variableSource,
+      ratePercent,
+      conditionedByNewValue,
+      newValueThreshold,
+      rateBelowThreshold,
+      rateAboveThreshold,
+      fixedAmount,
+      packPriceReduced,
+      capital,
+      minAmount,
+      maxAmount,
+      matrixDimension,
+      requiresGuarantee,
     } = body;
 
     if (!name) {
@@ -136,12 +169,27 @@ export async function POST(request: NextRequest) {
         name,
         description: description || null,
         calculationType,
-        categoryId: categoryId || null,
+        categoryId: categoryId && categoryId !== "__none__" ? categoryId : null,
         insurerId,
         isMandatory: isMandatory ?? false,
+        isOptional: isOptional ?? false,
+        conditions: typeof conditions === "string" ? conditions : (conditions ? JSON.stringify(conditions) : "{}"),
         isActive: isActive ?? true,
         displayOrder: displayOrder ?? 0,
         metadata: typeof metadata === "object" ? JSON.stringify(metadata) : (metadata || "{}"),
+        ...(variableSource !== undefined && { variableSource }),
+        ...(ratePercent !== undefined && { ratePercent }),
+        ...(conditionedByNewValue !== undefined && { conditionedByNewValue }),
+        ...(newValueThreshold !== undefined && { newValueThreshold }),
+        ...(rateBelowThreshold !== undefined && { rateBelowThreshold }),
+        ...(rateAboveThreshold !== undefined && { rateAboveThreshold }),
+        ...(fixedAmount !== undefined && { fixedAmount }),
+        ...(packPriceReduced !== undefined && { packPriceReduced }),
+        ...(capital !== undefined && { capital }),
+        ...(minAmount !== undefined && { minAmount }),
+        ...(maxAmount !== undefined && { maxAmount }),
+        ...(matrixDimension !== undefined && { matrixDimension }),
+        ...(requiresGuarantee !== undefined && { requiresGuarantee }),
       },
     });
 
@@ -152,8 +200,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(parseMetadata(coverage as unknown as Record<string, unknown>), { status: 201 });
   } catch (error) {
     console.error("Erreur coverages POST:", error);
+    const msg = error instanceof Error ? error.message : String(error);
     return NextResponse.json(
-      { error: "Erreur lors de la création de la garantie" },
+      { error: "Erreur lors de la création de la garantie", details: msg },
       { status: 500 }
     );
   }

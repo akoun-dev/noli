@@ -10,6 +10,8 @@ export async function GET() {
         code: true,
         name: true,
         description: true,
+        color: true,
+        icon: true,
         displayOrder: true,
       },
       orderBy: { displayOrder: "asc" },
@@ -22,9 +24,9 @@ export async function GET() {
         code: c.code,
         name: c.name,
         description: c.description,
+        color: c.color,
+        icon: c.icon,
         displayOrder: c.displayOrder,
-        // Count active coverages in this category (across all insurers)
-        _coverageCount: 0, // populated below
       }))
     );
   } catch (error) {

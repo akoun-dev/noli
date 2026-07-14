@@ -1,7 +1,6 @@
 "use client";
 
-import { motion, useInView } from "framer-motion";
-import { useRef } from "react";
+import { motion } from "framer-motion";
 import {
   Car,
   Bike,
@@ -221,16 +220,13 @@ function StarRating({ rating }: { rating: number }) {
 }
 
 /* ─── Component ────────────────────────────────────────────────── */
-export default function LandingPage() {
+export function LandingPage() {
   const setView = useAppStore((s) => s.setView);
-  const heroRef = useRef<HTMLElement>(null);
-  const isInView = useInView(heroRef, { once: true, margin: "-80px" });
 
   return (
-    <main className="flex-1">
+    <div className="flex-1">
       {/* ════════════ HERO ════════════ */}
       <section
-        ref={heroRef}
         className="relative overflow-hidden bg-[#E8F4F0] dark:bg-[#121e19]"
       >
         <div className="absolute -top-40 -right-40 h-[500px] w-[500px] rounded-full bg-[#D1ECDF]/50 dark:bg-[#1a3a2a]/50 blur-3xl pointer-events-none" />
@@ -239,7 +235,7 @@ export default function LandingPage() {
         <div className="relative mx-auto max-w-[1400px] px-4 sm:px-8 py-10 sm:py-14 md:py-20 lg:py-24">
           <motion.div
             initial={{ opacity: 0, y: 16 }}
-            animate={isInView ? { opacity: 1, y: 0 } : {}}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: "easeOut" }}
             className="mb-8 md:mb-12 max-w-2xl"
           >
@@ -259,7 +255,7 @@ export default function LandingPage() {
               <motion.div
                 variants={containerVariants}
                 initial="hidden"
-                animate={isInView ? "visible" : "hidden"}
+                animate="visible"
                 className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4"
               >
                 {insuranceCards.map((card) => {
@@ -275,10 +271,10 @@ export default function LandingPage() {
                           ? `Comparer ${card.label}`
                           : `${card.label} — bientôt disponible`
                       }
-                      className={`group relative flex flex-col gap-3 rounded-xl bg-card p-5 card-shadow transition-all duration-300 ${
+                      className={`group relative flex flex-col gap-3 rounded-xl p-5 transition-all duration-300 ${
                         card.available
-                          ? "cursor-pointer hover:scale-[1.02] card-shadow-hover ring-1 ring-transparent hover:ring-accent/40"
-                          : "cursor-default opacity-50 pointer-events-none"
+                          ? "bg-white dark:bg-card cursor-pointer hover:scale-[1.03] hover:shadow-xl border-2 border-border/60 hover:border-accent/50 hover:-translate-y-1 shadow-md"
+                          : "bg-muted/20 cursor-default opacity-50 pointer-events-none border-2 border-dashed border-border/40"
                       }`}
                       onClick={() => {
                         if (card.available) setView("compare");
@@ -296,7 +292,7 @@ export default function LandingPage() {
                         {card.badge}
                       </span>
                       <div
-                        className="flex h-11 w-11 items-center justify-center rounded-lg shrink-0"
+                        className="flex h-11 w-11 items-center justify-center rounded-lg shrink-0 transition-transform group-hover:scale-110 group-hover:rotate-3"
                         style={{ backgroundColor: card.colorBg }}
                       >
                         <Icon
@@ -308,7 +304,6 @@ export default function LandingPage() {
                       <h3 className="font-semibold text-sm sm:text-base text-foreground leading-snug pr-20">
                         {card.label}
                       </h3>
-
                     </motion.div>
                   );
                 })}
@@ -318,7 +313,7 @@ export default function LandingPage() {
             <motion.div
               variants={mascotVariants}
               initial="hidden"
-              animate={isInView ? "visible" : "hidden"}
+              animate="visible"
               transition={{ delay: 0.3 }}
               className="lg:col-span-2 flex items-center justify-center lg:sticky lg:top-32"
             >
@@ -345,7 +340,7 @@ export default function LandingPage() {
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}
-            animate={isInView ? { opacity: 1, y: 0 } : {}}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.6 }}
             className="mt-10 md:mt-14 flex flex-col sm:flex-row items-center justify-between gap-6 max-w-3xl"
           >
@@ -569,6 +564,6 @@ export default function LandingPage() {
           </motion.div>
         </div>
       </section>
-    </main>
+    </div>
   );
 }

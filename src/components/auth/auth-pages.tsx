@@ -69,7 +69,7 @@ function LoginPage() {
   const validate = () => {
     const e: { email?: string; password?: string } = {};
     if (!email) e.email = "L'email est requis";
-    else if (!isValidEmail(email)) e.email = "Email invalide";
+    else if (!isValidEmail(email)) e.email = "Adresse email invalide";
     if (!password) e.password = "Le mot de passe est requis";
     else if (!hasMinLength(password, 6))
       e.password = "Le mot de passe doit contenir au moins 6 caract\u00e8res";
@@ -137,7 +137,7 @@ function LoginPage() {
         <img src="/img/zebre_plein_sans_fond.png" alt="NOLI" className="h-16 w-auto mx-auto mb-4" />
         <h1 className="text-2xl font-bold tracking-tight">Se connecter</h1>
         <p className="text-muted-foreground mt-2">
-          Acc\u00e9dez \u00e0 votre espace NOLI Assurance
+          Accédez à votre espace NOLI Assurance
         </p>
       </div>
 
@@ -167,7 +167,7 @@ function LoginPage() {
             <Input
               id="login-password"
               type={showPassword ? "text" : "password"}
-              placeholder="\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022"
+              placeholder="votre mot de passe"
               value={password}
               onChange={(e) => {
                 setPassword(e.target.value);
@@ -196,7 +196,7 @@ function LoginPage() {
             onClick={() => setView("forgot")}
             className="text-sm text-primary hover:underline"
           >
-            Mot de passe oubli\u00e9 ?
+            Mot de passe oublié ?
           </button>
         </div>
 
@@ -234,7 +234,7 @@ function LoginPage() {
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="size-3.5" />
-          Retour \u00e0 l&apos;accueil
+          Retour à l&apos;accueil
         </button>
       </div>
     </div>
@@ -261,13 +261,13 @@ function RegisterPage() {
     const e: Record<string, string> = {};
     if (!fullName.trim()) e.fullName = "Le nom complet est requis";
     if (!email) e.email = "L'email est requis";
-    else if (!isValidEmail(email)) e.email = "Email invalide";
+    else if (!isValidEmail(email)) e.email = "Adresse email invalide";
     if (!password) e.password = "Le mot de passe est requis";
     else if (!hasMinLength(password, 6))
       e.password = "Le mot de passe doit contenir au moins 6 caract\u00e8res";
     if (password !== confirmPassword)
       e.confirmPassword = "Les mots de passe ne correspondent pas";
-    if (!acceptTerms) e.terms = "Vous devez accepter les conditions";
+    if (!acceptTerms) e.terms = "Vous devez accepter les conditions d'utilisation";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -598,7 +598,7 @@ function ForgotPasswordPage() {
         <>
           <div className="text-center mb-8">
             <img src="/img/zebre_plein_sans_fond.png" alt="NOLI" className="h-16 w-auto mx-auto mb-4" />
-            <h1 className="text-2xl font-bold tracking-tight">Mot de passe oubli\u00e9</h1>
+            <h1 className="text-2xl font-bold tracking-tight">Mot de passe oublié</h1>
             <p className="text-muted-foreground mt-2">
               R\u00e9initialisez votre mot de passe
             </p>
@@ -606,8 +606,8 @@ function ForgotPasswordPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Entrez l&apos;adresse email associ\u00e9e \u00e0 votre compte. Nous vous
-              enverrons un lien de r\u00e9initialisation.
+              Entrez l&apos;adresse email associée à votre compte. Nous vous
+              enverrons un lien de réinitialisation.
             </p>
 
             <div className="space-y-2">
@@ -647,7 +647,7 @@ function ForgotPasswordPage() {
                 className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
               >
                 <ArrowLeft className="size-3.5" />
-                Retour \u00e0 la connexion
+                Retour à la connexion
               </button>
             </p>
             <p className="text-center">
@@ -655,7 +655,7 @@ function ForgotPasswordPage() {
                 onClick={() => setView("landing")}
                 className="text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
-                Retour \u00e0 l&apos;accueil
+                Retour à l&apos;accueil
               </button>
             </p>
           </div>
@@ -702,7 +702,7 @@ export function AuthPages() {
       <footer className="mt-auto w-full border-t border-border/40">
         <div className="mx-auto flex max-w-[1400px] items-center justify-center px-8 py-5">
           <p className="text-xs text-muted-foreground">
-            &copy; {new Date().getFullYear()} NOLI Assurance. Tous droits r\u00e9serv\u00e9s.
+            &copy; {new Date().getFullYear()} NOLI Assurance. Tous droits réservés.
           </p>
         </div>
       </footer>

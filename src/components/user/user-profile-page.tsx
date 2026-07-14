@@ -18,6 +18,7 @@ import {
   CheckCircle,
 } from "lucide-react";
 import { useAppStore } from "@/store/app-store";
+import { getInitials } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -47,9 +48,6 @@ interface UserProfile {
 }
 
 /* ── Helpers ── */
-const getInitials = (first: string, last: string) =>
-  `${(first?.[0] ?? "").toUpperCase()}${(last?.[0] ?? "").toUpperCase()}`;
-
 const formatDate = (dateStr: string) => {
   try {
     return new Date(dateStr).toLocaleDateString("fr-FR", {

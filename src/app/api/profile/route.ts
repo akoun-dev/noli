@@ -1,15 +1,22 @@
 import { db } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import { getSessionProfile } from "@/lib/auth-guard";
 
 export async function GET(request: NextRequest) {
   try {
-    const userId = request.nextUrl.searchParams.get("userId");
-    if (!userId) {
-      return NextResponse.json({ error: "Identifiant utilisateur requis" }, { status: 400 });
+    const profile = await getSessionProfile();
+    if (!profile) {
+      return NextResponse.json({ error: "Authentification requise" }, { status: 401 });
     }
-    const profile = await db.profile.findUnique({
-      where: { id: userId },
+    const userId = request.nextUrl.searchParams.get("userId");
+    if (userId && userId !== profile.id && profile.role !== "ADMIN") {
+      return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+    }
+    const targetId = userId || profile.id;
+
+    const data = await db.profile.findUnique({
+      where: { id: targetId },
       select: {
         id: true,
         email: true,
@@ -22,13 +29,13 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    if (!profile) {
+    if (!data) {
       return NextResponse.json({ error: "Profil non trouvé" }, { status: 404 });
     }
 
     return NextResponse.json({
-      ...profile,
-      name: [profile.firstName, profile.lastName].filter(Boolean).join(" "),
+      ...data,
+      name: [data.firstName, data.lastName].filter(Boolean).join(" "),
     });
   } catch (error) {
     console.error("Profile GET error:", error);
@@ -38,14 +45,20 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
+    const sessionProfile = await getSessionProfile();
+    if (!sessionProfile) {
+      return NextResponse.json({ error: "Authentification requise" }, { status: 401 });
+    }
+
     const body = await request.json();
     const { userId, firstName, lastName, phone, photoUrl, currentPassword, newPassword } = body;
 
-    if (!userId) {
-      return NextResponse.json({ error: "Identifiant utilisateur requis" }, { status: 400 });
+    const targetId = userId || sessionProfile.id;
+    if (targetId !== sessionProfile.id && sessionProfile.role !== "ADMIN") {
+      return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
     }
 
-    const profile = await db.profile.findUnique({ where: { id: userId } });
+    const profile = await db.profile.findUnique({ where: { id: targetId } });
     if (!profile) {
       return NextResponse.json({ error: "Profil non trouvé" }, { status: 404 });
     }
@@ -57,7 +70,6 @@ export async function PUT(request: NextRequest) {
     if (phone !== undefined) updateData.phone = phone || null;
     if (photoUrl !== undefined) updateData.photoUrl = photoUrl || null;
 
-    // Handle password change
     if (newPassword) {
       if (!currentPassword) {
         return NextResponse.json({ error: "Le mot de passe actuel est requis" }, { status: 400 });

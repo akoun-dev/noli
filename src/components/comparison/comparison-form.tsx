@@ -16,7 +16,6 @@ import {
   Scale,
   Lock,
   FlameKindling,
-  ShieldCheck,
   CheckCheck,
   Wrench,
   CarFront,
@@ -36,8 +35,9 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { USAGE_OPTIONS } from "@/lib/constants";
 import { Progress } from "@/components/ui/progress";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 // ─── Icon mapping for DB coverage category codes ──────────────────
 const CATEGORY_ICON_MAP: Record<string, LucideIcon> = {
@@ -57,12 +57,29 @@ const CATEGORY_ICON_MAP: Record<string, LucideIcon> = {
 
 const DEFAULT_ICON = Shield;
 
+const CATEGORY_COLOR_MAP: Record<string, string> = {
+  RESPONSABILITE_CIVILE: "#0891b2",
+  DEFENSE_RECOURS: "#7c3aed",
+  INDIVIDUELLE_CONDUCTEUR: "#059669",
+  INDIVIDUELLE_PASSAGERS: "#0284c7",
+  INCENDIE: "#dc2626",
+  VOL: "#ea580c",
+  BRIS_GLACES: "#0ea5e9",
+  TIERCE_COMPLETE: "#2563eb",
+  TIERCE_COLLISION: "#4f46e5",
+  ASSISTANCE: "#16a34a",
+  AVANCE_RECOURS: "#ca8a04",
+  ACCESSOIRES: "#6b7280",
+};
+
 // ─── Types ────────────────────────────────────────────────────────
 interface DBCoverageCategory {
   id: string;
   code: string;
   name: string;
   description: string | null;
+  color: string | null;
+  icon: string | null;
   displayOrder: number;
 }
 
@@ -87,13 +104,6 @@ const SEAT_OPTIONS = [
   "2", "3", "4", "5", "6", "7", "8", "9+",
 ].map((v) => ({ value: v, label: v }));
 
-const USAGE_OPTIONS = [
-  { value: "personnel", label: "Personnel" },
-  { value: "professionnel", label: "Professionnel" },
-  { value: "taxi_vtc", label: "Taxi / VTC" },
-  { value: "autre", label: "Autre" },
-];
-
 // ─── Animation ──────────────────────────────────────────────────────
 const slideVariants = {
   enter: (d: number) => ({ x: d > 0 ? 200 : -200, opacity: 0 }),
@@ -111,7 +121,6 @@ export function ComparisonForm() {
     setView, setIsComparing, setComparisonResults,
     isComparing, user,
   } = useAppStore();
-  const { toast } = useToast();
   const [direction, setDirection] = useState(0);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -129,7 +138,7 @@ export function ComparisonForm() {
         if (Array.isArray(data)) setDbCategories(data);
       })
       .catch(() => {
-        // Fallback: empty — user will see error on submit
+        toast.error("Impossible de charger les catégories de garanties");
       })
       .finally(() => setCategoriesLoading(false));
   }, [dbCategories.length]);
@@ -185,11 +194,12 @@ export function ComparisonForm() {
 
   // ─── Submit ─────────────────────────────────────────────────────
   const handleSubmit = async () => {
-    if (!validateStep1() || !validateStep2() || !validateStep3()) {
-      setComparisonStep(1);
-      setDirection(0);
-      return;
-    }
+    const step1Ok = validateStep1();
+    const step2Ok = step1Ok && validateStep2();
+    const step3Ok = step2Ok && validateStep3();
+    if (!step1Ok) { setComparisonStep(1); setDirection(0); return; }
+    if (!step2Ok) { setComparisonStep(2); setDirection(0); return; }
+    if (!step3Ok) { setComparisonStep(3); setDirection(0); return; }
     setIsComparing(true);
     try {
       const res = await fetch("/api/compare", {
@@ -205,11 +215,7 @@ export function ComparisonForm() {
       setComparisonResults(data.results ?? []);
       setView("results");
     } catch (err) {
-      toast({
-        title: "Erreur",
-        description: err instanceof Error ? err.message : "Veuillez réessayer.",
-        variant: "destructive",
-      });
+      toast.error(err instanceof Error ? err.message : "Veuillez réessayer.");
     } finally {
       setIsComparing(false);
     }
@@ -399,7 +405,7 @@ function Step1({
           <Label htmlFor="lastName">Nom *</Label>
           <Input
             id="lastName"
-            placeholder="Aboa"
+            placeholder="Nom"
             value={personalInfo.lastName}
             onChange={(e) => setPersonalInfo({ lastName: e.target.value })}
             aria-invalid={!!errors.lastName}
@@ -411,7 +417,7 @@ function Step1({
           <Label htmlFor="firstName">Prénom *</Label>
           <Input
             id="firstName"
-            placeholder="Akoun Bernard"
+            placeholder="Prénoms"
             value={personalInfo.firstName}
             onChange={(e) => setPersonalInfo({ firstName: e.target.value })}
             aria-invalid={!!errors.firstName}
@@ -428,7 +434,7 @@ function Step1({
           <Input
             id="email"
             type="email"
-            placeholder="aboa.akoun40@gmail.com"
+            placeholder="Email"
             className="w-full pl-10"
             value={personalInfo.email}
             onChange={(e) => setPersonalInfo({ email: e.target.value })}
@@ -446,7 +452,7 @@ function Step1({
           </div>
           <Input
             id="phone"
-            placeholder="01 40 98 49 43"
+            placeholder="0123456789"
             className="w-full rounded-l-none"
             value={personalInfo.phone}
             onChange={(e) => setPersonalInfo({ phone: e.target.value })}
@@ -668,8 +674,11 @@ function Step3({
             Chargement des garanties disponibles...
           </p>
         </div>
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-6 h-6 animate-spin text-primary" />
+        <div className="flex items-center justify-center py-16">
+          <div className="text-center">
+            <Loader2 className="animate-spin h-8 w-8 mx-auto mb-4 text-primary" />
+            <p className="text-sm text-muted-foreground">Chargement des catégories...</p>
+          </div>
         </div>
       </div>
     );
@@ -692,7 +701,7 @@ function Step3({
 
   return (
     <div className="space-y-5 animate-fade-in">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-center justify-between">
         <div>
           <h2 className="font-[family-name:var(--font-space-grotesk)] text-xl font-bold text-foreground">
             Catégories de garanties
@@ -701,8 +710,8 @@ function Step3({
             Sélectionnez les catégories de garanties qui vous intéressent.
           </p>
         </div>
-        <span className="text-sm text-muted-foreground shrink-0 mt-1 whitespace-nowrap">
-          {selected.length}/{allIds.length}
+        <span className="text-sm text-muted-foreground shrink-0 ml-4 whitespace-nowrap rounded-full border px-3 py-1">
+          {selected.length}/{allIds.length} sélectionnée(s)
         </span>
       </div>
 
@@ -710,13 +719,13 @@ function Step3({
       <button
         type="button"
         onClick={onToggleAll}
-        className={`flex items-center gap-2 w-full p-3 rounded-xl border-2 transition-all text-sm font-medium ${
+        className={`flex items-center gap-2 w-full p-4 rounded-2xl border-2 transition-all text-sm font-medium shadow-sm ${
           allSelected
-            ? "border-primary bg-primary/5 text-primary"
-            : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
+            ? "border-green-500/60 bg-green-50/80 dark:border-green-500/50 dark:bg-green-950/20 text-green-700 dark:text-green-300"
+            : "border-border/60 bg-card text-muted-foreground hover:border-primary/40 hover:text-foreground hover:shadow-md"
         }`}
       >
-        <CheckCheck className={`w-4 h-4 ${allSelected ? "text-primary" : ""}`} />
+        <CheckCheck className={`w-4 h-4 ${allSelected ? "text-green-600" : ""}`} />
         {allSelected ? "Tout désélectionner" : "Tout sélectionner"}
       </button>
 
@@ -724,10 +733,11 @@ function Step3({
         <p className="text-sm text-destructive">{error}</p>
       )}
 
-      <div className="grid grid-cols-1 gap-3 max-h-[50vh] overflow-y-auto pr-1">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[50vh] overflow-y-auto pr-1">
         {categories.map((cat, i) => {
           const isSelected = selected.includes(cat.code);
           const Icon = CATEGORY_ICON_MAP[cat.code] || DEFAULT_ICON;
+          const catColor = cat.color || CATEGORY_COLOR_MAP[cat.code] || '#0891b2';
           return (
             <motion.button
               type="button"
@@ -736,35 +746,36 @@ function Step3({
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.03 }}
               onClick={() => onToggle(cat.code)}
-              className={`flex items-center gap-4 w-full p-4 rounded-xl border-2 transition-all text-left cursor-pointer bg-card ${
+              aria-pressed={isSelected}
+              className={`w-full rounded-2xl border-2 p-4 text-left transition-all duration-200 hover:shadow-lg ${
                 isSelected
-                  ? "border-primary bg-primary/5"
-                  : "border-border hover:border-primary/40"
+                  ? 'border-green-500/60 bg-green-50/80 dark:border-green-500/50 dark:bg-green-950/20'
+                  : 'border-border/60 bg-card/50 hover:border-primary/40 dark:border-border/30 dark:hover:border-accent/40'
               }`}
             >
-              <div
-                className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
-                  isSelected
-                    ? "bg-primary/15"
-                    : "bg-muted"
-                }`}
-              >
-                <Icon
-                  className={`w-5 h-5 transition-colors ${
-                    isSelected ? "text-primary" : "text-muted-foreground"
-                  }`}
-                />
+              <div className="flex items-center gap-3">
+                <div
+                  className="flex items-center justify-center w-12 h-12 rounded-xl shrink-0"
+                  style={{ backgroundColor: `${catColor}18`, color: catColor }}
+                >
+                  <Icon className="w-5 h-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-sm font-semibold text-foreground truncate">{cat.name}</h4>
+                  {cat.description && (
+                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{cat.description}</p>
+                  )}
+                </div>
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 transition-all ${
+                  isSelected ? 'bg-green-500 text-white scale-100' : 'border-2 border-muted-foreground/30 scale-90'
+                }`}>
+                  {isSelected && (
+                    <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  )}
+                </div>
               </div>
-              <span
-                className={`text-sm font-medium transition-colors flex-1 ${
-                  isSelected ? "text-primary" : "text-foreground"
-                }`}
-              >
-                {cat.name}
-              </span>
-              {isSelected && (
-                <ShieldCheck className="w-4 h-4 text-primary ml-auto shrink-0" />
-              )}
             </motion.button>
           );
         })}

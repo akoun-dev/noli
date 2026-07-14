@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, Search, Loader2, MoreHorizontal, Package } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Loader2, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -114,7 +114,7 @@ export function PackagesTab() {
         <Table><TableHeader><TableRow className="bg-muted/50"><TableHead>Nom</TableHead><TableHead>Description</TableHead><TableHead className="text-right">Prix base</TableHead><TableHead className="text-center">Garanties</TableHead><TableHead className="text-center">Statut</TableHead><TableHead className="w-10" /></TableRow></TableHeader>
         <TableBody>{items.map((p) => (
           <TableRow key={p.id}><TableCell className="font-medium">{p.name}</TableCell><TableCell className="text-sm text-muted-foreground max-w-[250px] truncate">{p.description || "—"}</TableCell><TableCell className="text-right font-mono text-sm">{fmtPrice(p.basePrice)}</TableCell><TableCell className="text-center"><Button variant="ghost" size="sm" className="text-xs" onClick={() => openCovDialog(p)}><Package className="h-3.5 w-3.5 mr-1" />{p._count.coverageLinks}</Button></TableCell><TableCell className="text-center"><Switch checked={p.isActive} onCheckedChange={async () => { await fetch(`/api/admin/insurance-packages/${p.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isActive: !p.isActive }) }); fetchItems(); }} /></TableCell>
-          <TableCell><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onClick={() => openCovDialog(p)}><Package className="h-4 w-4 mr-2" /> Gérer garanties</DropdownMenuItem><DropdownMenuItem onClick={() => openEdit(p)}><Pencil className="h-4 w-4 mr-2" /> Modifier</DropdownMenuItem><DropdownMenuItem className="text-destructive" onClick={() => setDeleteId(p.id)}><Trash2 className="h-4 w-4 mr-2" /> Supprimer</DropdownMenuItem></DropdownMenuContent></DropdownMenu></TableCell></TableRow>
+          <TableCell><div className="flex items-center gap-1"><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openCovDialog(p)} title="Gérer garanties"><Package className="h-4 w-4" /></Button><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(p)} title="Modifier"><Pencil className="h-4 w-4" /></Button><Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteId(p.id)} title="Supprimer"><Trash2 className="h-4 w-4" /></Button></div></TableCell></TableRow>
         ))}</TableBody></Table>
       </div>
       {/* Mobile cards */}

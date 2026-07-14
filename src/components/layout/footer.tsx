@@ -5,11 +5,11 @@ import { MapPin, Phone, Mail } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useAppStore } from "@/store/app-store";
 
-const noliLinks = [
-  { label: "À propos", href: "#" },
-  { label: "Contact", href: "#" },
-  { label: "FAQ", href: "#" },
-  { label: "Mentions légales", href: "#" },
+const noliLinks: { label: string; view: string }[] = [
+  { label: "À propos", view: "about" },
+  { label: "Contact", view: "contact" },
+  { label: "FAQ", view: "faq" },
+  { label: "Mentions légales", view: "mentions-legales" },
 ];
 
 export function Footer() {
@@ -54,13 +54,13 @@ export function Footer() {
             <ul className="flex flex-col gap-3">
               {noliLinks.map((link) => (
                 <li key={link.label}>
-                  <a
-                    href={link.href}
+                  <button
+                    onClick={() => setView(link.view as any)}
                     className="group inline-flex items-center gap-1.5 text-sm text-secondary-foreground/70 transition-colors hover:text-accent"
                   >
                     <span className="inline-block h-1 w-1 rounded-full bg-accent/40 transition-colors group-hover:bg-accent" />
                     {link.label}
-                  </a>
+                  </button>
                 </li>
               ))}
             </ul>
@@ -115,12 +115,6 @@ export function Footer() {
           © {new Date().getFullYear()} NOLI Assurance. Tous droits réservés.
         </p>
         <div className="flex items-center gap-4">
-          <button
-            onClick={() => setView("admin")}
-            className="text-xs text-secondary-foreground/30 hover:text-secondary-foreground/60 transition-colors"
-          >
-            Administration
-          </button>
           <p className="flex items-center gap-1.5 text-xs text-secondary-foreground/50">
             Propulsé par
             <span className="rounded bg-accent px-1.5 py-0.5 text-xs font-semibold text-accent-foreground">

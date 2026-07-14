@@ -76,7 +76,7 @@ function LoginModal() {
   const validate = () => {
     const e: { email?: string; password?: string } = {};
     if (!email) e.email = "L'email est requis";
-    else if (!isValidEmail(email)) e.email = "Email invalide";
+    else if (!isValidEmail(email)) e.email = "Adresse email invalide";
     if (!password) e.password = "Le mot de passe est requis";
     else if (!hasMinLength(password, 6))
       e.password = "Le mot de passe doit contenir au moins 6 caract\u00e8res";
@@ -195,7 +195,7 @@ function LoginModal() {
           onClick={() => setAuthModal("forgot")}
           className="text-sm text-primary hover:underline"
         >
-          Mot de passe oubli\u00e9 ?
+          Mot de passe oublié ?
         </button>
       </div>
 
@@ -250,13 +250,13 @@ function RegisterModal() {
     const e: Record<string, string> = {};
     if (!fullName.trim()) e.fullName = "Le nom complet est requis";
     if (!email) e.email = "L'email est requis";
-    else if (!isValidEmail(email)) e.email = "Email invalide";
+    else if (!isValidEmail(email)) e.email = "Adresse email invalide";
     if (!password) e.password = "Le mot de passe est requis";
     else if (!hasMinLength(password, 6))
       e.password = "Le mot de passe doit contenir au moins 6 caract\u00e8res";
     if (password !== confirmPassword)
       e.confirmPassword = "Les mots de passe ne correspondent pas";
-    if (!acceptTerms) e.terms = "Vous devez accepter les conditions";
+    if (!acceptTerms) e.terms = "Vous devez accepter les conditions d'utilisation";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -515,7 +515,7 @@ function ForgotPasswordModal() {
       return;
     }
     if (!isValidEmail(email)) {
-      setError("Email invalide");
+      setError("Adresse email invalide");
       return;
     }
 
@@ -625,15 +625,15 @@ export function AuthModals() {
   > = {
     login: {
       title: "Se connecter",
-      description: "Acc\u00e9dez \u00e0 votre espace NOLI Assurance",
+      description: "Accédez à votre espace NOLI Assurance",
     },
     register: {
-      title: "Cr\u00e9er un compte",
+      title: "Créer un compte",
       description: "Rejoignez NOLI Assurance pour comparer et souscrire",
     },
     forgot: {
-      title: "Mot de passe oubli\u00e9",
-      description: "R\u00e9initialisez votre mot de passe",
+      title: "Mot de passe oublié",
+      description: "Réinitialisez votre mot de passe",
     },
   };
 

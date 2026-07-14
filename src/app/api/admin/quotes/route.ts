@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth-guard";
 
 function parseJsonField<T>(value: string, fallback: T): T {
   try {
@@ -10,6 +11,7 @@ function parseJsonField<T>(value: string, fallback: T): T {
 }
 
 export async function GET(request: NextRequest) {
+  const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
   try {
     const { searchParams } = request.nextUrl;
     const status = searchParams.get("status");
@@ -64,6 +66,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
+  const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
   try {
     const body = await request.json();
     const { id, status, finalPrice, notes } = body;
