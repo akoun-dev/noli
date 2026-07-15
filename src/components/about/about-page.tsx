@@ -1,37 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
 import { Eye, Zap, Shield, Heart } from "lucide-react";
 
-/* ─── Animation Variants ───────────────────────────────────────── */
-const fadeUp = {
-  hidden: { opacity: 0, y: 30 },
-  visible: (delay: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.6, delay, ease: "easeOut" },
-  }),
-};
-
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.1 },
-  },
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.45, ease: "easeOut" },
-  },
-};
-
-/* ─── Data ─────────────────────────────────────────────────────── */
 const values = [
   {
     icon: Eye,
@@ -55,7 +26,6 @@ const values = [
   },
 ];
 
-/* ─── Component ────────────────────────────────────────────────── */
 export function AboutPage() {
   const [stats, setStats] = useState<{ value: string; label: string }[]>([]);
 
@@ -78,86 +48,44 @@ export function AboutPage() {
         ]);
       });
   }, []);
+
   return (
     <main className="min-h-screen">
       {/* ─── Hero ────────────────────────────────────────────── */}
       <section className="relative overflow-hidden bg-[#E8F4F0] dark:bg-[#121e19] py-20 md:py-28">
-        {/* Decorative blobs */}
         <div className="pointer-events-none absolute -top-20 -right-20 h-72 w-72 rounded-full bg-accent/20 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-16 -left-16 h-56 w-56 rounded-full bg-secondary/15 blur-3xl" />
 
         <div className="relative mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
-          <motion.span
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-60px" }}
-            custom={0}
-            variants={fadeUp}
-            className="mb-4 inline-block rounded-full bg-primary/10 px-4 py-1.5 text-xs font-semibold tracking-wider text-primary uppercase"
-          >
+          <span className="mb-4 inline-block rounded-full bg-primary/10 px-4 py-1.5 text-xs font-semibold tracking-wider text-primary uppercase animate-fade-in-up">
             Qui sommes-nous
-          </motion.span>
+          </span>
 
-          <motion.h1
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-60px" }}
-            custom={0.1}
-            variants={fadeUp}
-            className="font-display text-4xl font-bold tracking-tight text-foreground sm:text-5xl md:text-6xl"
-          >
+          <h1 className="font-display text-4xl font-bold tracking-tight text-foreground sm:text-5xl md:text-6xl animate-slide-up">
             À propos de{" "}
             <span className="text-primary">NOLI</span>
-          </motion.h1>
+          </h1>
 
-          <motion.p
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-60px" }}
-            custom={0.2}
-            variants={fadeUp}
-            className="mx-auto mt-6 max-w-2xl font-subtitle text-lg text-muted-foreground sm:text-xl"
-          >
+          <p className="mx-auto mt-6 max-w-2xl font-subtitle text-lg text-muted-foreground sm:text-xl animate-slide-up delay-200">
             La plateforme qui démocratise l&apos;assurance en Côte d&apos;Ivoire.
             Notre mission : rendre la comparaison d&apos;assurances simple,
             transparente et accessible à tous.
-          </motion.p>
+          </p>
         </div>
       </section>
 
       {/* ─── Notre Mission ───────────────────────────────────── */}
       <section className="bg-background py-16 md:py-24">
         <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-60px" }}
-            custom={0}
-            variants={fadeUp}
-            className="mb-4 inline-block rounded-full bg-primary/10 px-4 py-1.5 text-xs font-semibold tracking-wider text-primary uppercase"
-          >
+          <div className="mb-4 inline-block rounded-full bg-primary/10 px-4 py-1.5 text-xs font-semibold tracking-wider text-primary uppercase animate-fade-in-up">
             Notre Mission
-          </motion.div>
+          </div>
 
-          <motion.h2
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-60px" }}
-            custom={0.1}
-            variants={fadeUp}
-            className="font-display text-3xl font-bold text-foreground sm:text-4xl"
-          >
+          <h2 className="font-display text-3xl font-bold text-foreground sm:text-4xl animate-fade-in-up" style={{ animationDelay: "80ms" }}>
             Rendre l&apos;assurance accessible à tous les Ivoiriens
-          </motion.h2>
+          </h2>
 
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-60px" }}
-            custom={0.2}
-            variants={fadeUp}
-            className="mt-8 space-y-5 font-subtitle text-base leading-relaxed text-muted-foreground sm:text-lg"
-          >
+          <div className="mt-8 space-y-5 font-subtitle text-base leading-relaxed text-muted-foreground sm:text-lg animate-fade-in-up" style={{ animationDelay: "160ms" }}>
             <p>
               NOLI est une plateforme ivoirienne de comparaison d&apos;assurances
               conçue pour aider les particuliers et les professionnels à trouver
@@ -182,49 +110,29 @@ export function AboutPage() {
               vous faire économiser du temps et de l&apos;argent, tout en
               garantissant une couverture de qualité.
             </p>
-          </motion.div>
+          </div>
         </div>
       </section>
 
       {/* ─── Nos Valeurs ─────────────────────────────────────── */}
       <section className="bg-[#E8F4F0] dark:bg-[#121e19] py-16 md:py-24">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-60px" }}
-            custom={0}
-            variants={fadeUp}
-            className="mb-4 inline-block rounded-full bg-primary/10 px-4 py-1.5 text-xs font-semibold tracking-wider text-primary uppercase"
-          >
+          <div className="mb-4 inline-block rounded-full bg-primary/10 px-4 py-1.5 text-xs font-semibold tracking-wider text-primary uppercase animate-fade-in-up">
             Nos Valeurs
-          </motion.div>
+          </div>
 
-          <motion.h2
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-60px" }}
-            custom={0.1}
-            variants={fadeUp}
-            className="font-display text-3xl font-bold text-foreground sm:text-4xl"
-          >
+          <h2 className="font-display text-3xl font-bold text-foreground sm:text-4xl animate-fade-in-up" style={{ animationDelay: "80ms" }}>
             Ce qui nous guide chaque jour
-          </motion.h2>
+          </h2>
 
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-60px" }}
-            variants={containerVariants}
-            className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4"
-          >
-            {values.map((v) => {
+          <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {values.map((v, idx) => {
               const Icon = v.icon;
               return (
-                <motion.div
+                <div
                   key={v.title}
-                  variants={itemVariants}
-                  className="group rounded-xl border border-border/50 bg-background p-6 shadow-sm transition-shadow duration-300 hover:shadow-md"
+                  className="group rounded-xl border border-border/50 bg-background p-6 shadow-sm transition-shadow duration-300 hover:shadow-md animate-fade-in-up"
+                  style={{ animationDelay: `${(idx + 1) * 100}ms` }}
                 >
                   <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors duration-300 group-hover:bg-primary group-hover:text-primary-foreground">
                     <Icon className="size-6" />
@@ -235,50 +143,30 @@ export function AboutPage() {
                   <p className="mt-1.5 font-subtitle text-sm text-muted-foreground">
                     {v.desc}
                   </p>
-                </motion.div>
+                </div>
               );
             })}
-          </motion.div>
+          </div>
         </div>
       </section>
 
       {/* ─── Nos Chiffres ────────────────────────────────────── */}
       <section className="bg-background py-16 md:py-24">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-60px" }}
-            custom={0}
-            variants={fadeUp}
-            className="mb-4 inline-block rounded-full bg-primary/10 px-4 py-1.5 text-xs font-semibold tracking-wider text-primary uppercase"
-          >
+          <div className="mb-4 inline-block rounded-full bg-primary/10 px-4 py-1.5 text-xs font-semibold tracking-wider text-primary uppercase animate-fade-in-up">
             Nos Chiffres
-          </motion.div>
+          </div>
 
-          <motion.h2
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-60px" }}
-            custom={0.1}
-            variants={fadeUp}
-            className="mb-12 text-center font-display text-3xl font-bold text-foreground sm:text-4xl"
-          >
+          <h2 className="mb-12 text-center font-display text-3xl font-bold text-foreground sm:text-4xl animate-fade-in-up" style={{ animationDelay: "80ms" }}>
             NOLI en quelques données
-          </motion.h2>
+          </h2>
 
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-60px" }}
-            variants={containerVariants}
-            className="grid gap-6 sm:grid-cols-3"
-          >
-            {stats.map((s) => (
-              <motion.div
+          <div className="grid gap-6 sm:grid-cols-3">
+            {stats.map((s, idx) => (
+              <div
                 key={s.label}
-                variants={itemVariants}
-                className="rounded-xl border border-border/50 bg-[#E8F4F0] dark:bg-[#121e19] px-6 py-8 text-center"
+                className="rounded-xl border border-border/50 bg-[#E8F4F0] dark:bg-[#121e19] px-6 py-8 text-center animate-fade-in-up"
+                style={{ animationDelay: `${(idx + 1) * 100}ms` }}
               >
                 <p className="font-display text-4xl font-bold text-primary sm:text-5xl">
                   {s.value}
@@ -286,9 +174,9 @@ export function AboutPage() {
                 <p className="mt-2 font-subtitle text-sm text-muted-foreground sm:text-base">
                   {s.label}
                 </p>
-              </motion.div>
+              </div>
             ))}
-          </motion.div>
+          </div>
         </div>
       </section>
     </main>

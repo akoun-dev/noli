@@ -1,25 +1,19 @@
 "use client";
 
-import { motion } from "framer-motion";
-
 export function MentionsLegalesPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
       {/* Hero */}
       <section className="relative overflow-hidden border-b border-border/40 bg-gradient-to-br from-primary/5 via-background to-primary/5 py-20 md:py-28">
         <div className="mx-auto max-w-3xl px-6 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
+          <div className="animate-slide-up">
             <h1 className="font-[family-name:var(--font-space-grotesk)] text-4xl font-bold tracking-tight text-foreground md:text-5xl">
               Mentions Légales
             </h1>
             <p className="mt-4 text-lg text-muted-foreground">
               Informations légales relatives à la plateforme NOLI
             </p>
-          </motion.div>
+          </div>
         </div>
       </section>
 

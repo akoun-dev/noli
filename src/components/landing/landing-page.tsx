@@ -1,6 +1,5 @@
 "use client";
 
-import { motion } from "framer-motion";
 import {
   Car,
   Bike,
@@ -19,7 +18,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { useAppStore } from "@/store/app-store";
 
-/* ─── Data ─────────────────────────────────────────────────────── */
 const insuranceCards = [
   {
     label: "Assurance Auto",
@@ -142,60 +140,6 @@ const testimonials = [
   },
 ];
 
-/* ─── Animation Variants ───────────────────────────────────────── */
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.09 },
-  },
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 24 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, ease: "easeOut" },
-  },
-};
-
-const mascotVariants = {
-  hidden: { opacity: 0, scale: 0.85 },
-  visible: {
-    opacity: 1,
-    scale: 1,
-    transition: { duration: 0.7, ease: "easeOut" },
-  },
-};
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 30 },
-  visible: (delay: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.6, delay, ease: "easeOut" },
-  }),
-};
-
-const staggerContainer = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.12 },
-  },
-};
-
-const staggerItem = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.45, ease: "easeOut" },
-  },
-};
-
-/* ─── Star Rating ──────────────────────────────────────────────── */
 function StarRating({ rating }: { rating: number }) {
   return (
     <div className="flex items-center gap-0.5">
@@ -219,26 +163,18 @@ function StarRating({ rating }: { rating: number }) {
   );
 }
 
-/* ─── Component ────────────────────────────────────────────────── */
 export function LandingPage() {
   const setView = useAppStore((s) => s.setView);
 
   return (
     <div className="flex-1">
       {/* ════════════ HERO ════════════ */}
-      <section
-        className="relative overflow-hidden bg-[#E8F4F0] dark:bg-[#121e19]"
-      >
+      <section className="relative overflow-hidden bg-[#E8F4F0] dark:bg-[#121e19]">
         <div className="absolute -top-40 -right-40 h-[500px] w-[500px] rounded-full bg-[#D1ECDF]/50 dark:bg-[#1a3a2a]/50 blur-3xl pointer-events-none" />
         <div className="absolute -bottom-32 -left-32 h-[400px] w-[400px] rounded-full bg-[#DEEF4A]/10 dark:bg-[#DEEF4A]/5 blur-3xl pointer-events-none" />
 
         <div className="relative mx-auto max-w-[1400px] px-4 sm:px-8 py-10 sm:py-14 md:py-20 lg:py-24">
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, ease: "easeOut" }}
-            className="mb-8 md:mb-12 max-w-2xl"
-          >
+          <div className="mb-8 md:mb-12 max-w-2xl animate-slide-up">
             <h1 className="font-[family-name:var(--font-space-grotesk)] text-2xl sm:text-3xl md:text-4xl lg:text-[2.75rem] font-bold tracking-tight text-primary leading-tight">
               Comparez vos assurances{" "}
               <span className="text-secondary">en quelques clics</span>
@@ -248,22 +184,16 @@ export function LandingPage() {
               d&apos;Ivoire pour vous trouver le meilleur tarif. Simple, rapide
               et transparent.
             </p>
-          </motion.div>
+          </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-10 lg:gap-14 items-start">
             <div className="lg:col-span-3">
-              <motion.div
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
-                className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4"
-              >
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 {insuranceCards.map((card) => {
                   const Icon = card.icon;
                   return (
-                    <motion.div
+                    <div
                       key={card.label}
-                      variants={itemVariants}
                       role={card.available ? "button" : undefined}
                       tabIndex={card.available ? 0 : undefined}
                       aria-label={
@@ -271,7 +201,7 @@ export function LandingPage() {
                           ? `Comparer ${card.label}`
                           : `${card.label} — bientôt disponible`
                       }
-                      className={`group relative flex flex-col gap-3 rounded-xl p-5 transition-all duration-300 ${
+                      className={`group relative flex flex-col gap-3 rounded-xl p-5 transition-all duration-300 animate-fade-in-up ${
                         card.available
                           ? "bg-white dark:bg-card cursor-pointer hover:scale-[1.03] hover:shadow-xl border-2 border-border/60 hover:border-accent/50 hover:-translate-y-1 shadow-md"
                           : "bg-muted/20 cursor-default opacity-50 pointer-events-none border-2 border-dashed border-border/40"
@@ -304,19 +234,13 @@ export function LandingPage() {
                       <h3 className="font-semibold text-sm sm:text-base text-foreground leading-snug pr-20">
                         {card.label}
                       </h3>
-                    </motion.div>
+                    </div>
                   );
                 })}
-              </motion.div>
+              </div>
             </div>
 
-            <motion.div
-              variants={mascotVariants}
-              initial="hidden"
-              animate="visible"
-              transition={{ delay: 0.3 }}
-              className="lg:col-span-2 flex items-center justify-center lg:sticky lg:top-32"
-            >
+            <div className="lg:col-span-2 flex items-center justify-center lg:sticky lg:top-32 animate-fade-in delay-300">
               <div className="relative">
                 <div
                   className="absolute inset-0 -m-6 rounded-full blur-3xl pointer-events-none"
@@ -335,15 +259,10 @@ export function LandingPage() {
                   />
                 </div>
               </div>
-            </motion.div>
+            </div>
           </div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.6 }}
-            className="mt-10 md:mt-14 flex flex-col sm:flex-row items-center justify-between gap-6 max-w-3xl"
-          >
+          <div className="mt-10 md:mt-14 flex flex-col sm:flex-row items-center justify-between gap-6 max-w-3xl animate-slide-up delay-500">
             <Button
               size="lg"
               className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full px-8 text-sm sm:text-base font-semibold shadow-lg hover:shadow-xl transition-shadow"
@@ -352,22 +271,14 @@ export function LandingPage() {
               Comparer maintenant
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
-
-          </motion.div>
+          </div>
         </div>
       </section>
 
       {/* ════════════ COMMENT ÇA MARCHE ════════════ */}
       <section className="bg-background py-16 md:py-24">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-60px" }}
-            custom={0}
-            variants={fadeUp}
-            className="text-center mb-14"
-          >
+          <div className="text-center mb-14 animate-fade-in-up">
             <span className="mb-4 inline-block rounded-full bg-primary/10 px-4 py-1.5 text-xs font-semibold tracking-wider text-primary uppercase">
               Comment ça marche
             </span>
@@ -377,27 +288,19 @@ export function LandingPage() {
             <p className="mt-3 text-muted-foreground max-w-xl mx-auto">
               Comparez et souscrivez votre assurance en quelques minutes, sans quitter votre canapé.
             </p>
-          </motion.div>
+          </div>
 
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-40px" }}
-            variants={staggerContainer}
-            className="relative grid gap-6 sm:gap-8 md:grid-cols-3"
-          >
-            {/* Connector line (desktop) */}
+          <div className="relative grid gap-6 sm:gap-8 md:grid-cols-3">
             <div className="hidden md:block absolute top-14 left-[calc(16.67%+24px)] right-[calc(16.67%+24px)] h-0.5 bg-gradient-to-r from-primary/30 via-primary/20 to-primary/30" />
 
-            {steps.map((step) => {
+            {steps.map((step, idx) => {
               const Icon = step.icon;
               return (
-                <motion.div
-                  key={step.num}
-                  variants={staggerItem}
-                  className="relative text-center"
-                >
-                  {/* Step number circle */}
+                    <div
+                      key={step.num}
+                      className="relative text-center animate-fade-in-up"
+                      style={{ animationDelay: `${(idx + 1) * 100}ms` }}
+                    >
                   <div className="relative inline-flex items-center justify-center mb-5">
                     <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary">
                       <Icon className="size-7" />
@@ -412,24 +315,17 @@ export function LandingPage() {
                   <p className="text-sm text-muted-foreground leading-relaxed max-w-xs mx-auto">
                     {step.desc}
                   </p>
-                </motion.div>
+                </div>
               );
             })}
-          </motion.div>
+          </div>
         </div>
       </section>
 
       {/* ════════════ POURQUOI NOLI ════════════ */}
       <section className="bg-primary dark:bg-[#1B464D] py-16 md:py-24">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-60px" }}
-            custom={0}
-            variants={fadeUp}
-            className="text-center mb-14"
-          >
+          <div className="text-center mb-14 animate-fade-in-up">
             <span className="mb-4 inline-block rounded-full bg-primary-foreground/15 px-4 py-1.5 text-xs font-semibold tracking-wider text-primary-foreground uppercase">
               Nos avantages
             </span>
@@ -439,22 +335,16 @@ export function LandingPage() {
             <p className="mt-3 text-primary-foreground/60 max-w-xl mx-auto">
               Une plateforme pensée pour les Ivoiriens, avec des avantages concrets.
             </p>
-          </motion.div>
+          </div>
 
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-40px" }}
-            variants={staggerContainer}
-            className="grid gap-5 sm:grid-cols-2"
-          >
-            {advantages.map((adv) => {
+          <div className="grid gap-5 sm:grid-cols-2">
+            {advantages.map((adv, idx) => {
               const Icon = adv.icon;
               return (
-                <motion.div
+                <div
                   key={adv.title}
-                  variants={staggerItem}
-                  className="rounded-xl bg-primary-foreground/10 backdrop-blur-sm p-6 border border-primary-foreground/10 transition-all duration-300 hover:bg-primary-foreground/15"
+                  className="rounded-xl bg-primary-foreground/10 backdrop-blur-sm p-6 border border-primary-foreground/10 transition-all duration-300 hover:bg-primary-foreground/15 animate-fade-in-up"
+                  style={{ animationDelay: `${(idx + 1) * 100}ms` }}
                 >
                   <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent/20 mb-4">
                     <Icon className="size-6 text-accent" />
@@ -465,44 +355,31 @@ export function LandingPage() {
                   <p className="text-sm text-primary-foreground/60 leading-relaxed">
                     {adv.desc}
                   </p>
-                </motion.div>
+                </div>
               );
             })}
-          </motion.div>
+          </div>
         </div>
       </section>
 
       {/* ════════════ TÉMOIGNAGES ════════════ */}
       <section className="bg-[#E8F4F0] dark:bg-[#121e19] py-16 md:py-24">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-60px" }}
-            custom={0}
-            variants={fadeUp}
-            className="text-center mb-14"
-          >
+          <div className="text-center mb-14 animate-fade-in-up">
             <span className="mb-4 inline-block rounded-full bg-primary/10 px-4 py-1.5 text-xs font-semibold tracking-wider text-primary uppercase">
               Témoignages
             </span>
             <h2 className="font-[family-name:var(--font-space-grotesk)] text-3xl sm:text-4xl font-bold text-foreground">
               Ce que disent nos utilisateurs
             </h2>
-          </motion.div>
+          </div>
 
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-40px" }}
-            variants={staggerContainer}
-            className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
-          >
-            {testimonials.map((t) => (
-              <motion.div
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {testimonials.map((t, idx) => (
+              <div
                 key={t.name}
-                variants={staggerItem}
-                className="bg-card rounded-xl p-6 card-shadow flex flex-col gap-4"
+                className="bg-card rounded-xl p-6 card-shadow flex flex-col gap-4 animate-fade-in-up"
+                style={{ animationDelay: `${(idx + 1) * 100}ms` }}
               >
                 <Quote className="size-8 text-primary/20 shrink-0" />
                 <p className="text-sm text-muted-foreground leading-relaxed flex-1">
@@ -520,22 +397,16 @@ export function LandingPage() {
                     <StarRating rating={t.rating} />
                   </div>
                 </div>
-              </motion.div>
+              </div>
             ))}
-          </motion.div>
+          </div>
         </div>
       </section>
 
       {/* ════════════ FINAL CTA ════════════ */}
       <section className="bg-background py-16 md:py-24">
         <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 text-center">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-60px" }}
-            custom={0}
-            variants={fadeUp}
-          >
+          <div className="animate-fade-in-up">
             <div className="relative inline-block mb-6">
               <div className="animate-float">
                 <img
@@ -561,7 +432,7 @@ export function LandingPage() {
               Comparer mes offres
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
-          </motion.div>
+          </div>
         </div>
       </section>
     </div>

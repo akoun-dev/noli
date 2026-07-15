@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import {
   User,
   Car,
@@ -104,14 +103,7 @@ const SEAT_OPTIONS = [
   "2", "3", "4", "5", "6", "7", "8", "9+",
 ].map((v) => ({ value: v, label: v }));
 
-// ─── Animation ──────────────────────────────────────────────────────
-const slideVariants = {
-  enter: (d: number) => ({ x: d > 0 ? 200 : -200, opacity: 0 }),
-  center: { x: 0, opacity: 1 },
-  exit: (d: number) => ({ x: d < 0 ? 200 : -200, opacity: 0 }),
-};
-
-// ─── Component ──────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────
 export function ComparisonForm() {
   const {
     comparisonStep, setComparisonStep,
@@ -121,7 +113,6 @@ export function ComparisonForm() {
     setView, setIsComparing, setComparisonResults,
     isComparing, user,
   } = useAppStore();
-  const [direction, setDirection] = useState(0);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Dynamic coverage categories from DB
@@ -145,7 +136,6 @@ export function ComparisonForm() {
 
   const goNext = useCallback(() => {
     if (comparisonStep < 3) {
-      setDirection(1);
       setComparisonStep(comparisonStep + 1);
       setErrors({});
     }
@@ -153,7 +143,6 @@ export function ComparisonForm() {
 
   const goBack = useCallback(() => {
     if (comparisonStep === 1) { setView("landing"); return; }
-    setDirection(-1);
     setComparisonStep(comparisonStep - 1);
     setErrors({});
   }, [comparisonStep, setComparisonStep, setView]);
@@ -197,9 +186,9 @@ export function ComparisonForm() {
     const step1Ok = validateStep1();
     const step2Ok = step1Ok && validateStep2();
     const step3Ok = step2Ok && validateStep3();
-    if (!step1Ok) { setComparisonStep(1); setDirection(0); return; }
-    if (!step2Ok) { setComparisonStep(2); setDirection(0); return; }
-    if (!step3Ok) { setComparisonStep(3); setDirection(0); return; }
+    if (!step1Ok) { setComparisonStep(1); return; }
+    if (!step2Ok) { setComparisonStep(2); return; }
+    if (!step3Ok) { setComparisonStep(3); return; }
     setIsComparing(true);
     try {
       const res = await fetch("/api/compare", {
@@ -259,7 +248,6 @@ export function ComparisonForm() {
                 key={step.id}
                 onClick={() => {
                   if (step.id < comparisonStep) {
-                    setDirection(-1);
                     setComparisonStep(step.id);
                     setErrors({});
                   }
@@ -294,16 +282,7 @@ export function ComparisonForm() {
         </div>
 
         {/* Steps content */}
-        <AnimatePresence mode="wait" custom={direction}>
-          <motion.div
-            key={comparisonStep}
-            custom={direction}
-            variants={slideVariants}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            transition={{ duration: 0.3, ease: "easeInOut" }}
-          >
+        <div key={comparisonStep} className="animate-fade-in">
             {comparisonStep === 1 && (
               <Step1
                 personalInfo={personalInfo}
@@ -330,8 +309,7 @@ export function ComparisonForm() {
                 error={errors.categories}
               />
             )}
-          </motion.div>
-        </AnimatePresence>
+        </div>
 
         {/* Navigation buttons */}
         <div className="flex items-center justify-between mt-8 pt-6 border-t border-border">
@@ -733,25 +711,23 @@ function Step3({
         <p className="text-sm text-destructive">{error}</p>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[50vh] overflow-y-auto pr-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[50vh] overflow-y-auto pr-1">
         {categories.map((cat, i) => {
           const isSelected = selected.includes(cat.code);
           const Icon = CATEGORY_ICON_MAP[cat.code] || DEFAULT_ICON;
           const catColor = cat.color || CATEGORY_COLOR_MAP[cat.code] || '#0891b2';
           return (
-            <motion.button
+            <button
               type="button"
               key={cat.code}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.03 }}
               onClick={() => onToggle(cat.code)}
               aria-pressed={isSelected}
-              className={`w-full rounded-2xl border-2 p-4 text-left transition-all duration-200 hover:shadow-lg ${
+              className={`w-full rounded-2xl border-2 p-4 text-left transition-all duration-200 hover:shadow-lg animate-fade-in-up ${
                 isSelected
                   ? 'border-green-500/60 bg-green-50/80 dark:border-green-500/50 dark:bg-green-950/20'
                   : 'border-border/60 bg-card/50 hover:border-primary/40 dark:border-border/30 dark:hover:border-accent/40'
               }`}
+              style={{ animationDelay: `${i * 30}ms` }}
             >
               <div className="flex items-center gap-3">
                 <div
@@ -776,7 +752,7 @@ function Step3({
                   )}
                 </div>
               </div>
-            </motion.button>
+            </button>
           );
         })}
       </div>

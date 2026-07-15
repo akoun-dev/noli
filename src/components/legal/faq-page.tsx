@@ -1,6 +1,5 @@
 "use client";
 
-import { motion } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -50,18 +49,14 @@ export function FAQPage() {
       {/* Hero */}
       <section className="relative overflow-hidden border-b border-border/40 bg-gradient-to-br from-primary/5 via-background to-primary/5 py-20 md:py-28">
         <div className="mx-auto max-w-3xl px-6 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
+          <div className="animate-slide-up">
             <h1 className="font-[family-name:var(--font-space-grotesk)] text-4xl font-bold tracking-tight text-foreground md:text-5xl">
               Foire Aux Questions
             </h1>
             <p className="mt-4 text-lg text-muted-foreground">
               Tout ce que vous devez savoir sur NOLI Assurance
             </p>
-          </motion.div>
+          </div>
         </div>
       </section>
 
@@ -69,12 +64,10 @@ export function FAQPage() {
       <section className="mx-auto max-w-3xl px-6 py-16">
         <div className="space-y-3">
           {faqs.map((faq, i) => (
-            <motion.div
+            <div
               key={i}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05 }}
-              className="rounded-xl border border-border/50 bg-card shadow-sm overflow-hidden"
+              className="rounded-xl border border-border/50 bg-card shadow-sm overflow-hidden animate-fade-in-up"
+              style={{ animationDelay: `${i * 50}ms` }}
             >
               <button
                 onClick={() => setOpenIndex(openIndex === i ? null : i)}
@@ -96,7 +89,7 @@ export function FAQPage() {
                   {faq.a}
                 </p>
               </div>
-            </motion.div>
+            </div>
           ))}
         </div>
 

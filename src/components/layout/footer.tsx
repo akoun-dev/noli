@@ -1,6 +1,5 @@
 "use client";
 
-import { motion } from "framer-motion";
 import { MapPin, Phone, Mail } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useAppStore } from "@/store/app-store";
@@ -16,38 +15,24 @@ export function Footer() {
   const setView = useAppStore((s) => s.setView);
   return (
     <footer id="footer" className="mt-auto w-full bg-primary dark:bg-[#1B464D] text-secondary-foreground">
-      {/* Accent top bar */}
       <div className="h-1 w-full bg-accent" />
 
       <div className="mx-auto max-w-[1400px] px-8 py-12">
-        {/* 3-column responsive grid */}
         <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-3 lg:gap-8">
           {/* Col 1: Logo + Description */}
-          <div className="sm:col-span-2 lg:col-span-1">
-            <motion.div
-              initial={{ opacity: 0, y: 16 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.4 }}
-            >
-              <div className="mb-4">
-                <img src="/img/noli-vertical.png" alt="NOLI Assurance" className="h-9 w-auto object-contain" />
-              </div>
-              <p className="text-sm leading-relaxed text-secondary-foreground/60">
-                NOLI est votre plateforme de comparaison d&apos;assurances en
-                Côte d&apos;Ivoire. Nous vous aidons à trouver la meilleure
-                couverture au meilleur prix, en toute transparence.
-              </p>
-            </motion.div>
+          <div className="sm:col-span-2 lg:col-span-1 animate-slide-up">
+            <div className="mb-4">
+              <img src="/img/noli-vertical.png" alt="NOLI Assurance" className="h-9 w-auto object-contain" />
+            </div>
+            <p className="text-sm leading-relaxed text-secondary-foreground/60">
+              NOLI est votre plateforme de comparaison d&apos;assurances en
+              Côte d&apos;Ivoire. Nous vous aidons à trouver la meilleure
+              couverture au meilleur prix, en toute transparence.
+            </p>
           </div>
 
           {/* Col 2: NOLI */}
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.4, delay: 0.1 }}
-          >
+          <div className="animate-slide-up" style={{ animationDelay: "100ms" }}>
             <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-secondary-foreground/40">
               NOLI
             </h3>
@@ -64,15 +49,10 @@ export function Footer() {
                 </li>
               ))}
             </ul>
-          </motion.div>
+          </div>
 
-          {/* Col 4: Contact */}
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.4, delay: 0.2 }}
-          >
+          {/* Col 3: Contact */}
+          <div className="animate-slide-up" style={{ animationDelay: "200ms" }}>
             <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-secondary-foreground/40">
               Contact
             </h3>
@@ -104,11 +84,10 @@ export function Footer() {
                 </a>
               </li>
             </ul>
-          </motion.div>
+          </div>
         </div>
       </div>
 
-      {/* Bottom bar */}
       <Separator className="bg-primary/20" />
       <div className="mx-auto flex max-w-[1400px] flex-col items-center justify-between gap-2 px-8 py-5 sm:flex-row">
         <p className="text-xs text-secondary-foreground/50">

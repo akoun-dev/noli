@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
 import { MapPin, Phone, Mail, Clock, Send, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,26 +15,6 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 
-/* ─── Animation Variants ───────────────────────────────────────── */
-const fadeUp = {
-  hidden: { opacity: 0, y: 30 },
-  visible: (delay: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.6, delay, ease: "easeOut" },
-  }),
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.45, ease: "easeOut" },
-  },
-};
-
-/* ─── Data ─────────────────────────────────────────────────────── */
 const contactInfo = [
   {
     icon: MapPin,
@@ -66,7 +45,6 @@ const subjects = [
   "Partenariat",
 ];
 
-/* ─── Component ────────────────────────────────────────────────── */
 export function ContactPage() {
   const { toast } = useToast();
 
@@ -104,7 +82,6 @@ export function ContactPage() {
 
     setSubmitting(true);
 
-    // Simulate network delay
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
     setSubmitting(false);
@@ -125,40 +102,19 @@ export function ContactPage() {
         <div className="pointer-events-none absolute -top-16 -right-16 h-56 w-56 rounded-full bg-accent/15 blur-3xl" />
 
         <div className="relative mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
-          <motion.span
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-60px" }}
-            custom={0}
-            variants={fadeUp}
-            className="mb-4 inline-block rounded-full bg-primary/10 px-4 py-1.5 text-xs font-semibold tracking-wider text-primary uppercase"
-          >
+          <span className="mb-4 inline-block rounded-full bg-primary/10 px-4 py-1.5 text-xs font-semibold tracking-wider text-primary uppercase animate-fade-in-up">
             Contactez-nous
-          </motion.span>
+          </span>
 
-          <motion.h1
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-60px" }}
-            custom={0.1}
-            variants={fadeUp}
-            className="font-display text-4xl font-bold tracking-tight text-foreground sm:text-5xl"
-          >
+          <h1 className="font-display text-4xl font-bold tracking-tight text-foreground sm:text-5xl animate-slide-up">
             Une question ?{" "}
             <span className="text-primary">Parlons-en</span>
-          </motion.h1>
+          </h1>
 
-          <motion.p
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-60px" }}
-            custom={0.2}
-            variants={fadeUp}
-            className="mx-auto mt-4 max-w-xl font-subtitle text-base text-muted-foreground sm:text-lg"
-          >
+          <p className="mx-auto mt-4 max-w-xl font-subtitle text-base text-muted-foreground sm:text-lg animate-slide-up" style={{ animationDelay: "150ms" }}>
             Notre équipe est à votre écoute. Remplissez le formulaire ci-dessous
             et nous vous répondrons rapidement.
-          </motion.p>
+          </p>
         </div>
       </section>
 
@@ -167,14 +123,7 @@ export function ContactPage() {
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="grid gap-12 lg:grid-cols-5 lg:gap-16">
             {/* ─── Left: Form (3 cols) ─────────────────────── */}
-            <motion.div
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, margin: "-60px" }}
-              custom={0.1}
-              variants={fadeUp}
-              className="lg:col-span-3"
-            >
+            <div className="lg:col-span-3 animate-fade-in-up" style={{ animationDelay: "100ms" }}>
               <form
                 onSubmit={handleSubmit}
                 className="space-y-5 rounded-xl border border-border/50 bg-card p-6 shadow-sm sm:p-8"
@@ -287,17 +236,10 @@ export function ContactPage() {
                   )}
                 </Button>
               </form>
-            </motion.div>
+            </div>
 
             {/* ─── Right: Contact Info (2 cols) ────────────── */}
-            <motion.div
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, margin: "-60px" }}
-              custom={0.25}
-              variants={fadeUp}
-              className="space-y-5 lg:col-span-2"
-            >
+            <div className="space-y-5 lg:col-span-2 animate-fade-in-up" style={{ animationDelay: "250ms" }}>
               <h2 className="font-display text-xl font-semibold text-foreground">
                 Nos coordonnées
               </h2>
@@ -310,14 +252,10 @@ export function ContactPage() {
                 {contactInfo.map((info, i) => {
                   const Icon = info.icon;
                   return (
-                    <motion.div
+                    <div
                       key={info.label}
-                      initial="hidden"
-                      whileInView="visible"
-                      viewport={{ once: true, margin: "-40px" }}
-                      custom={0.3 + i * 0.08}
-                      variants={fadeUp}
-                      className="flex items-start gap-4 rounded-xl border border-border/50 bg-card p-4 shadow-sm transition-shadow duration-300 hover:shadow-md"
+                      className="flex items-start gap-4 rounded-xl border border-border/50 bg-card p-4 shadow-sm transition-shadow duration-300 hover:shadow-md animate-fade-in-up"
+                      style={{ animationDelay: `${300 + i * 80}ms` }}
                     >
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                         <Icon className="size-5" />
@@ -330,11 +268,11 @@ export function ContactPage() {
                           {info.value}
                         </p>
                       </div>
-                    </motion.div>
+                    </div>
                   );
                 })}
               </div>
-            </motion.div>
+            </div>
           </div>
         </div>
       </section>

@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useMemo, useState, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -262,12 +261,8 @@ function ComparisonBar({
   if (offers.length === 0) return null;
 
   return (
-    <motion.div
-      initial={{ y: -60, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      exit={{ y: -60, opacity: 0 }}
-      transition={{ duration: 0.3, ease: "easeOut" }}
-      className="sticky top-16 z-40 bg-muted/80 backdrop-blur-md border-b border-border/60 shadow-md"
+    <div
+      className="sticky top-16 z-40 bg-muted/80 backdrop-blur-md border-b border-border/60 shadow-md animate-slide-up"
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 py-3 flex flex-col sm:flex-row items-start sm:items-center gap-3">
         <div className="flex items-center gap-2 shrink-0">
@@ -317,7 +312,7 @@ function ComparisonBar({
           </Button>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -703,14 +698,7 @@ function OfferCard({
   const visibleFeatures = offer.features.slice(0, 4);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
-      transition={{ duration: 0.3 }}
-      layout
-      className="space-y-0"
-    >
+    <div className="space-y-0 animate-fade-in-up">
       <div className="bg-white dark:bg-card rounded-xl border border-border/70 shadow-md hover:shadow-xl transition-all duration-300 overflow-visible relative hover:-translate-y-0.5">
         {/* Heart icon top-right */}
         <button
@@ -857,16 +845,12 @@ function OfferCard({
           )}
         </button>
 
-        <AnimatePresence>
-          {detailsOpen && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.3, ease: "easeInOut" }}
-              className="overflow-hidden"
-            >
-              <div className="bg-muted/20 rounded-lg border border-border/40 p-5 space-y-5">
+        <div
+          className={`overflow-hidden transition-all duration-300 ease-in-out ${
+            detailsOpen ? "max-h-[2000px] opacity-100" : "max-h-0 opacity-0"
+          }`}
+        >
+            <div className="bg-muted/20 rounded-lg border border-border/40 p-5 space-y-5">
                 {/* Description */}
                 {offer.description && (
                   <div>
@@ -931,11 +915,9 @@ function OfferCard({
                   Obtenir le devis
                 </Button>
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -1151,17 +1133,15 @@ export function ResultsPage() {
   return (
     <div className="h-[calc(100vh-4rem)] flex flex-col">
       {/* ── Comparison Bar (sticky) ── */}
-      <AnimatePresence>
-        {offersToCompare.length > 0 && (
-          <ComparisonBar
-            offers={offersToCompare}
-            onRemove={handleRemoveCompare}
-            onClear={handleClearCompare}
-            onCompare={handleOpenComparison}
-            onOpen={handleOpenComparison}
-          />
-        )}
-      </AnimatePresence>
+      {offersToCompare.length > 0 && (
+        <ComparisonBar
+          offers={offersToCompare}
+          onRemove={handleRemoveCompare}
+          onClear={handleClearCompare}
+          onCompare={handleOpenComparison}
+          onOpen={handleOpenComparison}
+        />
+      )}
 
       {/* ── Scrolling content below ── */}
       <div className="flex-1 overflow-y-auto">
@@ -1235,30 +1215,24 @@ export function ResultsPage() {
           </div>
 
           {/* ── Mobile Filters (collapsible) ── */}
-          <AnimatePresence>
-            {mobileFiltersOpen && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.25 }}
-                className="overflow-hidden lg:hidden mb-6"
-              >
-                <FiltersSidebar
-                  coverageFilter={coverageFilter}
-                  setCoverageFilter={setCoverageFilter}
-                  uncheckedInsurers={uncheckedInsurers}
-                  toggleInsurer={toggleInsurer}
-                  onToggleAllInsurers={handleToggleAllInsurers}
-                  uniqueInsurers={uniqueInsurers}
-                  budgetMax={budgetMax}
-                  setBudgetMax={setBudgetMax}
-                  onReset={resetFilters}
-                  totalOffers={comparisonResults.length}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <div
+            className={`overflow-hidden lg:hidden mb-6 transition-all duration-250 ease-in-out ${
+              mobileFiltersOpen ? "max-h-[1000px] opacity-100" : "max-h-0 opacity-0"
+            }`}
+          >
+            <FiltersSidebar
+              coverageFilter={coverageFilter}
+              setCoverageFilter={setCoverageFilter}
+              uncheckedInsurers={uncheckedInsurers}
+              toggleInsurer={toggleInsurer}
+              onToggleAllInsurers={handleToggleAllInsurers}
+              uniqueInsurers={uniqueInsurers}
+              budgetMax={budgetMax}
+              setBudgetMax={setBudgetMax}
+              onReset={resetFilters}
+              totalOffers={comparisonResults.length}
+            />
+          </div>
 
           {/* ── Summary Panels ── */}
           <SummaryPanels offers={comparisonResults} />
@@ -1284,8 +1258,7 @@ export function ResultsPage() {
             {/* Main Content */}
             <main className="flex-1 min-w-0 space-y-4">
               {filteredAndSorted.length > 0 ? (
-                <AnimatePresence mode="popLayout">
-                  {filteredAndSorted.map((offer) => (
+                  filteredAndSorted.map((offer) => (
                     <OfferCard
                       key={offer.id}
                       offer={offer}
@@ -1294,8 +1267,7 @@ export function ResultsPage() {
                       onAddToCompare={handleToggleCompare}
                       isCompared={isOfferCompared(offer.id)}
                     />
-                  ))}
-                </AnimatePresence>
+                  ))
               ) : (
                 <div className="text-center py-16">
                   <div className="rounded-full bg-muted/40 p-6 mb-4 inline-block">
