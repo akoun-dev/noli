@@ -15,6 +15,8 @@ import {
   LayoutGrid,
   CircleDot,
   Info,
+  X,
+  Search,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -154,7 +156,8 @@ interface CategoryTariff {
   valueLabel: string;
   franchise: number;
   franchiseLabel: string;
-  prime: number;
+  prime: number;      // Taux en % (ex: 4.4 pour 4.4%)
+  vehicleCategory?: string; // "401" | "402" | "412"
 }
 
 const VN_RANGES = [
@@ -168,11 +171,16 @@ const VN_RANGES = [
 
 const FRANCHISE_LEVELS = [
   { label: "Sans franchise", value: 0 },
+  { label: "250K", value: 250_000 },
   { label: "500K", value: 500_000 },
   { label: "1M", value: 1_000_000 },
-  { label: "2M", value: 2_000_000 },
   { label: "2.5M", value: 2_500_000 },
 ] as const;
+
+/* Les catégories disponibles sont extraites dynamiquement de TIERCE_RATES */
+function getDefaultVehicleCategories(): string[] {
+  return Object.keys(TIERCE_RATES).sort();
+}
 
 function getDefaultFiscalPowerTariffs(): MatrixTariff[] {
   const now = Date.now();
@@ -196,38 +204,88 @@ function getDefaultFormulas(): FormulaConfig[] {
   ];
 }
 
-function getDefaultCategoryTariffs(type: "TIERCE_COMPLETE" | "TIERCE_COLLISION"): CategoryTariff[] {
+/* ── Grilles tarifaires Tierce par catégorie de véhicule ── */
+// Les valeurs sont des TAUX en % (ex: 4.4 = 4.4% de la VN)
+// Formule : Prime = VN × (taux / 100)
+
+const TIERCE_RATES: Record<string, Record<string, Record<string, number>>> = {
+  "401": {
+    TIERCE_COMPLETE: {
+      // VN class A (≤12M)
+      A_0: 4.4, A_250000: 3.52, A_500000: 2.992, A_1000000: 2.695, A_2500000: 2.695,
+      // VN class B (12M-25M)
+      B_0: 4.785, B_250000: 3.828, B_500000: 3.256, B_1000000: 2.926, B_2500000: 2.926,
+      // VN class C (25M-40M)
+      C_0: 5.17, C_250000: 4.136, C_500000: 3.52, C_1000000: 3.168, C_2500000: 3.168,
+      // VN class D (50M-90M) — sparse
+      D_500000: 3.52,
+      // VN class E (90M-110M) — sparse
+      E_1000000: 3.168,
+      // VN class F (>110M) — sparse
+      F_2500000: 3.168,
+    },
+    TIERCE_COLLISION: {
+      // ≤40M combined
+      C_0: 4.311, C_250000: 3.651, C_500000: 2.232, C_1000000: 2.105, C_2500000: 1.035,
+      D_500000: 2.232,
+      E_1000000: 2.035,
+      F_2500000: 1.035,
+    },
+  },
+  "402": {
+    TIERCE_COMPLETE: {
+      A_0: 2.816, A_250000: 2.255, A_500000: 1.914, A_1000000: 1.727, A_2500000: 1.727,
+      B_0: 3.069, B_250000: 2.453, B_500000: 2.09, B_1000000: 1.881, B_2500000: 1.881,
+      C_0: 3.311, C_250000: 2.651, C_500000: 2.255, C_1000000: 2.035, C_2500000: 2.035,
+      D_500000: 2.255,
+      E_1000000: 2.035,
+      F_2500000: 2.035,
+    },
+    TIERCE_COLLISION: {
+      // Note: cat 402 DC a 50K au lieu de "Sans franchise" pour le 1er palier
+      A_0: 2.716, A_50000: 2.716, A_250000: 2.235, A_500000: 1.914, A_1000000: 1.756, A_2500000: 1.72,
+      B_0: 3.679, B_50000: 3.679, B_250000: 2.456, B_500000: 2.09, B_1000000: 1.881, B_2500000: 1.881,
+      C_0: 3.911, C_50000: 3.911, C_250000: 2.7, C_500000: 2.35, C_1000000: 2.035, C_2500000: 2.1895,
+      D_500000: 2.255,
+      E_1000000: 2.035,
+      F_2500000: 2.33,
+    },
+  },
+};
+
+// 412 shares the same rates as 401
+TIERCE_RATES["412"] = {
+  TIERCE_COMPLETE: { ...TIERCE_RATES["401"]["TIERCE_COMPLETE"] },
+  TIERCE_COLLISION: { ...TIERCE_RATES["401"]["TIERCE_COLLISION"] },
+};
+
+function getDefaultCategoryTariffs(
+  type: "TIERCE_COMPLETE" | "TIERCE_COLLISION",
+  vehicleCategory?: string
+): CategoryTariff[] {
   const now = Date.now();
   const tariffs: CategoryTariff[] = [];
-  const defaults: Record<string, Record<number, number>> = type === "TIERCE_COMPLETE"
-    ? {
-        A: { 0: 4_680 },
-        B: { 500_000: 3_256, 1_000_000: 2_968, 2_000_000: 2_744, 2_500_000: 2_628 },
-        C: { 1_000_000: 2_128, 2_000_000: 1_956 },
-        D: { 2_500_000: 1_648 },
-        F: { 2_500_000: 1_248 },
-      }
-    : {
-        A: { 500_000: 2_232, 1_000_000: 2_052, 2_000_000: 1_912, 2_500_000: 1_836 },
-        D: { 500_000: 1_764, 1_000_000: 1_628, 2_000_000: 1_516, 2_500_000: 1_456 },
-      };
+  const cat = vehicleCategory || "401";
+  const rates = TIERCE_RATES[cat]?.[type];
+  if (!rates) return tariffs;
+
   for (const range of VN_RANGES) {
-    const franchiseDefaults = defaults[range.key];
-    if (!franchiseDefaults) continue;
-    for (const [franchiseStr, prime] of Object.entries(franchiseDefaults)) {
-      const franchise = Number(franchiseStr);
-      const fl = FRANCHISE_LEVELS.find(f => f.value === franchise);
-      tariffs.push({
-        key: `${type.toLowerCase()}_${range.key}_${franchise}_${now}`,
-        category: range.key,
-        guaranteeType: type,
-        valueMin: range.min,
-        valueMax: range.max,
-        valueLabel: range.label,
-        franchise,
-        franchiseLabel: fl?.label || `${franchise}`,
-        prime,
-      });
+    for (const fl of FRANCHISE_LEVELS) {
+      const key = `${range.key}_${fl.value}`;
+      if (rates[key] != null) {
+        tariffs.push({
+          key: `${type.toLowerCase()}_${cat}_${range.key}_${fl.value}_${now}`,
+          category: range.key,
+          guaranteeType: type,
+          valueMin: range.min,
+          valueMax: range.max,
+          valueLabel: range.label,
+          franchise: fl.value,
+          franchiseLabel: fl.label,
+          prime: rates[key],
+          vehicleCategory: cat,
+        });
+      }
     }
   }
   return tariffs;
@@ -381,6 +439,24 @@ export function InsurerGuaranteesTab() {
   const [matrixDefaultPrime, setMatrixDefaultPrime] = useState<number>(0);
   const [matrixDimension, setMatrixDimension] = useState<string>("FISCAL_POWER");
   const [categoryTariffs, setCategoryTariffs] = useState<CategoryTariff[]>([]);
+  const [tierceVehicleCategory, setTierceVehicleCategory] = useState<string>("401");
+  const [tierceCategories, setTierceCategories] = useState<string[]>(getDefaultVehicleCategories());
+  const [newCategoryInput, setNewCategoryInput] = useState("");
+
+  // Search / filter
+  const [searchQuery, setSearchQuery] = useState("");
+  const filteredCoverages = coverages.filter((cov) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      cov.name.toLowerCase().includes(q) ||
+      cov.code?.toLowerCase().includes(q) ||
+      (cov.category?.name || "").toLowerCase().includes(q) ||
+      (calcLabel[cov.calculationType] || "").toLowerCase().includes(q) ||
+      (cov.isMandatory ? "oui" : "non").includes(q) ||
+      (cov.isActive ? "active" : "inactive").includes(q)
+    );
+  });
 
   // Delete dialog
   const [deleteTarget, setDeleteTarget] = useState<Coverage | null>(null);
@@ -462,6 +538,9 @@ export function InsurerGuaranteesTab() {
     setMatrixDefaultPrime(0);
     setMatrixDimension("FISCAL_POWER");
     setCategoryTariffs([]);
+    setTierceVehicleCategory("401");
+    setTierceCategories(getDefaultVehicleCategories());
+    setNewCategoryInput("");
     setStep(1);
   };
 
@@ -509,6 +588,15 @@ export function InsurerGuaranteesTab() {
     setMatrixTariffs(Array.isArray(parsed.tariffs) ? (parsed.tariffs as MatrixTariff[]) : []);
     setMatrixFormulas(Array.isArray(parsed.formulas) ? (parsed.formulas as FormulaConfig[]) : []);
     setCategoryTariffs(Array.isArray(parsed.categoryTariffs) ? (parsed.categoryTariffs as CategoryTariff[]) : []);
+
+    // Restore vehicle category from data
+    const firstCat = (parsed.categoryTariffs as CategoryTariff[])?.[0];
+    setTierceVehicleCategory(firstCat?.vehicleCategory || "401");
+    // Reconstruit la liste des catégories depuis les données existantes + défauts
+    const existingCats = new Set<string>();
+    (parsed.categoryTariffs as CategoryTariff[])?.forEach(ct => { if (ct.vehicleCategory) existingCats.add(ct.vehicleCategory); });
+    const allCats = [...new Set([...getDefaultVehicleCategories(), ...existingCats])].sort();
+    setTierceCategories(allCats);
 
     setStep(1);
     setDialogOpen(true);
@@ -588,6 +676,7 @@ export function InsurerGuaranteesTab() {
           valueMax: ct.valueMax,
           franchise: ct.franchise,
           prime: ct.prime,
+          vehicleCategory: ct.vehicleCategory,
         }));
       return m;
     }
@@ -1403,12 +1492,101 @@ export function InsurerGuaranteesTab() {
           {(matrixDimension === "TIERCE_COMPLETE" || matrixDimension === "TIERCE_COLLISION") && (
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">
-                {matrixDimension === "TIERCE_COMPLETE" ? "Tierce Complète (DTA)" : "Tierce Collision (DC)"} — Définissez les primes par tranche VN et franchise.
+                {matrixDimension === "TIERCE_COMPLETE" ? "Tierce Complète (DTA)" : "Tierce Collision (DC)"} — Taux en % de la VN selon tranche et franchise.
               </p>
+
+              {/* Vehicle category selector */}
+              <div className="flex items-center gap-3 flex-wrap">
+                <Label className="text-sm shrink-0">Catégorie véhicule</Label>
+                <div className="flex gap-1 flex-wrap">
+                  {tierceCategories.map((cat) => (
+                    <div key={cat} className="flex items-center gap-0">
+                      <Button
+                        type="button"
+                        variant={tierceVehicleCategory === cat ? "default" : "outline"}
+                        size="sm"
+                        className={`rounded-r-none ${tierceVehicleCategory === cat ? "bg-[#B9E54D] text-black hover:bg-[#a5d044]" : ""}`}
+                        onClick={() => {
+                          setTierceVehicleCategory(cat);
+                          setCategoryTariffs(getDefaultCategoryTariffs(
+                            matrixDimension as "TIERCE_COMPLETE" | "TIERCE_COLLISION",
+                            cat
+                          ));
+                        }}
+                      >
+                        {cat}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={tierceVehicleCategory === cat ? "default" : "outline"}
+                        size="sm"
+                        className={`h-8 w-6 p-0 rounded-l-none border-l-0 ${tierceVehicleCategory === cat ? "bg-[#B9E54D] text-black hover:bg-[#a5d044]" : "text-muted-foreground hover:text-destructive"}`}
+                        onClick={() => {
+                          const filtered = categoryTariffs.filter(ct => ct.vehicleCategory !== cat);
+                          const remaining = tierceCategories.filter(c => c !== cat);
+                          setTierceCategories(remaining);
+                          setCategoryTariffs(filtered);
+                          if (tierceVehicleCategory === cat && remaining.length > 0) {
+                            const nextCat = remaining[0];
+                            setTierceVehicleCategory(nextCat);
+                            const defaults = getDefaultCategoryTariffs(
+                              matrixDimension as "TIERCE_COMPLETE" | "TIERCE_COLLISION",
+                              nextCat
+                            );
+                            setCategoryTariffs(defaults.length > 0 ? defaults : filtered);
+                          }
+                        }}
+                        title="Supprimer la catégorie"
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                  {/* Add category button */}
+                  <div className="flex items-center gap-1 ml-2">
+                    <Input
+                      className="h-7 w-20 text-xs"
+                      placeholder="Nouveau"
+                      value={newCategoryInput}
+                      onChange={(e) => setNewCategoryInput(e.target.value.replace(/[^\w]/g, "").toUpperCase())}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && newCategoryInput.trim()) {
+                          if (!tierceCategories.includes(newCategoryInput.trim())) {
+                            setTierceCategories([...tierceCategories, newCategoryInput.trim()].sort());
+                            setTierceVehicleCategory(newCategoryInput.trim());
+                            setCategoryTariffs([]);
+                          }
+                          setNewCategoryInput("");
+                        }
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0"
+                      disabled={!newCategoryInput.trim() || tierceCategories.includes(newCategoryInput.trim())}
+                      onClick={() => {
+                        const cat = newCategoryInput.trim();
+                        if (cat && !tierceCategories.includes(cat)) {
+                          setTierceCategories([...tierceCategories, cat].sort());
+                          setTierceVehicleCategory(cat);
+                          setCategoryTariffs([]);
+                        }
+                        setNewCategoryInput("");
+                      }}
+                      title="Ajouter la catégorie"
+                    >
+                      <Plus className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
               {categoryTariffs.length === 0 ? (
                 <div className="text-center p-6 border-2 border-dashed rounded-lg">
                   <p className="text-sm text-muted-foreground mb-3">Aucune tarification configurée</p>
-                  <Button type="button" variant="outline" size="sm" onClick={() => setCategoryTariffs(getDefaultCategoryTariffs(matrixDimension as "TIERCE_COMPLETE" | "TIERCE_COLLISION"))}>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setCategoryTariffs(getDefaultCategoryTariffs(matrixDimension as "TIERCE_COMPLETE" | "TIERCE_COLLISION", tierceVehicleCategory))}>
                     <Plus className="h-4 w-4 mr-2" />Initialiser avec tarifs par défaut
                   </Button>
                 </div>
@@ -1426,7 +1604,7 @@ export function InsurerGuaranteesTab() {
                     </thead>
                     <tbody>
                       {VN_RANGES.map(range => {
-                        const rowEntries = categoryTariffs.filter(ct => ct.valueMin === range.min && ct.guaranteeType === matrixDimension);
+                        const rowEntries = categoryTariffs.filter(ct => ct.valueMin === range.min && ct.guaranteeType === matrixDimension && ct.vehicleCategory === tierceVehicleCategory);
                         return (
                           <tr key={range.key}>
                             <td className="p-2 border font-medium text-xs whitespace-nowrap">{range.label}</td>
@@ -1437,10 +1615,11 @@ export function InsurerGuaranteesTab() {
                                   {entry ? (
                                     <Input
                                       type="number"
+                                      step="0.001"
                                       className="h-7 w-20 text-xs text-center mx-auto"
                                       value={entry.prime || ""}
                                       onChange={(e) => {
-                                        const val = parseInt(e.target.value) || 0;
+                                        const val = parseFloat(e.target.value) || 0;
                                         setCategoryTariffs(categoryTariffs.map(ct => ct.key === entry.key ? { ...ct, prime: val } : ct));
                                       }}
                                     />
@@ -1453,7 +1632,7 @@ export function InsurerGuaranteesTab() {
                                       onClick={() => {
                                         const now = Date.now();
                                         setCategoryTariffs([...categoryTariffs, {
-                                          key: `${matrixDimension.toLowerCase()}_${range.key}_${fl.value}_${now}`,
+                                          key: `${matrixDimension.toLowerCase()}_${tierceVehicleCategory}_${range.key}_${fl.value}_${now}`,
                                           category: range.key,
                                           guaranteeType: matrixDimension as "TIERCE_COMPLETE" | "TIERCE_COLLISION",
                                           valueMin: range.min,
@@ -1462,6 +1641,7 @@ export function InsurerGuaranteesTab() {
                                           franchise: fl.value,
                                           franchiseLabel: fl.label,
                                           prime: 0,
+                                          vehicleCategory: tierceVehicleCategory,
                                         }]);
                                       }}
                                     >
@@ -1478,7 +1658,7 @@ export function InsurerGuaranteesTab() {
                     </tbody>
                   </table>
                   <p className="text-xs text-muted-foreground mt-2">
-                    Cliquez <span className="inline-flex align-middle"><Plus className="h-3 w-3" /></span> pour ajouter une cellule. Les primes sont en FCFA.
+                    Les valeurs sont des <strong>taux en %</strong> de la VN. Ex: 4.4 = 4.4% × VN. Cliquez <span className="inline-flex align-middle"><Plus className="h-3 w-3" /></span> pour ajouter une cellule.
                   </p>
                 </div>
               )}
@@ -1518,14 +1698,36 @@ export function InsurerGuaranteesTab() {
       </div>
 
       {/* Guarantees table */}
-      <div className="rounded-xl border bg-card">
-        <div className="p-6 pb-4">
-          <h3 className="text-lg font-semibold">Liste des garanties</h3>
-          <p className="text-sm text-muted-foreground">
-            Toutes vos garanties configurées
-          </p>
+      <div className="rounded-xl border bg-card overflow-hidden">
+        {/* Search bar */}
+        <div className="p-4 pb-0">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <Input
+              placeholder="Rechercher par nom, code, catégorie, type…"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 h-10 text-sm bg-muted/30 border-muted focus-visible:bg-background transition-all"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          <div className="flex items-center justify-between mt-3">
+            <p className="text-sm text-muted-foreground">
+              {searchQuery.trim()
+                ? `${filteredCoverages.length} résultat${filteredCoverages.length > 1 ? "s" : ""} sur ${coverages.length} garantie${coverages.length > 1 ? "s" : ""}`
+                : `${coverages.length} garantie${coverages.length > 1 ? "s" : ""} configurée${coverages.length > 1 ? "s" : ""}`
+              }
+            </p>
+          </div>
         </div>
-        <div className="max-h-96 overflow-y-auto">
+        <div className="overflow-x-auto">
           {loading ? (
             <div className="p-8 space-y-3">
               {Array.from({ length: 5 }).map((_, i) => (
@@ -1559,23 +1761,38 @@ export function InsurerGuaranteesTab() {
             </div>
           ) : (
             <Table>
-              <TableHeader>
+              <TableHeader className="sticky top-0 bg-card z-10">
                 <TableRow>
-                  <TableHead>Nom</TableHead>
-                  <TableHead className="hidden md:table-cell">
+                  <TableHead className="min-w-[160px]">Nom</TableHead>
+                  <TableHead className="hidden md:table-cell min-w-[130px]">
                     Catégorie
                   </TableHead>
-                  <TableHead className="hidden lg:table-cell">
+                  <TableHead className="hidden lg:table-cell min-w-[120px]">
                     Type de calcul
                   </TableHead>
-                  <TableHead className="text-center">Obligatoire</TableHead>
-                  <TableHead>Prix</TableHead>
-                  <TableHead>Statut</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="text-center w-[100px]">Obligatoire</TableHead>
+                  <TableHead className="min-w-[120px]">Prix</TableHead>
+                  <TableHead className="w-[90px]">Statut</TableHead>
+                  <TableHead className="text-right w-[90px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {coverages.map((cov) => (
+                {filteredCoverages.length === 0 && searchQuery.trim() ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="py-12 text-center">
+                      <div className="flex flex-col items-center gap-2">
+                        <Search className="h-8 w-8 text-muted-foreground/50" />
+                        <p className="text-sm text-muted-foreground">
+                          Aucune garantie ne correspond à &quot;{searchQuery}&quot;
+                        </p>
+                        <Button variant="outline" size="sm" onClick={() => setSearchQuery("")}>
+                          Effacer la recherche
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredCoverages.map((cov) => (
                   <TableRow key={cov.id}>
                     <TableCell className="font-medium">{cov.name}</TableCell>
                     <TableCell className="hidden md:table-cell">
@@ -1634,7 +1851,7 @@ export function InsurerGuaranteesTab() {
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                )))}
               </TableBody>
             </Table>
           )}
@@ -1643,7 +1860,7 @@ export function InsurerGuaranteesTab() {
 
       {/* ── Wizard Dialog ── */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-5xl max-h-[92vh]">
+        <DialogContent className="max-w-5xl max-h-[95vh]">
           <DialogHeader>
             <DialogTitle>
               {editingItem ? "Modifier la garantie" : "Nouvelle garantie"}

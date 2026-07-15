@@ -857,7 +857,7 @@ function OfferCard({
               </div>
             )}
             <div className="flex flex-col min-w-0">
-              <h3 className="text-base lg:text-lg font-bold text-foreground leading-tight truncate">
+              <h3 className="text-base lg:text-lg font-bold text-foreground leading-tight break-words">
                 {offer.insurerName}
               </h3>
               <Badge

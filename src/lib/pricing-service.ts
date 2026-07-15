@@ -654,40 +654,50 @@ function calculateTierceAmount(
   code: string
 ): { amount: number; breakdown: string } {
   const catTariffs = meta.categoryTariffs || [];
-  const vnClass = getVNRangeClass(nv);
-  const vnBounds = VN_RANGE_BOUNDS[vnClass];
-  const usageCategory = mapUsageToVehicleCategory(vehicle.usage);
-
-  // Cherche la tarification correspondant à la classe VN + catégorie d'usage
-  const match = catTariffs.find((t) => {
-    const tCat = (t.category || "").toUpperCase().trim();
-    return tCat === vnClass || tCat === code || tCat === usageCategory;
-  });
-
-  if (match) {
-    const amount = roundTo500(match.prime);
+  if (catTariffs.length === 0) {
     return {
-      amount,
-      breakdown: `${code} — Classe VN ${vnClass} (${vnBounds.min.toLocaleString("fr-FR")} – ${vnBounds.max === Infinity ? "∞" : vnBounds.max.toLocaleString("fr-FR")} FCFA), catégorie « ${match.category} » → prime ${match.prime.toLocaleString("fr-FR")} FCFA (arrondi ${amount.toLocaleString("fr-FR")} FCFA)`,
+      amount: 0,
+      breakdown: `${code} — Aucune tarification configurée`,
     };
   }
 
-  // Fallback : cherche par valeur dans les bornes valueMin / valueMax
-  const valueMatch = catTariffs.find((t) => {
-    return nv >= (t.valueMin ?? -Infinity) && nv <= (t.valueMax ?? Infinity);
-  });
+  const vnClass = getVNRangeClass(nv);
+  const vnBounds = VN_RANGE_BOUNDS[vnClass];
+  const vehicleCategory = mapUsageToVehicleCategory(vehicle.usage);
 
-  if (valueMatch) {
-    const amount = roundTo500(valueMatch.prime);
-    return {
-      amount,
-      breakdown: `${code} — VN ${nv.toLocaleString("fr-FR")} FCFA dans [${valueMatch.valueMin?.toLocaleString("fr-FR") ?? "?"} – ${valueMatch.valueMax?.toLocaleString("fr-FR") ?? "?"}] → prime ${amount.toLocaleString("fr-FR")} FCFA`,
-    };
+  // Déterminer la franchise applicable depuis les métadonnées
+  // Pour TCM/TCL, la franchise est implicite dans la grille de taux
+  // On cherche le taux pour la franchise 0 (sans franchise) par défaut,
+  // puis celui correspondant à la franchise configurée dans meta.franchise
+  let franchise = 0;
+  if (meta.franchise) {
+    franchise = meta.franchise.type === "AMOUNT"
+      ? meta.franchise.value
+      : 0; // Pourcentage non applicable pour la grille
+  }
+
+  // Cherche le taux correspondant
+  const rate = findTierceRate(catTariffs, vnClass, franchise, vehicleCategory);
+
+  if (rate != null) {
+    // Prime = VN × (taux / 100)
+    const grossPremium = nv * (rate / 100);
+    const amount = roundTo500(grossPremium);
+
+    const breakdown = [
+      `${code} — Catégorie ${vehicleCategory}`,
+      `Classe VN ${vnClass} (${vnBounds.min.toLocaleString("fr-FR")} – ${vnBounds.max === Infinity ? "∞" : vnBounds.max.toLocaleString("fr-FR")} FCFA)`,
+      `Taux : ${rate}%`,
+      `Brut : ${grossPremium.toLocaleString("fr-FR")} FCFA`,
+      `Arrondi (×500) : ${amount.toLocaleString("fr-FR")} FCFA`,
+    ].join(" — ");
+
+    return { amount, breakdown };
   }
 
   return {
     amount: 0,
-    breakdown: `${code} — Aucune tarification trouvée pour VN ${nv.toLocaleString("fr-FR")} FCFA (classe ${vnClass})`,
+    breakdown: `${code} — Aucun taux trouvé pour VN ${nv.toLocaleString("fr-FR")} FCFA (classe ${vnClass}), catégorie ${vehicleCategory}`,
   };
 }
 
@@ -720,15 +730,56 @@ function findTariffRuleAmount(
   return 0;
 }
 
-/** Mappe l'usage du véhicule vers une catégorie d'assurance */
+/** Mappe l'usage du véhicule vers une catégorie d'assurance (Côte d'Ivoire) */
 function mapUsageToVehicleCategory(usage: string): string {
   const mapping: Record<string, string> = {
-    personnel: "VP",
-    professionnel: "VP",
-    taxi_vtc: "VT",
-    autre: "VP",
+    personnel: "401",      // Véhicule Particulier (VP)
+    professionnel: "401",  // VP usage pro
+    taxi_vtc: "402",       // Véhicule de Transport (VT)
+    autre: "401",
   };
-  return mapping[usage] || "VP";
+  return mapping[usage] || "401";
+}
+
+/**
+ * Trouve le taux applicable dans la grille Tierce pour une combinaison
+ * VN class + franchise + catégorie véhicule.
+ * Les taux sont stockés en % (ex: 4.4 = 4.4% de la VN).
+ */
+function findTierceRate(
+  catTariffs: MatrixCategoryTariff[],
+  vnClass: string,
+  franchise: number,
+  vehicleCategory: string
+): number | null {
+  // 1) Match exact par catégorie + classe VN + franchise
+  let match = catTariffs.find((t) => {
+    const tCat = (t.category || "").toUpperCase().trim();
+    const tVC = (t as any).vehicleCategory as string | undefined;
+    const catMatch = !tVC || tVC === vehicleCategory;
+    return catMatch && tCat === vnClass && t.franchise === franchise;
+  });
+  if (match?.prime != null) return match.prime;
+
+  // 2) Match par catégorie + classe VN (première franchise dispo)
+  match = catTariffs.find((t) => {
+    const tCat = (t.category || "").toUpperCase().trim();
+    const tVC = (t as any).vehicleCategory as string | undefined;
+    const catMatch = !tVC || tVC === vehicleCategory;
+    return catMatch && tCat === vnClass;
+  });
+  if (match?.prime != null) return match.prime;
+
+  // 3) Match par valeur (valueMin/valueMax) + catégorie
+  match = catTariffs.find((t) => {
+    const tVC = (t as any).vehicleCategory as string | undefined;
+    const catMatch = !tVC || tVC === vehicleCategory;
+    // Note: vnClass bounds are in VN_RANGE_BOUNDS
+    return catMatch;
+  });
+  if (match?.prime != null) return match.prime;
+
+  return null;
 }
 
 // ── 2. calculateNetPremium ───────────────────────────────────

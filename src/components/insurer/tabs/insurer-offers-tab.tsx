@@ -9,6 +9,10 @@ import {
   Pencil,
   Trash2,
   Loader2,
+  Check,
+  ChevronsUpDown,
+  Search,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -45,12 +49,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -60,12 +58,6 @@ import { useAppStore } from "@/store/app-store";
 import { useToast } from "@/hooks/use-toast";
 
 /* ── Types ── */
-interface Category {
-  id: string;
-  name: string;
-  icon: string | null;
-}
-
 interface Offer {
   id: string;
   name: string;
@@ -79,15 +71,6 @@ interface Offer {
   isActive: boolean;
   category: { id: string; name: string; icon: string | null } | null;
   createdAt: string;
-  // Vehicle eligibility fields (optional, from DB)
-  fiscalPowerMin?: number | null;
-  fiscalPowerMax?: number | null;
-  fuelTypes?: string;
-  newValueMin?: number | null;
-  newValueMax?: number | null;
-  venalValueMin?: number | null;
-  venalValueMax?: number | null;
-  vehicleUsage?: string;
 }
 
 interface CoverageMini {
@@ -112,19 +95,7 @@ interface OfferFormData {
   contractType: string;
   selectedGuarantees: string[]; // coverage names
   isActive: boolean;
-  // Vehicle eligibility
-  fiscalPowerMin: string;
-  fiscalPowerMax: string;
-  fuelTypes: string[];
-  newValueMin: string;
-  newValueMax: string;
-  venalValueMin: string;
-  venalValueMax: string;
-  vehicleUsage: string[];
 }
-
-const FUEL_OPTIONS = ["Essence", "Diesel", "Hybride", "Électrique"];
-const USAGE_OPTIONS = ["Personnel", "Professionnel", "Taxi/VTC", "Autre"];
 
 const safeJsonParse = (val: unknown): string[] => {
   if (Array.isArray(val)) return val;
@@ -145,15 +116,6 @@ const emptyForm: OfferFormData = {
   contractType: "",
   selectedGuarantees: [],
   isActive: true,
-  // Vehicle eligibility
-  fiscalPowerMin: "",
-  fiscalPowerMax: "",
-  fuelTypes: [],
-  newValueMin: "",
-  newValueMax: "",
-  venalValueMin: "",
-  venalValueMax: "",
-  vehicleUsage: [],
 };
 
 const contractTypeLabels: Record<string, string> = {
@@ -173,7 +135,6 @@ export function InsurerOffersTab() {
 
   const [insurerId, setInsurerId] = useState<string | null>(null);
   const [offers, setOffers] = useState<Offer[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -186,6 +147,10 @@ export function InsurerOffersTab() {
   // Delete dialog
   const [deleteTarget, setDeleteTarget] = useState<Offer | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Dropdown state for guarantee selection
+  const [popoverOpen, setPopoverOpen] = useState(false);
+  const [guaranteeSearch, setGuaranteeSearch] = useState("");
 
   // Coverages for guarantee selection
   const [formCoverages, setFormCoverages] = useState<CoverageMini[]>([]);
@@ -216,17 +181,6 @@ export function InsurerOffersTab() {
     }
   }, []);
 
-  const fetchCategories = useCallback(async () => {
-    try {
-      const res = await fetch("/api/admin/insurance-categories");
-      if (!res.ok) return;
-      const data = await res.json();
-      setCategories(data);
-    } catch {
-      /* ignore */
-    }
-  }, []);
-
   const refreshData = useCallback(async () => {
     if (!insurerId) return;
     await fetchOffers(insurerId);
@@ -241,7 +195,6 @@ export function InsurerOffersTab() {
     (async () => {
       const iid = await fetchInsurer(user.id!);
       if (iid) await fetchOffers(iid);
-      await fetchCategories();
       setLoading(false);
     })();
   }, [user.id]);
@@ -284,15 +237,6 @@ export function InsurerOffersTab() {
       contractType: offer.contractType || "",
       selectedGuarantees: Array.isArray(offer.features) ? offer.features : safeJsonParse(offer.features),
       isActive: offer.isActive,
-      // Vehicle eligibility
-      fiscalPowerMin: offer.fiscalPowerMin != null ? String(offer.fiscalPowerMin) : "",
-      fiscalPowerMax: offer.fiscalPowerMax != null ? String(offer.fiscalPowerMax) : "",
-      fuelTypes: safeJsonParse(offer.fuelTypes),
-      newValueMin: offer.newValueMin != null ? String(offer.newValueMin) : "",
-      newValueMax: offer.newValueMax != null ? String(offer.newValueMax) : "",
-      venalValueMin: offer.venalValueMin != null ? String(offer.venalValueMin) : "",
-      venalValueMax: offer.venalValueMax != null ? String(offer.venalValueMax) : "",
-      vehicleUsage: safeJsonParse(offer.vehicleUsage),
     });
     setDialogOpen(true);
   };
@@ -313,15 +257,6 @@ export function InsurerOffersTab() {
       contractType: form.contractType || null,
       features: form.selectedGuarantees,
       isActive: form.isActive,
-      // Vehicle eligibility
-      fiscalPowerMin: form.fiscalPowerMin ? Number(form.fiscalPowerMin) : null,
-      fiscalPowerMax: form.fiscalPowerMax ? Number(form.fiscalPowerMax) : null,
-      fuelTypes: JSON.stringify(form.fuelTypes),
-      newValueMin: form.newValueMin ? Number(form.newValueMin) : null,
-      newValueMax: form.newValueMax ? Number(form.newValueMax) : null,
-      venalValueMin: form.venalValueMin ? Number(form.venalValueMin) : null,
-      venalValueMax: form.venalValueMax ? Number(form.venalValueMax) : null,
-      vehicleUsage: JSON.stringify(form.vehicleUsage),
     };
 
     try {
@@ -386,36 +321,6 @@ export function InsurerOffersTab() {
     } finally {
       setDeleting(false);
     }
-  };
-
-  const toggleGuarantee = (coverageName: string, checked: boolean | "indeterminate") => {
-    if (checked === "indeterminate") return;
-    setForm((f) => ({
-      ...f,
-      selectedGuarantees: checked
-        ? [...f.selectedGuarantees, coverageName]
-        : f.selectedGuarantees.filter((n) => n !== coverageName),
-    }));
-  };
-
-  const toggleFuelType = (fuel: string, checked: boolean | "indeterminate") => {
-    if (checked === "indeterminate") return;
-    setForm((f) => ({
-      ...f,
-      fuelTypes: checked
-        ? [...f.fuelTypes, fuel]
-        : f.fuelTypes.filter((t) => t !== fuel),
-    }));
-  };
-
-  const toggleVehicleUsage = (usage: string, checked: boolean | "indeterminate") => {
-    if (checked === "indeterminate") return;
-    setForm((f) => ({
-      ...f,
-      vehicleUsage: checked
-        ? [...f.vehicleUsage, usage]
-        : f.vehicleUsage.filter((u) => u !== usage),
-    }));
   };
 
   /* ── Group coverages by category for display ── */
@@ -500,19 +405,28 @@ export function InsurerOffersTab() {
           {offers.map((offer) => (
             <Card
               key={offer.id}
-              className="hover:shadow-md transition-shadow"
+              className="hover:shadow-md transition-shadow overflow-hidden"
             >
               <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
+                <div className="flex items-start justify-between gap-2">
                   <div className="space-y-1 min-w-0 flex-1">
-                    <CardTitle className="text-base truncate">
-                      {offer.name}
-                    </CardTitle>
-                    <p className="text-xs text-muted-foreground">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <CardTitle className="text-base truncate">
+                            {offer.name}
+                          </CardTitle>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs">
+                          <p className="text-xs break-words">{offer.name}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <p className="text-xs text-muted-foreground truncate">
                       {offer.category?.name || "Non catégorisé"}
                     </p>
                   </div>
-                  <div className="flex items-center gap-1 shrink-0 ml-2">
+                  <div className="flex items-center gap-1 shrink-0">
                     {offer.isActive ? (
                       <Badge className="border-0 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 text-xs">
                         <CheckCircle2 className="mr-1 h-3 w-3" />
@@ -625,7 +539,7 @@ export function InsurerOffersTab() {
 
       {/* ── Create/Edit Dialog ── */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingOffer ? "Modifier l'offre" : "Nouvelle offre"}
@@ -652,27 +566,7 @@ export function InsurerOffersTab() {
               />
             </div>
 
-            {/* Category */}
-            <div className="space-y-2">
-              <Label>Catégorie de produit</Label>
-              <Select
-                value={form.categoryId}
-                onValueChange={(v) =>
-                  setForm((f) => ({ ...f, categoryId: v }))
-                }
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Sélectionner une catégorie" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+
 
             {/* Contract Type */}
             <div className="space-y-2">
@@ -770,7 +664,7 @@ export function InsurerOffersTab() {
 
             <Separator />
 
-            {/* Guarantee selection (like admin) */}
+            {/* Guarantee selection — dropdown with search */}
             <div className="space-y-2">
               <Label>Garanties</Label>
               {formCoveragesLoading && (
@@ -785,179 +679,131 @@ export function InsurerOffersTab() {
                   </p>
                 )}
               {!formCoveragesLoading && formCoverages.length > 0 && (
-                <div className="border rounded-lg max-h-64 overflow-y-auto p-3 space-y-3">
-                  {Object.entries(groupedCoverages)
-                    .sort(([a], [b]) => a.localeCompare(b))
-                    .map(([cat, covs]) => (
-                      <div key={cat}>
-                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
-                          {cat}
-                        </p>
-                        <div className="space-y-1.5">
-                          {covs.map((c) => (
-                            <div key={c.id} className="flex items-center gap-2">
-                              <Checkbox
-                                id={`cov-${c.id}`}
-                                checked={form.selectedGuarantees.includes(
-                                  c.name
-                                )}
-                                onCheckedChange={(checked) =>
-                                  toggleGuarantee(c.name, checked)
-                                }
-                              />
-                              <Label
-                                htmlFor={`cov-${c.id}`}
-                                className="text-sm font-normal cursor-pointer"
-                              >
-                                {c.name}
-                              </Label>
-                              {c.isMandatory && (
-                                <Badge
-                                  variant="default"
-                                  className="text-[10px] px-1.5 py-0 bg-[#B9E54D] text-black hover:bg-[#a5d044]"
-                                >
-                                  Obligatoire
-                                </Badge>
-                              )}
-                            </div>
-                          ))}
+                <div className="relative">
+                  <Button
+                    variant="outline"
+                    type="button"
+                    onClick={() => {
+                      setPopoverOpen(!popoverOpen);
+                      setGuaranteeSearch("");
+                    }}
+                    className="w-full justify-between h-auto min-h-10 py-2"
+                  >
+                    <span className="text-left truncate">
+                      {form.selectedGuarantees.length === 0
+                        ? "Sélectionner des garanties…"
+                        : `${form.selectedGuarantees.length} garantie${form.selectedGuarantees.length > 1 ? "s" : ""} sélectionnée${form.selectedGuarantees.length > 1 ? "s" : ""}`}
+                    </span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                  {popoverOpen && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-40"
+                        onClick={() => {
+                          setPopoverOpen(false);
+                          setGuaranteeSearch("");
+                        }}
+                      />
+                      <div className="absolute z-50 left-0 right-0 mt-1 rounded-md border bg-popover shadow-md flex flex-col" style={{ maxHeight: '320px' }}>
+                        {/* Barre de recherche */}
+                        <div className="relative border-b shrink-0">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                          <Input
+                            placeholder="Rechercher une garantie…"
+                            value={guaranteeSearch}
+                            onChange={(e) => setGuaranteeSearch(e.target.value)}
+                            className="border-0 pl-9 h-10 text-sm focus-visible:ring-0 rounded-none"
+                            autoFocus
+                          />
+                          {guaranteeSearch && (
+                            <button
+                              onClick={() => setGuaranteeSearch("")}
+                              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
+                        {/* Liste filtrée */}
+                        <div className="overflow-y-auto flex-1 p-1">
+                          {(() => {
+                            // Filtrer toutes les garanties
+                            const q = guaranteeSearch.toLowerCase().trim();
+                            const filteredEntries = Object.entries(groupedCoverages)
+                              .sort(([a], [b]) => a.localeCompare(b))
+                              .map(([cat, covs]) => [
+                                cat,
+                                q
+                                  ? covs.filter((c) =>
+                                      c.name.toLowerCase().includes(q) ||
+                                      c.code.toLowerCase().includes(q) ||
+                                      cat.toLowerCase().includes(q)
+                                    )
+                                  : covs,
+                              ] as [string, CoverageMini[]])
+                              .filter(([, covs]) => covs.length > 0);
+
+                            if (filteredEntries.length === 0) {
+                              return (
+                                <div className="py-8 text-center text-sm text-muted-foreground">
+                                  Aucune garantie trouvée.
+                                </div>
+                              );
+                            }
+
+                            return filteredEntries.map(([cat, covs]) => (
+                              <div key={cat} className="mb-2">
+                                <p className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                                  {cat}
+                                </p>
+                                {covs.map((c) => {
+                                  const isSelected = form.selectedGuarantees.includes(c.name);
+                                  return (
+                                    <button
+                                      key={c.id}
+                                      type="button"
+                                      className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-sm text-sm text-left hover:bg-accent transition-colors ${
+                                        isSelected ? "bg-accent/50" : ""
+                                      }`}
+                                      onClick={() => {
+                                        setForm((f) => ({
+                                          ...f,
+                                          selectedGuarantees: isSelected
+                                            ? f.selectedGuarantees.filter((n) => n !== c.name)
+                                            : [...f.selectedGuarantees, c.name],
+                                        }));
+                                      }}
+                                    >
+                                      <div className={`flex h-4 w-4 items-center justify-center rounded-sm border transition-colors shrink-0 ${
+                                        isSelected
+                                          ? "bg-[#B9E54D] text-black border-[#B9E54D]"
+                                          : "border-muted-foreground/30"
+                                      }`}>
+                                        {isSelected && <Check className="h-3 w-3" />}
+                                      </div>
+                                      <span className="flex-1 truncate">{c.name}</span>
+                                      {c.isMandatory && (
+                                        <Badge
+                                          variant="default"
+                                          className="text-[10px] px-1.5 py-0 bg-[#B9E54D] text-black hover:bg-[#a5d044] shrink-0"
+                                        >
+                                          Obligatoire
+                                        </Badge>
+                                      )}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            ));
+                          })()}
                         </div>
                       </div>
-                    ))}
+                    </>
+                  )}
                 </div>
               )}
             </div>
-
-            <Separator />
-
-            {/* Vehicle Eligibility Accordion */}
-            <Accordion type="multiple" className="w-full">
-              <AccordionItem value="vehicle-eligibility" className="border rounded-lg px-4">
-                <AccordionTrigger className="py-3 hover:no-underline">
-                  <span className="font-semibold text-sm">Éligibilité Véhicule</span>
-                </AccordionTrigger>
-                <AccordionContent className="pb-4 pt-0 space-y-4">
-                  <p className="text-xs text-muted-foreground">Définissez les critères d&apos;éligibilité des véhicules pour cette offre. Laissez vide pour accepter tous les véhicules.</p>
-
-                  {/* Puissance fiscale */}
-                  <div className="w-full grid gap-2">
-                    <Label>Puissance fiscale (CV)</Label>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="grid gap-1">
-                        <Label className="text-xs text-muted-foreground">Min</Label>
-                        <Input
-                          className="w-full"
-                          type="number"
-                          placeholder="Min"
-                          value={form.fiscalPowerMin}
-                          onChange={(e) => setForm((f) => ({ ...f, fiscalPowerMin: e.target.value }))}
-                        />
-                      </div>
-                      <div className="grid gap-1">
-                        <Label className="text-xs text-muted-foreground">Max</Label>
-                        <Input
-                          className="w-full"
-                          type="number"
-                          placeholder="Max"
-                          value={form.fiscalPowerMax}
-                          onChange={(e) => setForm((f) => ({ ...f, fiscalPowerMax: e.target.value }))}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Carburant */}
-                  <div className="w-full grid gap-2">
-                    <Label>Carburant</Label>
-                    <div className="flex flex-wrap gap-3">
-                      {FUEL_OPTIONS.map((fuel) => (
-                        <div key={fuel} className="flex items-center gap-2">
-                          <Checkbox
-                            id={`fuel-${fuel}`}
-                            checked={form.fuelTypes.includes(fuel)}
-                            onCheckedChange={(checked) => toggleFuelType(fuel, checked)}
-                          />
-                          <Label htmlFor={`fuel-${fuel}`} className="text-sm font-normal cursor-pointer">{fuel}</Label>
-                        </div>
-                      ))}
-                    </div>
-                    <p className="text-xs text-muted-foreground">Laissez vide pour accepter tous les types de carburant.</p>
-                  </div>
-
-                  {/* Valeur à neuf */}
-                  <div className="w-full grid gap-2">
-                    <Label>Valeur à neuf (FCFA)</Label>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="grid gap-1">
-                        <Label className="text-xs text-muted-foreground">Min</Label>
-                        <Input
-                          className="w-full"
-                          type="number"
-                          placeholder="0"
-                          value={form.newValueMin}
-                          onChange={(e) => setForm((f) => ({ ...f, newValueMin: e.target.value }))}
-                        />
-                      </div>
-                      <div className="grid gap-1">
-                        <Label className="text-xs text-muted-foreground">Max</Label>
-                        <Input
-                          className="w-full"
-                          type="number"
-                          placeholder="0"
-                          value={form.newValueMax}
-                          onChange={(e) => setForm((f) => ({ ...f, newValueMax: e.target.value }))}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Valeur vénale */}
-                  <div className="w-full grid gap-2">
-                    <Label>Valeur vénale (FCFA)</Label>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="grid gap-1">
-                        <Label className="text-xs text-muted-foreground">Min</Label>
-                        <Input
-                          className="w-full"
-                          type="number"
-                          placeholder="0"
-                          value={form.venalValueMin}
-                          onChange={(e) => setForm((f) => ({ ...f, venalValueMin: e.target.value }))}
-                        />
-                      </div>
-                      <div className="grid gap-1">
-                        <Label className="text-xs text-muted-foreground">Max</Label>
-                        <Input
-                          className="w-full"
-                          type="number"
-                          placeholder="0"
-                          value={form.venalValueMax}
-                          onChange={(e) => setForm((f) => ({ ...f, venalValueMax: e.target.value }))}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Usage */}
-                  <div className="w-full grid gap-2">
-                    <Label>Usage</Label>
-                    <div className="flex flex-wrap gap-3">
-                      {USAGE_OPTIONS.map((usage) => (
-                        <div key={usage} className="flex items-center gap-2">
-                          <Checkbox
-                            id={`usage-${usage}`}
-                            checked={form.vehicleUsage.includes(usage)}
-                            onCheckedChange={(checked) => toggleVehicleUsage(usage, checked)}
-                          />
-                          <Label htmlFor={`usage-${usage}`} className="text-sm font-normal cursor-pointer">{usage}</Label>
-                        </div>
-                      ))}
-                    </div>
-                    <p className="text-xs text-muted-foreground">Laissez vide pour accepter tous les usages.</p>
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
 
             <Separator />
 
