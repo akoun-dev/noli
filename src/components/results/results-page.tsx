@@ -3,6 +3,7 @@
 import React, { useMemo, useState, useCallback } from "react";
 import {
   ArrowLeft,
+  Car,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
@@ -318,6 +319,21 @@ function ComparisonBar({
 
 /* ──────── Comparison Modal ──────── */
 
+const COVERAGE_LABELS: Record<string, string> = {
+  RESPONSABILITE_CIVILE: "RC",
+  DEFENSE_RECOURS: "Défense & Recours",
+  INDIVIDUELLE_CONDUCTEUR: "Ind. Conducteur",
+  INDIVIDUELLE_PASSAGERS: "Ind. Passagers",
+  INCENDIE: "Incendie",
+  VOL: "Vol",
+  BRIS_GLACES: "Bris de Glaces",
+  TIERCE_COMPLETE: "Tierce Complète",
+  TIERCE_COLLISION: "Tierce Collision",
+  ASSISTANCE: "Assistance",
+  AVANCE_RECOURS: "Avance sur Recours",
+  ACCESSOIRES: "Accessoires",
+};
+
 function ComparisonModal({
   offers,
   open,
@@ -327,6 +343,7 @@ function ComparisonModal({
   open: boolean;
   onClose: () => void;
 }) {
+  const { vehicleInfo, coverageNeeds } = useAppStore();
   // Build category → guarantees structure from pricingBreakdown
   const categories = useMemo(() => {
     const catMap = new Map<string, { name: string; guarantees: string[] }>();
@@ -384,9 +401,13 @@ function ComparisonModal({
 
   if (!open || offers.length < 2) return null;
 
+  const selectedCategories = coverageNeeds.guaranteeCategories || [];
+  const cheapest = [...offers].sort((a, b) => a.annualPrice - b.annualPrice)[0];
+  const bestRated = [...offers].sort((a, b) => b.insurerRating - a.insurerRating)[0];
+
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto p-0">
+      <DialogContent className="sm:max-w-[1050px] max-h-[90vh] overflow-y-auto p-0">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border/60 bg-muted/30 sticky top-0 z-20">
           <DialogTitle className="text-lg font-bold text-foreground">
@@ -402,10 +423,56 @@ function ComparisonModal({
           </DialogDescription>
         </div>
 
+        {/* ── Récap du véhicule et garanties demandées ── */}
+        <div className="px-6 py-4 border-b border-border/40 bg-primary/[0.03]">
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+            <div className="flex items-center gap-2">
+              <Car className="size-4 text-primary" />
+              <span className="font-semibold text-foreground">Véhicule</span>
+              <span className="text-muted-foreground">
+                {vehicleInfo.year || "—"} · {vehicleInfo.fiscalPower || "—"} CV · {vehicleInfo.fuelType || "—"}
+              </span>
+            </div>
+            {vehicleInfo.newValue && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-muted-foreground">Valeur neuve :</span>
+                <span className="font-semibold text-foreground">{formatFCFA(Number(vehicleInfo.newValue))}</span>
+              </div>
+            )}
+            {vehicleInfo.currentValue && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-muted-foreground">Valeur actuelle :</span>
+                <span className="font-semibold text-foreground">{formatFCFA(Number(vehicleInfo.currentValue))}</span>
+              </div>
+            )}
+            {vehicleInfo.usage && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-muted-foreground">Usage :</span>
+                <span className="font-medium text-foreground">{vehicleInfo.usage}</span>
+              </div>
+            )}
+          </div>
+          {selectedCategories.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-3">
+              {selectedCategories.map((code) => (
+                <span
+                  key={code}
+                  className="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary px-2.5 py-0.5 text-[11px] font-semibold border border-primary/20"
+                >
+                  <Check className="size-3" />
+                  {COVERAGE_LABELS[code] || code}
+                </span>
+              ))}
+              <span className="inline-flex items-center rounded-full bg-muted/50 text-muted-foreground px-2.5 py-0.5 text-[11px] font-medium">
+                {selectedCategories.length} garantie{selectedCategories.length > 1 ? "s" : ""} demandée{selectedCategories.length > 1 ? "s" : ""}
+              </span>
+            </div>
+          )}
+        </div>
+
         {/* Comparison Table */}
         <div className="overflow-x-auto">
           <table className="w-full min-w-[500px]">
-            {/* Column Headers: Offers (insurer + plan) */}
             <thead>
               <tr>
                 <th className="text-left p-4 w-52 bg-muted/30 sticky left-0 z-10 border-b border-border/60">
@@ -413,37 +480,62 @@ function ComparisonModal({
                     Critères
                   </span>
                 </th>
-                {offers.map((offer) => (
-                  <th
-                    key={offer.id}
-                    className="text-center p-4 bg-muted/30 border-b border-border/60 min-w-[150px]"
-                  >
-                    <div className="flex flex-col items-center gap-1.5">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 border-2 border-primary/20">
-                        <Shield className="size-5 text-primary" />
+                {offers.map((offer) => {
+                  const isBest = offer.id === cheapest.id;
+                  return (
+                    <th
+                      key={offer.id}
+                      className={`text-center p-4 border-b border-border/60 min-w-[150px] ${isBest ? "bg-primary/[0.06]" : "bg-muted/30"}`}
+                    >
+                      <div className="flex flex-col items-center gap-1.5">
+                        <div className="relative">
+                          <div className={`flex h-10 w-10 items-center justify-center rounded-full border-2 ${isBest ? "bg-primary/15 border-primary/40" : "bg-primary/10 border-primary/20"}`}>
+                            <Shield className="size-5 text-primary" />
+                          </div>
+                          {isBest && (
+                            <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-green-500 text-white text-[9px] font-bold">
+                              ★
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-sm font-bold text-foreground leading-tight">
+                          {offer.insurerName}
+                        </span>
+                        <span className="text-xs text-muted-foreground capitalize">
+                          {offer.coverageType.replace("_", " ")}
+                        </span>
                       </div>
-                      <span className="text-sm font-bold text-foreground leading-tight">
-                        {offer.insurerName}
-                      </span>
-                      <span className="text-xs text-muted-foreground capitalize">
-                        {offer.coverageType.replace("_", " ")}
-                      </span>
-                    </div>
-                  </th>
-                ))}
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
 
             <tbody>
-              {/* Annuel */}
+              {/* Prix mensuel */}
               <tr className="bg-card">
                 <td className="p-4 text-sm font-semibold text-foreground sticky left-0 bg-card border-b border-border/30">
+                  Mensuel
+                </td>
+                {offers.map((offer) => (
+                  <td
+                    key={offer.id}
+                    className={`p-4 text-center text-sm font-bold border-b border-border/30 ${offer.id === cheapest.id ? "text-green-600 dark:text-green-400" : "text-foreground"}`}
+                  >
+                    {formatFCFA(offer.monthlyPrice)}/mois
+                  </td>
+                ))}
+              </tr>
+
+              {/* Prix annuel */}
+              <tr className="bg-muted/20">
+                <td className="p-4 text-sm font-semibold text-foreground sticky left-0 bg-muted/20 border-b border-border/30">
                   Annuel
                 </td>
                 {offers.map((offer) => (
                   <td
                     key={offer.id}
-                    className="p-4 text-center text-sm font-bold text-foreground border-b border-border/30"
+                    className={`p-4 text-center text-sm font-bold border-b border-border/30 ${offer.id === cheapest.id ? "text-green-600 dark:text-green-400" : "text-foreground"}`}
                   >
                     {formatFCFA(offer.annualPrice)}
                   </td>
@@ -451,8 +543,8 @@ function ComparisonModal({
               </tr>
 
               {/* Franchise */}
-              <tr className="bg-muted/20">
-                <td className="p-4 text-sm font-medium text-foreground sticky left-0 bg-muted/20 border-b border-border/30">
+              <tr className="bg-card">
+                <td className="p-4 text-sm font-medium text-foreground sticky left-0 bg-card border-b border-border/30">
                   Franchise
                 </td>
                 {offers.map((offer) => (
@@ -465,10 +557,76 @@ function ComparisonModal({
                 ))}
               </tr>
 
+              {/* Note assureur */}
+              <tr className="bg-muted/20">
+                <td className="p-4 text-sm font-medium text-foreground sticky left-0 bg-muted/20 border-b border-border/30">
+                  Note
+                </td>
+                {offers.map((offer) => (
+                  <td
+                    key={offer.id}
+                    className={`p-4 text-center text-sm font-semibold border-b border-border/30 ${offer.id === bestRated.id ? "text-accent" : "text-foreground"}`}
+                  >
+                    <div className="flex items-center justify-center gap-1">
+                      <Star className="size-3.5 fill-current" />
+                      {offer.insurerRating}/5
+                    </div>
+                  </td>
+                ))}
+              </tr>
+
+              {/* Couverture max */}
+              {offers.some((o) => o.maxCoverage > 0) && (
+                <tr className="bg-card">
+                  <td className="p-4 text-sm font-medium text-foreground sticky left-0 bg-card border-b border-border/30">
+                    Couverture max
+                  </td>
+                  {offers.map((offer) => (
+                    <td
+                      key={offer.id}
+                      className="p-4 text-center text-sm text-foreground border-b border-border/30"
+                    >
+                      {offer.maxCoverage > 0
+                        ? `${Math.round(offer.maxCoverage / 1_000_000)}M FCFA`
+                        : "—"}
+                    </td>
+                  ))}
+                </tr>
+              )}
+
+              {/* Nombre de garanties */}
+              <tr className="bg-primary/[0.03]">
+                <td className="p-4 text-sm font-semibold text-foreground sticky left-0 bg-primary/[0.03] border-b border-border/30">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="size-4 text-primary" />
+                    Total garanties
+                  </div>
+                </td>
+                {offers.map((offer) => {
+                  const count = guaranteeLookup.get(offer.id)?.size ?? 0;
+                  const requestedCount = selectedCategories.length;
+                  const matchPercent = requestedCount > 0 ? Math.round((count / requestedCount) * 100) : 0;
+                  return (
+                    <td
+                      key={offer.id}
+                      className="p-4 text-center border-b border-border/30"
+                    >
+                      <span className="text-lg font-bold text-foreground">{count}</span>
+                      {requestedCount > 0 && (
+                        <div className="mt-1">
+                          <span className={`text-[11px] font-semibold ${matchPercent >= 80 ? "text-green-600" : matchPercent >= 50 ? "text-amber-600" : "text-red-500"}`}>
+                            {matchPercent}% de correspondance
+                          </span>
+                        </div>
+                      )}
+                    </td>
+                  );
+                })}
+              </tr>
+
               {/* Guarantee rows grouped by category */}
               {categories.map(([catKey, catData], catIdx) => (
                 <React.Fragment key={catKey}>
-                  {/* Category header with background badge */}
                   <tr>
                     <td
                       className="p-0"
@@ -487,7 +645,6 @@ function ComparisonModal({
                       </div>
                     </td>
                   </tr>
-                  {/* Guarantees within this category */}
                   {catData.guarantees.map((guarantee, idx) => {
                     const isZebra = catIdx % 2 === 0 ? idx % 2 === 1 : idx % 2 === 0;
                     return (
@@ -1155,7 +1312,7 @@ export function ResultsPage() {
               onClick={() => setView("compare")}
             >
               <ArrowLeft className="size-4 mr-1.5" />
-              <span className="hidden sm:inline">Retour au formulaire</span>
+              <span className="hidden sm:inline">Modifier mes choix</span>
               <span className="sm:hidden">Retour</span>
             </Button>
 
