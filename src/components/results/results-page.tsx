@@ -403,7 +403,6 @@ function ComparisonModal({
 
   const selectedCategories = coverageNeeds.guaranteeCategories || [];
   const cheapest = [...offers].sort((a, b) => a.annualPrice - b.annualPrice)[0];
-  const bestRated = [...offers].sort((a, b) => b.insurerRating - a.insurerRating)[0];
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -557,24 +556,6 @@ function ComparisonModal({
                 ))}
               </tr>
 
-              {/* Note assureur */}
-              <tr className="bg-muted/20">
-                <td className="p-4 text-sm font-medium text-foreground sticky left-0 bg-muted/20 border-b border-border/30">
-                  Note
-                </td>
-                {offers.map((offer) => (
-                  <td
-                    key={offer.id}
-                    className={`p-4 text-center text-sm font-semibold border-b border-border/30 ${offer.id === bestRated.id ? "text-accent" : "text-foreground"}`}
-                  >
-                    <div className="flex items-center justify-center gap-1">
-                      <Star className="size-3.5 fill-current" />
-                      {offer.insurerRating}/5
-                    </div>
-                  </td>
-                ))}
-              </tr>
-
               {/* Couverture max */}
               {offers.some((o) => o.maxCoverage > 0) && (
                 <tr className="bg-card">
@@ -593,36 +574,6 @@ function ComparisonModal({
                   ))}
                 </tr>
               )}
-
-              {/* Nombre de garanties */}
-              <tr className="bg-primary/[0.03]">
-                <td className="p-4 text-sm font-semibold text-foreground sticky left-0 bg-primary/[0.03] border-b border-border/30">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="size-4 text-primary" />
-                    Total garanties
-                  </div>
-                </td>
-                {offers.map((offer) => {
-                  const count = guaranteeLookup.get(offer.id)?.size ?? 0;
-                  const requestedCount = selectedCategories.length;
-                  const matchPercent = requestedCount > 0 ? Math.round((count / requestedCount) * 100) : 0;
-                  return (
-                    <td
-                      key={offer.id}
-                      className="p-4 text-center border-b border-border/30"
-                    >
-                      <span className="text-lg font-bold text-foreground">{count}</span>
-                      {requestedCount > 0 && (
-                        <div className="mt-1">
-                          <span className={`text-[11px] font-semibold ${matchPercent >= 80 ? "text-green-600" : matchPercent >= 50 ? "text-amber-600" : "text-red-500"}`}>
-                            {matchPercent}% de correspondance
-                          </span>
-                        </div>
-                      )}
-                    </td>
-                  );
-                })}
-              </tr>
 
               {/* Guarantee rows grouped by category */}
               {categories.map(([catKey, catData], catIdx) => (
