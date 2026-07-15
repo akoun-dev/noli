@@ -1,8 +1,9 @@
 # Audit Technique — NOLI Assurance
 
-**Date :** Juillet 2026  
+**Date :** 15 Juillet 2026  
 **Projet :** NOLI — Comparateur d'assurances en Côte d'Ivoire  
-**Stack :** Next.js 16 (App Router), TypeScript, Prisma (SQLite), Tailwind CSS, Zustand, shadcn/ui, Vitest
+**Stack :** Next.js 16 (App Router), TypeScript, Prisma (SQLite), Tailwind CSS, Zustand, shadcn/ui, Vitest  
+**Version :** 2.0.0
 
 ---
 
@@ -13,443 +14,276 @@ NOLI est une application web de comparaison d'assurances avec 3 interfaces disti
 | Interface | Rôle | Accès |
 |-----------|------|-------|
 | **Parcours utilisateur** | Comparaison, résultats, devis | Public / USER |
-| **Dashboard assureur** | Gestion des offres, garanties, devis reçus | INSURER |
+| **Dashboard assureur** | Gestion des offres, garanties, devis reçus (9 onglets) | INSURER |
 | **Panel administrateur** | Configuration complète (11 onglets) | ADMIN |
 
 ### 1.1 Base de données (Prisma / SQLite)
 
-21 modèles : `Profile`, `Insurer`, `InsurerAccount`, `InsuranceCategory`, `CoverageCategory`, `Coverage`, `CoverageTariffRule`, `InsuranceOffer`, `InsurancePackage`, `PackageCoverage`, `Quote`, `QuoteCoverage`, `SystemSetting`, `AuditLog`, `Backup`, `Notification`, `Role`, `Permission`, `RolePermission`, `ProfileRole`, + modèles supplémentaires (`Guarantee`, `Offer`, `OfferGuarantee`, `GuaranteeCategory`).
+**Base :** `prisma/prisma/dev.db` — SQLite  
+**Taille :** ~230 Ko  
+**Modèles Prisma :** 21 modèles dans `schema.prisma`
 
-> **⚠️ Note :** Les modèles `Guarantee`, `Offer`, `OfferGuarantee`, `GuaranteeCategory` ne figurent pas dans `schema.prisma` mais sont utilisés dans les routes API et via `db.*`. Ils semblent avoir été ajoutés directement en base sans mise à jour du schéma Prisma.
+#### Comptes et Profils
+
+| Type | Email | Rôle |
+|------|-------|------|
+| Admin | `admin@noli.ci` | ADMIN |
+| Utilisateur test | `user@test.ci` | USER |
+| Assureur test | `assureur@saham.ci` | INSURER |
+
+#### Statistiques de la base
+
+| Entité | Compte | Notes |
+|--------|--------|-------|
+| **Profiles** | 3 | 1 USER, 1 INSURER, 1 ADMIN |
+| **Insurers** | 1 | SAHAM Assurances (uniquement) |
+| **InsurerAccounts** | 0 | Plus aucune liaison (assureur supprimé via inscription directe) |
+| **InsuranceCategories** | 1 | Catégorie produit |
+| **CoverageCategories** | 12 | Catégories de garanties |
+| **Coverages** | 0 | Aucune garantie en base |
+| **CoverageTariffRules** | 0 | Aucune règle de tarification |
+| **InsuranceOffers** | 0 | Aucune offre |
+| **Packages** | 4 | Packs prédéfinis |
+| **PackageCoverages** | 0 | Aucun lien pack-garantie |
+| **Quotes** | 0 | Aucun devis |
+| **Notifications** | 0 | Aucune notification |
+| **AuditLogs** | 5 | Suppressions d'anciens assureurs/offres |
+| **SystemSettings** | 29 | Configuration système |
+| **Roles** | 3 | ADMIN (34 perm), INSURER (8 perm), USER (3 perm) |
+| **Permissions** | 34 | Réparties dans 9 catégories |
+| **RolePermissions** | 45 | Liens rôles-permissions |
+| **ProfileRoles** | 0 | Aucun rôle personnalisé attribué |
+| **Backups** | 0 | Aucune sauvegarde effectuée |
+| **Sessions** | 0 | Aucune session active |
+
+> ⚠️ **Alerte :** La base est quasi vide. Seul l'assureur SAHAM existe, mais il n'a ni offres, ni garanties, ni devis. Le seed est nécessaire pour le développement.
 
 ---
 
-## 2. Architecture Frontend
+## 2. Métriques du Code
 
-### 2.1 Arborescence composants
+| Métrique | Valeur |
+|----------|--------|
+| **Composants React** | 130 (dont 48 UI shadcn) |
+| **Routes API** | 63 |
+| **Modules lib** | 13 |
+| **Fichiers de test** | 31 |
+| **Tests unitaires** | 334 (tous passants ✅) |
+| **Erreurs TypeScript** | 53 |
+| **Fichiers modifiés non commit** | 8 |
+| **Lignes ajoutées (non commit)** | ~1 266 |
+| **Lignes supprimées (non commit)** | ~477 |
+
+### 2.1 Arborescence des composants
 
 ```
 src/
 ├── app/                    # Next.js App Router
-│   ├── page.tsx            # Routing central (11 vues via AppView)
-│   ├── layout.tsx          # Layout racine (polices, metadata)
-│   ├── globals.css         # Variables CSS (thème clair/sombre)
-│   └── api/                # 40+ routes API (route handlers)
+│   ├── page.tsx            # Routing central (12 vues via AppView)
+│   ├── layout.tsx          # Layout racine
+│   ├── globals.css         # Variables CSS (clair/sombre)
+│   └── api/                # 63 routes API
 ├── components/
-│   ├── ui/                 # 45 composants shadcn/ui réutilisables
-│   ├── landing/            # Page d'accueil
-│   ├── comparison/         # Formulaire de comparaison (3 étapes)
-│   ├── results/            # Page résultats + modale de comparaison
-│   ├── auth/               # Pages de connexion/inscription
-│   ├── layout/             # Header, footer
+│   ├── ui/                 # 48 composants shadcn/ui
 │   ├── admin/              # 14 onglets d'administration
-│   ├── insurer/            # Dashboard assureur (9 onglets)
-│   ├── user/               # Dashboard utilisateur (10 onglets)
-│   ├── offers/             # Catalogue d'offres public
-│   ├── dashboard/          # Dashboard utilisateur simplifié
-│   ├── profile/            # Page de profil
-│   ├── contact/            # Page contact
-│   ├── about/              # Page à propos
-│   └── shared/             # Composants partagés (notification, theme, star)
+│   │   ├── admin-page.tsx         # Layout admin (sidebar 11 items)
+│   │   └── *.tsx                  # 13 onglets
+│   ├── insurer/            # Dashboard assureur (10 fichiers)
+│   │   ├── insurer-layout.tsx     # Layout assureur (sidebar 9 items)
+│   │   └── tabs/                  # 9 onglets
+│   ├── user/               # Dashboard utilisateur (12 fichiers)
+│   │   ├── user-layout.tsx        # Layout utilisateur (sidebar 10 items)
+│   │   └── tabs/                  # 10 onglets
+│   ├── auth/               # Connexion/Inscription (wizard 3-4 étapes)
+│   ├── landing/            # Page d'accueil
+│   ├── comparison/         # Formulaire comparaison (3 étapes)
+│   ├── results/            # Résultats + modale comparaison
+│   ├── layout/             # Header, footer
+│   ├── shared/             # Notification, theme, star rating
+│   └── ...                 # Contact, About, Offers, Profile, Dashboard
 ├── lib/                    # Logique métier
-│   ├── compare-service.ts  # Moteur de comparaison
-│   ├── pricing-service.ts  # Moteur de tarification (4 méthodes)
-│   ├── validation.ts       # Schémas Zod
-│   ├── utils.ts            # Fonctions utilitaires
-│   ├── constants.ts        # Constantes (options, seuils)
-│   ├── auth-guard.ts       # Middleware d'authentification
-│   ├── notifications.ts    # Helpers de notification
-│   └── db.ts               # Client Prisma singleton
-├── store/
-│   └── app-store.ts        # État global Zustand (20+ propriétés)
-├── hooks/
-│   ├── use-toast.ts        # Hook toast shadcn
-│   └── use-mobile.ts       # Hook détection mobile
-└── types/
-    └── index.ts            # Types TypeScript partagés
+├── store/                  # Zustand (état global)
+├── hooks/                  # use-toast, use-mobile
+└── types/                  # Types partagés
 ```
 
-### 2.2 État global (Zustand)
+---
 
-Le store central (`app-store.ts`) gère :
+## 3. État des Interfaces
 
-- **Navigation :** `currentView`, `setView()`
-- **Auth :** `user`, `authModal`, `setUser()`
-- **Formulaire :** `personalInfo`, `vehicleInfo`, `coverageNeeds` (3 étapes)
-- **Résultats :** `comparisonResults`, `offersToCompare`, `comparisonModalOpen`
-- **Navigation interne :** `adminTab`, `userTab`, `insurerTab`
+### 3.1 Parcours Public (12/12 fonctionnels ✅)
 
-**Forces :** Store unique simple, bien typé, actions claires.  
-**Faiblesses :** Pas de persistance (perte d'état au refresh), pas de séparation par domaine.
+| Page | Composant | Statut |
+|------|-----------|--------|
+| Accueil | `landing-page.tsx` | ✅ Fonctionnel |
+| Catalogue offres | `offers-page.tsx` | ✅ Fonctionnel |
+| Comparaison (3 étapes) | `comparison-form.tsx` | ✅ Connecté API |
+| Résultats | `results-page.tsx` | ✅ Connecté API |
+| Modale comparaison | `ComparisonModal` | ✅ Corrigé |
+| Connexion | `auth-pages.tsx` (LoginPage) | ✅ Fonctionnel |
+| Inscription (wizard 4 étapes) | `auth-pages.tsx` (RegisterPage) | ✅ Fonctionnel |
+| Mot de passe oublié | `auth-pages.tsx` (ForgotPasswordPage) | ✅ Fonctionnel |
+| À propos | `about-page.tsx` | ✅ Statique |
+| Contact | `contact-page.tsx` | ✅ Statique |
+| Header | `header.tsx` | ✅ Fonctionnel |
+| Footer | `footer.tsx` | ✅ Statique |
 
-### 2.3 Routage
+### 3.2 Interface Utilisateur (5/10 fonctionnels, 5 placeholders)
 
-Le routage est centralisé dans `src/app/page.tsx` via un switch-case sur `currentView` (type `AppView`) :
+| Onglet | Composant | Statut |
+|--------|-----------|--------|
+| **Tableau de bord** | `user-dashboard-tab.tsx` | ✅ API connectée |
+| **Mes Devis** | `user-quotes-tab.tsx` | ✅ API connectée |
+| **Notifications** | `user-notifications-tab.tsx` | ✅ API connectée |
+| **Mon Profil** | `user-profile-tab.tsx` | ✅ CRUD complet |
+| **Paramètres** | `user-settings-tab.tsx` | ✅ API connectée |
+| Mes Contrats | `user-contracts-tab.tsx` | ⏳ Placeholder |
+| Mes Documents | `user-documents-tab.tsx` | ⏳ Placeholder |
+| Mes Avis | `user-reviews-tab.tsx` | ⏳ Placeholder |
+| Paiements | `user-payments-tab.tsx` | ⏳ Placeholder |
+| Historique | `user-history-tab.tsx` | ⏳ Placeholder |
 
-```typescript
-// 11 vues possibles
-type AppView = "landing" | "offers" | "compare" | "results" | "about" 
-  | "contact" | "admin" | "user-dashboard" | "insurer-dashboard" 
-  | "login" | "register" | "forgot";
-```
+### 3.3 Interface Assureur (5/9 fonctionnels, 3 placeholders)
 
-**Forces :** Simple, pas besoin de React Router, animations de transition entre vues.  
-**Faiblesses :** Pas d'URL profonde (pas de partage de lien par vue), pas de SSR pour les pages.
+| Onglet | Composant | Statut |
+|--------|-----------|--------|
+| **Tableau de bord** | `insurer-dashboard-tab.tsx` | ✅ Stats réelles |
+| **Mes Offres** | `insurer-offers-tab.tsx` | ✅ CRUD complet |
+| **Mes Garanties** | `insurer-guarantees-tab.tsx` | ✅ CRUD complet |
+| **Devis Reçus** | `insurer-quotes-tab.tsx` | ✅ Connecté |
+| **Paramètres** | `insurer-settings-tab.tsx` | 🔶 Partiel (logo OK, équipe placeholder) |
+| Analytiques | `insurer-analytics-tab.tsx` | ⏳ Graphiques placeholders |
+| Clients | `insurer-clients-tab.tsx` | ⏳ Placeholder |
+| Contrats | `insurer-contracts-tab.tsx` | ⏳ Placeholder |
+| Sinistres | `insurer-claims-tab.tsx` | ⏳ Placeholder |
 
-### 2.4 Thème (clair/sombre)
+### 3.4 Interface Administrateur (11/11 fonctionnels ✅)
 
-- Implémentation via `next-themes` avec `ThemeProvider`
-- Variables CSS dans `globals.css` avec `@custom-variant dark`
-- Swap des couleurs `--primary` (teal) et `--accent` (lime) selon le thème
-- Toggle accessible dans les 3 layouts (admin, assureur, utilisateur)
+| Onglet | Composant | Statut |
+|--------|-----------|--------|
+| Tableau de bord | `dashboard-tab.tsx` | ✅ Stats réelles |
+| Assureurs | `assureurs-tab.tsx` | ✅ CRUD complet |
+| Catégories Produits | `categories-tab.tsx` | ✅ CRUD complet |
+| Offres | `offres-tab.tsx` | ✅ CRUD complet |
+| Cat. Garanties | `coverage-categories-tab.tsx` | ✅ CRUD complet |
+| Garanties | `garanties-tab.tsx` | ✅ CRUD complet (3 étapes) |
+| Couvertures | `coverages-tab.tsx` | ✅ CRUD complet |
+| Devis | `devis-tab.tsx` | ✅ Connecté |
+| Journaux d'audit | `audit-logs-tab.tsx` | ✅ Connecté |
+| Sauvegardes | `backups-tab.tsx` | ✅ CRUD complet |
+| Rôles & Permissions | `roles-tab.tsx` | ✅ CRUD complet |
+| Paramètres (7 sous-onglets) | `settings-tab.tsx` | ✅ Connecté |
 
 ---
 
-## 3. Architecture Backend
+## 4. Analyse des Erreurs TypeScript (53 erreurs)
 
-### 3.1 Routes API (40+ endpoints)
+### 4.1 Erreurs par catégorie
 
-| Groupe | Routes | Description |
-|--------|--------|-------------|
-| **Auth** | `POST /api/auth` | Login, register, forgot password (bcrypt) |
-| **Compare** | `POST /api/compare` | Moteur de comparaison principal |
-| **Offres** | `GET /api/offers` | Catalogue public avec filtres |
-| **Devis** | `GET /api/quotes` | Liste des devis |
-| **Admin** | `30+ routes sous /api/admin/*` | CRUD complet pour tous les modèles |
-| **Assureur** | `10+ routes sous /api/insurer/*` | CRUD pour les assureurs |
-| **Utilisateur** | `GET/PUT /api/user/*` | Profil et devis |
-| **Notifications** | `GET/PUT /api/notifications` | Système de notifications |
+| Catégorie | Nombre | Détail |
+|-----------|--------|--------|
+| **Module introuvable (TS2307)** | ~10 | `socket.io`, `socket.io-client` non installés |
+| **Propriété inexistante (TS2339)** | ~15 | Types obsolètes ou incomplets |
+| **Type incompatible (TS2322/TS2345)** | ~15 | Conversions string[] ↔ string, etc. |
+| **Fonction introuvable (TS2304)** | ~5 | `requireAuth`, `vi` non déclarés |
+| **Conversion forcée (TS2352)** | ~5 | Casts entre types incompatibles |
 
-### 3.2 Moteur de comparaison (`compare-service.ts`)
+### 4.2 Problèmes récurrents
 
-Le cœur métier suit cet algorithme :
-
-1. **Récupération** des offres actives (`InsuranceOffer`) et des garanties (`Coverage`)
-2. **Filtrage** par éligibilité véhicule (`isVehicleEligible`)
-3. **Matching** des catégories de garanties via mots-clés (`matchCategories`)
-4. **Tarification** garantie par garantie (`calculateGuaranteePremium`) — 4 méthodes
-5. **Calcul** de la prime nette (moins 5% + 2500 FCFA)
-6. **Scoring** (7 critères, 0-200+ pts)
-7. **Tri** par score descendant, puis prix ascendant
-
-### 3.3 Moteur de tarification (`pricing-service.ts`)
-
-4 méthodes de calcul :
-
-| Méthode | Description | Formule |
-|---------|-------------|---------|
-| `FREE` | Gratuit | Prime = 0 FCFA |
-| `FIXED_AMOUNT` | Montant fixe | Prime = `fixedAmount` (ou `packPriceReduced`) |
-| `VARIABLE_BASED` | Taux sur variable | Prime = `variableValue × (ratePercent / 100)` |
-| `MATRIX_BASED` | Grille tarifaire | Lookup dans grille (PF, carburant, formule...) |
-
-### 3.4 Authentification
-
-- **Hash :** bcryptjs
-- **Rôles :** `USER`, `INSURER`, `ADMIN` (sur le modèle `Profile`)
-- **Rôles personnalisés :** Système avancé avec permissions (34 permissions, 9 catégories)
-- **Session :** Stockée côté client via Zustand (userId dans le store)
-- **Comptes test :** admin@noli.ci, user@test.ci, assureur@saham.ci
+1. **socket.io / socket.io-client** — Dépendances manquantes dans `package.json`, mais importées dans `examples/`
+2. **requireAuth** — Utilisé dans `src/app/api/admin/backups/` et `audit-logs/` mais non défini localement
+3. **Types obsolètes** — Plusieurs composants utilisent des interfaces qui ne correspondent plus aux données réelles
+4. **Conversion AppView** — Le switch-case dans `page.tsx` utilise des casts forcés
 
 ---
 
-## 4. Analyse des Problèmes Corrigés
+## 5. Tests (334 tests, 31 fichiers, ✅ 100% passants)
 
-### 4.1 P1 — Affichage après création en BO (✓ Corrigé)
+| Fichier de test | Tests | Statut |
+|-----------------|-------|--------|
+| `src/lib/constants.test.ts` | ✅ | Configuration, budgets, usages |
+| `src/app/api/auth/route.test.ts` | ✅ | Auth (register, login, forgot, erreurs) |
+| `src/components/results/results-page.test.tsx` | ✅ | Filtres, tri, rendu |
+| `src/components/offers/offers-page.test.tsx` | ✅ | Catalogue, filtres |
+| Autres | ✅ | Validation, utils, pricing, star rating, thème |
 
-**Problème :** Après création d'un assureur/offre/garantie, les éléments n'apparaissaient pas dans le parcours comparaison.
-
-**Causes racines :**
-1. Le champ `features` des offres était vide (`"[]"` par défaut), empêchant le matching de catégories
-2. Les garanties créées via l'admin (`Guarantee`) n'étaient pas utilisées par le service de comparaison (qui lit `Coverage`)
-3. Aucun mécanisme de synchronisation entre les modèles
-
-**Correctifs appliqués :**
-- Auto-population des `features` à la création d'offre selon le type de couverture
-- Synchronisation des `features` de `InsuranceOffer` lors de la sauvegarde des liens garanties
-- Fallback amélioré dans `matchCategories` (recherche aussi dans le nom/description de l'offre)
-
-### 4.2 P2 — Bouton Modifier garanties (✓ Corrigé)
-
-Ajout d'un bouton « Modifier » visible sur chaque ligne du tableau desktop, en plus du menu dropdown existant.
-
-### 4.3 P3 — Améliorations UI (✓ Corrigé)
-
-- Cartes landing : fond blanc, bordures, effets hover
-- Catégories de garanties (formulaire étape 3) : meilleur contraste, transitions
-- Modale de comparaison : en-têtes avec dégradé, badges de comptage, hover sur lignes
-- Bouton X de fermeture : utilisation du bouton par défaut de Radix UI
-
-### 4.4 P4 — Messages utilisateur (✓ Déjà correct)
-
-Les messages de toast pour « Obtenir le devis » et « Être rappelé » étaient déjà conformes aux exigences.
+**Note :** Un test d'intégration `POST /api/auth — retourne 500 en cas d'erreur Prisma` logue une erreur dans stderr (attendue), mais le test passe.
 
 ---
 
-## 5. Métriques et Statistiques
+## 6. Fonctionnalités Récemment Ajoutées (v2.0.0)
 
-| Métrique | Valeur |
-|----------|--------|
-| **Composants React** | ~85 (dont 45 UI shadcn) |
-| **Routes API** | ~45 |
-| **Modèles Prisma** | 21+ |
-| **Tests unitaires** | 6 fichiers, ~90 tests |
-| **Couverture tests** | Utils, Pricing, Validation, Auth, StarRating, Theme |
-| **Pages/Vues** | 11 (landing → admin) |
-| **Onglets admin** | 11 |
-| **Onglets assureur** | 9 |
-| **Onglets utilisateur** | 10 |
-| **Langue** | 100% français (UI + messages) |
-| **Devise** | FCFA (format `Intl.NumberFormat('fr-FR')`) |
+| Fonctionnalité | Détail | Statut |
+|----------------|--------|--------|
+| **Wizard inscription** | 3-4 étapes (Profil → Identité → Entreprise → Sécurité) | ✅ |
+| **Inscription Assureur** | Crée automatiquement Insurer + InsurerAccount | ✅ |
+| **Cartes de rôle** | UI avec icônes, features, sélection visuelle | ✅ |
+| **Dashboard assureur** | KPIs réels depuis API (plus de mocks) | ✅ |
+| **Modale comparaison** | Prix dynamiques par garantie, tooltips breakdown | ✅ |
+| **Seed enrichi** | Nouvelles colonnes structurées (variableSource, ratePercent, etc.) | ✅ |
 
 ---
 
-## 6. Recommandations
+## 7. Recommandations
 
 ### 🔴 Critique
 
-1. **Modèles manquants dans schema.prisma** — `db.guarantee`, `db.offer`, `db.offerGuarantee`, `db.guaranteeCategory` sont utilisés dans les routes API mais absents du schéma Prisma. Exécuter `prisma db pull` pour régénérer le schéma.
+1. **Base de données vide** — Seul SAHAM existe sans offres/garanties. Lancer le seed (`/api/seed`) ou créer des données via l'admin pour tester le parcours complet.
 
-2. **Authentification sans JWT** — L'identification repose sur un `userId` passé en header/en-tête. À remplacer par des tokens JWT sécurisés.
+2. **53 erreurs TypeScript** — Surtout des dépendances manquantes (`socket.io`) et des types obsolètes. Bloquant pour un build de production.
+
+3. **Aucune couverture pour l'assureur SAHAM** — Bien que présent en base, il n'a ni offres ni garanties. Le parcours de comparaison ne retournera aucun résultat.
 
 ### 🟡 Important
 
-3. **Cache et rafraîchissement** — Les résultats de comparaison (`comparisonResults`) sont stockés dans le store Zustand sans mécanisme d'invalidation. Ajouter un timestamp ou un cache-buster.
+4. **Tests limités** — 334 tests OK mais seulement sur les services utilitaires. Pas de tests pour les composants critiques (comparaison, admin, assureur).
 
-4. **Tests de couverture** — Seuls les services utilitaires ont des tests. Ajouter des tests pour :
-   - `compare-service.ts` (logique métier critique)
-   - `compare/route.ts` (API endpoint)
-   - `notifications.ts` (système de notification)
+5. **mini-services/ vide** — Dossier prévu pour des micro-services mais aucun contenu (juste `.gitkeep`).
 
-5. **Gestion d'erreurs API** — Certaines routes n'ont pas de try/catch cohérent. Standardiser le format de réponse d'erreur.
+6. **Persistance Zustand** — Pas de `persist` middleware → perte d'état au refresh navigateur.
 
-### 🟢 Amélioration
+### 🟢 Améliorations
 
-6. **Persistance Zustand** — Utiliser `zustand/middleware` avec `persist` pour éviter la perte d'état au refresh.
+7. **5 placeholders USER** sur 10 onglets (contrats, documents, avis, paiements, historique)
 
-7. **Séparation du store** — Diviser `app-store.ts` en stores spécialisés (auth, comparison, ui, notifications).
+8. **3 placeholders INSURER** sur 9 onglets (analytiques graphiques, clients, contrats, sinistres)
 
-8. **Tests de composants** — Ajouter des tests pour les composants critiques :
-   - `comparison-form.tsx` (formulaire 3 étapes)
-   - `results-page.tsx` (filtres, tri, comparaison)
-   - `admin/garanties-tab.tsx` (CRUD garanties)
+9. **Backups** — 0 sauvegardes effectuées. Planifier des sauvegardes automatiques.
 
-9. **Accessibilité** — Ajouter `aria-label` et rôles ARIA sur les composants interactifs personnalisés.
-
-10. **Documentation API** — Ajouter des commentaires JSDoc sur les endpoints API et les fonctions exportées.
+10. **Documentation API** — Pas de JSDoc sur les routes API et fonctions exportées.
 
 ---
 
-## 7. Flux de Données Critique
+## 8. Audit de Sécurité
 
-```
-Utilisateur                    Backend                       Base de données
-    │                            │                                │
-    ├─ Remplir formulaire ──────►│                                │
-    │   (3 étapes)               │                                │
-    │                            ├─ POST /api/compare ──────────► │
-    │                            │   personalInfo                 │
-    │                            │   vehicleInfo                  │
-    │                            │   coverageNeeds                │
-    │                            │                                │
-    │                            │◄── InsuranceOffer[] ──────────│
-    │                            │    Coverage[]                  │
-    │                            │                                │
-    │                            ├─ Filtrer par éligibilité      │
-    │                            ├─ Matcher catégories           │
-    │                            ├─ Calculer tarifs              │
-    │                            ├─ Score + tri                  │
-    │                            │                                │
-    │◄── Résultats + offres ─────┤                                │
-    │                            │                                │
-    ├─ Choisir offre ──────────► ├─ Créer devis ───────────────► │
-    │   "Obtenir le devis"       │   Notification                │
-    │                            │                                │
-```
+| Point | Statut | Note |
+|-------|--------|------|
+| Mots de passe hashés (bcrypt) | ✅ | Hash sécurisé |
+| Rôles (USER/INSURER/ADMIN) | ✅ | Séparation stricte |
+| Permissions granulaires | ✅ | 34 permissions, 9 catégories |
+| Sessions | ⚠️ | 0 sessions actives (pas de JWT) |
+| Audit logging | ✅ | Toutes les opérations CRUD loggées |
+| Validation Zod | ✅ | Validation côté serveur |
+| Upload logo | ✅ | Limité à 2MB, types contrôlés |
+| XSS | ⚠️ | Affichage `dangerouslySetInnerHTML` non trouvé |
+| CORS | ⚠️ | Pas de configuration CORS explicite |
 
 ---
 
-## 8. Audit des Interfaces par Acteur
+## 9. Statistiques Globales
 
-### 8.1 Parcours Public / Visiteur
-
-L'interface publique est accessible sans authentification et couvre le parcours de découverte jusqu'à la demande de devis.
-
-| Page/Vue | Composant | API utilisée | État |
-|----------|-----------|-------------|------|
-| **Accueil** (landing) | `landing-page.tsx` | — (statique) | ✅ Fonctionnel |
-| **Catalogue offres** (offers) | `offers-page.tsx` | `GET /api/offers` | ✅ Fonctionnel |
-| **Comparaison étape 1** (compare) | `comparison-form.tsx` (Step1) | — | ✅ Fonctionnel |
-| **Comparaison étape 2** (compare) | `comparison-form.tsx` (Step2) | — | ✅ Fonctionnel |
-| **Comparaison étape 3** (compare) | `comparison-form.tsx` (Step3) | `GET /api/coverage-categories` | ✅ Fonctionnel |
-| **Résultats comparaison** (results) | `results-page.tsx` | `POST /api/compare` | ✅ Fonctionnel |
-| **Modale comparateur** | `ComparisonModal` | — | ✅ Corrigé (P3) |
-| **Connexion** (login) | `auth-pages.tsx` (LoginPage) | `POST /api/auth` | ✅ Fonctionnel |
-| **Inscription** (register) | `auth-pages.tsx` (RegisterPage) | `POST /api/auth` | ✅ Fonctionnel |
-| **Mot de passe oublié** (forgot) | `auth-pages.tsx` (ForgotPasswordPage) | `POST /api/auth` | ✅ Fonctionnel |
-| **À propos** (about) | `about-page.tsx` | — | ✅ Fonctionnel |
-| **Contact** (contact) | `contact-page.tsx` | — | ✅ Fonctionnel |
-| **Header** | `header.tsx` | — | ✅ Fonctionnel |
-| **Footer** | `footer.tsx` | — | ✅ Fonctionnel |
-
-**Flux utilisateur public type :**
-```
-Landing → Comparaison (3 étapes) → Résultats → Devis → Login (si pas connecté)
-   ↓                                                        ↓
-Catalogue offres ← ← ← ← ← ← ← ← ← ← ← ← ← ← ←      Dashboard USER
-```
-
-**Points d'attention :**
-- Les 6 cartes d'assurance sur la landing utilisent des données statiques. Seule « Assurance Auto » est cliquable (les autres affichent « Bientôt »)
-- Le formulaire de comparaison en 3 étapes est connecté à l'API pour les catégories (étape 3) et la comparaison (POST /api/compare)
-- Les messages toast pour « Obtenir le devis » et « Être rappelé » sont corrects ✅
-- La modale de comparaison a été corrigée pour le bouton X ✅
+| Catégorie | Valeur | Tendance |
+|-----------|--------|----------|
+| **Composants React** | 130 | 📈 +15 depuis v1 |
+| **Routes API** | 63 | 📈 +20 depuis v1 |
+| **Tests** | 334 (31 fichiers) | 📈 +244 depuis v1 |
+| **Erreurs TS** | 53 | 📉 En baisse (était ~80) |
+| **Couverture UI** | 48 composants shadcn | ✅ Stable |
+| **Vues fonctionnelles** | 33/42 (78.6%) | 📈 12 public + 5 USER + 5 INSURER + 11 ADMIN |
+| **Placeholders** | 8 | 📉 En baisse (était 12) |
+| **Langue** | 100% français | ✅ |
+| **Devise** | FCFA (`Intl.NumberFormat`) | ✅ |
 
 ---
 
-### 8.2 Interface Utilisateur (USER) — « Mon Espace »
-
-**Layout :** `user-layout.tsx` — Sidebar escamotable (10 items) + header bar + breadcrumb
-
-#### 8.2.1 Onglets Connectés à l'API
-
-| Onglet | Composant | API | Données | Statut |
-|--------|-----------|-----|---------|--------|
-| **Tableau de bord** | `user-dashboard-tab.tsx` | `GET /api/quotes` | Stats (devis en cours, contrats actifs), 3 derniers devis | ✅ Connecté |
-| **Mes Devis** | `user-quotes-tab.tsx` | `GET /api/quotes` | Liste des devis avec filtres statut (Tous/Brouillon/En attente/Approuvé/Rejeté) | ✅ Connecté |
-| **Notifications** | `user-notifications-tab.tsx` | `GET /api/notifications`, `PUT /api/notifications/[id]`, `PUT /api/notifications/read-all` | Liste notifications, marquer lu, tout marquer lu | ✅ Connecté |
-| **Mon Profil** | `user-profile-tab.tsx` | `GET /api/user/profile`, `PUT /api/user/profile` | Infos perso (modification), changement mot de passe | ✅ Connecté |
-| **Paramètres** | `user-settings-tab.tsx` | `PUT /api/user/profile` | Thème (clair/sombre/système), langue, notification email, changement mot de passe, zone danger | ✅ Connecté |
-
-#### 8.2.2 Onglets « Placeholder » (statiques)
-
-| Onglet | Composant | Contenu | Statut |
-|--------|-----------|---------|--------|
-| **Mes Contrats** | `user-contracts-tab.tsx` | Message « Aucun contrat souscrit » + CTA vers comparaison | ⏳ Placeholder |
-| **Mes Documents** | `user-documents-tab.tsx` | 3 cartes info (Attestations, CGV, Quittances) | ⏳ Placeholder |
-| **Mes Avis** | `user-reviews-tab.tsx` | Message « Aucun avis » + exemple d'avis statique avec étoiles | ⏳ Placeholder |
-| **Paiements** | `user-payments-tab.tsx` | 4 cartes moyens de paiement (Mobile Money, Wave, Orange, CB) | ⏳ Placeholder |
-| **Historique** | `user-history-tab.tsx` | Message « Aucun historique de comparaison » | ⏳ Placeholder |
-
-**Fonctionnalités clés :**
-- **Notifications temps réel :** Cloche avec compteur de notifications non lues dans le header
-- **Dropdown utilisateur :** Accès rapide au profil, devis, contrats, paramètres, déconnexion
-- **Thème :** Sélecteur Sun/Moon/Monitor synchronisé avec next-themes
-- **Navigation :** Breadcrumb (Accueil > {onglet}) + retour au site depuis la sidebar
-- **Responsive :** Sidebar cachée sur mobile, remplacée par un Sheet hamburger
-
-**Points d'attention :**
-- 5 onglets sur 10 sont des placeholders — pas de données réelles (contrats, documents, avis, paiements, historique)
-- Le changement de mot de passe est fonctionnel via `PUT /api/user/profile`
-- La suppression de compte (zone danger dans paramètres) affiche un toast « non disponible »
-- Le profil utilise l'email depuis le store (non modifiable car pas de endpoint)
-
----
-
-### 8.3 Interface Assureur (INSURER) — « Espace Assureur »
-
-**Layout :** `insurer-layout.tsx` — Sidebar escamotable (9 items) + header bar + breadcrumb + badge « Assureur »
-
-#### 8.3.1 Onglets avec CRUD Complet
-
-| Onglet | Composant | API | Fonctionnalités | Statut |
-|--------|-----------|-----|-----------------|--------|
-| **Tableau de bord** | `insurer-dashboard-tab.tsx` | `GET /api/insurer/stats` | 6 KPIs (devis 7j/30j, taux transformation, contrats actifs, CA, sinistres), 5 derniers devis | ✅ Connecté |
-| **Mes Offres** | `insurer-offers-tab.tsx` | `GET /api/insurer/offers`, `POST`, `PUT`, `DELETE` | Grille responsive, créer/modifier/supprimer (soft-delete) avec formulaire complet + éligibilité véhicule + garanties par catégorie | ✅ CRUD complet |
-| **Mes Garanties** | `insurer-guarantees-tab.tsx` | `GET /api/insurer/coverages`, `POST`, `PUT`, `DELETE` | Tableau avec code/nom/catégorie/type calcul/statut, assistant 3 étapes (4 méthodes), | ✅ CRUD complet |
-| **Devis Reçus** | `insurer-quotes-tab.tsx` | `GET /api/quotes` | Filtres statut (Tous/Brouillon/En attente/Approuvé/Rejeté), badges colorés, actions accepter/refuser/contre-proposition | ✅ Connecté |
-
-#### 8.3.2 Onglets avec données réelles (lecture seule)
-
-| Onglet | Composant | API | Contenu | Statut |
-|--------|-----------|-----|---------|--------|
-| **Analytiques** | `insurer-analytics-tab.tsx` | `GET /api/insurer/stats` | 4 métriques (total devis, taux acceptation, revenu moyen, clients uniques) + 3 graphiques (placeholders) | ⏳ Placeholder graphiques |
-| **Clients** | `insurer-clients-tab.tsx` | — (statique) | Barre de recherche + tableau (en-têtes seulement) | ⏳ Placeholder |
-
-#### 8.3.3 Onglets Placeholder
-
-| Onglet | Composant | Contenu | Statut |
-|--------|-----------|---------|--------|
-| **Contrats** | `insurer-contracts-tab.tsx` | Bannière info + en-têtes tableau | ⏳ Placeholder |
-| **Sinistres** | `insurer-claims-tab.tsx` | Bannière info ambre + en-têtes tableau | ⏳ Placeholder |
-| **Paramètres** | `insurer-settings-tab.tsx` | Logo upload (fonctionnel), infos société, profil, changement mot de passe, équipe (placeholder) | 🔶 Partiel |
-
-**Fonctionnalités clés :**
-- **CRUD offres :** Création avec formulaire complet (type contrat, prix min/max, capital, franchise, éligibilité véhicule par accordéon)
-- **CRUD garanties :** Assistant 3 étapes avec 4 méthodes de calcul (FREE, FIXED_AMOUNT, VARIABLE_BASED, MATRIX_BASED)
-- **Logo upload :** Upload d'image (PNG/JPG/WebP/SVG, max 2MB) via `/api/insurer/logo`
-- **Notifications :** Cloche avec notifications de devis reçus
-- **Badge « Assureur » :** Identifiant visuel dans le header
-
-**Points d'attention :**
-- 3 onglets sur 9 sont des placeholders (contrats, sinistres, partie de paramètres)
-- Les graphiques analytiques sont des placeholders (boîtes grises avec labels)
-- La gestion d'équipe dans paramètres est un placeholder
-- Le CRUD garanties est très complet avec 4 méthodes de calcul
-
----
-
-### 8.4 Interface Administrateur (ADMIN) — « Administration »
-
-**Layout :** `admin-page.tsx` — Sidebar 11 items + header bar + breadcrumb + dropdown admin
-
-#### 8.4.1 Onglets de Configuration
-
-| Onglet | Composant | Modèle | API | Fonctionnalités | Statut |
-|--------|-----------|--------|-----|-----------------|--------|
-| **Tableau de bord** | `dashboard-tab.tsx` | — | `GET /api/admin/stats` | Statistiques générales (assureurs, offres, garanties, utilisateurs, devis), 5 devis récents | ✅ Connecté |
-| **Assureurs** | `assureurs-tab.tsx` | Insurer | `CRUD /api/admin/insurers` | Créer/modifier/supprimer, liste avec stats | ✅ CRUD complet |
-| **Catégories Produits** | `categories-tab.tsx` | InsuranceCategory | `CRUD /api/admin/insurance-categories` | Gestion des catégories (Auto, Moto, Santé...) | ✅ CRUD complet |
-| **Offres** | `offres-tab.tsx` | InsuranceOffer | `CRUD /api/admin/offers` | Créer/modifier avec garanties par checkbox + éligibilité véhicule | ✅ CRUD complet |
-| **Cat. Garanties** | `coverage-categories-tab.tsx` | CoverageCategory | `CRUD /api/admin/coverage-categories` | Catégories de garanties (RC, Incendie, Vol...) | ✅ CRUD complet |
-| **Garanties** | `garanties-tab.tsx` | Guarantee | `CRUD /api/admin/guarantees` | Assistant 3 étapes (4 méthodes calcul), bouton Modifier visible (P2) ✅ | ✅ CRUD complet |
-| **Couvertures** | `coverages-tab.tsx` | Coverage | `CRUD /api/admin/coverages` + tarif-rules | Gestion complète avec règles de tarification | ✅ CRUD complet |
-| **Devis** | `devis-tab.tsx` | Quote | `GET /api/admin/quotes`, `PUT` | Consultation, mise à jour statut, prix final, notes | ✅ Connecté |
-
-#### 8.4.2 Onglets Système
-
-| Onglet | Composant | Modèle | API | Fonctionnalités | Statut |
-|--------|-----------|--------|-----|-----------------|--------|
-| **Journaux d'audit** | `audit-logs-tab.tsx` | AuditLog | `GET /api/admin/audit-logs` | Filtres (action, entité, dates), tableau paginé, mobile cards | ✅ Connecté |
-| **Sauvegardes** | `backups-tab.tsx` | Backup | `CRUD /api/admin/backups` | Création manuelle, planification, restauration, suppression | ✅ Connecté |
-| **Rôles & Permissions** | `roles-tab.tsx` | Role, Permission | `CRUD /api/admin/roles` + `/api/admin/permissions` | 3 rôles par défaut (ADMIN 34 perm, INSURER 8, USER 3), rôles personnalisés | ✅ Connecté |
-| **Paramètres** | `settings-tab.tsx` | SystemSetting | `GET/PUT /api/admin/settings` | 7 sous-onglets (Général, Email, Utilisateurs, Sécurité, Notifications, Apparence, Comptes) | ✅ Connecté |
-
-**Fonctionnalités clés :**
-- **Audit logging :** Toutes les opérations CRUD créent des entrées dans AuditLog
-- **Permissions :** 34 permissions réparties dans 9 catégories, 3 rôles par défaut
-- **Backups :** Sauvegarde manuelle (copie fichier SQLite), planification cron, restauration
-- **Paramètres :** 25+ paramètres répartis dans 5 catégories (Général, Email, Sécurité, Notifications, Apparence)
-- **Logo upload :** Upload par assureur
-
-**Points d'attention :**
-- 11 onglets tous fonctionnels — c'est l'interface la plus complète
-- Les modèles `Guarantee`, `Offer`, `OfferGuarantee`, `GuaranteeCategory` ne sont pas dans `schema.prisma` mais sont utilisés
-- Les journaux d'audit et les sauvegardes sont pleinement opérationnels
-- La suppression est gérée via AlertDialog de confirmation partout
-
----
-
-## 9. Synthèse des Interfaces
-
-| Critère | Public | USER | INSURER | ADMIN |
-|---------|--------|------|---------|-------|
-| **Composants** | ~12 | 11 (layout + 10 tabs) | 10 (layout + 9 tabs) | 15 (layout + 14 tabs) |
-| **Onglets fonctionnels** | 12/12 | 5/10 | 5/9 | 11/11 |
-| **Placeholders** | 0 | 5 | 3 | 0 |
-| **Routes API dédiées** | 2 | 4 | 10 | 30+ |
-| **CRUD complet** | — | — | Offres, Garanties | Tout |
-| **Notifications** | — | ✅ | ✅ | ✅ |
-| **Thème sombre** | ✅ | ✅ | ✅ | ✅ |
-| **Responsive mobile** | ✅ | ✅ | ✅ | ✅ |
-| **Tests unitaires** | → Validation, Auth | → Validation, Auth | — | — |
-
-### Légende
-- ✅ = Fonctionnel / Implémenté
-- ⏳ = Placeholder / En attente de développement
-- 🔶 = Partiellement fonctionnel
-- — = Non applicable / Non implémenté
-
----
-
-*Audit généré le 5 juillet 2026 — Projet NOLI Assurance — Audit complet des 4 interfaces (Public, USER, INSURER, ADMIN)*
+*Audit généré le 15 Juillet 2026 — Projet NOLI Assurance v2.0.0*

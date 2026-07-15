@@ -311,8 +311,48 @@ const matrixDimensions = [
 const variableSources = [
   { value: "NEW_VALUE", label: "Valeur Neuve (VN)" },
   { value: "VENAL_VALUE", label: "Valeur Vénale (VA)" },
-  { value: "FISCAL_POWER", label: "Puissance Fiscale (PF)" },
-];
+  { value: "FISCAL_POWER", label: "Puissance Fiscale (PF)"},];
+
+/* ── Price display helpers ── */
+const fmtPrice = (n: number) =>
+  new Intl.NumberFormat("fr-FR").format(n) + " FCFA";
+
+function displayCoveragePrice(cov: Coverage): string {
+  if (cov.calculationType === "FREE") return "Gratuit";
+  if (cov.calculationType === "FIXED_AMOUNT") {
+    if (cov.fixedAmount != null) return fmtPrice(cov.fixedAmount);
+    try {
+      const meta = typeof cov.metadata === "string" ? JSON.parse(cov.metadata) : (cov.metadata || {});
+      if ((meta as Record<string, unknown>).fixedAmount) return fmtPrice(Number((meta as Record<string, unknown>).fixedAmount));
+    } catch { /* ignore */ }
+    return "—";
+  }
+  if (cov.calculationType === "VARIABLE_BASED") {
+    if (cov.conditionedByNewValue && cov.rateBelowThreshold != null && cov.rateAboveThreshold != null)
+      return `${cov.rateBelowThreshold}% / ${cov.rateAboveThreshold}%`;
+    if (cov.ratePercent != null) return `${cov.ratePercent} %`;
+    try {
+      const meta = typeof cov.metadata === "string" ? JSON.parse(cov.metadata) : (cov.metadata || {});
+      const m = meta as Record<string, unknown>;
+      if (m.conditionedByNewValue && m.rateBelowThresholdPercent && m.rateAboveThresholdPercent)
+        return `${m.rateBelowThresholdPercent}% / ${m.rateAboveThresholdPercent}%`;
+      if (m.ratePercent) return `${m.ratePercent} %`;
+    } catch { /* ignore */ }
+    return "—";
+  }
+  if (cov.calculationType === "MATRIX_BASED") {
+    const dim = cov.matrixDimension || "";
+    const labels: Record<string, string> = {
+      FISCAL_POWER: "Grille PF",
+      FORMULA: "Grille formules",
+      VEHICLE_CATEGORY: "Grille catégories",
+      TIERCE_COMPLETE: "Grille TC",
+      TIERCE_COLLISION: "Grille TCol",
+    };
+    return labels[dim] || "Matrice";
+  }
+  return "—";
+}
 
 /* ── Component ── */
 export function InsurerGuaranteesTab() {
@@ -557,12 +597,16 @@ export function InsurerGuaranteesTab() {
 
   /* ── Save ── */
   const handleSave = async () => {
-    if (!step1.name.trim() || !insurerId || !calcType) {
-      toast({
-        title: "Erreur",
-        description: "Veuillez remplir tous les champs requis",
-        variant: "destructive",
-      });
+    if (!step1.name.trim()) {
+      toast({ title: "Erreur", description: "Le nom de la garantie est requis", variant: "destructive" });
+      return;
+    }
+    if (!insurerId) {
+      toast({ title: "Erreur", description: "Compte assureur non trouvé. Impossible de créer la garantie.", variant: "destructive" });
+      return;
+    }
+    if (!calcType) {
+      toast({ title: "Erreur", description: "Le mode de calcul est requis (étape 2)", variant: "destructive" });
       return;
     }
     setSaving(true);
@@ -1466,6 +1510,7 @@ export function InsurerGuaranteesTab() {
         <Button
           className="bg-[#B9E54D] text-black hover:bg-[#a5d044]"
           onClick={openCreate}
+          disabled={!insurerId}
         >
           <Plus className="mr-2 h-4 w-4" />
           Ajouter une garantie
@@ -1516,7 +1561,6 @@ export function InsurerGuaranteesTab() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Code</TableHead>
                   <TableHead>Nom</TableHead>
                   <TableHead className="hidden md:table-cell">
                     Catégorie
@@ -1525,6 +1569,7 @@ export function InsurerGuaranteesTab() {
                     Type de calcul
                   </TableHead>
                   <TableHead className="text-center">Obligatoire</TableHead>
+                  <TableHead>Prix</TableHead>
                   <TableHead>Statut</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -1532,9 +1577,6 @@ export function InsurerGuaranteesTab() {
               <TableBody>
                 {coverages.map((cov) => (
                   <TableRow key={cov.id}>
-                    <TableCell className="font-mono text-xs">
-                      {cov.code}
-                    </TableCell>
                     <TableCell className="font-medium">{cov.name}</TableCell>
                     <TableCell className="hidden md:table-cell">
                       {cov.category?.name || "—"}
@@ -1556,6 +1598,9 @@ export function InsurerGuaranteesTab() {
                           Non
                         </Badge>
                       )}
+                    </TableCell>
+                    <TableCell className="font-mono text-sm max-w-[160px] truncate" title={displayCoveragePrice(cov)}>
+                      {displayCoveragePrice(cov)}
                     </TableCell>
                     <TableCell>
                       {cov.isActive ? (
@@ -1766,7 +1811,7 @@ export function InsurerGuaranteesTab() {
               <Button
                 className="bg-[#B9E54D] text-black hover:bg-[#a5d044]"
                 onClick={() => setStep(step + 1)}
-                disabled={step === 1 && !step1.name.trim()}
+                disabled={(step === 1 && !step1.name.trim()) || (step === 2 && !calcType)}
               >
                 Suivant
                 <ChevronRight className="h-4 w-4 ml-1" />

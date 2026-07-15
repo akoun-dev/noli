@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Eye, EyeOff, Loader2, Zap, ArrowRight } from "lucide-react";
+import { Eye, EyeOff, Loader2, Zap, ArrowRight, ChevronLeft, ChevronRight, Check, UserRound, Shield, Globe } from "lucide-react";
 import { useAppStore } from "@/store/app-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -230,60 +230,110 @@ function LoginModal() {
   );
 }
 
-/* ── Register Modal ── */
+/* ── Register Modal (step wizard) ── */
 function RegisterModal() {
   const { setAuthModal, setUser } = useAppStore();
   const { toast } = useToast();
 
+  const [step, setStep] = useState(1);
+
+  // Step 1: Profile
+  const [role, setRole] = useState("USER");
+  const [acceptTerms, setAcceptTerms] = useState(false);
+
+  // Step 2: Identity
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+
+  // Step 3: Company (INSURER only)
+  const [companyName, setCompanyName] = useState("");
+  const [companyEmail, setCompanyEmail] = useState("");
+  const [companyPhone, setCompanyPhone] = useState("");
+  const [companyWebsite, setCompanyWebsite] = useState("");
+
+  // Step 4: Security (or Step 3 for USER)
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [acceptTerms, setAcceptTerms] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const validate = () => {
+  const clearError = (key: string) =>
+    setErrors((prev) => {
+      if (!prev[key]) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+
+  const validateStep = (): boolean => {
     const e: Record<string, string> = {};
-    if (!fullName.trim()) e.fullName = "Le nom complet est requis";
-    if (!email) e.email = "L'email est requis";
-    else if (!isValidEmail(email)) e.email = "Adresse email invalide";
-    if (!password) e.password = "Le mot de passe est requis";
-    else if (!hasMinLength(password, 6))
-      e.password = "Le mot de passe doit contenir au moins 6 caract\u00e8res";
-    if (password !== confirmPassword)
-      e.confirmPassword = "Les mots de passe ne correspondent pas";
-    if (!acceptTerms) e.terms = "Vous devez accepter les conditions d'utilisation";
+
+    if (step === 1) {
+      if (!acceptTerms) e.terms = "Vous devez accepter les conditions d'utilisation";
+    }
+
+    if (step === 2) {
+      if (!fullName.trim()) e.fullName = "Le nom complet est requis";
+      if (!email) e.email = "L'email est requis";
+      else if (!isValidEmail(email)) e.email = "Adresse email invalide";
+    }
+
+    if (step === 3 && role === "INSURER") {
+      if (!companyName.trim()) e.companyName = "Le nom de l'entreprise est requis";
+    }
+
+    if ((step === 3 && role !== "INSURER") || (step === 4)) {
+      if (!password) e.password = "Le mot de passe est requis";
+      else if (!hasMinLength(password, 6))
+        e.password = "Le mot de passe doit contenir au moins 6 caractères";
+      if (password !== confirmPassword)
+        e.confirmPassword = "Les mots de passe ne correspondent pas";
+    }
+
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
-  const handleSubmit = async (ev: React.FormEvent) => {
-    ev.preventDefault();
-    if (!validate()) return;
+  const handleNext = () => {
+    if (!validateStep()) return;
+    setStep((s) => Math.min(s + 1, totalSteps));
+  };
+
+  const handleSubmit = async () => {
+    if (!validateStep()) return;
     setLoading(true);
 
     try {
+      const payload: Record<string, unknown> = {
+        action: "register",
+        name: fullName,
+        email,
+        phone,
+        password,
+        role,
+      };
+      if (role === "INSURER") {
+        payload.companyName = companyName;
+        payload.companyEmail = companyEmail || undefined;
+        payload.companyPhone = companyPhone || undefined;
+        payload.companyWebsite = companyWebsite || undefined;
+      }
+
       const res = await fetch("/api/auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "register",
-          name: fullName,
-          email,
-          phone,
-          password,
-        }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
 
       if (!res.ok) {
         toast({
           title: "Erreur",
-          description: data.error || "Impossible de cr\u00e9er le compte",
+          description: data.error || "Impossible de créer le compte",
           variant: "destructive",
         });
         return;
@@ -298,8 +348,8 @@ function RegisterModal() {
       });
 
       toast({
-        title: "Compte cr\u00e9\u00e9",
-        description: `Bienvenue, ${data.user.name} ! Votre compte a \u00e9t\u00e9 cr\u00e9\u00e9 avec succ\u00e8s.`,
+        title: "Compte créé",
+        description: `Bienvenue, ${data.user.name} ! Votre compte a été créé avec succès.`,
       });
       setAuthModal("none");
 
@@ -314,7 +364,7 @@ function RegisterModal() {
     } catch {
       toast({
         title: "Erreur",
-        description: "Une erreur est survenue. Veuillez r\u00e9essayer.",
+        description: "Une erreur est survenue. Veuillez réessayer.",
         variant: "destructive",
       });
     } finally {
@@ -322,16 +372,152 @@ function RegisterModal() {
     }
   };
 
-  const clearError = (key: string) =>
-    setErrors((prev) => {
-      if (!prev[key]) return prev;
-      const next = { ...prev };
-      delete next[key];
-      return next;
-    });
+  /* ── Step config ── */
+  const totalSteps = role === "INSURER" ? 4 : 3;
+  const stepLabels = role === "INSURER"
+    ? ["Profil", "Identité", "Entreprise", "Sécurité"]
+    : ["Profil", "Identité", "Sécurité"];
 
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+  const renderStepIndicator = () => (
+    <div className="flex items-center justify-center gap-2 pb-2">
+      {stepLabels.map((label, i) => {
+        const num = i + 1;
+        const isCompleted = num < step;
+        const isCurrent = num === step;
+        return (
+          <div key={i} className="flex items-center gap-2">
+            <div
+              className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-medium transition-colors ${
+                isCompleted
+                  ? "bg-emerald-500 text-white"
+                  : isCurrent
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground"
+              }`}
+            >
+              {isCompleted ? <Check className="h-3.5 w-3.5" /> : num}
+            </div>
+            <span className={`text-xs ${isCurrent ? "font-semibold text-foreground" : "text-muted-foreground"}`}>
+              {label}
+            </span>
+            {i < stepLabels.length - 1 && (
+              <div className={`h-px w-8 ${isCompleted ? "bg-emerald-500" : "bg-muted"}`} />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  /* ── Role cards ── */
+  const roleCards = [
+    {
+      value: "USER",
+      label: "Utilisateur",
+      description: "Souscrire des assurances et suivre mes devis",
+      icon: UserRound,
+      features: ["Comparez les offres", "Recevez des devis", "Suivez vos contrats"],
+    },
+    {
+      value: "INSURER",
+      label: "Assureur",
+      description: "Gérer mes offres, garanties et devis",
+      icon: Shield,
+      features: ["Créez des offres", "Gérez vos garanties", "Consultez les devis"],
+    },
+  ];
+
+  /* ── Step 1: Profile ── */
+  const renderStep1 = () => (
+    <div className="space-y-5 pt-2">
+      <div className="text-center">
+        <h3 className="text-base font-semibold">Qui êtes-vous ?</h3>
+        <p className="text-xs text-muted-foreground mt-1">Choisissez le profil qui vous correspond</p>
+      </div>
+
+      <div className="space-y-3">
+        {roleCards.map((card) => {
+          const Icon = card.icon;
+          const isSelected = role === card.value;
+          return (
+            <button
+              key={card.value}
+              type="button"
+              onClick={() => { setRole(card.value); clearError("role"); }}
+              className={`w-full flex items-start gap-4 rounded-xl border-2 p-4 text-left transition-all ${
+                isSelected
+                  ? "border-primary bg-primary/5 shadow-sm"
+                  : "border-border hover:border-muted-foreground/30 bg-card"
+              }`}
+            >
+              <div
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors ${
+                  isSelected
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground"
+                }`}
+              >
+                <Icon className="h-5 w-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-sm">{card.label}</span>
+                  {isSelected && <Check className="h-4 w-4 text-primary" />}
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                  {card.description}
+                </p>
+                {isSelected && (
+                  <ul className="mt-2 space-y-0.5">
+                    {card.features.map((f) => (
+                      <li key={f} className="text-xs text-muted-foreground flex items-center gap-1.5">
+                        <Check className="h-3 w-3 text-primary" />
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="flex items-start gap-2 pt-1">
+        <Checkbox
+          id="reg-terms"
+          checked={acceptTerms}
+          onCheckedChange={(v) => {
+            setAcceptTerms(v === true);
+            clearError("terms");
+          }}
+          className={errors.terms ? "border-destructive" : ""}
+        />
+        <Label htmlFor="reg-terms" className="text-xs font-normal leading-snug cursor-pointer">
+          J&apos;accepte les{" "}
+          <span className="text-primary hover:underline cursor-pointer font-medium">
+            conditions d&apos;utilisation
+          </span>{" "}
+          et la{" "}
+          <span className="text-primary hover:underline cursor-pointer font-medium">
+            politique de confidentialité
+          </span>
+        </Label>
+      </div>
+      {errors.terms && (
+        <p className="text-xs text-destructive">{errors.terms}</p>
+      )}
+    </div>
+  );
+
+  /* ── Step 2: Identity ── */
+  const renderStep2 = () => (
+    <div className="space-y-4 pt-2">
+      <div className="text-center">
+        <h3 className="text-base font-semibold">Vos informations</h3>
+        <p className="text-xs text-muted-foreground mt-1">Complétez vos coordonnées personnelles</p>
+      </div>
+
       <div className="space-y-2">
         <Label htmlFor="reg-name">Nom complet</Label>
         <Input
@@ -371,7 +557,7 @@ function RegisterModal() {
 
       <div className="space-y-2">
         <Label htmlFor="reg-phone">
-          T\u00e9l\u00e9phone <span className="text-muted-foreground font-normal">(optionnel)</span>
+          Téléphone <span className="text-muted-foreground font-normal">(optionnel)</span>
         </Label>
         <Input
           id="reg-phone"
@@ -381,6 +567,16 @@ function RegisterModal() {
           onChange={(e) => setPhone(e.target.value)}
           className="w-full"
         />
+      </div>
+    </div>
+  );
+
+  /* ── Step 3: Security ── */
+  const renderStep3 = () => (
+    <div className="space-y-4 pt-2">
+      <div className="text-center">
+        <h3 className="text-base font-semibold">Sécurisez votre compte</h3>
+        <p className="text-xs text-muted-foreground mt-1">Choisissez un mot de passe sécurisé</p>
       </div>
 
       <div className="space-y-2">
@@ -441,51 +637,118 @@ function RegisterModal() {
           <p className="text-xs text-destructive">{errors.confirmPassword}</p>
         )}
       </div>
+    </div>
+  );
 
-      <div className="flex items-start gap-2">
-        <Checkbox
-          id="reg-terms"
-          checked={acceptTerms}
-          onCheckedChange={(v) => {
-            setAcceptTerms(v === true);
-            clearError("terms");
-          }}
-          className={errors.terms ? "border-destructive" : ""}
-        />
-        <Label htmlFor="reg-terms" className="text-sm font-normal leading-snug cursor-pointer">
-          J&apos;accepte les{" "}
-          <span className="text-primary hover:underline cursor-pointer">
-            conditions d&apos;utilisation
-          </span>{" "}
-          et la{" "}
-          <span className="text-primary hover:underline cursor-pointer">
-            politique de confidentialit\u00e9
-          </span>
-        </Label>
-      </div>
-      {errors.terms && (
-        <p className="text-xs text-destructive -mt-2">{errors.terms}</p>
+  return (
+    <form onSubmit={(e) => { e.preventDefault(); step < totalSteps ? handleNext() : handleSubmit(); }} className="space-y-4">
+      {renderStepIndicator()}
+
+      {step === 1 && renderStep1()}
+      {step === 2 && renderStep2()}
+      {step === 3 && role === "INSURER" && (
+        <div className="space-y-4 pt-2">
+          <div className="text-center">
+            <h3 className="text-base font-semibold">Votre entreprise</h3>
+            <p className="text-xs text-muted-foreground mt-1">Détails de votre compagnie d'assurance</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="reg-company">
+              Nom de l'entreprise <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="reg-company"
+              placeholder="Société Ivoirienne d'Assurance"
+              value={companyName}
+              onChange={(e) => { setCompanyName(e.target.value); clearError("companyName"); }}
+              className={`w-full ${errors.companyName ? "border-destructive" : ""}`}
+            />
+            {errors.companyName && <p className="text-xs text-destructive">{errors.companyName}</p>}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="reg-company-email">Email professionnel</Label>
+            <div className="relative">
+              <Globe className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+              <Input
+                id="reg-company-email"
+                type="email"
+                placeholder="contact@assureur.ci"
+                value={companyEmail}
+                onChange={(e) => setCompanyEmail(e.target.value)}
+                className="w-full pl-9"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="reg-company-phone">Téléphone</Label>
+            <Input
+              id="reg-company-phone"
+              type="tel"
+              placeholder="+225 01 XX XX XX XX"
+              value={companyPhone}
+              onChange={(e) => setCompanyPhone(e.target.value)}
+              className="w-full"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="reg-company-site">Site web</Label>
+            <Input
+              id="reg-company-site"
+              type="url"
+              placeholder="www.assureur.ci"
+              value={companyWebsite}
+              onChange={(e) => setCompanyWebsite(e.target.value)}
+              className="w-full"
+            />
+          </div>
+        </div>
       )}
+      {((step === 3 && role !== "INSURER") || step === 4) && renderStep3()}
 
-      <Button
-        type="submit"
-        className="w-full bg-primary text-primary-foreground hover:bg-primary/90 rounded-full"
-        disabled={loading}
-      >
-        {loading ? (
-          <Loader2 className="size-4 animate-spin" />
+      <div className="flex items-center justify-between pt-2">
+        <div>
+          {step > 1 && (
+            <Button type="button" variant="ghost" size="sm" onClick={() => setStep((s) => s - 1)}>
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Retour
+            </Button>
+          )}
+        </div>
+        {step < totalSteps ? (
+          <Button
+            type="button"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full"
+            onClick={handleNext}
+          >
+            Suivant
+            <ChevronRight className="h-4 w-4 ml-1" />
+          </Button>
         ) : (
-          <>
-            <Zap className="size-4" />
-            Cr\u00e9er mon compte
-          </>
+          <Button
+            type="submit"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full"
+            disabled={loading}
+          >
+            {loading ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <>
+                <Zap className="size-4" />
+                Créer mon compte
+              </>
+            )}
+          </Button>
         )}
-      </Button>
+      </div>
 
       <Separator />
 
       <p className="text-center text-sm text-muted-foreground">
-        D\u00e9j\u00e0 un compte ?{" "}
+        Déjà un compte ?{" "}
         <button
           type="button"
           onClick={() => setAuthModal("login")}

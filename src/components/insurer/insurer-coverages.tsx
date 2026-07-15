@@ -148,7 +148,6 @@ export function InsurerCoverages() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Code</TableHead>
                   <TableHead>Nom</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Catégorie</TableHead>
@@ -159,7 +158,6 @@ export function InsurerCoverages() {
               <TableBody>
                 {filtered.map((c) => (
                   <TableRow key={c.id}>
-                    <TableCell className="font-mono text-sm">{c.code}</TableCell>
                     <TableCell className="font-medium">{c.name}</TableCell>
                     <TableCell className="text-muted-foreground">{c.type || "—"}</TableCell>
                     <TableCell className="text-muted-foreground">{c.category || "—"}</TableCell>
@@ -185,7 +183,6 @@ export function InsurerCoverages() {
                   <div className="flex items-start justify-between">
                     <div className="min-w-0">
                       <p className="font-medium truncate">{c.name}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5 font-mono">{c.code}</p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       {c.isMandatory && (

@@ -127,6 +127,19 @@ type GuaranteeMetadata =
 interface CoverageInput {
   calculationType: string;
   metadata: string;
+  variableSource?: string | null;
+  ratePercent?: number | null;
+  conditionedByNewValue?: boolean | null;
+  newValueThreshold?: number | null;
+  rateBelowThreshold?: number | null;
+  rateAboveThreshold?: number | null;
+  fixedAmount?: number | null;
+  packPriceReduced?: number | null;
+  capital?: number | null;
+  minAmount?: number | null;
+  maxAmount?: number | null;
+  matrixDimension?: string | null;
+  requiresGuarantee?: string | null;
   tariffRules?: Array<{
     vehicleCategory?: string | null;
     minFiscalPower?: number | null;
@@ -230,6 +243,49 @@ export function calculateGuaranteePremium(
   }
 ): PricingResult {
   const meta = safeParseJSON<GuaranteeMetadata>(coverage.metadata);
+
+  // Normalize legacy metadata field names to match expected interface
+  const m = meta as any;
+  // MATRIX_BASED: matrixType → dimension
+  if (m.matrixType && !m.dimension) m.dimension = m.matrixType;
+  // VARIABLE_BASED: variable → variableSource
+  if (m.variable && !m.variableSource) {
+    const varMap: Record<string, string> = { VN: "NEW_VALUE", VA: "VENAL_VALUE", CV: "FISCAL_POWER", "REPLACEMENT_VALUE": "NEW_VALUE" };
+    m.variableSource = varMap[m.variable] || m.variable;
+  }
+  // rate → ratePercent
+  if (m.rate != null && m.ratePercent == null) m.ratePercent = m.rate;
+  // conditional object → flat fields
+  if (m.conditional && typeof m.conditional === "object") {
+    if (!m.conditionedByNewValue) m.conditionedByNewValue = true;
+    if (m.conditional.threshold != null && m.newValueThreshold == null) m.newValueThreshold = m.conditional.threshold;
+    if (m.conditional.rateBelow != null && m.rateBelowThresholdPercent == null) m.rateBelowThresholdPercent = m.conditional.rateBelow;
+    if (m.conditional.rateAbove != null && m.rateAboveThresholdPercent == null) m.rateAboveThresholdPercent = m.conditional.rateAbove;
+  }
+  // IC/IPT formulas: primeFixe → use as ceiling with baseRate=100 so amount=primeFixe
+  if (m.formulas && Array.isArray(m.formulas)) {
+    for (const f of m.formulas) {
+      if (f.primeFixe != null && f.baseRate == null) {
+        f.baseRate = 100;
+        f.ceiling = f.primeFixe;
+      }
+    }
+  }
+
+  // Merge structured columns into metadata (structured columns override metadata JSON)
+  if (coverage.variableSource) (meta as any).variableSource = coverage.variableSource;
+  if (coverage.ratePercent != null) (meta as any).ratePercent = coverage.ratePercent;
+  if (coverage.conditionedByNewValue) {
+    (meta as any).conditionedByNewValue = true;
+    if (coverage.newValueThreshold != null) (meta as any).newValueThreshold = coverage.newValueThreshold;
+    if (coverage.rateBelowThreshold != null) (meta as any).rateBelowThresholdPercent = coverage.rateBelowThreshold;
+    if (coverage.rateAboveThreshold != null) (meta as any).rateAboveThresholdPercent = coverage.rateAboveThreshold;
+  }
+  if (coverage.fixedAmount != null) (meta as any).fixedAmount = coverage.fixedAmount;
+  if (coverage.packPriceReduced != null) (meta as any).packPriceReduced = coverage.packPriceReduced;
+  if (coverage.capital != null) (meta as any).capital = coverage.capital;
+  if (coverage.matrixDimension) (meta as any).dimension = coverage.matrixDimension;
+  if (coverage.requiresGuarantee) (meta as any).requiresGuarantee = coverage.requiresGuarantee;
 
   switch (coverage.calculationType) {
     case "FREE":

@@ -181,7 +181,10 @@ export async function runComparison(
       insurerId: { in: insurerIds },
       isActive: true,
     },
-    include: { category: { select: { id: true, name: true, code: true } } },
+    include: {
+      category: { select: { id: true, name: true, code: true } },
+      tariffRules: true,
+    },
   });
 
   const coveragesByInsurer = new Map<string, typeof allCoverages>();

@@ -40,6 +40,11 @@ export const registerSchema = z.object({
   name: z.string().min(1, "Le nom complet est requis"),
   password: passwordSchema,
   phone: z.string().optional(),
+  role: z.enum(["USER", "INSURER"]).optional().default("USER"),
+  companyName: z.string().optional(),
+  companyEmail: z.string().optional(),
+  companyPhone: z.string().optional(),
+  companyWebsite: z.string().optional(),
 });
 
 export const loginSchema = z.object({

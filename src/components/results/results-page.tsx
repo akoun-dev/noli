@@ -399,6 +399,20 @@ function ComparisonModal({
     return map;
   }, [offers]);
 
+  // Build a pricing lookup: `${offerId}::${guaranteeName}` → PricingBreakdown
+  const pricingLookup = useMemo(() => {
+    const map = new Map<string, { amount: number; method: string; breakdown: string }>();
+    for (const o of offers) {
+      if (o.pricingBreakdown) {
+        for (const pb of o.pricingBreakdown) {
+          map.set(`${o.id}::${pb.guaranteeName}`, pb);
+        }
+      }
+    }
+    return map;
+  }, [offers]);
+
+
   if (!open || offers.length < 2) return null;
 
   const selectedCategories = coverageNeeds.guaranteeCategories || [];
@@ -617,12 +631,24 @@ function ComparisonModal({
                         </td>
                         {offers.map((offer) => {
                           const hasGuarantee = guaranteeLookup.get(offer.id)?.has(guarantee) ?? false;
+                          const pricing = pricingLookup.get(`${offer.id}::${guarantee}`);
                           return (
                             <td
                               key={offer.id}
                               className="p-3 text-center border-b border-border/20"
                             >
-                              {hasGuarantee ? (
+                              {hasGuarantee && pricing ? (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className="text-sm font-bold text-foreground tabular-nums cursor-default">
+                                      {pricing.amount === 0 ? "Gratuit" : formatFCFA(pricing.amount)}
+                                    </span>
+                                  </TooltipTrigger>
+                                   <TooltipContent side="bottom" className="max-w-xs text-xs bg-foreground text-white border-foreground">
+                                     <p className="text-white whitespace-pre-line">{pricing.breakdown}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              ) : hasGuarantee ? (
                                 <div className="flex items-center justify-center">
                                   <div className="flex h-7 w-7 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30 ring-1 ring-green-200 dark:ring-green-800/50">
                                     <Check className="size-3.5 text-green-600 dark:text-green-400" />
@@ -630,7 +656,7 @@ function ComparisonModal({
                                 </div>
                               ) : (
                                 <div className="flex items-center justify-center">
-                                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-red-50 dark:bg-red-900/20 ring-1 ring-red-200 dark:ring-red-800/30">
+                                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-red-50 dark:bg-red-900/20 ring-1 ring-red-200 dark:ring-red-800/50">
                                     <X className="size-3.5 text-red-400 dark:text-red-400" />
                                   </div>
                                 </div>

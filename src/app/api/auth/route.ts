@@ -15,14 +15,16 @@ function verifyPassword(password: string, hash: string): boolean {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { action, email, name, phone, password } = body;
+    const { action, email, name, phone, password, role, companyName, companyEmail, companyPhone, companyWebsite } = body;
 
     if (action === "register") {
-      const parsed = registerSchema.safeParse({ email, name, password, phone });
+      const parsed = registerSchema.safeParse({ email, name, password, phone, role, companyName, companyEmail, companyPhone, companyWebsite });
       if (!parsed.success) {
         const firstError = parsed.error.issues[0]?.message || "Champs requis manquants";
         return NextResponse.json({ error: firstError }, { status: 400 });
       }
+
+      const selectedRole = parsed.data.role;
 
       const existing = await db.profile.findUnique({ where: { email } });
       if (existing) {
@@ -40,9 +42,37 @@ export async function POST(request: NextRequest) {
           firstName,
           lastName,
           phone: phone || null,
-          role: "USER",
+          role: selectedRole,
         },
       });
+
+      // If INSURER, create the Insurer record + InsurerAccount automatically
+      if (selectedRole === "INSURER" && companyName?.trim()) {
+        const code = companyName
+          .trim()
+          .toUpperCase()
+          .replace(/[^A-Z0-9]/g, "_")
+          .replace(/_+/g, "_")
+          .replace(/^_|_$/g, "")
+          .slice(0, 20);
+
+        const insurer = await db.insurer.create({
+          data: {
+            code,
+            name: companyName.trim(),
+            contactEmail: companyEmail?.trim() || email,
+            phone: companyPhone?.trim() || phone,
+            website: companyWebsite?.trim() || null,
+          },
+        });
+
+        await db.insurerAccount.create({
+          data: {
+            profileId: profile.id,
+            insurerId: insurer.id,
+          },
+        });
+      }
 
       await createSession(profile.id);
 
