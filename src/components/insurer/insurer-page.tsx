@@ -26,7 +26,7 @@ import { getInitials } from "@/lib/utils";
 import { InsurerDashboard } from "./insurer-dashboard";
 import { InsurerOffers } from "./insurer-offers";
 import { InsurerQuotes } from "./insurer-quotes";
-import { InsurerCoverages } from "./insurer-coverages";
+import { InsurerGuaranteesTab } from "./tabs/insurer-guarantees-tab";
 
 const sidebarItems = [
   { id: "dashboard", label: "Tableau de bord", icon: LayoutDashboard },
@@ -298,7 +298,7 @@ export function InsurerPage() {
       case "quotes":
         return <InsurerQuotes />;
       case "coverages":
-        return <InsurerCoverages />;
+        return <InsurerGuaranteesTab />;
       default:
         return <InsurerDashboard />;
     }

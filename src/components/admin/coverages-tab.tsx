@@ -939,14 +939,14 @@ export function CoveragesTab() {
                   <div className="space-y-2">
                     {matrixTariffs.map((tariff) => (
                       <div key={tariff.key} className="flex items-center gap-2">
-                        <Input type="text" className="h-8 w-20 text-sm" placeholder="Code" value={tariff.vehicleCategory || ""} onChange={(e) => {
+                        <Input type="text" className="h-8 w-20 text-sm shrink-0" placeholder="Code" value={tariff.vehicleCategory || ""} onChange={(e) => {
                           setMatrixTariffs(matrixTariffs.map(t => t.key === tariff.key ? { ...t, vehicleCategory: e.target.value } : t));
                         }} />
-                        <Input type="number" className="h-8 w-32 text-sm" placeholder="Prime FCFA" value={tariff.prime || ""} onChange={(e) => {
+                        <Input type="number" className="h-8 flex-1 text-sm" placeholder="Prime FCFA" value={tariff.prime || ""} onChange={(e) => {
                           setMatrixTariffs(matrixTariffs.map(t => t.key === tariff.key ? { ...t, prime: parseInt(e.target.value) || 0 } : t));
                         }} />
-                        <span className="text-xs text-muted-foreground">FCFA</span>
-                        <Button type="button" variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive" onClick={() => setMatrixTariffs(matrixTariffs.filter(t => t.key !== tariff.key))}>
+                        <span className="text-xs text-muted-foreground shrink-0">FCFA</span>
+                        <Button type="button" variant="ghost" size="sm" className="h-8 w-8 p-0 shrink-0 text-destructive" onClick={() => setMatrixTariffs(matrixTariffs.filter(t => t.key !== tariff.key))}>
                           <Trash2 className="h-3 w-3" />
                         </Button>
                       </div>
@@ -1086,7 +1086,7 @@ export function CoveragesTab() {
           {/* Franchise */}
           <div className="space-y-3">
             <Label className="font-medium">Franchise</Label>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4">
               <div>
                 <Label className="text-xs">Type de franchise</Label>
                 <Select value={franchiseType || "__none__"} onValueChange={(v) => setFranchiseType(v === "__none__" ? "" : v as FranchiseType)}>
@@ -1207,6 +1207,7 @@ export function CoveragesTab() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Nom</TableHead>
+                  <TableHead>Cat. Produit</TableHead>
                   <TableHead>Catégorie</TableHead>
                   <TableHead>Assureur</TableHead>
                   <TableHead>Méthode</TableHead>
@@ -1223,6 +1224,7 @@ export function CoveragesTab() {
                     onClick={() => handleRowClick(item.id)}
                   >
                     <TableCell className="font-medium">{item.name}</TableCell>
+                    <TableCell className="text-sm">{item.type || <span className="text-muted-foreground">—</span>}</TableCell>
                     <TableCell className="text-sm">{item.category?.name || <span className="text-muted-foreground">—</span>}</TableCell>
                     <TableCell className="text-sm">
                     <div className="flex items-center gap-2">

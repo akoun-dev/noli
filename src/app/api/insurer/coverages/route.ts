@@ -44,7 +44,22 @@ export async function POST(request: NextRequest) {
       description,
       calculationType,
       isMandatory,
+      isOptional,
+      conditions,
+      displayOrder,
       metadata,
+      variableSource,
+      ratePercent,
+      conditionedByNewValue,
+      newValueThreshold,
+      rateBelowThreshold,
+      rateAboveThreshold,
+      fixedAmount,
+      matrixDimension,
+      minAmount,
+      maxAmount,
+      capital,
+      requiresGuarantee,
     } = body;
 
     if (!insurerId || !name) {
@@ -88,12 +103,28 @@ export async function POST(request: NextRequest) {
         description: description || null,
         calculationType: calculationType || "FIXED_AMOUNT",
         isMandatory: Boolean(isMandatory),
+        isOptional: Boolean(isOptional),
+        conditions: conditions || "{}",
+        displayOrder: displayOrder ?? 0,
         isActive: true,
         metadata: metadata
           ? typeof metadata === "string"
             ? metadata
             : JSON.stringify(metadata)
           : "{}",
+        // Structured columns
+        variableSource: variableSource || null,
+        ratePercent: ratePercent != null ? Number(ratePercent) : null,
+        conditionedByNewValue: Boolean(conditionedByNewValue),
+        newValueThreshold: newValueThreshold != null ? Number(newValueThreshold) : null,
+        rateBelowThreshold: rateBelowThreshold != null ? Number(rateBelowThreshold) : null,
+        rateAboveThreshold: rateAboveThreshold != null ? Number(rateAboveThreshold) : null,
+        fixedAmount: fixedAmount != null ? Number(fixedAmount) : null,
+        matrixDimension: matrixDimension || null,
+        minAmount: minAmount != null ? Number(minAmount) : null,
+        maxAmount: maxAmount != null ? Number(maxAmount) : null,
+        capital: capital != null ? Number(capital) : null,
+        requiresGuarantee: requiresGuarantee || null,
       },
       include: {
         category: { select: { id: true, name: true, code: true } },

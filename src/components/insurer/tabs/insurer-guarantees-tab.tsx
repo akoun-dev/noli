@@ -14,7 +14,6 @@ import {
   Percent,
   LayoutGrid,
   CircleDot,
-  Minus,
   Info,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -59,12 +58,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
 import { useAppStore } from "@/store/app-store";
 import { useToast } from "@/hooks/use-toast";
 
@@ -75,6 +68,11 @@ interface CoverageCategory {
   code: string;
 }
 
+interface InsCatOption {
+  id: string;
+  name: string;
+}
+
 interface Coverage {
   id: string;
   code: string;
@@ -83,9 +81,23 @@ interface Coverage {
   description: string | null;
   calculationType: string;
   isMandatory: boolean;
+  isOptional: boolean;
+  conditions: string;
   isActive: boolean;
   displayOrder: number;
   metadata: string;
+  variableSource: string | null;
+  ratePercent: number | null;
+  conditionedByNewValue: boolean;
+  newValueThreshold: number | null;
+  rateBelowThreshold: number | null;
+  rateAboveThreshold: number | null;
+  fixedAmount: number | null;
+  minAmount: number | null;
+  maxAmount: number | null;
+  capital: number | null;
+  matrixDimension: string | null;
+  requiresGuarantee: string | null;
   category: { id: string; name: string; code: string } | null;
 }
 
@@ -97,43 +109,140 @@ type CalculationType =
 
 interface Step1Data {
   name: string;
+  insuranceCategoryId: string;
   categoryId: string;
   description: string;
   isMandatory: boolean;
+  isOptional: boolean;
+  conditions: string;
+  displayOrder: string;
 }
 
-/* Matrix sub-types */
+/* Matrix sub-types (aligned with admin) */
 interface MatrixTariff {
-  id: string;
+  key: string;
+  fuelType: "Essence" | "Diesel";
   fiscalPowerMin: number;
   fiscalPowerMax: number;
-  fuelType: string;
-  vehicleCategory: string;
   prime: number;
+  vehicleCategory?: string;
 }
 
-interface MatrixFormula {
-  id: string;
-  name: string;
-  baseRate: number;
-  ceiling: number;
+interface PlacesTariff {
+  places: number;
+  prime: number;
+  label: string;
+}
+
+interface FormulaConfig {
+  formula: number;
+  label: string;
+  capitalDeces: number;
+  capitalInvalidite: number;
+  fraisMedicaux: number;
+  prime: number;
+  usePlaces: boolean;
+  placesTariffs?: PlacesTariff[];
 }
 
 interface CategoryTariff {
-  id: string;
+  key: string;
   category: string;
+  guaranteeType: "TIERCE_COMPLETE" | "TIERCE_COLLISION";
   valueMin: number;
   valueMax: number;
+  valueLabel: string;
   franchise: number;
+  franchiseLabel: string;
   prime: number;
+}
+
+const VN_RANGES = [
+  { label: "≤ 12M", min: 0, max: 12_000_000, key: "A" },
+  { label: "12M – 25M", min: 12_000_001, max: 25_000_000, key: "B" },
+  { label: "25M – 40M", min: 25_000_001, max: 40_000_000, key: "C" },
+  { label: "40M – 90M", min: 40_000_001, max: 90_000_000, key: "D" },
+  { label: "90M – 110M", min: 90_000_001, max: 110_000_000, key: "E" },
+  { label: "> 110M", min: 110_000_001, max: 999_999_999, key: "F" },
+] as const;
+
+const FRANCHISE_LEVELS = [
+  { label: "Sans franchise", value: 0 },
+  { label: "500K", value: 500_000 },
+  { label: "1M", value: 1_000_000 },
+  { label: "2M", value: 2_000_000 },
+  { label: "2.5M", value: 2_500_000 },
+] as const;
+
+function getDefaultFiscalPowerTariffs(): MatrixTariff[] {
+  const now = Date.now();
+  return [
+    { key: `essence_1_4_${now}`, fuelType: "Essence", fiscalPowerMin: 1, fiscalPowerMax: 4, prime: 68675 },
+    { key: `essence_5_7_${now}`, fuelType: "Essence", fiscalPowerMin: 5, fiscalPowerMax: 7, prime: 85000 },
+    { key: `essence_8_10_${now}`, fuelType: "Essence", fiscalPowerMin: 8, fiscalPowerMax: 10, prime: 95000 },
+    { key: `essence_11_${now}`, fuelType: "Essence", fiscalPowerMin: 11, fiscalPowerMax: 99, prime: 110000 },
+    { key: `diesel_1_4_${now}`, fuelType: "Diesel", fiscalPowerMin: 1, fiscalPowerMax: 4, prime: 68675 },
+    { key: `diesel_5_7_${now}`, fuelType: "Diesel", fiscalPowerMin: 5, fiscalPowerMax: 7, prime: 85000 },
+    { key: `diesel_8_10_${now}`, fuelType: "Diesel", fiscalPowerMin: 8, fiscalPowerMax: 10, prime: 95000 },
+    { key: `diesel_11_${now}`, fuelType: "Diesel", fiscalPowerMin: 11, fiscalPowerMax: 99, prime: 110000 },
+  ];
+}
+
+function getDefaultFormulas(): FormulaConfig[] {
+  return [
+    { formula: 1, label: "Formule 1", capitalDeces: 1_000_000, capitalInvalidite: 2_000_000, fraisMedicaux: 100_000, prime: 5_500, usePlaces: false },
+    { formula: 2, label: "Formule 2", capitalDeces: 3_000_000, capitalInvalidite: 6_000_000, fraisMedicaux: 400_000, prime: 8_400, usePlaces: false },
+    { formula: 3, label: "Formule 3", capitalDeces: 5_000_000, capitalInvalidite: 10_000_000, fraisMedicaux: 500_000, prime: 15_900, usePlaces: false },
+  ];
+}
+
+function getDefaultCategoryTariffs(type: "TIERCE_COMPLETE" | "TIERCE_COLLISION"): CategoryTariff[] {
+  const now = Date.now();
+  const tariffs: CategoryTariff[] = [];
+  const defaults: Record<string, Record<number, number>> = type === "TIERCE_COMPLETE"
+    ? {
+        A: { 0: 4_680 },
+        B: { 500_000: 3_256, 1_000_000: 2_968, 2_000_000: 2_744, 2_500_000: 2_628 },
+        C: { 1_000_000: 2_128, 2_000_000: 1_956 },
+        D: { 2_500_000: 1_648 },
+        F: { 2_500_000: 1_248 },
+      }
+    : {
+        A: { 500_000: 2_232, 1_000_000: 2_052, 2_000_000: 1_912, 2_500_000: 1_836 },
+        D: { 500_000: 1_764, 1_000_000: 1_628, 2_000_000: 1_516, 2_500_000: 1_456 },
+      };
+  for (const range of VN_RANGES) {
+    const franchiseDefaults = defaults[range.key];
+    if (!franchiseDefaults) continue;
+    for (const [franchiseStr, prime] of Object.entries(franchiseDefaults)) {
+      const franchise = Number(franchiseStr);
+      const fl = FRANCHISE_LEVELS.find(f => f.value === franchise);
+      tariffs.push({
+        key: `${type.toLowerCase()}_${range.key}_${franchise}_${now}`,
+        category: range.key,
+        guaranteeType: type,
+        valueMin: range.min,
+        valueMax: range.max,
+        valueLabel: range.label,
+        franchise,
+        franchiseLabel: fl?.label || `${franchise}`,
+        prime,
+      });
+    }
+  }
+  return tariffs;
 }
 
 /* ── Constants ── */
 const emptyStep1: Step1Data = {
   name: "",
+  insuranceCategoryId: "",
   categoryId: "",
   description: "",
   isMandatory: false,
+  isOptional: false,
+  conditions: "",
+  displayOrder: "0",
 };
 
 const calcBadge: Record<string, string> = {
@@ -191,65 +300,19 @@ const step2Options: {
   },
 ];
 
-const variableSources = [
-  { value: "NEW_VALUE", label: "Valeur Neuve (VN)" },
-  { value: "VENAL_VALUE", label: "Valeur Vénale (VA)" },
-  { value: "FISCAL_POWER", label: "Puissance Fiscale (PF)" },
-];
-
 const matrixDimensions = [
-  { value: "FISCAL_POWER", label: "Puissance fiscale" },
-  { value: "FUEL_TYPE", label: "Type de carburant" },
-  { value: "VEHICLE_CATEGORY", label: "Catégorie véhicule" },
-  { value: "SEATS", label: "Nombre de places" },
+  { value: "FISCAL_POWER", label: "Puissance fiscale (CV)" },
+  { value: "VEHICLE_CATEGORY", label: "Catégorie de véhicule" },
   { value: "FORMULA", label: "Formule (IC/IPT)" },
   { value: "TIERCE_COMPLETE", label: "Tierce complète" },
   { value: "TIERCE_COLLISION", label: "Tierce collision" },
 ];
 
-const fuelTypes = [
-  { value: "ESSENCE", label: "Essence" },
-  { value: "DIESEL", label: "Diesel" },
-  { value: "HYBRIDE", label: "Hybride" },
-  { value: "ELECTRIQUE", label: "Électrique" },
-  { value: "GPL", label: "GPL" },
+const variableSources = [
+  { value: "NEW_VALUE", label: "Valeur Neuve (VN)" },
+  { value: "VENAL_VALUE", label: "Valeur Vénale (VA)" },
+  { value: "FISCAL_POWER", label: "Puissance Fiscale (PF)" },
 ];
-
-const vehicleCategories = [
-  { value: "VP", label: "VP - Véhicule Particulier" },
-  { value: "VT", label: "VT - Véhicule de Tourisme" },
-  { value: "VUL", label: "VUL - Véhicule Utilitaire Léger" },
-  { value: "PL", label: "PL - Poids Lourd" },
-  { value: "MOTO", label: "Moto" },
-  { value: "CAMION", label: "Camion" },
-  { value: "ENGIN", label: "Engin" },
-  { value: "AUTRE", label: "Autre" },
-];
-
-const emptyTariff: MatrixTariff = {
-  id: crypto.randomUUID(),
-  fiscalPowerMin: 0,
-  fiscalPowerMax: 0,
-  fuelType: "",
-  vehicleCategory: "",
-  prime: 0,
-};
-
-const emptyFormula: MatrixFormula = {
-  id: crypto.randomUUID(),
-  name: "",
-  baseRate: 0,
-  ceiling: 0,
-};
-
-const emptyCategoryTariff: CategoryTariff = {
-  id: crypto.randomUUID(),
-  category: "VP",
-  valueMin: 0,
-  valueMax: 0,
-  franchise: 0,
-  prime: 0,
-};
 
 /* ── Component ── */
 export function InsurerGuaranteesTab() {
@@ -259,6 +322,7 @@ export function InsurerGuaranteesTab() {
   const [insurerId, setInsurerId] = useState<string | null>(null);
   const [coverages, setCoverages] = useState<Coverage[]>([]);
   const [categories, setCategories] = useState<CoverageCategory[]>([]);
+  const [insuranceCategories, setInsuranceCategories] = useState<InsCatOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -271,9 +335,11 @@ export function InsurerGuaranteesTab() {
   const [metadata, setMetadata] = useState<Record<string, unknown>>({});
   const [saving, setSaving] = useState(false);
 
-  // Matrix array states
-  const [tariffs, setTariffs] = useState<MatrixTariff[]>([]);
-  const [formulas, setFormulas] = useState<MatrixFormula[]>([]);
+  // Matrix states (aligned with admin)
+  const [matrixTariffs, setMatrixTariffs] = useState<MatrixTariff[]>([]);
+  const [matrixFormulas, setMatrixFormulas] = useState<FormulaConfig[]>([]);
+  const [matrixDefaultPrime, setMatrixDefaultPrime] = useState<number>(0);
+  const [matrixDimension, setMatrixDimension] = useState<string>("FISCAL_POWER");
   const [categoryTariffs, setCategoryTariffs] = useState<CategoryTariff[]>([]);
 
   // Delete dialog
@@ -307,10 +373,21 @@ export function InsurerGuaranteesTab() {
 
   const fetchCategories = useCallback(async () => {
     try {
-      const res = await fetch("/api/admin/coverage-categories");
+      const res = await fetch("/api/insurer/coverage-categories");
       if (!res.ok) return;
       const data = await res.json();
       setCategories(data);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const fetchInsuranceCategories = useCallback(async () => {
+    try {
+      const res = await fetch("/api/insurer/insurance-categories");
+      if (!res.ok) return;
+      const data = await res.json();
+      setInsuranceCategories(data);
     } catch {
       /* ignore */
     }
@@ -330,7 +407,7 @@ export function InsurerGuaranteesTab() {
     (async () => {
       const iid = await fetchInsurer(user.id!);
       if (iid) await fetchCoverages(iid);
-      await fetchCategories();
+      await Promise.all([fetchCategories(), fetchInsuranceCategories()]);
       setLoading(false);
     })();
   }, [user.id]);
@@ -340,8 +417,10 @@ export function InsurerGuaranteesTab() {
     setStep1(emptyStep1);
     setCalcType("");
     setMetadata({});
-    setTariffs([]);
-    setFormulas([]);
+    setMatrixTariffs([]);
+    setMatrixFormulas([]);
+    setMatrixDefaultPrime(0);
+    setMatrixDimension("FISCAL_POWER");
     setCategoryTariffs([]);
     setStep(1);
   };
@@ -354,11 +433,16 @@ export function InsurerGuaranteesTab() {
 
   const openEdit = (item: Coverage) => {
     setEditingItem(item);
+    const insCat = insuranceCategories.find((c) => c.name === item.type);
     setStep1({
       name: item.name,
+      insuranceCategoryId: insCat?.id || "",
       categoryId: item.category?.id || "",
       description: item.description || "",
       isMandatory: item.isMandatory,
+      isOptional: item.isOptional || false,
+      conditions: item.conditions || "",
+      displayOrder: String(item.displayOrder ?? 0),
     });
     setCalcType(item.calculationType as CalculationType);
 
@@ -374,12 +458,17 @@ export function InsurerGuaranteesTab() {
 
     setMetadata(parsed);
 
-    // Restore matrix arrays
-    setTariffs((parsed.tariffs as MatrixTariff[])?.map((t) => ({ ...t, id: t.id || crypto.randomUUID() })) || []);
-    setFormulas((parsed.formulas as MatrixFormula[])?.map((f) => ({ ...f, id: f.id || crypto.randomUUID() })) || []);
-    setCategoryTariffs(
-      (parsed.categoryTariffs as CategoryTariff[])?.map((c) => ({ ...c, id: c.id || crypto.randomUUID() })) || []
-    );
+    // Restore matrix state
+    const toNum = (v: unknown, fallback: number): number => {
+      if (typeof v === "number" && !isNaN(v)) return v;
+      if (typeof v === "string") { const n = Number(v); return isNaN(n) ? fallback : n; }
+      return fallback;
+    };
+    setMatrixDimension((parsed.dimension as string) || "FISCAL_POWER");
+    setMatrixDefaultPrime(toNum(parsed.defaultPrime, 0));
+    setMatrixTariffs(Array.isArray(parsed.tariffs) ? (parsed.tariffs as MatrixTariff[]) : []);
+    setMatrixFormulas(Array.isArray(parsed.formulas) ? (parsed.formulas as FormulaConfig[]) : []);
+    setCategoryTariffs(Array.isArray(parsed.categoryTariffs) ? (parsed.categoryTariffs as CategoryTariff[]) : []);
 
     setStep(1);
     setDialogOpen(true);
@@ -447,12 +536,19 @@ export function InsurerGuaranteesTab() {
     if (calcType === "MATRIX_BASED") {
       const m: Record<string, unknown> = {
         method: "MATRIX_BASED",
-        dimension: metadata.dimension || "FISCAL_POWER",
+        dimension: matrixDimension,
+        defaultPrime: matrixDefaultPrime || 0,
       };
-      if (tariffs.length > 0) m.tariffs = tariffs.map(({ id: _id, ...rest }) => rest);
-      if (formulas.length > 0) m.formulas = formulas.map(({ id: _id, ...rest }) => rest);
+      if (matrixTariffs.length > 0) m.tariffs = matrixTariffs;
+      if (matrixFormulas.length > 0) m.formulas = matrixFormulas;
       if (categoryTariffs.length > 0)
-        m.categoryTariffs = categoryTariffs.map(({ id: _id, ...rest }) => rest);
+        m.categoryTariffs = categoryTariffs.map(ct => ({
+          category: ct.category,
+          valueMin: ct.valueMin,
+          valueMax: ct.valueMax,
+          franchise: ct.franchise,
+          prime: ct.prime,
+        }));
       return m;
     }
 
@@ -474,11 +570,28 @@ export function InsurerGuaranteesTab() {
     const payload = {
       insurerId,
       categoryId: step1.categoryId || null,
+      type: insuranceCategories.find((c) => c.id === step1.insuranceCategoryId)?.name || "",
       name: step1.name.trim(),
       description: step1.description.trim() || null,
       calculationType: calcType,
       isMandatory: step1.isMandatory,
+      isOptional: step1.isOptional,
+      conditions: step1.conditions || "{}",
+      displayOrder: parseInt(step1.displayOrder, 10) || 0,
       metadata: buildMetadata(),
+      // Structured columns for direct querying
+      variableSource: calcType === "VARIABLE_BASED" ? (metadata.variableSource as string) || "NEW_VALUE" : null,
+      ratePercent: calcType === "VARIABLE_BASED" ? Number(metadata.ratePercent) || null : null,
+      conditionedByNewValue: calcType === "VARIABLE_BASED" ? Boolean(metadata.conditionedByNewValue) : false,
+      newValueThreshold: calcType === "VARIABLE_BASED" && metadata.conditionedByNewValue ? Number(metadata.newValueThreshold) || null : null,
+      rateBelowThreshold: calcType === "VARIABLE_BASED" && metadata.conditionedByNewValue ? Number(metadata.rateBelowThresholdPercent) || null : null,
+      rateAboveThreshold: calcType === "VARIABLE_BASED" && metadata.conditionedByNewValue ? Number(metadata.rateAboveThresholdPercent) || null : null,
+      fixedAmount: calcType === "FIXED_AMOUNT" ? Number(metadata.fixedAmount) || null : null,
+      matrixDimension: calcType === "MATRIX_BASED" ? matrixDimension : null,
+      minAmount: metadata.minAmount !== undefined && metadata.minAmount !== "" ? Number(metadata.minAmount) : null,
+      maxAmount: metadata.maxAmount !== undefined && metadata.maxAmount !== "" ? Number(metadata.maxAmount) : null,
+      capital: metadata.capital !== undefined && metadata.capital !== "" ? Number(metadata.capital) : null,
+      requiresGuarantee: (metadata.requiresGuarantee as string)?.trim() || null,
     };
 
     try {
@@ -543,23 +656,6 @@ export function InsurerGuaranteesTab() {
     }
   };
 
-  /* ── Matrix helpers ── */
-  const updateTariff = (id: string, field: keyof MatrixTariff, value: string | number) => {
-    setTariffs((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, [field]: value } : t))
-    );
-  };
-  const updateFormula = (id: string, field: keyof MatrixFormula, value: string | number) => {
-    setFormulas((prev) =>
-      prev.map((f) => (f.id === id ? { ...f, [field]: value } : f))
-    );
-  };
-  const updateCategoryTariff = (id: string, field: keyof CategoryTariff, value: string | number) => {
-    setCategoryTariffs((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, [field]: value } : c))
-    );
-  };
-
   /* ── Franchise sub-form (shared by FIXED_AMOUNT & VARIABLE_BASED) ── */
   const renderFranchiseSection = () => (
     <div className="rounded-lg border bg-muted/30 p-4 space-y-4">
@@ -590,7 +686,7 @@ export function InsurerGuaranteesTab() {
         </RadioGroup>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 gap-3">
         <div className="w-full">
           <Label className="text-xs">
             {metadata.franchiseType === "AMOUNT" ? "Valeur (FCFA)" : "Taux (%)"}
@@ -643,6 +739,162 @@ export function InsurerGuaranteesTab() {
     </div>
   );
 
+  /* ── Common params (admin-aligned) ── */
+  const renderCommonParams = () => (
+    <>
+      <Separator />
+      <div className="rounded-lg border border-dashed p-4 space-y-4">
+        <Label className="text-base font-semibold">Paramètres communs</Label>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <Label>Montant minimum (FCFA)</Label>
+            <Input
+              type="number"
+              value={(metadata.minAmount as number) ?? ""}
+              onChange={(e) =>
+                setMetadata({ ...metadata, minAmount: e.target.value ? Number(e.target.value) : "" })
+              }
+              placeholder="Aucun minimum"
+            />
+          </div>
+          <div>
+            <Label>Montant maximum (FCFA)</Label>
+            <Input
+              type="number"
+              value={(metadata.maxAmount as number) ?? ""}
+              onChange={(e) =>
+                setMetadata({ ...metadata, maxAmount: e.target.value ? Number(e.target.value) : "" })
+              }
+              placeholder="Aucun maximum"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <Label>Capital (FCFA)</Label>
+            <Input
+              type="number"
+              value={(metadata.capital as number) ?? ""}
+              onChange={(e) =>
+                setMetadata({ ...metadata, capital: e.target.value ? Number(e.target.value) : "" })
+              }
+              placeholder="Ex: 3000000 (Avance sur recours)"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Capitale de garantie si applicable
+            </p>
+          </div>
+          <div>
+            <Label>Garantie requise (code)</Label>
+            <Select
+              value={(metadata.requiresGuarantee as string) || ""}
+              onValueChange={(v) =>
+                setMetadata({ ...metadata, requiresGuarantee: v })
+              }
+            >
+              <SelectTrigger className="w-full mt-1">
+                <SelectValue placeholder="Aucune" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Aucune</SelectItem>
+                {coverages
+                  .filter((c) => c.isActive)
+                  .map((c) => (
+                    <SelectItem key={c.id} value={c.code}>
+                      {c.name} ({c.code})
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground mt-1">
+              Code de la garantie nécessaire pour activer celle-ci
+            </p>
+          </div>
+        </div>
+
+        <Separator />
+
+        <div className="space-y-3">
+          <Label className="font-medium">Franchise</Label>
+          <div className="grid grid-cols-1 gap-4">
+            <div>
+              <Label className="text-xs">Type de franchise</Label>
+              <Select
+                value={(metadata.franchiseType as string) || "__none__"}
+                onValueChange={(v) =>
+                  setMetadata({
+                    ...metadata,
+                    franchiseType: v === "__none__" ? "" : v,
+                    franchiseEnabled: v !== "__none__",
+                  })
+                }
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Aucune franchise" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Aucune franchise</SelectItem>
+                  <SelectItem value="PERCENT">Pourcentage (%)</SelectItem>
+                  <SelectItem value="AMOUNT">Montant fixe (FCFA)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {(metadata.franchiseType as string) && (metadata.franchiseType as string) !== "__none__" && (
+              <>
+                <div>
+                  <Label className="text-xs">
+                    {metadata.franchiseType === "AMOUNT" ? "Montant (FCFA)" : "Taux (%)"}
+                  </Label>
+                  <Input
+                    type="number"
+                    step={(metadata.franchiseType as string) === "PERCENT" ? "0.01" : "1"}
+                    value={(metadata.franchiseValue as number) ?? ""}
+                    onChange={(e) =>
+                      setMetadata({
+                        ...metadata,
+                        franchiseValue: parseFloat(e.target.value) || 0,
+                      })
+                    }
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-xs">Min (FCFA)</Label>
+                    <Input
+                      type="number"
+                      value={(metadata.franchiseMin as number) ?? ""}
+                      onChange={(e) =>
+                        setMetadata({
+                          ...metadata,
+                          franchiseMin: parseInt(e.target.value) || 0,
+                        })
+                      }
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Max (FCFA)</Label>
+                    <Input
+                      type="number"
+                      value={(metadata.franchiseMax as number) ?? ""}
+                      onChange={(e) =>
+                        setMetadata({
+                          ...metadata,
+                          franchiseMax: parseInt(e.target.value) || 0,
+                        })
+                      }
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+
   /* ── Render Step 3 ── */
   const renderStep3 = () => {
     /* ─── FREE ─── */
@@ -659,25 +911,6 @@ export function InsurerGuaranteesTab() {
             <p className="text-emerald-600 dark:text-emerald-400 text-sm mt-2 max-w-md mx-auto">
               Aucune configuration supplémentaire requise. Cette garantie est
               incluse sans frais additionnels.
-            </p>
-          </div>
-          {/* Optional: capital & requiresGuarantee */}
-          <div className="w-full">
-            <Label>Capital (FCFA) — optionnel</Label>
-            <Input
-              className="w-full mt-1"
-              type="number"
-              placeholder="Ex: 3 000 000"
-              value={(metadata.capital as number) ?? ""}
-              onChange={(e) =>
-                setMetadata({
-                  ...metadata,
-                  capital: parseFloat(e.target.value) || 0,
-                })
-              }
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              Montant du capital couvert, le cas échéant.
             </p>
           </div>
         </div>
@@ -737,106 +970,6 @@ export function InsurerGuaranteesTab() {
                 Prix appliqué si la garantie est incluse dans un pack.
               </p>
             </div>
-          </div>
-
-          <div className="w-full">
-            <Label>Capital (FCFA)</Label>
-            <Input
-              className="w-full mt-1"
-              type="number"
-              placeholder="Ex: 3 000 000"
-              value={(metadata.capital as number) ?? ""}
-              onChange={(e) =>
-                setMetadata({
-                  ...metadata,
-                  capital: parseFloat(e.target.value) || 0,
-                })
-              }
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              Ex: Avance sur recours 3 000 000 FCFA.
-            </p>
-          </div>
-
-          <Separator />
-
-          {/* Min / Max */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="w-full">
-              <Label>Plancher minimum (FCFA)</Label>
-              <Input
-                className="w-full mt-1"
-                type="number"
-                placeholder="0"
-                value={(metadata.minAmount as number) ?? ""}
-                onChange={(e) =>
-                  setMetadata({
-                    ...metadata,
-                    minAmount: parseFloat(e.target.value) || 0,
-                  })
-                }
-              />
-            </div>
-            <div className="w-full">
-              <Label>Plafond maximum (FCFA)</Label>
-              <Input
-                className="w-full mt-1"
-                type="number"
-                placeholder="0"
-                value={(metadata.maxAmount as number) ?? ""}
-                onChange={(e) =>
-                  setMetadata({
-                    ...metadata,
-                    maxAmount: parseFloat(e.target.value) || 0,
-                  })
-                }
-              />
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Franchise toggle + form */}
-          <div className="flex items-center gap-2">
-            <Switch
-              id="frac-toggle-fixed"
-              checked={!!metadata.franchiseEnabled}
-              onCheckedChange={(v) =>
-                setMetadata({ ...metadata, franchiseEnabled: !!v })
-              }
-            />
-            <Label htmlFor="frac-toggle-fixed">Appliquer une franchise</Label>
-          </div>
-          {metadata.franchiseEnabled && renderFranchiseSection()}
-
-          <Separator />
-
-          {/* Requires guarantee */}
-          <div className="w-full">
-            <Label>Garantie prérequise — optionnel</Label>
-            <Select
-              value={(metadata.requiresGuarantee as string) || ""}
-              onValueChange={(v) =>
-                setMetadata({ ...metadata, requiresGuarantee: v })
-              }
-            >
-              <SelectTrigger className="w-full mt-1">
-                <SelectValue placeholder="Aucune prérequis" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Aucune</SelectItem>
-                {coverages
-                  .filter((c) => c.isActive)
-                  .map((c) => (
-                    <SelectItem key={c.id} value={c.code}>
-                      {c.name} ({c.code})
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground mt-1">
-              Ex: BDG pour Toits Ouvrants.
-            </p>
           </div>
         </div>
       );
@@ -1023,87 +1156,6 @@ export function InsurerGuaranteesTab() {
               </p>
             </div>
           ) : null}
-
-          <Separator />
-
-          {/* Min / Max */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="w-full">
-              <Label>Plancher minimum (FCFA)</Label>
-              <Input
-                className="w-full mt-1"
-                type="number"
-                placeholder="0"
-                value={(metadata.minAmount as number) ?? ""}
-                onChange={(e) =>
-                  setMetadata({
-                    ...metadata,
-                    minAmount: parseFloat(e.target.value) || 0,
-                  })
-                }
-              />
-            </div>
-            <div className="w-full">
-              <Label>Plafond maximum (FCFA)</Label>
-              <Input
-                className="w-full mt-1"
-                type="number"
-                placeholder="0"
-                value={(metadata.maxAmount as number) ?? ""}
-                onChange={(e) =>
-                  setMetadata({
-                    ...metadata,
-                    maxAmount: parseFloat(e.target.value) || 0,
-                  })
-                }
-              />
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Franchise */}
-          <div className="flex items-center gap-2">
-            <Switch
-              id="frac-toggle-var"
-              checked={!!metadata.franchiseEnabled}
-              onCheckedChange={(v) =>
-                setMetadata({ ...metadata, franchiseEnabled: !!v })
-              }
-            />
-            <Label htmlFor="frac-toggle-var">Appliquer une franchise</Label>
-          </div>
-          {metadata.franchiseEnabled && renderFranchiseSection()}
-
-          <Separator />
-
-          {/* Requires guarantee */}
-          <div className="w-full">
-            <Label>Garantie prérequise — optionnel</Label>
-            <Select
-              value={(metadata.requiresGuarantee as string) || ""}
-              onValueChange={(v) =>
-                setMetadata({ ...metadata, requiresGuarantee: v })
-              }
-            >
-              <SelectTrigger className="w-full mt-1">
-                <SelectValue placeholder="Aucune prérequis" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Aucune</SelectItem>
-                {coverages
-                  .filter((c) => c.isActive)
-                  .map((c) => (
-                    <SelectItem key={c.id} value={c.code}>
-                      {c.name} ({c.code})
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground mt-1">
-              Ex: BDG pour Toits Ouvrants.
-            </p>
-          </div>
         </div>
       );
     }
@@ -1112,7 +1164,6 @@ export function InsurerGuaranteesTab() {
     if (calcType === "MATRIX_BASED") {
       return (
         <div className="space-y-5">
-          {/* Formula display */}
           <div className="rounded-lg bg-violet-50 dark:bg-violet-950/30 border border-violet-200 dark:border-violet-800 px-4 py-3">
             <p className="text-xs text-muted-foreground mb-1">Formule de calcul</p>
             <p className="font-mono text-sm font-semibold text-violet-800 dark:text-violet-300">
@@ -1120,14 +1171,16 @@ export function InsurerGuaranteesTab() {
             </p>
           </div>
 
-          {/* Dimension selector */}
           <div className="w-full">
-            <Label>Dimension de recherche *</Label>
+            <Label>Dimension de la matrice</Label>
             <Select
-              value={(metadata.dimension as string) || "FISCAL_POWER"}
-              onValueChange={(v) =>
-                setMetadata({ ...metadata, dimension: v })
-              }
+              value={matrixDimension}
+              onValueChange={(v) => {
+                setMatrixDimension(v);
+                setMatrixTariffs([]);
+                setMatrixFormulas([]);
+                setCategoryTariffs([]);
+              }}
             >
               <SelectTrigger className="w-full mt-1">
                 <SelectValue />
@@ -1140,455 +1193,258 @@ export function InsurerGuaranteesTab() {
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground mt-1">
-              La dimension utilisée pour chercher la prime dans la grille.
-            </p>
           </div>
 
           <Separator />
 
-          {/* Accordion sections */}
-          <Accordion type="multiple" className="w-full">
-            {/* ─ Tarifs par puissance ─ */}
-            <AccordionItem value="tariffs">
-              <AccordionTrigger className="text-sm font-medium hover:no-underline">
-                Grille tarifaire (Puissance fiscale)
-                {tariffs.length > 0 && (
-                  <Badge variant="secondary" className="ml-2 text-xs">
-                    {tariffs.length} ligne(s)
-                  </Badge>
-                )}
-              </AccordionTrigger>
-              <AccordionContent>
-                <div className="space-y-3 pt-2">
-                  <p className="text-xs text-muted-foreground">
-                    Définissez les tranches de puissance fiscale avec la prime
-                    associée. Utilisé pour la RC et garanties indexées par PF.
-                  </p>
-
-                  {tariffs.length > 0 && (
-                    <div className="rounded-lg border overflow-hidden">
-                      <Table>
-                        <TableHeader>
-                          <TableRow className="bg-muted/50">
-                            <TableHead className="text-xs">PF Min</TableHead>
-                            <TableHead className="text-xs">PF Max</TableHead>
-                            <TableHead className="text-xs">Carburant</TableHead>
-                            <TableHead className="text-xs">Catégorie</TableHead>
-                            <TableHead className="text-xs">Prime (FCFA)</TableHead>
-                            <TableHead className="w-10"></TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {tariffs.map((t) => (
-                            <TableRow key={t.id}>
-                              <TableCell>
-                                <Input
-                                  className="w-20 h-8 text-xs"
-                                  type="number"
-                                  value={t.fiscalPowerMin || ""}
-                                  onChange={(e) =>
-                                    updateTariff(
-                                      t.id,
-                                      "fiscalPowerMin",
-                                      parseInt(e.target.value) || 0
-                                    )
-                                  }
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <Input
-                                  className="w-20 h-8 text-xs"
-                                  type="number"
-                                  value={t.fiscalPowerMax || ""}
-                                  onChange={(e) =>
-                                    updateTariff(
-                                      t.id,
-                                      "fiscalPowerMax",
-                                      parseInt(e.target.value) || 0
-                                    )
-                                  }
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <Select
-                                  value={t.fuelType}
-                                  onValueChange={(v) =>
-                                    updateTariff(t.id, "fuelType", v)
-                                  }
-                                >
-                                  <SelectTrigger className="w-28 h-8 text-xs">
-                                    <SelectValue placeholder="—" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {fuelTypes.map((f) => (
-                                      <SelectItem
-                                        key={f.value}
-                                        value={f.value}
-                                      >
-                                        {f.label}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </TableCell>
-                              <TableCell>
-                                <Select
-                                  value={t.vehicleCategory}
-                                  onValueChange={(v) =>
-                                    updateTariff(t.id, "vehicleCategory", v)
-                                  }
-                                >
-                                  <SelectTrigger className="w-28 h-8 text-xs">
-                                    <SelectValue placeholder="—" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {vehicleCategories.map((vc) => (
-                                      <SelectItem
-                                        key={vc.value}
-                                        value={vc.value}
-                                      >
-                                        {vc.label}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </TableCell>
-                              <TableCell>
-                                <Input
-                                  className="w-28 h-8 text-xs"
-                                  type="number"
-                                  value={t.prime || ""}
-                                  onChange={(e) =>
-                                    updateTariff(
-                                      t.id,
-                                      "prime",
-                                      parseInt(e.target.value) || 0
-                                    )
-                                  }
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-7 w-7 text-destructive hover:text-destructive"
-                                  onClick={() =>
-                                    setTariffs((prev) =>
-                                      prev.filter((x) => x.id !== t.id)
-                                    )
-                                  }
-                                >
-                                  <Minus className="h-3.5 w-3.5" />
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  )}
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="w-full border-dashed"
-                    onClick={() =>
-                      setTariffs((prev) => [
-                        ...prev,
-                        { ...emptyTariff, id: crypto.randomUUID() },
-                      ])
-                    }
-                  >
-                    <Plus className="h-3.5 w-3.5 mr-1" />
-                    Ajouter une ligne tarifaire
+          {/* ── Fiscal power matrix ── */}
+          {matrixDimension === "FISCAL_POWER" && (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Définissez les tarifs selon le type de carburant et la puissance fiscale (CV).
+              </p>
+              {(!matrixTariffs || matrixTariffs.length === 0) ? (
+                <div className="text-center p-6 border-2 border-dashed rounded-lg">
+                  <p className="text-sm text-muted-foreground mb-3">Aucun tarif configuré</p>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setMatrixTariffs(getDefaultFiscalPowerTariffs())}>
+                    <Plus className="h-4 w-4 mr-2" />Initialiser avec tarifs par défaut
                   </Button>
                 </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            {/* ─ Formules IC/IPT ─ */}
-            <AccordionItem value="formulas">
-              <AccordionTrigger className="text-sm font-medium hover:no-underline">
-                Formules (IC/IPT)
-                {formulas.length > 0 && (
-                  <Badge variant="secondary" className="ml-2 text-xs">
-                    {formulas.length} formule(s)
-                  </Badge>
-                )}
-              </AccordionTrigger>
-              <AccordionContent>
-                <div className="space-y-3 pt-2">
-                  <p className="text-xs text-muted-foreground">
-                    Configurez les formules IC (Incendie Complet) / IPT avec
-                    taux de base et plafonds.
-                  </p>
-
-                  {formulas.length > 0 && (
-                    <div className="rounded-lg border overflow-hidden">
-                      <Table>
-                        <TableHeader>
-                          <TableRow className="bg-muted/50">
-                            <TableHead className="text-xs">Nom</TableHead>
-                            <TableHead className="text-xs">
-                              Taux de base (%)
-                            </TableHead>
-                            <TableHead className="text-xs">
-                              Plafond (FCFA)
-                            </TableHead>
-                            <TableHead className="w-10"></TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {formulas.map((f) => (
-                            <TableRow key={f.id}>
-                              <TableCell>
-                                <Input
-                                  className="w-32 h-8 text-xs"
-                                  placeholder="Formule 1"
-                                  value={f.name}
-                                  onChange={(e) =>
-                                    updateFormula(f.id, "name", e.target.value)
-                                  }
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <Input
-                                  className="w-24 h-8 text-xs"
-                                  type="number"
-                                  step="0.01"
-                                  value={f.baseRate || ""}
-                                  onChange={(e) =>
-                                    updateFormula(
-                                      f.id,
-                                      "baseRate",
-                                      parseFloat(e.target.value) || 0
-                                    )
-                                  }
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <Input
-                                  className="w-28 h-8 text-xs"
-                                  type="number"
-                                  value={f.ceiling || ""}
-                                  onChange={(e) =>
-                                    updateFormula(
-                                      f.id,
-                                      "ceiling",
-                                      parseFloat(e.target.value) || 0
-                                    )
-                                  }
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-7 w-7 text-destructive hover:text-destructive"
-                                  onClick={() =>
-                                    setFormulas((prev) =>
-                                      prev.filter((x) => x.id !== f.id)
-                                    )
-                                  }
-                                >
-                                  <Minus className="h-3.5 w-3.5" />
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {(["Essence", "Diesel"] as const).map((fuelType) => (
+                    <div key={fuelType} className="border rounded-lg p-3">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="font-medium text-sm">{fuelType}</h4>
+                        <Button type="button" variant="outline" size="sm" onClick={() => {
+                          setMatrixTariffs([...matrixTariffs, { key: `${fuelType.toLowerCase()}_${Date.now()}`, fuelType, fiscalPowerMin: 1, fiscalPowerMax: 99, prime: 0 }]);
+                        }}>
+                          <Plus className="h-3 w-3 mr-1" />Ajouter
+                        </Button>
+                      </div>
+                      <div className="space-y-2">
+                        {matrixTariffs.filter((t) => t.fuelType === fuelType).map((tariff) => (
+                          <div key={tariff.key} className="flex items-center gap-2">
+                            <Input type="number" className="h-8 w-16 text-sm" placeholder="Min" value={tariff.fiscalPowerMin || ""} onChange={(e) => {
+                              setMatrixTariffs(matrixTariffs.map(t => t.key === tariff.key ? { ...t, fiscalPowerMin: parseInt(e.target.value) || 1 } : t));
+                            }} />
+                            <span className="text-xs text-muted-foreground">-</span>
+                            <Input type="number" className="h-8 w-16 text-sm" placeholder="Max" value={tariff.fiscalPowerMax === 99 ? "" : tariff.fiscalPowerMax} onChange={(e) => {
+                              setMatrixTariffs(matrixTariffs.map(t => t.key === tariff.key ? { ...t, fiscalPowerMax: parseInt(e.target.value) || 99 } : t));
+                            }} />
+                            <span className="text-xs bg-muted px-2 py-1 rounded">CV</span>
+                            <Input type="number" className="h-8 w-24 text-sm" placeholder="Tarif" value={tariff.prime || ""} onChange={(e) => {
+                              setMatrixTariffs(matrixTariffs.map(t => t.key === tariff.key ? { ...t, prime: parseInt(e.target.value) || 0 } : t));
+                            }} />
+                            <span className="text-xs text-muted-foreground">FCFA</span>
+                            <Button type="button" variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive" onClick={() => setMatrixTariffs(matrixTariffs.filter(t => t.key !== tariff.key))}>
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  )}
+                  ))}
+                </div>
+              )}
+              <div>
+                <Label>Prime par défaut (FCFA) — optionnel</Label>
+                <Input type="number" value={matrixDefaultPrime || ""} onChange={(e) => setMatrixDefaultPrime(parseInt(e.target.value) || 0)} placeholder="0" />
+                <p className="text-xs text-muted-foreground mt-1">Utilisée si aucune correspondance n&apos;est trouvée dans la matrice</p>
+              </div>
+            </div>
+          )}
 
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="w-full border-dashed"
-                    onClick={() =>
-                      setFormulas((prev) => [
-                        ...prev,
-                        { ...emptyFormula, id: crypto.randomUUID() },
-                      ])
-                    }
-                  >
-                    <Plus className="h-3.5 w-3.5 mr-1" />
-                    Ajouter une formule
+          {/* ── Formula matrix (IC/IPT) ── */}
+          {matrixDimension === "FORMULA" && (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Définissez les formules avec leurs plafonds de garanties et primes.
+              </p>
+              {matrixFormulas.length === 0 ? (
+                <div className="text-center p-6 border-2 border-dashed rounded-lg">
+                  <p className="text-sm text-muted-foreground mb-3">Aucune formule configurée</p>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setMatrixFormulas(getDefaultFormulas())}>
+                    <Plus className="h-4 w-4 mr-2" />Initialiser avec formules par défaut
                   </Button>
                 </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            {/* ─ Tarifs par catégorie (TCM/TCL) ─ */}
-            <AccordionItem value="categoryTariffs">
-              <AccordionTrigger className="text-sm font-medium hover:no-underline">
-                Tarifs par catégorie (TCM/TCL)
-                {categoryTariffs.length > 0 && (
-                  <Badge variant="secondary" className="ml-2 text-xs">
-                    {categoryTariffs.length} ligne(s)
-                  </Badge>
-                )}
-              </AccordionTrigger>
-              <AccordionContent>
-                <div className="space-y-3 pt-2">
-                  <p className="text-xs text-muted-foreground">
-                    Matrices 3D : Catégorie véhicule × Tranche de valeur
-                    neuve × Franchise. Utilisé pour TCM (Tous Corps
-                    Matériels) / TCL (Tous Corps).
-                  </p>
-
-                  {categoryTariffs.length > 0 && (
-                    <div className="rounded-lg border overflow-hidden">
-                      <Table>
-                        <TableHeader>
-                          <TableRow className="bg-muted/50">
-                            <TableHead className="text-xs">Catégorie</TableHead>
-                            <TableHead className="text-xs">
-                              VN Min (FCFA)
-                            </TableHead>
-                            <TableHead className="text-xs">
-                              VN Max (FCFA)
-                            </TableHead>
-                            <TableHead className="text-xs">
-                              Franchise (FCFA)
-                            </TableHead>
-                            <TableHead className="text-xs">
-                              Prime (FCFA)
-                            </TableHead>
-                            <TableHead className="w-10"></TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {categoryTariffs.map((ct) => (
-                            <TableRow key={ct.id}>
-                              <TableCell>
-                                <Select
-                                  value={ct.category}
-                                  onValueChange={(v) =>
-                                    updateCategoryTariff(
-                                      ct.id,
-                                      "category",
-                                      v
-                                    )
-                                  }
-                                >
-                                  <SelectTrigger className="w-24 h-8 text-xs">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {vehicleCategories.map((vc) => (
-                                      <SelectItem
-                                        key={vc.value}
-                                        value={vc.value}
-                                      >
-                                        {vc.value}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </TableCell>
-                              <TableCell>
-                                <Input
-                                  className="w-28 h-8 text-xs"
-                                  type="number"
-                                  value={ct.valueMin || ""}
-                                  onChange={(e) =>
-                                    updateCategoryTariff(
-                                      ct.id,
-                                      "valueMin",
-                                      parseFloat(e.target.value) || 0
-                                    )
-                                  }
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <Input
-                                  className="w-28 h-8 text-xs"
-                                  type="number"
-                                  value={ct.valueMax || ""}
-                                  onChange={(e) =>
-                                    updateCategoryTariff(
-                                      ct.id,
-                                      "valueMax",
-                                      parseFloat(e.target.value) || 0
-                                    )
-                                  }
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <Input
-                                  className="w-28 h-8 text-xs"
-                                  type="number"
-                                  value={ct.franchise || ""}
-                                  onChange={(e) =>
-                                    updateCategoryTariff(
-                                      ct.id,
-                                      "franchise",
-                                      parseFloat(e.target.value) || 0
-                                    )
-                                  }
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <Input
-                                  className="w-28 h-8 text-xs"
-                                  type="number"
-                                  value={ct.prime || ""}
-                                  onChange={(e) =>
-                                    updateCategoryTariff(
-                                      ct.id,
-                                      "prime",
-                                      parseFloat(e.target.value) || 0
-                                    )
-                                  }
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-7 w-7 text-destructive hover:text-destructive"
-                                  onClick={() =>
-                                    setCategoryTariffs((prev) =>
-                                      prev.filter((x) => x.id !== ct.id)
-                                    )
-                                  }
-                                >
-                                  <Minus className="h-3.5 w-3.5" />
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
+              ) : (
+                <div className="space-y-3">
+                  {matrixFormulas.map((formula) => (
+                    <div key={formula.formula} className="border rounded-lg p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-sm">Formule {formula.formula}</span>
+                          <Input type="text" value={formula.label} onChange={(e) => setMatrixFormulas(matrixFormulas.map(f => f.formula === formula.formula ? { ...f, label: e.target.value } : f))} className="h-8 w-40 text-sm" placeholder="Libellé" />
+                        </div>
+                        <Button type="button" variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive" onClick={() => setMatrixFormulas(matrixFormulas.filter(f => f.formula !== formula.formula))}>
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <div>
+                          <Label className="text-xs">Capital Décès (FCFA)</Label>
+                          <Input type="number" className="h-8 text-sm" value={formula.capitalDeces || ""} onChange={(e) => setMatrixFormulas(matrixFormulas.map(f => f.formula === formula.formula ? { ...f, capitalDeces: parseInt(e.target.value) || 0 } : f))} placeholder="0" />
+                        </div>
+                        <div>
+                          <Label className="text-xs">Capital Invalidité (FCFA)</Label>
+                          <Input type="number" className="h-8 text-sm" value={formula.capitalInvalidite || ""} onChange={(e) => setMatrixFormulas(matrixFormulas.map(f => f.formula === formula.formula ? { ...f, capitalInvalidite: parseInt(e.target.value) || 0 } : f))} placeholder="0" />
+                        </div>
+                        <div>
+                          <Label className="text-xs">Frais Médicaux (FCFA)</Label>
+                          <Input type="number" className="h-8 text-sm" value={formula.fraisMedicaux || ""} onChange={(e) => setMatrixFormulas(matrixFormulas.map(f => f.formula === formula.formula ? { ...f, fraisMedicaux: parseInt(e.target.value) || 0 } : f))} placeholder="0" />
+                        </div>
+                        <div>
+                          <Label className="text-xs">Prime fixe (FCFA)</Label>
+                          <Input type="number" className="h-8 text-sm" value={formula.prime || ""} onChange={(e) => setMatrixFormulas(matrixFormulas.map(f => f.formula === formula.formula ? { ...f, prime: parseInt(e.target.value) || 0 } : f))} placeholder="0" />
+                        </div>
+                      </div>
                     </div>
-                  )}
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="w-full border-dashed"
-                    onClick={() =>
-                      setCategoryTariffs((prev) => [
-                        ...prev,
-                        {
-                          ...emptyCategoryTariff,
-                          id: crypto.randomUUID(),
-                        },
-                      ])
-                    }
-                  >
-                    <Plus className="h-3.5 w-3.5 mr-1" />
-                    Ajouter une ligne catégorie
+                  ))}
+                  <Button type="button" variant="outline" size="sm" onClick={() => {
+                    const nextNum = matrixFormulas.length > 0 ? Math.max(...matrixFormulas.map(f => f.formula)) + 1 : 1;
+                    setMatrixFormulas([...matrixFormulas, { formula: nextNum, label: `Formule ${nextNum}`, capitalDeces: 0, capitalInvalidite: 0, fraisMedicaux: 0, prime: 0, usePlaces: false }]);
+                  }}>
+                    <Plus className="h-3 w-3 mr-1" />Ajouter une formule
                   </Button>
                 </div>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
+              )}
+            </div>
+          )}
+
+          {/* ── VEHICLE_CATEGORY: category → prime mapping ── */}
+          {matrixDimension === "VEHICLE_CATEGORY" && (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Définissez les primes par catégorie de véhicule (401, 402, etc.).
+              </p>
+              {(!matrixTariffs || matrixTariffs.length === 0) ? (
+                <div className="text-center p-6 border-2 border-dashed rounded-lg">
+                  <p className="text-sm text-muted-foreground mb-3">Aucun tarif configuré</p>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setMatrixTariffs([
+                    { key: `vc_401_${Date.now()}`, fuelType: "Essence", fiscalPowerMin: 0, fiscalPowerMax: 0, prime: 0, vehicleCategory: "401" },
+                    { key: `vc_402_${Date.now()}`, fuelType: "Essence", fiscalPowerMin: 0, fiscalPowerMax: 0, prime: 0, vehicleCategory: "402" },
+                    { key: `vc_412_${Date.now()}`, fuelType: "Essence", fiscalPowerMin: 0, fiscalPowerMax: 0, prime: 0, vehicleCategory: "412" },
+                  ])}>
+                    <Plus className="h-4 w-4 mr-2" />Initialiser avec catégories par défaut
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {matrixTariffs.map((tariff) => (
+                    <div key={tariff.key} className="flex items-center gap-2">
+                      <Input type="text" className="h-8 w-20 text-sm shrink-0" placeholder="Code" value={tariff.vehicleCategory || ""} onChange={(e) => {
+                        setMatrixTariffs(matrixTariffs.map(t => t.key === tariff.key ? { ...t, vehicleCategory: e.target.value } : t));
+                      }} />
+                      <Input type="number" className="h-8 flex-1 text-sm" placeholder="Prime FCFA" value={tariff.prime || ""} onChange={(e) => {
+                        setMatrixTariffs(matrixTariffs.map(t => t.key === tariff.key ? { ...t, prime: parseInt(e.target.value) || 0 } : t));
+                      }} />
+                      <span className="text-xs text-muted-foreground shrink-0">FCFA</span>
+                      <Button type="button" variant="ghost" size="sm" className="h-8 w-8 p-0 shrink-0 text-destructive" onClick={() => setMatrixTariffs(matrixTariffs.filter(t => t.key !== tariff.key))}>
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button type="button" variant="outline" size="sm" onClick={() => {
+                    setMatrixTariffs([...matrixTariffs, { key: `vc_${Date.now()}`, fuelType: "Essence", fiscalPowerMin: 0, fiscalPowerMax: 0, prime: 0, vehicleCategory: "" }]);
+                  }}>
+                    <Plus className="h-3 w-3 mr-1" />Ajouter une catégorie
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── TIERCE_COMPLETE / TIERCE_COLLISION: VN ranges × franchises grid ── */}
+          {(matrixDimension === "TIERCE_COMPLETE" || matrixDimension === "TIERCE_COLLISION") && (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                {matrixDimension === "TIERCE_COMPLETE" ? "Tierce Complète (DTA)" : "Tierce Collision (DC)"} — Définissez les primes par tranche VN et franchise.
+              </p>
+              {categoryTariffs.length === 0 ? (
+                <div className="text-center p-6 border-2 border-dashed rounded-lg">
+                  <p className="text-sm text-muted-foreground mb-3">Aucune tarification configurée</p>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setCategoryTariffs(getDefaultCategoryTariffs(matrixDimension as "TIERCE_COMPLETE" | "TIERCE_COLLISION"))}>
+                    <Plus className="h-4 w-4 mr-2" />Initialiser avec tarifs par défaut
+                  </Button>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm border-collapse">
+                    <thead>
+                      <tr>
+                        <th className="text-left p-2 border bg-muted/50 text-xs font-medium">Tranche VN</th>
+                        {FRANCHISE_LEVELS.map(fl => (
+                          <th key={fl.value} className="text-center p-2 border bg-muted/50 text-xs font-medium">{fl.label}</th>
+                        ))}
+                        <th className="w-10"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {VN_RANGES.map(range => {
+                        const rowEntries = categoryTariffs.filter(ct => ct.valueMin === range.min && ct.guaranteeType === matrixDimension);
+                        return (
+                          <tr key={range.key}>
+                            <td className="p-2 border font-medium text-xs whitespace-nowrap">{range.label}</td>
+                            {FRANCHISE_LEVELS.map(fl => {
+                              const entry = rowEntries.find(r => r.franchise === fl.value);
+                              return (
+                                <td key={fl.value} className="p-1 border text-center">
+                                  {entry ? (
+                                    <Input
+                                      type="number"
+                                      className="h-7 w-20 text-xs text-center mx-auto"
+                                      value={entry.prime || ""}
+                                      onChange={(e) => {
+                                        const val = parseInt(e.target.value) || 0;
+                                        setCategoryTariffs(categoryTariffs.map(ct => ct.key === entry.key ? { ...ct, prime: val } : ct));
+                                      }}
+                                    />
+                                  ) : (
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                                      onClick={() => {
+                                        const now = Date.now();
+                                        setCategoryTariffs([...categoryTariffs, {
+                                          key: `${matrixDimension.toLowerCase()}_${range.key}_${fl.value}_${now}`,
+                                          category: range.key,
+                                          guaranteeType: matrixDimension as "TIERCE_COMPLETE" | "TIERCE_COLLISION",
+                                          valueMin: range.min,
+                                          valueMax: range.max,
+                                          valueLabel: range.label,
+                                          franchise: fl.value,
+                                          franchiseLabel: fl.label,
+                                          prime: 0,
+                                        }]);
+                                      }}
+                                    >
+                                      <Plus className="h-3 w-3" />
+                                    </Button>
+                                  )}
+                                </td>
+                              );
+                            })}
+                            <td></td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Cliquez <span className="inline-flex align-middle"><Plus className="h-3 w-3" /></span> pour ajouter une cellule. Les primes sont en FCFA.
+                  </p>
+                </div>
+              )}
+              <div>
+                <Label>Prime par défaut (FCFA) — optionnel</Label>
+                <Input type="number" value={matrixDefaultPrime || ""} onChange={(e) => setMatrixDefaultPrime(parseInt(e.target.value) || 0)} placeholder="0" />
+                <p className="text-xs text-muted-foreground mt-1">Utilisée si aucune correspondance n&apos;est trouvée dans la grille</p>
+              </div>
+            </div>
+          )}
         </div>
       );
     }
@@ -1742,16 +1598,11 @@ export function InsurerGuaranteesTab() {
 
       {/* ── Wizard Dialog ── */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh]">
+        <DialogContent className="sm:max-w-5xl max-h-[92vh]">
           <DialogHeader>
             <DialogTitle>
               {editingItem ? "Modifier la garantie" : "Nouvelle garantie"}
             </DialogTitle>
-            <DialogDescription>
-              {editingItem
-                ? "Modifiez les informations de la garantie."
-                : "Configurez votre nouvelle garantie en 3 étapes."}
-            </DialogDescription>
           </DialogHeader>
 
           {/* Step indicator */}
@@ -1759,7 +1610,7 @@ export function InsurerGuaranteesTab() {
             {[1, 2, 3].map((s) => (
               <div key={s} className="flex items-center gap-2">
                 <div
-                  className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium transition-colors ${
+                  className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${
                     step > s
                       ? "bg-emerald-500 text-white"
                       : step === s
@@ -1771,7 +1622,7 @@ export function InsurerGuaranteesTab() {
                 </div>
                 {s < 3 && (
                   <div
-                    className={`h-0.5 w-12 transition-colors ${
+                    className={`h-0.5 w-12 ${
                       step > s ? "bg-emerald-500" : "bg-muted"
                     }`}
                   />
@@ -1780,65 +1631,46 @@ export function InsurerGuaranteesTab() {
             ))}
           </div>
 
-          <ScrollArea className="max-h-[55vh] pr-4">
+          <ScrollArea className="max-h-[70vh] pr-4">
             {/* Step 1: Basic info */}
             {step === 1 && (
               <div className="space-y-4">
                 <div className="w-full">
-                  <Label htmlFor="cov-name">Nom *</Label>
-                  <Input
-                    className="w-full mt-1"
-                    id="cov-name"
-                    placeholder="Ex: Responsabilité Civile Automobile"
-                    value={step1.name}
-                    onChange={(e) =>
-                      setStep1({ ...step1, name: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="w-full">
-                  <Label>Description</Label>
-                  <Textarea
-                    className="w-full mt-1"
-                    placeholder="Description de la garantie..."
-                    rows={3}
-                    value={step1.description}
-                    onChange={(e) =>
-                      setStep1({ ...step1, description: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="w-full">
-                  <Label>Catégorie de garantie</Label>
-                  <Select
-                    value={step1.categoryId}
-                    onValueChange={(v) =>
-                      setStep1({ ...step1, categoryId: v })
-                    }
-                  >
-                    <SelectTrigger className="w-full mt-1">
-                      <SelectValue placeholder="Sélectionner une catégorie" />
-                    </SelectTrigger>
+                  <Label>Catégorie Produit</Label>
+                  <Select value={step1.insuranceCategoryId} onValueChange={(v) => setStep1({ ...step1, insuranceCategoryId: v })}>
+                    <SelectTrigger className="w-full"><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
                     <SelectContent>
-                      {categories.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.name}
-                        </SelectItem>
-                      ))}
+                      {insuranceCategories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="flex items-center justify-between rounded-lg border p-4">
-                  <Label htmlFor="cov-mandatory" className="cursor-pointer">
-                    Garantie obligatoire
-                  </Label>
-                  <Switch
-                    id="cov-mandatory"
-                    checked={step1.isMandatory}
-                    onCheckedChange={(v) =>
-                      setStep1({ ...step1, isMandatory: v })
-                    }
-                  />
+                <div className="w-full"><Label>Nom *</Label><Input className="w-full" value={step1.name} onChange={(e) => setStep1({ ...step1, name: e.target.value })} /></div>
+                <div className="w-full"><Label>Description</Label><Textarea className="w-full" value={step1.description} onChange={(e) => setStep1({ ...step1, description: e.target.value })} rows={2} /></div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="w-full">
+                    <Label>Cat. Garantie</Label>
+                    <Select value={step1.categoryId} onValueChange={(v) => setStep1({ ...step1, categoryId: v })}>
+                      <SelectTrigger className="w-full"><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
+                      <SelectContent>
+                        {categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="w-full"><Label>Ordre d&apos;affichage</Label><Input className="w-full" type="number" value={step1.displayOrder} onChange={(e) => setStep1({ ...step1, displayOrder: e.target.value })} /></div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="flex items-center justify-between h-full pt-6">
+                    <Label>Obligatoire</Label>
+                    <Switch checked={step1.isMandatory} onCheckedChange={(v) => setStep1({ ...step1, isMandatory: v })} />
+                  </div>
+                  <div className="flex items-center justify-between h-full pt-6">
+                    <Label>Optionnelle</Label>
+                    <Switch checked={step1.isOptional} onCheckedChange={(v) => setStep1({ ...step1, isOptional: v })} />
+                  </div>
+                </div>
+                <div className="w-full">
+                  <Label>Conditions d&apos;application</Label>
+                  <Textarea className="w-full" placeholder="Conditions d'application (optionnel)" rows={2} value={step1.conditions} onChange={(e) => setStep1({ ...step1, conditions: e.target.value })} />
                 </div>
               </div>
             )}
@@ -1861,8 +1693,8 @@ export function InsurerGuaranteesTab() {
                           setCalcType(opt.type);
                           // Reset metadata when switching type
                           setMetadata({});
-                          setTariffs([]);
-                          setFormulas([]);
+                          setMatrixTariffs([]);
+                          setMatrixFormulas([]);
                           setCategoryTariffs([]);
                         }}
                         className={`w-full flex items-start gap-4 rounded-xl border-2 p-4 text-left transition-all ${
@@ -1905,7 +1737,7 @@ export function InsurerGuaranteesTab() {
 
             {/* Step 3: Calculation config */}
             {step === 3 && (
-              <div className="py-2">
+              <div className="py-2 space-y-6">
                 <div className="mb-4 flex items-center gap-2">
                   <Badge className={calcBadge[calcType] ?? ""}>
                     {calcLabel[calcType] ?? calcType}
@@ -1915,6 +1747,7 @@ export function InsurerGuaranteesTab() {
                   </span>
                 </div>
                 {renderStep3()}
+                {calcType && renderCommonParams()}
               </div>
             )}
           </ScrollArea>
