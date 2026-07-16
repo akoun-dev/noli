@@ -69,12 +69,16 @@ const CONTRACT_TYPE_LABELS: Record<string, string> = {
   basic: "Tiers",
   third_party_plus: "Tiers+",
   all_risks: "Tous Risques",
+  premium: "Premium",
+  premium_plus: "Premium+",
 };
 
 const CONTRACT_TYPE_BADGE: Record<string, string> = {
   basic: "bg-muted text-muted-foreground",
   third_party_plus: "bg-secondary text-secondary-foreground",
   all_risks: "bg-accent text-accent-foreground",
+  premium: "bg-primary/15 text-primary border-primary/30",
+  premium_plus: "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-400/40",
 };
 
 const FORMAT = new Intl.NumberFormat("fr-FR");
@@ -470,6 +474,8 @@ export function OffersPage() {
                 <SelectItem value="basic">Tiers</SelectItem>
                 <SelectItem value="third_party_plus">Tiers+</SelectItem>
                 <SelectItem value="all_risks">Tous Risques</SelectItem>
+                <SelectItem value="premium">Premium</SelectItem>
+                <SelectItem value="premium_plus">Premium+</SelectItem>
               </SelectContent>
             </Select>
 

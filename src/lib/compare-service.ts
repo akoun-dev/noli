@@ -28,6 +28,8 @@ const contractTypeLabel: Record<string, string> = {
   basic: "Tiers",
   third_party_plus: "Tiers+",
   all_risks: "Tous Risques",
+  premium: "Premium",
+  premium_plus: "Premium+",
 };
 
 function toPricingVehicle(v: VehicleInfo): VehiclePricingData {

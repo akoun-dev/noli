@@ -53,6 +53,10 @@ const coverageBadgeStyle = (type: string) => {
       return "bg-secondary/15 text-secondary border-secondary/25";
     case "Tous Risques":
       return "bg-accent/20 text-accent-foreground border-accent/35";
+    case "Premium":
+      return "bg-primary/15 text-primary border-primary/30";
+    case "Premium+":
+      return "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-400/40";
     default:
       return "bg-muted/60 text-muted-foreground border-border";
   }
@@ -963,92 +967,92 @@ function OfferCard({
             </div>
           </div>
         </div>
-      </div>
 
-      {/* ── Inline "En savoir plus" dropdown ── */}
-      <div className="mt-0">
-        <button
-          onClick={() => setDetailsOpen(!detailsOpen)}
-          className="w-full flex items-center justify-center gap-2 py-3 text-sm font-medium text-secondary hover:text-primary transition-colors"
-        >
-          En savoir plus sur cette offre
-          {detailsOpen ? (
-            <ChevronUp className="size-4" />
-          ) : (
-            <ChevronDown className="size-4" />
-          )}
-        </button>
+        {/* ── "En savoir plus" dropdown ── */}
+        <div className="border-t border-border/40">
+          <button
+            onClick={() => setDetailsOpen(!detailsOpen)}
+            className="w-full flex items-center justify-center gap-2 py-3 text-sm font-medium text-secondary hover:text-primary transition-colors"
+          >
+            En savoir plus sur cette offre
+            {detailsOpen ? (
+              <ChevronUp className="size-4" />
+            ) : (
+              <ChevronDown className="size-4" />
+            )}
+          </button>
 
-        <div
-          className={`overflow-hidden transition-all duration-300 ease-in-out ${
-            detailsOpen ? "max-h-[2000px] opacity-100" : "max-h-0 opacity-0"
-          }`}
-        >
-            <div className="bg-muted/20 rounded-lg border border-border/40 p-5 space-y-5">
-                {/* Description */}
-                {offer.description && (
-                  <div>
-                    <h4 className="font-semibold text-sm mb-2 text-foreground">
-                      Description
-                    </h4>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
-                      {offer.description}
-                    </p>
-                  </div>
-                )}
-
-                {/* All features grid */}
+          <div
+            className={`overflow-hidden transition-all duration-300 ease-in-out ${
+              detailsOpen ? "max-h-[2000px] opacity-100" : "max-h-0 opacity-0"
+            }`}
+          >
+            <div className="bg-muted/20 px-5 pb-5 space-y-5">
+              {/* Description */}
+              {offer.description && (
                 <div>
-                  <h4 className="font-semibold text-sm mb-3 text-foreground">
-                    Garanties incluses
+                  <h4 className="font-semibold text-sm mb-2 text-foreground">
+                    Description
                   </h4>
-                  <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {offer.features.map((feature, idx) => (
-                      <li key={idx} className="flex items-start gap-2 text-sm">
-                        <CheckCircle2 className="size-4 text-green-600 mt-0.5 shrink-0" />
-                        <span className="text-foreground/90">{resolveCoverageName(feature)}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {offer.description}
+                  </p>
                 </div>
+              )}
 
-                {/* Coverage amount */}
-                {offer.maxCoverage > 0 && (
-                  <div className="flex items-center gap-3 bg-card rounded-lg p-3 border border-border/30">
-                    <Shield className="size-5 text-primary shrink-0" />
-                    <div>
-                      <p className="text-xs text-muted-foreground">
-                        Capital maximum couvert
-                      </p>
-                      <p className="text-sm font-bold text-foreground">
-                        {Math.round(offer.maxCoverage / 1_000_000)} M FCFA
-                      </p>
-                    </div>
-                  </div>
-                )}
+              {/* All features grid */}
+              <div>
+                <h4 className="font-semibold text-sm mb-3 text-foreground">
+                  Garanties incluses
+                </h4>
+                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {offer.features.map((feature, idx) => (
+                    <li key={idx} className="flex items-start gap-2 text-sm">
+                      <CheckCircle2 className="size-4 text-green-600 mt-0.5 shrink-0" />
+                      <span className="text-foreground/90">{resolveCoverageName(feature)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
 
-                {/* Conditions */}
-                {offer.conditions && (
+              {/* Coverage amount */}
+              {offer.maxCoverage > 0 && (
+                <div className="flex items-center gap-3 bg-card rounded-lg p-3 border border-border/30">
+                  <Shield className="size-5 text-primary shrink-0" />
                   <div>
-                    <h4 className="font-semibold text-sm mb-2 text-foreground">
-                      Conditions
-                    </h4>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
-                      {offer.conditions}
+                    <p className="text-xs text-muted-foreground">
+                      Capital maximum couvert
+                    </p>
+                    <p className="text-sm font-bold text-foreground">
+                      {Math.round(offer.maxCoverage / 1_000_000)} M FCFA
                     </p>
                   </div>
-                )}
+                </div>
+              )}
 
-                {/* CTA */}
-                <Button
-                  size="lg"
-                  className="w-full bg-accent text-accent-foreground hover:bg-accent/90 rounded-lg font-semibold shadow-sm"
-                  onClick={() => onRequestQuote(offer)}
-                >
-                  <FileText className="size-4 mr-2" />
-                  Obtenir le devis
-                </Button>
-              </div>
+              {/* Conditions */}
+              {offer.conditions && (
+                <div>
+                  <h4 className="font-semibold text-sm mb-2 text-foreground">
+                    Conditions
+                  </h4>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {offer.conditions}
+                  </p>
+                </div>
+              )}
+
+              {/* CTA */}
+              <Button
+                size="lg"
+                className="w-full bg-accent text-accent-foreground hover:bg-accent/90 rounded-lg font-semibold shadow-sm"
+                onClick={() => onRequestQuote(offer)}
+              >
+                <FileText className="size-4 mr-2" />
+                Obtenir le devis
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -1145,7 +1149,11 @@ export function ResultsPage() {
       results = results.filter((o) => effectiveChecked.has(o.insurerName));
     }
 
-    results = results.filter((o) => o.monthlyPrice <= budgetMax);
+    // Filtre budget mensuel avec sécurité NaN
+    results = results.filter((o) => {
+      if (typeof o.monthlyPrice !== "number" || isNaN(o.monthlyPrice)) return true;
+      return o.monthlyPrice <= budgetMax;
+    });
 
     switch (sortBy) {
       case "price_asc":
@@ -1255,7 +1263,7 @@ export function ResultsPage() {
   const activeFilterCount = [
     coverageFilter !== "all",
     uncheckedInsurers.size > 0,
-    budgetMax < 300000,
+    budgetMax < BUDGET_MAX,
   ].filter(Boolean).length;
 
   /* ── empty state (no comparison results at all) ── */

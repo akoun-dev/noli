@@ -2,8 +2,9 @@ export const MAX_COMPARE = 4;
 
 export const COVERAGE_OPTIONS = ["Tous", "Tiers", "Tiers+", "Tous Risques"] as const;
 
-export const BUDGET_MAX = 300000;
-export const BUDGET_STEP = 5000;
+// Budget mensuel max : 100 000 FCFA (les prix mensuels sont typiquement entre 2 000 et 50 000 FCFA)
+export const BUDGET_MAX = 100000;
+export const BUDGET_STEP = 2500;
 
 export const USAGE_OPTIONS = [
   { value: "personnel", label: "Personnel" },
