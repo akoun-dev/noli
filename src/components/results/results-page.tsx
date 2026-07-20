@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState, useCallback } from "react";
+import React, { useMemo, useState, useCallback, useEffect } from "react";
 import {
   ArrowLeft,
   Car,
@@ -44,6 +44,34 @@ import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 /* ──────────────────────────── helpers ──────────────────────────── */
+
+function normalizeGuaranteeName(name: string): string {
+  return name
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/&/g, "et")
+    .replace(/[-_]/g, " ")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function findPricingForFeature(
+  pricingBreakdown: InsurerOffer["pricingBreakdown"],
+  feature: string
+) {
+  if (!pricingBreakdown) return undefined;
+  const norm = normalizeGuaranteeName(feature);
+  return pricingBreakdown.find((pb) => {
+    if (normalizeGuaranteeName(pb.guaranteeName) === norm) return true;
+    if (normalizeGuaranteeName(pb.guaranteeCode) === norm) return true;
+    const resolved = resolveCoverageName(pb.guaranteeName);
+    if (normalizeGuaranteeName(resolved) === norm) return true;
+    const normName = normalizeGuaranteeName(pb.guaranteeName);
+    if (norm.includes(normName) || normName.includes(norm)) return true;
+    const keywords = norm.split(" ").filter((w) => w.length > 2);
+    return keywords.length > 0 && keywords.every((kw) => normName.includes(kw));
+  });
+}
 
 const coverageBadgeStyle = (type: string) => {
   switch (type) {
@@ -114,6 +142,7 @@ function FiltersSidebar({
   uniqueInsurers,
   budgetMax,
   setBudgetMax,
+  effectiveBudgetMax,
   onReset,
   totalOffers,
   onToggleAllInsurers,
@@ -126,6 +155,7 @@ function FiltersSidebar({
   uniqueInsurers: string[];
   budgetMax: number;
   setBudgetMax: (v: number) => void;
+  effectiveBudgetMax: number;
   onReset: () => void;
   totalOffers: number;
 }) {
@@ -235,7 +265,7 @@ function FiltersSidebar({
             value={[budgetMax]}
             onValueChange={([v]) => setBudgetMax(v)}
             min={0}
-            max={BUDGET_MAX}
+            max={effectiveBudgetMax}
             step={BUDGET_STEP}
             className="w-full"
           />
@@ -348,68 +378,103 @@ function ComparisonModal({
   onClose: () => void;
 }) {
   const { vehicleInfo, coverageNeeds } = useAppStore();
-  // Build category → guarantees structure from pricingBreakdown
+  const selectedCategories = coverageNeeds.guaranteeCategories || [];
+
+  // Build category → guarantees: selected categories ALWAYS appear
   const categories = useMemo(() => {
     const catMap = new Map<string, { name: string; guarantees: string[] }>();
-    let hasBreakdowns = false;
 
+    // 1) Seed ALL selected categories
+    for (const code of selectedCategories) {
+      catMap.set(code, { name: COVERAGE_LABELS[code] || code, guarantees: [] });
+    }
+
+    // 2) Collect ALL guarantee names from all offers' pricingBreakdown
+    const allBreakdowns = new Map<string, { name: string; code: string; categoryName: string }[]>();
     for (const o of offers) {
-      if (o.pricingBreakdown && o.pricingBreakdown.length > 0) {
-        hasBreakdowns = true;
-        for (const pb of o.pricingBreakdown) {
-          const catKey = pb.categoryCode || "AUTRES";
-          if (!catMap.has(catKey)) {
-            catMap.set(catKey, { name: pb.categoryName || "Autres", guarantees: [] });
-          }
-          const entry = catMap.get(catKey)!;
-          if (!entry.guarantees.includes(pb.guaranteeName)) {
-            entry.guarantees.push(pb.guaranteeName);
+      if (!o.pricingBreakdown) continue;
+      for (const pb of o.pricingBreakdown) {
+        if (!pb.categoryCode) continue;
+        const list = allBreakdowns.get(pb.categoryCode) || [];
+        if (!list.some((e) => e.name === pb.guaranteeName)) {
+          list.push({ name: pb.guaranteeName, code: pb.guaranteeCode, categoryName: pb.categoryName || pb.guaranteeName });
+        }
+        allBreakdowns.set(pb.categoryCode, list);
+      }
+    }
+
+    // 3) Fill each selected category with its guarantees from breakdowns
+    for (const [catCode, guarantees] of allBreakdowns) {
+      if (catMap.has(catCode)) {
+        const entry = catMap.get(catCode)!;
+        for (const g of guarantees) {
+          if (!entry.guarantees.includes(g.name)) {
+            entry.guarantees.push(g.name);
           }
         }
       }
     }
 
-    // Fallback: use features if no breakdowns
-    if (!hasBreakdowns) {
-      catMap.set("GARANTIES", { name: "Garanties incluses", guarantees: [] });
-      for (const o of offers) {
-        for (const f of o.features) {
-          const name = resolveCoverageName(f);
-          const entry = catMap.get("GARANTIES")!;
-          if (!entry.guarantees.includes(name)) {
-            entry.guarantees.push(name);
-          }
-        }
+    // 4) For any selected category still empty, add the category name itself as a single guarantee
+    for (const [catCode, entry] of catMap) {
+      if (entry.guarantees.length === 0) {
+        entry.guarantees.push(entry.name);
+      }
+    }
+
+    // 5) Add extra categories from breakdowns not in selectedCategories
+    for (const [catCode, guarantees] of allBreakdowns) {
+      if (!catMap.has(catCode)) {
+        catMap.set(catCode, {
+          name: guarantees[0]?.categoryName || catCode,
+          guarantees: guarantees.map((g) => g.name),
+        });
       }
     }
 
     return Array.from(catMap.entries());
-  }, [offers]);
+  }, [offers, selectedCategories]);
 
-  // Build a lookup: offer.id → Set of guarantee names it has
+  // Build a lookup: offer.id → normalized guarantee name keys
   const guaranteeLookup = useMemo(() => {
     const map = new Map<string, Set<string>>();
     for (const o of offers) {
       const set = new Set<string>();
-      if (o.pricingBreakdown && o.pricingBreakdown.length > 0) {
+      if (o.pricingBreakdown) {
         for (const pb of o.pricingBreakdown) {
-          if (pb.guaranteeName) set.add(pb.guaranteeName);
+          if (pb.guaranteeName) {
+            set.add(pb.guaranteeName);
+            set.add(normalizeGuaranteeName(pb.guaranteeName));
+            set.add(resolveCoverageName(pb.guaranteeName));
+          }
+          if (pb.guaranteeCode) {
+            set.add(pb.guaranteeCode);
+            set.add(normalizeGuaranteeName(pb.guaranteeCode));
+          }
         }
-      } else {
-        for (const f of o.features) set.add(resolveCoverageName(f));
+      }
+      for (const f of o.features) {
+        set.add(f);
+        set.add(normalizeGuaranteeName(f));
+        set.add(resolveCoverageName(f));
       }
       map.set(o.id, set);
     }
     return map;
   }, [offers]);
 
-  // Build a pricing lookup: `${offerId}::${guaranteeName}` → PricingBreakdown
+  // Build a pricing lookup with normalized keys: `${offerId}::${normalizedGuaranteeName}` → PricingBreakdown
   const pricingLookup = useMemo(() => {
-    const map = new Map<string, { amount: number; method: string; breakdown: string }>();
+    const map = new Map<string, { amount: number; coverageCapital?: number; method: string; breakdown: string }>();
     for (const o of offers) {
       if (o.pricingBreakdown) {
         for (const pb of o.pricingBreakdown) {
-          map.set(`${o.id}::${pb.guaranteeName}`, pb);
+          const keys = [pb.guaranteeName, pb.guaranteeCode, resolveCoverageName(pb.guaranteeName)]
+            .filter(Boolean)
+            .flatMap((name) => [name, normalizeGuaranteeName(name)]);
+          for (const key of keys) {
+            map.set(`${o.id}::${key}`, pb);
+          }
         }
       }
     }
@@ -419,7 +484,6 @@ function ComparisonModal({
 
   if (!open || offers.length < 2) return null;
 
-  const selectedCategories = coverageNeeds.guaranteeCategories || [];
   const cheapest = [...offers].sort((a, b) => a.annualPrice - b.annualPrice)[0];
 
   return (
@@ -620,12 +684,12 @@ function ComparisonModal({
                       <tr
                         key={guarantee}
                         className={`transition-colors ${
-                          isZebra ? "bg-[#B9E54D]/5" : "bg-card"
+                          isZebra ? "bg-primary/5" : "bg-card"
                         } hover:bg-muted/20`}
                       >
                         <td
                           className={`p-3 pl-6 text-sm text-foreground sticky left-0 border-b border-border/20 font-medium ${
-                            isZebra ? "bg-[#B9E54D]/5" : "bg-card"
+                            isZebra ? "bg-primary/5" : "bg-card"
                           }`}
                         >
                           <div className="flex items-center gap-2">
@@ -634,37 +698,72 @@ function ComparisonModal({
                           </div>
                         </td>
                         {offers.map((offer) => {
-                          const hasGuarantee = guaranteeLookup.get(offer.id)?.has(guarantee) ?? false;
-                          const pricing = pricingLookup.get(`${offer.id}::${guarantee}`);
+                          const normG = normalizeGuaranteeName(guarantee);
+                          const hasGuarantee = (guaranteeLookup.get(offer.id)?.has(guarantee) ?? false)
+                            || (guaranteeLookup.get(offer.id)?.has(normG) ?? false);
+                          const pricing = pricingLookup.get(`${offer.id}::${guarantee}`)
+                            || pricingLookup.get(`${offer.id}::${normG}`);
+                          const description = offer.guaranteeDescriptions?.[guarantee]
+                            || offer.guaranteeDescriptions?.[Object.keys(offer.guaranteeDescriptions || {}).find(k => normalizeGuaranteeName(k) === normG) || ""]
+                            || null;
                           return (
                             <td
                               key={offer.id}
                               className="p-3 text-center border-b border-border/20"
                             >
-                              {hasGuarantee && pricing ? (
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <span className="text-sm font-bold text-foreground tabular-nums cursor-default">
-                                      {pricing.amount === 0 ? "Gratuit" : formatFCFA(pricing.amount)}
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className={`text-sm font-bold tabular-nums cursor-default ${
+                                    hasGuarantee
+                                      ? "text-foreground"
+                                      : "text-muted-foreground/40"
+                                  }`}>
+                                    {hasGuarantee
+                                      ? (pricing ? (pricing.amount === 0 ? "Gratuit" : formatFCFA(pricing.amount)) : "—")
+                                      : "—"
+                                    }
+                                  </span>
+                                  {hasGuarantee && pricing && pricing.coverageCapital != null && pricing.coverageCapital > 0 && (
+                                    <span className="block text-[10px] text-muted-foreground/70 mt-0.5 font-normal">
+                                      Capital : {formatFCFA(pricing.coverageCapital)}
                                     </span>
-                                  </TooltipTrigger>
-                                   <TooltipContent side="bottom" className="max-w-xs text-xs bg-foreground text-white border-foreground">
-                                     <p className="text-white whitespace-pre-line">{pricing.breakdown}</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              ) : hasGuarantee ? (
-                                <div className="flex items-center justify-center">
-                                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30 ring-1 ring-green-200 dark:ring-green-800/50">
-                                    <Check className="size-3.5 text-green-600 dark:text-green-400" />
+                                  )}
+                                </TooltipTrigger>
+                                <TooltipContent side="bottom" className="max-w-[300px] text-sm bg-foreground text-background border-foreground" arrowClassName="fill-foreground bg-foreground">
+                                  <div className="space-y-1.5">
+                                    <p className="font-bold text-background">{guarantee}</p>
+                                    {hasGuarantee ? (
+                                      <>
+                                        {description ? (
+                                          <p className="text-background/90 whitespace-pre-line leading-relaxed">{description}</p>
+                                        ) : (
+                                          <p className="text-background/60 italic">Description non disponible</p>
+                                        )}
+                                        {pricing && (
+                                          <div className="border-t border-background/20 pt-1.5 mt-1.5 space-y-1">
+                                            {pricing.coverageCapital != null && pricing.coverageCapital > 0 && (
+                                              <p className="text-background/90">
+                                                Capital garanti : <span className="font-bold text-background">{formatFCFA(pricing.coverageCapital)}</span>
+                                              </p>
+                                            )}
+                                            <p className="text-background/90">
+                                              Montant : <span className="font-bold text-background">{pricing.amount === 0 ? "Gratuit" : formatFCFA(pricing.amount)}</span>
+                                            </p>
+                                            <p className="text-background/90">
+                                              Méthode : <span className="font-semibold text-background">{pricing.method}</span>
+                                            </p>
+                                            {pricing.breakdown && (
+                                              <p className="text-background/80 whitespace-pre-line text-xs">{pricing.breakdown}</p>
+                                            )}
+                                          </div>
+                                        )}
+                                      </>
+                                    ) : (
+                                      <p className="text-background/70 italic">Non couverte par cette offre</p>
+                                    )}
                                   </div>
-                                </div>
-                              ) : (
-                                <div className="flex items-center justify-center">
-                                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-red-50 dark:bg-red-900/20 ring-1 ring-red-200 dark:ring-red-800/50">
-                                    <X className="size-3.5 text-red-400 dark:text-red-400" />
-                                  </div>
-                                </div>
-                              )}
+                                </TooltipContent>
+                              </Tooltip>
                             </td>
                           );
                         })}
@@ -825,12 +924,14 @@ function OfferCard({
   onRequestCall,
   onAddToCompare,
   isCompared,
+  priceMode,
 }: {
   offer: InsurerOffer;
   onRequestQuote: (offer: InsurerOffer) => void;
   onRequestCall: (offer: InsurerOffer) => void;
   onAddToCompare: (offer: InsurerOffer) => void;
   isCompared: boolean;
+  priceMode: "annual" | "monthly";
 }) {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const visibleFeatures = offer.features.slice(0, 4);
@@ -877,34 +978,66 @@ function OfferCard({
 
           {/* ── Center section: Guarantees ── */}
           <div className="flex-1 p-4 lg:p-5 min-w-0">
-            <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
-              Garanties correspondantes
-            </h4>
-            {/* Matched guarantee badges */}
-            {offer.matchedGuarantees && offer.matchedGuarantees.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mb-3">
-                {offer.matchedGuarantees.map((code) => (
-                  <span
-                    key={code}
-                    className="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary px-2.5 py-0.5 text-[11px] font-semibold border border-primary/20"
-                  >
-                    <CheckCircle2 className="size-3" />
-                    {GUARANTEE_LABELS[code] || code}
-                  </span>
-                ))}
-              </div>
-            )}
             <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2 mt-1">
               Garanties inclues
             </h4>
             <Separator className="mb-3" />
             <ul className="space-y-1.5">
-              {visibleFeatures.map((feature, idx) => (
-                <li key={idx} className="flex items-start gap-2 text-sm">
-                  <CheckCircle2 className="size-4 text-green-600 mt-0.5 shrink-0" />
-                  <span className="text-foreground/90">{feature}</span>
-                </li>
-              ))}
+              {visibleFeatures.map((feature, idx) => {
+                const pricing = findPricingForFeature(offer.pricingBreakdown, feature);
+                const description = offer.guaranteeDescriptions?.[feature]
+                  || offer.guaranteeDescriptions?.[Object.keys(offer.guaranteeDescriptions || {}).find(k => normalizeGuaranteeName(k) === normalizeGuaranteeName(feature)) || ""]
+                  || null;
+                return (
+                  <li key={idx} className="flex items-start gap-2 text-sm">
+                    <CheckCircle2 className="size-4 text-green-600 mt-0.5 shrink-0" />
+                    <span className="text-foreground/90 flex-1 min-w-0">
+                      {feature}
+                    </span>
+                    {pricing && (
+                      <span className={`text-xs font-semibold shrink-0 tabular-nums mt-0.5 ${pricing.amount === 0 ? "text-green-600" : "text-foreground"}`}>
+                        {pricing.amount === 0 ? "Inclus" : `${formatFCFA(pricing.amount)}/an`}
+                      </span>
+                    )}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button type="button" className="shrink-0 text-muted-foreground/50 hover:text-primary transition-colors mt-0.5">
+                          <Info className="size-3.5" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="left" className="max-w-[320px] text-sm bg-foreground text-background border-foreground" arrowClassName="fill-foreground bg-foreground">
+                        <div className="space-y-1.5">
+                          <p className="font-bold text-background">{feature}</p>
+                          {description ? (
+                            <p className="text-background/90 whitespace-pre-line leading-relaxed">
+                              {description}
+                            </p>
+                          ) : (
+                            <p className="text-background/60 italic">Description non disponible</p>
+                          )}
+                          {pricing && (
+                            <div className="border-t border-background/20 pt-1.5 mt-1.5 space-y-1">
+                              {pricing.coverageCapital != null && pricing.coverageCapital > 0 && (
+                                <p className="text-background/90">
+                                  Capital garanti : <span className="font-bold text-background">{formatFCFA(pricing.coverageCapital)}</span>
+                                </p>
+                              )}
+                              <p className="text-background/90">
+                                Coût : <span className="font-bold text-background">{pricing.amount === 0 ? "Gratuit" : formatFCFA(pricing.amount)}</span>
+                              </p>
+                              {pricing.breakdown && (
+                                <p className="text-background/80 whitespace-pre-line text-xs">
+                                  {pricing.breakdown}
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  </li>
+                );
+              })}
             </ul>
             <p className="text-xs text-muted-foreground mt-3">
               Franchise :{" "}
@@ -920,12 +1053,25 @@ function OfferCard({
               <p className="text-xs text-muted-foreground mb-0.5">
                 À partir de
               </p>
-              <p className="text-xl lg:text-2xl font-bold text-primary leading-tight">
-                {formatFCFA(offer.annualPrice)}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                /an · Soit {formatFCFA(offer.monthlyPrice)}/mois
-              </p>
+              {priceMode === "monthly" ? (
+                <>
+                  <p className="text-xl lg:text-2xl font-bold text-primary leading-tight">
+                    {formatFCFA(offer.monthlyPrice)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    /mois · Soit {formatFCFA(offer.annualPrice)}/an
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-xl lg:text-2xl font-bold text-primary leading-tight">
+                    {formatFCFA(offer.annualPrice)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    /an · Soit {formatFCFA(offer.monthlyPrice)}/mois
+                  </p>
+                </>
+              )}
             </div>
             <div className="w-full flex flex-col gap-2 mt-auto">
               <Button
@@ -1006,12 +1152,56 @@ function OfferCard({
                   Garanties incluses
                 </h4>
                 <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {offer.features.map((feature, idx) => (
-                    <li key={idx} className="flex items-start gap-2 text-sm">
-                      <CheckCircle2 className="size-4 text-green-600 mt-0.5 shrink-0" />
-                      <span className="text-foreground/90">{resolveCoverageName(feature)}</span>
-                    </li>
-                  ))}
+                  {offer.features.map((feature, idx) => {
+                    const resolvedName = resolveCoverageName(feature);
+                    const pricing = findPricingForFeature(offer.pricingBreakdown, feature);
+                    const description = offer.guaranteeDescriptions?.[feature]
+                      || offer.guaranteeDescriptions?.[Object.keys(offer.guaranteeDescriptions || {}).find(k => normalizeGuaranteeName(k) === normalizeGuaranteeName(feature)) || ""]
+                      || null;
+                    return (
+                      <li key={idx} className="flex items-start gap-2 text-sm">
+                        <CheckCircle2 className="size-4 text-green-600 mt-0.5 shrink-0" />
+                        <span className="text-foreground/90 flex-1 min-w-0">{resolvedName}</span>
+                        {pricing && (
+                          <span className={`text-xs font-semibold shrink-0 tabular-nums mt-0.5 ${pricing.amount === 0 ? "text-green-600" : "text-foreground"}`}>
+                            {pricing.amount === 0 ? "Inclus" : `${formatFCFA(pricing.amount)}/an`}
+                          </span>
+                        )}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button type="button" className="shrink-0 text-muted-foreground/50 hover:text-primary transition-colors mt-0.5">
+                              <Info className="size-3.5" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-[300px] text-sm bg-foreground text-background border-foreground" arrowClassName="fill-foreground bg-foreground">
+                            <div className="space-y-1.5">
+                              <p className="font-bold text-background">{resolvedName}</p>
+                              {description ? (
+                                <p className="text-background/90 whitespace-pre-line leading-relaxed">{description}</p>
+                              ) : (
+                                <p className="text-background/60 italic">Description non disponible</p>
+                              )}
+                              {pricing && (
+                                <div className="border-t border-background/20 pt-1.5 mt-1.5 space-y-1">
+                                  {pricing.coverageCapital != null && pricing.coverageCapital > 0 && (
+                                    <p className="text-background/90">
+                                      Capital garanti : <span className="font-bold text-background">{formatFCFA(pricing.coverageCapital)}</span>
+                                    </p>
+                                  )}
+                                  <p className="text-background/90">
+                                    Montant : <span className="font-bold text-background">{pricing.amount === 0 ? "Gratuit" : formatFCFA(pricing.amount)}</span>
+                                  </p>
+                                  {pricing.breakdown && (
+                                    <p className="text-background/80 whitespace-pre-line text-xs">{pricing.breakdown}</p>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
 
@@ -1103,16 +1293,27 @@ export function ResultsPage() {
   } = useAppStore();
   const { toast } = useToast();
 
+  /* ── derived data ── */
+  const effectiveBudgetMax = useMemo(() => {
+    if (comparisonResults.length === 0) return BUDGET_MAX;
+    const maxPrice = Math.max(...comparisonResults.map((o) => o.annualPrice || 0));
+    return Math.max(BUDGET_MAX, Math.ceil(maxPrice / BUDGET_STEP) * BUDGET_STEP);
+  }, [comparisonResults]);
+
   /* ── local filter state ── */
   const [uncheckedInsurers, setUncheckedInsurers] = useState<Set<string>>(
     new Set()
   );
   const [coverageFilter, setCoverageFilter] = useState<string>("all");
-  const [budgetMax, setBudgetMax] = useState<number>(BUDGET_MAX);
+  const [budgetMax, setBudgetMax] = useState<number>(effectiveBudgetMax);
   const [priceMode, setPriceMode] = useState<"annual" | "monthly">("annual");
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
-  /* ── derived data ── */
+  // Sync budgetMax when data arrives
+  useEffect(() => {
+    setBudgetMax(effectiveBudgetMax);
+  }, [effectiveBudgetMax]);
+
   const uniqueInsurers = useMemo(() => {
     const names = [...new Set(comparisonResults.map((o) => o.insurerName))];
     return names.sort();
@@ -1149,11 +1350,14 @@ export function ResultsPage() {
       results = results.filter((o) => effectiveChecked.has(o.insurerName));
     }
 
-    // Filtre budget mensuel avec sécurité NaN
-    results = results.filter((o) => {
-      if (typeof o.monthlyPrice !== "number" || isNaN(o.monthlyPrice)) return true;
-      return o.monthlyPrice <= budgetMax;
-    });
+    // Filtre budget — utilise le prix correspondant au mode sélectionné
+    if (budgetMax < effectiveBudgetMax) {
+      results = results.filter((o) => {
+        const price = priceMode === "monthly" ? o.monthlyPrice : o.annualPrice;
+        if (typeof price !== "number" || isNaN(price)) return true;
+        return price <= budgetMax;
+      });
+    }
 
     switch (sortBy) {
       case "price_asc":
@@ -1171,7 +1375,7 @@ export function ResultsPage() {
     }
 
     return results;
-  }, [comparisonResults, sortBy, coverageFilter, effectiveChecked, budgetMax]);
+  }, [comparisonResults, sortBy, coverageFilter, effectiveChecked, budgetMax, priceMode, effectiveBudgetMax]);
 
   /* ── comparison handlers ── */
   const isOfferCompared = (offerId: string) =>
@@ -1256,14 +1460,14 @@ export function ResultsPage() {
   const resetFilters = () => {
     setCoverageFilter("all");
     setUncheckedInsurers(new Set());
-    setBudgetMax(BUDGET_MAX);
+    setBudgetMax(effectiveBudgetMax);
     setSortBy("price_asc");
   };
 
   const activeFilterCount = [
     coverageFilter !== "all",
     uncheckedInsurers.size > 0,
-    budgetMax < BUDGET_MAX,
+    budgetMax < effectiveBudgetMax,
   ].filter(Boolean).length;
 
   /* ── empty state (no comparison results at all) ── */
@@ -1371,6 +1575,7 @@ export function ResultsPage() {
               uniqueInsurers={uniqueInsurers}
               budgetMax={budgetMax}
               setBudgetMax={setBudgetMax}
+              effectiveBudgetMax={effectiveBudgetMax}
               onReset={resetFilters}
               totalOffers={comparisonResults.length}
             />
@@ -1392,6 +1597,7 @@ export function ResultsPage() {
                 uniqueInsurers={uniqueInsurers}
                 budgetMax={budgetMax}
                 setBudgetMax={setBudgetMax}
+                effectiveBudgetMax={effectiveBudgetMax}
                 onReset={resetFilters}
                 totalOffers={comparisonResults.length}
               />
@@ -1408,6 +1614,7 @@ export function ResultsPage() {
                       onRequestCall={handleRequestCall}
                       onAddToCompare={handleToggleCompare}
                       isCompared={isOfferCompared(offer.id)}
+                      priceMode={priceMode}
                     />
                   ))
               ) : (

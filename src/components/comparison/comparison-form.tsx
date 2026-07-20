@@ -103,6 +103,14 @@ const SEAT_OPTIONS = [
   "2", "3", "4", "5", "6", "7", "8", "9+",
 ].map((v) => ({ value: v, label: v }));
 
+const CONTRACT_DURATION_OPTIONS = [
+  { value: "1", label: "1 mois" },
+  { value: "3", label: "3 mois" },
+  { value: "6", label: "6 mois" },
+  { value: "9", label: "9 mois" },
+  { value: "12", label: "12 mois" },
+];
+
 // ─── Types ────────────────────────────────────────────────────────
 export function ComparisonForm() {
   const {
@@ -119,13 +127,14 @@ export function ComparisonForm() {
   const [dbCategories, setDbCategories] = useState<DBCoverageCategory[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(false);
 
-  // Fetch coverage categories when component mounts (or step reaches 3)
+  // Fetch coverage categories when component mounts
   useEffect(() => {
     if (dbCategories.length > 0) return;
     setCategoriesLoading(true);
     fetch("/api/coverage-categories")
-      .then((res) => res.json())
-      .then((data) => {
+      .then(async (res) => {
+        if (!res.ok) throw new Error("API error");
+        const data = await res.json();
         if (Array.isArray(data)) setDbCategories(data);
       })
       .catch(() => {
@@ -199,7 +208,11 @@ export function ComparisonForm() {
           userId: user.id,
         }),
       });
-      if (!res.ok) throw new Error("Erreur lors de la comparaison");
+      if (!res.ok) {
+        const errBody = await res.text();
+        console.error("[compare-form] Error body:", errBody);
+        throw new Error("Erreur lors de la comparaison");
+      }
       const data = await res.json();
       setComparisonResults(data.results ?? []);
       setView("results");
@@ -295,6 +308,8 @@ export function ComparisonForm() {
               <Step2
                 vehicleInfo={vehicleInfo}
                 setVehicleInfo={setVehicleInfo}
+                coverageNeeds={coverageNeeds}
+                setCoverageNeeds={setCoverageNeeds}
                 errors={errors}
                 FieldError={FieldError}
               />
@@ -460,11 +475,15 @@ function Step1({
 function Step2({
   vehicleInfo,
   setVehicleInfo,
+  coverageNeeds,
+  setCoverageNeeds,
   errors,
   FieldError,
 }: {
   vehicleInfo: Record<string, string>;
   setVehicleInfo: (info: Record<string, unknown>) => void;
+  coverageNeeds: { guaranteeCategories: string[]; contractDuration: number };
+  setCoverageNeeds: (info: Record<string, unknown>) => void;
   errors: Record<string, string>;
   FieldError: ({ field }: { field: string }) => React.ReactNode | null;
 }) {
@@ -617,6 +636,26 @@ function Step2({
           </SelectContent>
         </Select>
         <FieldError field="usage" />
+      </div>
+
+      {/* Durée du contrat */}
+      <div className="space-y-2">
+        <Label>Durée du contrat *</Label>
+        <Select
+          value={String(coverageNeeds.contractDuration || 12)}
+          onValueChange={(v) => setCoverageNeeds({ contractDuration: parseInt(v) })}
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Sélectionnez la durée" />
+          </SelectTrigger>
+          <SelectContent>
+            {CONTRACT_DURATION_OPTIONS.map((o) => (
+              <SelectItem key={o.value} value={o.value}>
+                {o.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
     </div>
   );

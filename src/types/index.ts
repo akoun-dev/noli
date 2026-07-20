@@ -36,6 +36,7 @@ export interface VehicleInfo {
 
 export interface CoverageNeeds {
   guaranteeCategories: string[];
+  contractDuration: number; // 1, 3, 6, 9, or 12 months
 }
 
 export interface ComparisonResult {
@@ -55,11 +56,13 @@ export interface InsurerOffer {
   description: string | null;
   monthlyPrice: number;
   annualPrice: number;
+  contractDuration: number;
   deductible: number;
   maxCoverage: number;
   features: string[];
   conditions: string | null;
   matchedGuarantees?: string[];
+  guaranteeDescriptions?: Record<string, string>;
   relevanceScore?: number;
   matchReasons?: string[];
   pricingBreakdown?: PricingBreakdown[];
@@ -71,6 +74,7 @@ export interface PricingBreakdown {
   categoryCode?: string;
   categoryName?: string;
   amount: number;
+  coverageCapital?: number;
   method: string;
   breakdown: string;
 }

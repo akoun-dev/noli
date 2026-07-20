@@ -6,6 +6,29 @@ import { COVERAGE_CODE_MAP } from "@/lib/constants";
 export async function POST() {
   try {
     if ((await db.insurer.count()) > 0) {
+      // Ensure coverage categories exist
+      const catData = [
+        { code: "RESPONSABILITE_CIVILE", name: "Responsabilité Civile", displayOrder: 1 },
+        { code: "DEFENSE_RECOURS", name: "Défense et Recours", displayOrder: 2 },
+        { code: "INDIVIDUELLE_CONDUCTEUR", name: "Individuelle Conducteur", displayOrder: 3 },
+        { code: "INDIVIDUELLE_PASSAGERS", name: "Individuelle Passagers", displayOrder: 4 },
+        { code: "INCENDIE", name: "Incendie", displayOrder: 5 },
+        { code: "VOL", name: "Vol", displayOrder: 6 },
+        { code: "BRIS_GLACES", name: "Bris de Glaces", displayOrder: 7 },
+        { code: "TIERCE_COMPLETE", name: "Tierce Complète", displayOrder: 8 },
+        { code: "TIERCE_COLLISION", name: "Tierce Collision", displayOrder: 9 },
+        { code: "ASSISTANCE", name: "Assistance", displayOrder: 10 },
+        { code: "AVANCE_RECOURS", name: "Avance sur Recours", displayOrder: 11 },
+        { code: "ACCESSOIRES", name: "Accessoires", displayOrder: 12 },
+      ];
+      for (const c of catData) {
+        await db.coverageCategory.upsert({
+          where: { code: c.code },
+          create: c,
+          update: { name: c.name, displayOrder: c.displayOrder, isActive: true },
+        });
+      }
+
       // Update coverage names: replace abbreviations with full names
       const nameFixes: Record<string, string> = {
         "IC Formule 1": "Individuelle Conducteur Formule 1",

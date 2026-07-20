@@ -24,6 +24,24 @@ const CATEGORY_FEATURE_KEYWORDS: Record<string, string[]> = {
   ACCESSOIRES: ["Accessoire"],
 };
 
+const COVERAGE_TYPE_TO_CATEGORY: Record<string, string> = {
+  RC: "RESPONSABILITE_CIVILE",
+  RTI: "RESPONSABILITE_CIVILE",
+  DR: "DEFENSE_RECOURS",
+  IC: "INDIVIDUELLE_CONDUCTEUR",
+  IPT: "INDIVIDUELLE_PASSAGERS",
+  INCENDIE: "INCENDIE",
+  VOL: "VOL",
+  VOL_ARME: "VOL",
+  BDG: "BRIS_GLACES",
+  EXT_BDG: "BRIS_GLACES",
+  TCM: "TIERCE_COMPLETE",
+  TCL: "TIERCE_COLLISION",
+  ASSISTANCE: "ASSISTANCE",
+  AVANCE_RECOURS: "AVANCE_RECOURS",
+  VOL_ACCESSOIRES: "ACCESSOIRES",
+};
+
 const contractTypeLabel: Record<string, string> = {
   basic: "Tiers",
   third_party_plus: "Tiers+",
@@ -74,6 +92,16 @@ function matchCategories(
   return matched;
 }
 
+function resolveCategory(coverage: any): { code: string; name: string } {
+  const code = coverage.category?.code
+    || COVERAGE_TYPE_TO_CATEGORY[coverage.type]
+    || COVERAGE_TYPE_TO_CATEGORY[coverage.code?.split("_")[0]]
+    || coverage.type
+    || "UNKNOWN";
+  const name = coverage.category?.name || code;
+  return { code, name };
+}
+
 function priceCoverages(
   insurerCoverages: any[],
   matchedCategories: string[],
@@ -83,28 +111,73 @@ function priceCoverages(
   const pricingBreakdown: PricingBreakdown[] = [];
 
   for (const coverage of insurerCoverages) {
-    const catCode = coverage.category?.code;
-    const isMatched = catCode && matchedCategories.includes(catCode);
-    if (!isMatched && !coverage.isMandatory) continue;
+    const { code: catCode, name: catName } = resolveCategory(coverage);
+    const isMatched = matchedCategories.includes(catCode);
+    const isCountable = isMatched || coverage.isMandatory;
 
     try {
       const result = calculateGuaranteePremium(coverage, pricingVehicle);
-      grossPremium += result.amount;
+      if (isCountable) grossPremium += result.amount;
+      const meta = (() => { try { return JSON.parse(coverage.metadata || "{}"); } catch { return {}; } })();
+      const coverageCapital = coverage.capital || meta.capital || meta.maxAmount || coverage.maxAmount || null;
       pricingBreakdown.push({
         guaranteeName: coverage.name,
         guaranteeCode: coverage.code,
-        categoryCode: coverage.category?.code,
-        categoryName: coverage.category?.name,
+        categoryCode: catCode,
+        categoryName: catName,
         amount: result.amount,
+        coverageCapital: coverageCapital || undefined,
         method: result.method,
         breakdown: result.breakdown,
       });
     } catch (err) {
-      console.error(`Pricing error for ${coverage.code}:`, err);
+      const meta = (() => { try { return JSON.parse(coverage.metadata || "{}"); } catch { return {}; } })();
+      const coverageCapital = coverage.capital || meta.capital || meta.maxAmount || coverage.maxAmount || null;
+      pricingBreakdown.push({
+        guaranteeName: coverage.name,
+        guaranteeCode: coverage.code,
+        categoryCode: catCode,
+        categoryName: catName,
+        amount: 0,
+        coverageCapital: coverageCapital || undefined,
+        method: coverage.calculationType || "INCLUDED",
+        breakdown: "Garantie incluse dans la formule",
+      });
     }
   }
 
   return { grossPremium, pricingBreakdown };
+}
+
+function findPricingForFeature(
+  pricingBreakdown: PricingBreakdown[],
+  feature: string
+): PricingBreakdown | undefined {
+  const norm = feature
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/&/g, "et")
+    .toLowerCase()
+    .trim();
+  return pricingBreakdown.find((pb) => {
+    const normName = (pb.guaranteeName || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/&/g, "et")
+      .toLowerCase()
+      .trim();
+    if (normName === norm) return true;
+    const normCode = (pb.guaranteeCode || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/&/g, "et")
+      .toLowerCase()
+      .trim();
+    if (normCode === norm) return true;
+    if (norm.includes(normName) || normName.includes(norm)) return true;
+    const keywords = norm.split(" ").filter((w: string) => w.length > 2);
+    return keywords.length > 0 && keywords.every((kw: string) => normName.includes(kw));
+  });
 }
 
 function buildOfferResult(
@@ -115,10 +188,10 @@ function buildOfferResult(
   offerFuelTypes: string[],
   offerVehicleUsage: string[],
   grossPremium: number,
-  pricingBreakdown: PricingBreakdown[]
+  pricingBreakdown: PricingBreakdown[],
+  contractDuration: number = 12,
+  coverageDescriptions: Record<string, string> = {}
 ): InsurerOffer {
-  const netPremium = calculateNetPremium(grossPremium);
-
   const { score, reasons } = scoreOffer(
     {
       fiscalPowerMin: offer.fiscalPowerMin,
@@ -137,6 +210,12 @@ function buildOfferResult(
     matchedCategories
   );
 
+  let computedPremium = 0;
+  for (const feature of offerFeatures) {
+    const pricing = findPricingForFeature(pricingBreakdown, feature);
+    if (pricing) computedPremium += pricing.amount;
+  }
+
   return {
     id: offer.id,
     insurerId: offer.insurerId,
@@ -146,13 +225,15 @@ function buildOfferResult(
     name: offer.name,
     coverageType: contractTypeLabel[offer.contractType || "basic"] || offer.contractType || "Tiers",
     description: offer.description,
-    monthlyPrice: Math.round(netPremium / 11),
-    annualPrice: netPremium,
+    monthlyPrice: Math.round(computedPremium / contractDuration),
+    annualPrice: Math.round(computedPremium),
+    contractDuration,
     deductible: offer.deductible || 0,
     maxCoverage: offer.coverageAmount || 0,
     features: offerFeatures,
     conditions: null,
     matchedGuarantees: matchedCategories,
+    guaranteeDescriptions: coverageDescriptions,
     relevanceScore: score,
     matchReasons: reasons,
     pricingBreakdown,
@@ -166,6 +247,7 @@ export async function runComparison(
   userId?: string
 ) {
   const selectedCats: string[] = needs.guaranteeCategories || [];
+  const contractDuration = needs.contractDuration || 12;
   const pricingVehicle = toPricingVehicle(vehicle);
 
   const offers = await db.insuranceOffer.findMany({
@@ -196,6 +278,16 @@ export async function runComparison(
     coveragesByInsurer.set(c.insurerId, list);
   }
 
+  const coverageDescriptions: Record<string, string> = {};
+  for (const c of allCoverages) {
+    if (c.description && !coverageDescriptions[c.code]) {
+      coverageDescriptions[c.code] = c.description;
+    }
+    if (c.description && c.name && !coverageDescriptions[c.name]) {
+      coverageDescriptions[c.name] = c.description;
+    }
+  }
+
   const results: InsurerOffer[] = [];
 
   for (const offer of offers) {
@@ -221,29 +313,35 @@ export async function runComparison(
 
     const matchedCategories = matchCategories(selectedCats, offerFeatures);
 
-    // Fallback: if no feature match, check if insurer has coverages belonging to selected categories
-    if (selectedCats.length > 0 && matchedCategories.length === 0) {
-      const insurerCoverages = coveragesByInsurer.get(offer.insurerId) || [];
-      const coverageCatCodes = new Set(
-        insurerCoverages
-          .map((c) => c.category?.code)
-          .filter(Boolean) as string[]
-      );
-      const coverageMatched = selectedCats.filter((cat) => coverageCatCodes.has(cat));
-      if (coverageMatched.length > 0) {
-        matchedCategories.push(...coverageMatched);
+    // Fallback: for unmatched categories, check if insurer has coverages belonging to them
+    if (selectedCats.length > 0) {
+      const unmatched = selectedCats.filter((c) => !matchedCategories.includes(c));
+      if (unmatched.length > 0) {
+        const insurerCoverages = coveragesByInsurer.get(offer.insurerId) || [];
+        const coverageCatCodes = new Set(
+          insurerCoverages
+            .map((c) => c.category?.code)
+            .filter(Boolean) as string[]
+        );
+        const coverageMatched = unmatched.filter((cat) => coverageCatCodes.has(cat));
+        if (coverageMatched.length > 0) {
+          matchedCategories.push(...coverageMatched);
+        }
       }
     }
 
-    // Second fallback: try matching by offer name/description keywords
-    if (selectedCats.length > 0 && matchedCategories.length === 0) {
-      const offerText = `${offer.name} ${offer.description || ""} ${offer.contractType || ""}`.toUpperCase();
-      const fallbackMatched = selectedCats.filter((cat) => {
-        const keywords = CATEGORY_FEATURE_KEYWORDS[cat] || [];
-        return keywords.some((kw) => offerText.includes(kw.toUpperCase()));
-      });
-      if (fallbackMatched.length > 0) {
-        matchedCategories.push(...fallbackMatched);
+    // Second fallback: try matching by offer name/description keywords for still unmatched
+    if (selectedCats.length > 0) {
+      const stillUnmatched = selectedCats.filter((c) => !matchedCategories.includes(c));
+      if (stillUnmatched.length > 0) {
+        const offerText = `${offer.name} ${offer.description || ""} ${offer.contractType || ""}`.toUpperCase();
+        const fallbackMatched = stillUnmatched.filter((cat) => {
+          const keywords = CATEGORY_FEATURE_KEYWORDS[cat] || [];
+          return keywords.some((kw) => offerText.includes(kw.toUpperCase()));
+        });
+        if (fallbackMatched.length > 0) {
+          matchedCategories.push(...fallbackMatched);
+        }
       }
     }
 
@@ -259,11 +357,13 @@ export async function runComparison(
     );
 
     if (grossPremium === 0 && pricingBreakdown.length === 0) {
-      const basePrice = offer.priceMin || 25000;
-      grossPremium = legacyCalculatePrice(basePrice, vehicle, needs);
+      console.warn(
+        `[compare] Aucune prime calculée pour l'offre "${offer.name}" (${offer.insurerId}). ` +
+        `Vérifier les coverages et règles tarifaires.`
+      );
     }
 
-    results.push(buildOfferResult(
+    const built = buildOfferResult(
       offer,
       matchedCategories,
       pricingVehicle,
@@ -271,8 +371,11 @@ export async function runComparison(
       offerFuelTypes,
       offerVehicleUsage,
       grossPremium,
-      pricingBreakdown
-    ));
+      pricingBreakdown,
+      contractDuration,
+      coverageDescriptions
+    );
+    results.push(built);
   }
 
   results.sort((a, b) => {
@@ -337,52 +440,4 @@ async function saveQuote(
   }
 }
 
-function legacyCalculatePrice(
-  basePrice: number,
-  vehicle: VehicleInfo,
-  needs: CoverageNeeds
-): number {
-  let price = basePrice;
 
-  const cv = parseInt(vehicle.fiscalPower || "6");
-  if (cv <= 4) price *= 0.8;
-  else if (cv <= 6) price *= 1.0;
-  else if (cv <= 8) price *= 1.12;
-  else if (cv <= 11) price *= 1.25;
-  else price *= 1.4;
-
-  const currentYear = new Date().getFullYear();
-  const rawYear = vehicle.year?.split("-")[0] || String(currentYear);
-  const vehicleAge = currentYear - parseInt(rawYear);
-  if (vehicleAge <= 1) price *= 1.05;
-  else if (vehicleAge <= 3) price *= 1.0;
-  else if (vehicleAge <= 5) price *= 1.1;
-  else if (vehicleAge <= 10) price *= 1.2;
-  else price *= 1.35;
-
-  if (vehicle.usage === "professionnel") price *= 1.15;
-  else if (vehicle.usage === "taxi_vtc") price *= 1.4;
-  else if (vehicle.usage === "autre") price *= 1.2;
-
-  if (vehicle.fuelType === "diesel") price *= 1.05;
-  else if (vehicle.fuelType === "hybride") price *= 1.08;
-  else if (vehicle.fuelType === "electrique") price *= 0.95;
-
-  const seats = parseInt(vehicle.seats || "5");
-  if (seats > 7) price *= 1.15;
-  else if (seats <= 2) price *= 0.9;
-
-  const newVal = parseInt((vehicle.newValue || "0").replace(/\s/g, "")) || 10000000;
-  if (newVal > 30000000) price *= 1.3;
-  else if (newVal > 20000000) price *= 1.15;
-  else if (newVal > 10000000) price *= 1.0;
-  else price *= 0.85;
-
-  const catCount = needs.guaranteeCategories?.length || 0;
-  if (catCount <= 2) price *= 0.85;
-  else if (catCount <= 4) price *= 1.0;
-  else if (catCount <= 6) price *= 1.2;
-  else price *= 1.35;
-
-  return Math.round(price / 500) * 500;
-}

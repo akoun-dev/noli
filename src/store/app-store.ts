@@ -77,6 +77,7 @@ const defaultVehicleInfo: VehicleInfo = {
 
 const defaultCoverageNeeds: CoverageNeeds = {
   guaranteeCategories: [],
+  contractDuration: 12,
 };
 
 export const useAppStore = create<AppState>()(

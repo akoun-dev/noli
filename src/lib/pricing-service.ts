@@ -178,8 +178,9 @@ function roundTo500(value: number): number {
   return Math.round(value / 500) * 500;
 }
 
-/** Parse JSON string safely, returns empty object on failure */
-function safeParseJSON<T>(raw: string): T {
+/** Parse JSON string safely, returns empty object on failure or empty/null input */
+function safeParseJSON<T>(raw: string | null | undefined): T {
+  if (!raw) return {} as T;
   try {
     return JSON.parse(raw) as T;
   } catch {
@@ -497,8 +498,18 @@ function calculateMatrixBased(
       if (match) {
         amount = match.prime;
         breakdown = `CV ${fp} dans [${match.fiscalPowerMin ?? "?"}–${match.fiscalPowerMax ?? "?"}]${match.fuelType ? `, carburant ${match.fuelType}` : ""} → prime ${amount.toLocaleString("fr-FR")} FCFA`;
+      } else if (tariffs.length === 0) {
+        // Pas de tariffs dans la metadata → fallback vers les règles DB
+        amount = findTariffRuleAmount(tariffRules, { fiscalPower: fp, fuelType }, meta);
+        breakdown = amount > 0
+          ? `Règle tarifaire DB (CV ${fp}, ${fuelType || "any"}) → ${amount.toLocaleString("fr-FR")} FCFA`
+          : `Aucune tranche trouvée pour CV ${fp}, carburant ${fuelType || "any"}`;
       } else {
-        // Fallback : chercher dans les règles de tarification DB
+        // Des tariffs existent dans la metadata mais ne matchent pas
+        console.warn(
+          `[pricing] Tariffs metadata disponibles (${tariffs.length}) mais aucun match pour CV ${fp}, carburant "${fuelType}". ` +
+          `Tranches : ${tariffs.map(t => `[${t.fiscalPowerMin ?? "?"}-${t.fiscalPowerMax ?? "?"}, ${t.fuelType ?? "any"}]`).join(", ")}`
+        );
         amount = findTariffRuleAmount(tariffRules, { fiscalPower: fp, fuelType }, meta);
         breakdown = amount > 0
           ? `Règle tarifaire DB → ${amount.toLocaleString("fr-FR")} FCFA`
@@ -654,50 +665,62 @@ function calculateTierceAmount(
   code: string
 ): { amount: number; breakdown: string } {
   const catTariffs = meta.categoryTariffs || [];
-  if (catTariffs.length === 0) {
+  if (catTariffs.length > 0) {
+    const vnClass = getVNRangeClass(nv);
+    const vnBounds = VN_RANGE_BOUNDS[vnClass];
+    const vehicleCategory = mapUsageToVehicleCategory(vehicle.usage);
+
+    let franchise = 0;
+    if (meta.franchise) {
+      franchise = meta.franchise.type === "AMOUNT"
+        ? meta.franchise.value
+        : 0;
+    }
+
+    const rate = findTierceRate(catTariffs, vnClass, franchise, vehicleCategory);
+
+    if (rate != null) {
+      const grossPremium = nv * (rate / 100);
+      const amount = roundTo500(grossPremium);
+
+      const breakdown = [
+        `${code} — Catégorie ${vehicleCategory}`,
+        `Classe VN ${vnClass} (${vnBounds.min.toLocaleString("fr-FR")} – ${vnBounds.max === Infinity ? "∞" : vnBounds.max.toLocaleString("fr-FR")} FCFA)`,
+        `Taux : ${rate}%`,
+        `Brut : ${grossPremium.toLocaleString("fr-FR")} FCFA`,
+        `Arrondi (×500) : ${amount.toLocaleString("fr-FR")} FCFA`,
+      ].join(" — ");
+
+      return { amount, breakdown };
+    }
+  }
+
+  if (nv <= 0) {
     return {
       amount: 0,
-      breakdown: `${code} — Aucune tarification configurée`,
+      breakdown: `${code} — VN non renseignée, tarification impossible`,
     };
   }
 
+  const defaultRates: Record<string, number> = {
+    TIERCE_COMPLETE: 4.4,
+    TIERCE_COLLISION: 2.8,
+  };
+  const ratePercent = defaultRates[code] || defaultRates[meta.dimension] || 3.0;
+  const grossPremium = nv * (ratePercent / 100);
+  const amount = roundTo500(grossPremium);
   const vnClass = getVNRangeClass(nv);
   const vnBounds = VN_RANGE_BOUNDS[vnClass];
-  const vehicleCategory = mapUsageToVehicleCategory(vehicle.usage);
-
-  // Déterminer la franchise applicable depuis les métadonnées
-  // Pour TCM/TCL, la franchise est implicite dans la grille de taux
-  // On cherche le taux pour la franchise 0 (sans franchise) par défaut,
-  // puis celui correspondant à la franchise configurée dans meta.franchise
-  let franchise = 0;
-  if (meta.franchise) {
-    franchise = meta.franchise.type === "AMOUNT"
-      ? meta.franchise.value
-      : 0; // Pourcentage non applicable pour la grille
-  }
-
-  // Cherche le taux correspondant
-  const rate = findTierceRate(catTariffs, vnClass, franchise, vehicleCategory);
-
-  if (rate != null) {
-    // Prime = VN × (taux / 100)
-    const grossPremium = nv * (rate / 100);
-    const amount = roundTo500(grossPremium);
-
-    const breakdown = [
-      `${code} — Catégorie ${vehicleCategory}`,
-      `Classe VN ${vnClass} (${vnBounds.min.toLocaleString("fr-FR")} – ${vnBounds.max === Infinity ? "∞" : vnBounds.max.toLocaleString("fr-FR")} FCFA)`,
-      `Taux : ${rate}%`,
-      `Brut : ${grossPremium.toLocaleString("fr-FR")} FCFA`,
-      `Arrondi (×500) : ${amount.toLocaleString("fr-FR")} FCFA`,
-    ].join(" — ");
-
-    return { amount, breakdown };
-  }
 
   return {
-    amount: 0,
-    breakdown: `${code} — Aucun taux trouvé pour VN ${nv.toLocaleString("fr-FR")} FCFA (classe ${vnClass}), catégorie ${vehicleCategory}`,
+    amount,
+    breakdown: [
+      `${code} — Taux par défaut`,
+      `Classe VN ${vnClass} (${vnBounds.min.toLocaleString("fr-FR")} – ${vnBounds.max === Infinity ? "∞" : vnBounds.max.toLocaleString("fr-FR")} FCFA)`,
+      `Taux : ${ratePercent}% (par défaut)`,
+      `VN : ${nv.toLocaleString("fr-FR")} FCFA`,
+      `Arrondi (×500) : ${amount.toLocaleString("fr-FR")} FCFA`,
+    ].join(" — "),
   };
 }
 
@@ -707,7 +730,12 @@ function findTariffRuleAmount(
   params: { fiscalPower: number; fuelType: string },
   meta: MatrixBasedMetadata
 ): number {
-  if (!rules || rules.length === 0) return 0;
+  if (!rules || rules.length === 0) {
+    console.warn(
+      `[pricing] Aucune règle tarifaire DB disponible (CV ${params.fiscalPower}, carburant ${params.fuelType})`
+    );
+    return 0;
+  }
 
   const match = rules.find((r) => {
     const fpOk =
@@ -720,9 +748,16 @@ function findTariffRuleAmount(
     return fpOk && fuelOk;
   });
 
-  if (match?.fixedAmount != null) return match.fixedAmount;
-  if (match?.baseRate != null) {
-    // baseRate sur une valeur de référence (par défaut 10 000 000)
+  if (!match) {
+    console.warn(
+      `[pricing] Aucune règle tarifaire ne correspond pour CV ${params.fiscalPower}, carburant "${params.fuelType}". ` +
+      `Règles disponibles : ${rules.map(r => `[${r.minFiscalPower ?? "?"}-${r.maxFiscalPower ?? "?"}, ${r.fuelType ?? "any"}, ${r.fixedAmount ?? "?"}]`).join(", ")}`
+    );
+    return 0;
+  }
+
+  if (match.fixedAmount != null) return match.fixedAmount;
+  if (match.baseRate != null) {
     const ref = 10_000_000;
     return roundTo500(ref * (match.baseRate / 100));
   }
