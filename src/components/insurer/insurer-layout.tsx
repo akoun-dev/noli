@@ -12,6 +12,7 @@ import {
   BarChart3,
   ShieldCheck,
   Settings,
+  Phone,
   Menu,
   ArrowLeft,
   LogOut,
@@ -47,6 +48,7 @@ import { InsurerQuotesTab } from "./tabs/insurer-quotes-tab";
 import { InsurerAnalyticsTab } from "./tabs/insurer-analytics-tab";
 import { InsurerGuaranteesTab } from "./tabs/insurer-guarantees-tab";
 import { InsurerSettingsTab } from "./tabs/insurer-settings-tab";
+import { InsurerCallbacksTab } from "./tabs/insurer-callbacks-tab";
 
 /* ── Sidebar config ── */
 const sidebarItems = [
@@ -56,6 +58,7 @@ const sidebarItems = [
   { id: "claims", label: "Sinistres", icon: AlertTriangle },
   { id: "offers", label: "Offres", icon: Car },
   { id: "quotes", label: "Devis Reçus", icon: FileText },
+  { id: "callbacks", label: "Rappels", icon: Phone },
   { id: "analytics", label: "Analytics", icon: BarChart3 },
   { id: "guarantees", label: "Mes Garanties", icon: ShieldCheck },
   { id: "settings", label: "Paramètres", icon: Settings },
@@ -152,6 +155,8 @@ function renderTab(tab: string) {
       return <InsurerOffersTab />;
     case "quotes":
       return <InsurerQuotesTab />;
+    case "callbacks":
+      return <InsurerCallbacksTab />;
     case "analytics":
       return <InsurerAnalyticsTab />;
     case "guarantees":

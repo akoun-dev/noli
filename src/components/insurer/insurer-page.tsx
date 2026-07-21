@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useSyncExternalStore } from "react";
 import {
-  LayoutDashboard, FileText, Shield, User,
+  LayoutDashboard, FileText, Shield, User, Phone,
   Menu, ArrowLeft, Home, Bell, ChevronDown, RefreshCw, Moon, Sun,
   LogOut, Building2,
 } from "lucide-react";
@@ -27,11 +27,13 @@ import { InsurerDashboard } from "./insurer-dashboard";
 import { InsurerOffers } from "./insurer-offers";
 import { InsurerQuotes } from "./insurer-quotes";
 import { InsurerGuaranteesTab } from "./tabs/insurer-guarantees-tab";
+import { InsurerCallbacksTab } from "./tabs/insurer-callbacks-tab";
 
 const sidebarItems = [
   { id: "dashboard", label: "Tableau de bord", icon: LayoutDashboard },
   { id: "offers", label: "Mes Offres", icon: FileText },
   { id: "quotes", label: "Devis Reçus", icon: Building2 },
+  { id: "callbacks", label: "Rappels", icon: Phone },
   { id: "coverages", label: "Garanties", icon: Shield },
   { id: "profile", label: "Mon Profil", icon: User },
 ] as const;
@@ -297,6 +299,8 @@ export function InsurerPage() {
         return <InsurerOffers />;
       case "quotes":
         return <InsurerQuotes />;
+      case "callbacks":
+        return <InsurerCallbacksTab />;
       case "coverages":
         return <InsurerGuaranteesTab />;
       default:

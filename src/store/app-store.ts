@@ -76,7 +76,7 @@ const defaultVehicleInfo: VehicleInfo = {
 };
 
 const defaultCoverageNeeds: CoverageNeeds = {
-  guaranteeCategories: [],
+  contractType: "",
   contractDuration: 12,
 };
 

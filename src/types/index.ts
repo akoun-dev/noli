@@ -35,7 +35,7 @@ export interface VehicleInfo {
 }
 
 export interface CoverageNeeds {
-  guaranteeCategories: string[];
+  contractType: string; // "basic" | "third_party_plus" | "all_risks"
   contractDuration: number; // 1, 3, 6, 9, or 12 months
 }
 

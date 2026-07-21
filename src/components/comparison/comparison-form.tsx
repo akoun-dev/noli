@@ -1,24 +1,16 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import {
   User,
   Car,
   Shield,
+  ShieldCheck,
   Check,
   ChevronLeft,
   Loader2,
   Mail,
-  UserCheck,
-  Users,
-  Banknote,
-  Scale,
-  Lock,
-  FlameKindling,
-  CheckCheck,
-  Wrench,
-  CarFront,
-  HandHelping,
+  Sparkles,
   type LucideIcon,
 } from "lucide-react";
 
@@ -38,55 +30,50 @@ import { USAGE_OPTIONS } from "@/lib/constants";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 
-// ─── Icon mapping for DB coverage category codes ──────────────────
-const CATEGORY_ICON_MAP: Record<string, LucideIcon> = {
-  RESPONSABILITE_CIVILE: Shield,
-  DEFENSE_RECOURS: Scale,
-  INDIVIDUELLE_CONDUCTEUR: UserCheck,
-  INDIVIDUELLE_PASSAGERS: Users,
-  INCENDIE: FlameKindling,
-  VOL: Lock,
-  BRIS_GLACES: CarFront,
-  TIERCE_COMPLETE: Car,
-  TIERCE_COLLISION: CarFront,
-  ASSISTANCE: HandHelping,
-  AVANCE_RECOURS: Banknote,
-  ACCESSOIRES: Wrench,
-};
-
-const DEFAULT_ICON = Shield;
-
-const CATEGORY_COLOR_MAP: Record<string, string> = {
-  RESPONSABILITE_CIVILE: "#0891b2",
-  DEFENSE_RECOURS: "#7c3aed",
-  INDIVIDUELLE_CONDUCTEUR: "#059669",
-  INDIVIDUELLE_PASSAGERS: "#0284c7",
-  INCENDIE: "#dc2626",
-  VOL: "#ea580c",
-  BRIS_GLACES: "#0ea5e9",
-  TIERCE_COMPLETE: "#2563eb",
-  TIERCE_COLLISION: "#4f46e5",
-  ASSISTANCE: "#16a34a",
-  AVANCE_RECOURS: "#ca8a04",
-  ACCESSOIRES: "#6b7280",
-};
-
-// ─── Types ────────────────────────────────────────────────────────
-interface DBCoverageCategory {
-  id: string;
-  code: string;
-  name: string;
-  description: string | null;
-  color: string | null;
-  icon: string | null;
-  displayOrder: number;
-}
+// ─── Contract type configuration ───────────────────────────────────
+const CONTRACT_TYPES: {
+  value: string;
+  label: string;
+  description: string;
+  icon: LucideIcon;
+  color: string;
+  colorBg: string;
+  features: string[];
+}[] = [
+  {
+    value: "basic",
+    label: "Tiers",
+    description: "Couverture de base obligatoire : Responsabilité Civile et Défense & Recours. Idéal pour un budget maîtrisé.",
+    icon: Shield,
+    color: "#6b7280",
+    colorBg: "rgba(107,114,128,0.12)",
+    features: ["RC", "DR"],
+  },
+  {
+    value: "third_party_plus",
+    label: "Tiers+",
+    description: "Garanties renforcées : Incendie, Vol, Bris de Glaces, Individuelle Conducteur & Passagers. Le meilleur rapport qualité-prix.",
+    icon: ShieldCheck,
+    color: "#23847E",
+    colorBg: "rgba(35,132,126,0.12)",
+    features: ["RC", "DR", "IC", "IPT", "INCENDIE", "VOL", "BDG"],
+  },
+  {
+    value: "all_risks",
+    label: "Tous Risques",
+    description: "Protection maximale incluant la Tierce Complète, Collision et Assistance. Une tranquillité d'esprit totale.",
+    icon: Sparkles,
+    color: "#B9E54D",
+    colorBg: "rgba(185,229,77,0.15)",
+    features: ["RC", "DR", "IC", "IPT", "INCENDIE", "VOL", "BDG", "TCM", "TCL", "ASSISTANCE"],
+  },
+];
 
 // ─── Constants ─────────────────────────────────────────────────────
 const STEPS = [
   { id: 1, label: "Profil assuré", icon: User },
   { id: 2, label: "Informations véhicule", icon: Car },
-  { id: 3, label: "Catégories de garanties", icon: Shield },
+  { id: 3, label: "Type de contrat", icon: Shield },
 ];
 
 const FUEL_OPTIONS = [
@@ -122,26 +109,6 @@ export function ComparisonForm() {
     isComparing, user,
   } = useAppStore();
   const [errors, setErrors] = useState<Record<string, string>>({});
-
-  // Dynamic coverage categories from DB
-  const [dbCategories, setDbCategories] = useState<DBCoverageCategory[]>([]);
-  const [categoriesLoading, setCategoriesLoading] = useState(false);
-
-  // Fetch coverage categories when component mounts
-  useEffect(() => {
-    if (dbCategories.length > 0) return;
-    setCategoriesLoading(true);
-    fetch("/api/coverage-categories")
-      .then(async (res) => {
-        if (!res.ok) throw new Error("API error");
-        const data = await res.json();
-        if (Array.isArray(data)) setDbCategories(data);
-      })
-      .catch(() => {
-        toast.error("Impossible de charger les catégories de garanties");
-      })
-      .finally(() => setCategoriesLoading(false));
-  }, [dbCategories.length]);
 
   const goNext = useCallback(() => {
     if (comparisonStep < 3) {
@@ -184,8 +151,8 @@ export function ComparisonForm() {
 
   const validateStep3 = (): boolean => {
     const e: Record<string, string> = {};
-    if (!coverageNeeds.guaranteeCategories?.length)
-      e.categories = "Sélectionnez au moins une catégorie";
+    if (!coverageNeeds.contractType)
+      e.contractType = "Sélectionnez un type de contrat";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -220,25 +187,6 @@ export function ComparisonForm() {
       toast.error(err instanceof Error ? err.message : "Veuillez réessayer.");
     } finally {
       setIsComparing(false);
-    }
-  };
-
-  const toggleCategory = (id: string) => {
-    const cats = coverageNeeds.guaranteeCategories || [];
-    setCoverageNeeds({
-      guaranteeCategories: cats.includes(id)
-        ? cats.filter((c) => c !== id)
-        : [...cats, id],
-    });
-  };
-
-  const toggleAllCategories = () => {
-    const allIds = dbCategories.map((c) => c.code);
-    const current = coverageNeeds.guaranteeCategories || [];
-    if (current.length === allIds.length && allIds.length > 0) {
-      setCoverageNeeds({ guaranteeCategories: [] });
-    } else {
-      setCoverageNeeds({ guaranteeCategories: allIds });
     }
   };
 
@@ -316,12 +264,9 @@ export function ComparisonForm() {
             )}
             {comparisonStep === 3 && (
               <Step3
-                categories={dbCategories}
-                loading={categoriesLoading}
-                selected={coverageNeeds.guaranteeCategories || []}
-                onToggle={toggleCategory}
-                onToggleAll={toggleAllCategories}
-                error={errors.categories}
+                selected={coverageNeeds.contractType}
+                onSelect={(type) => setCoverageNeeds({ contractType: type })}
+                error={errors.contractType}
               />
             )}
         </div>
@@ -482,7 +427,7 @@ function Step2({
 }: {
   vehicleInfo: Record<string, string>;
   setVehicleInfo: (info: Record<string, unknown>) => void;
-  coverageNeeds: { guaranteeCategories: string[]; contractDuration: number };
+  coverageNeeds: { contractType: string; contractDuration: number };
   setCoverageNeeds: (info: Record<string, unknown>) => void;
   errors: Record<string, string>;
   FieldError: ({ field }: { field: string }) => React.ReactNode | null;
@@ -661,134 +606,86 @@ function Step2({
   );
 }
 
-/* ─── Step 3 — Dynamic categories from DB ──────────────────────── */
+/* ─── Step 3 — Contract type selection ──────────────────────────── */
 function Step3({
-  categories,
-  loading,
   selected,
-  onToggle,
-  onToggleAll,
+  onSelect,
   error,
 }: {
-  categories: DBCoverageCategory[];
-  loading: boolean;
-  selected: string[];
-  onToggle: (id: string) => void;
-  onToggleAll: () => void;
+  selected: string;
+  onSelect: (type: string) => void;
   error?: string;
 }) {
-  const allIds = categories.map((c) => c.code);
-  const allSelected = allIds.length > 0 && selected.length === allIds.length;
-
-  if (loading) {
-    return (
-      <div className="space-y-5 animate-fade-in">
-        <div>
-          <h2 className="font-[family-name:var(--font-space-grotesk)] text-xl font-bold text-foreground">
-            Catégories de garanties
-          </h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            Chargement des garanties disponibles...
-          </p>
-        </div>
-        <div className="flex items-center justify-center py-16">
-          <div className="text-center">
-            <Loader2 className="animate-spin h-8 w-8 mx-auto mb-4 text-primary" />
-            <p className="text-sm text-muted-foreground">Chargement des catégories...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (categories.length === 0) {
-    return (
-      <div className="space-y-5 animate-fade-in">
-        <div>
-          <h2 className="font-[family-name:var(--font-space-grotesk)] text-xl font-bold text-foreground">
-            Catégories de garanties
-          </h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            Aucune catégorie de garantie disponible.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-5 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="font-[family-name:var(--font-space-grotesk)] text-xl font-bold text-foreground">
-            Catégories de garanties
-          </h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            Sélectionnez les catégories de garanties qui vous intéressent.
-          </p>
-        </div>
-        <span className="text-sm text-muted-foreground shrink-0 ml-4 whitespace-nowrap rounded-full border px-3 py-1">
-          {selected.length}/{allIds.length} sélectionnée(s)
-        </span>
+      <div>
+        <h2 className="font-[family-name:var(--font-space-grotesk)] text-xl font-bold text-foreground">
+          Type de contrat
+        </h2>
+        <p className="text-sm text-muted-foreground mt-1">
+          Choisissez le niveau de couverture qui correspond à vos besoins.
+        </p>
       </div>
-
-      {/* Toggle all */}
-      <button
-        type="button"
-        onClick={onToggleAll}
-        className={`flex items-center gap-2 w-full p-4 rounded-2xl border-2 transition-all text-sm font-medium shadow-sm ${
-          allSelected
-            ? "border-green-500/60 bg-green-50/80 dark:border-green-500/50 dark:bg-green-950/20 text-green-700 dark:text-green-300"
-            : "border-border/60 bg-card text-muted-foreground hover:border-primary/40 hover:text-foreground hover:shadow-md"
-        }`}
-      >
-        <CheckCheck className={`w-4 h-4 ${allSelected ? "text-green-600" : ""}`} />
-        {allSelected ? "Tout désélectionner" : "Tout sélectionner"}
-      </button>
 
       {error && (
         <p className="text-sm text-destructive">{error}</p>
       )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[50vh] overflow-y-auto pr-1">
-        {categories.map((cat, i) => {
-          const isSelected = selected.includes(cat.code);
-          const Icon = CATEGORY_ICON_MAP[cat.code] || DEFAULT_ICON;
-          const catColor = cat.color || CATEGORY_COLOR_MAP[cat.code] || '#0891b2';
+      <div className="grid grid-cols-1 gap-4">
+        {CONTRACT_TYPES.map((ct, i) => {
+          const isSelected = selected === ct.value;
+          const Icon = ct.icon;
           return (
             <button
               type="button"
-              key={cat.code}
-              onClick={() => onToggle(cat.code)}
+              key={ct.value}
+              onClick={() => onSelect(ct.value)}
               aria-pressed={isSelected}
-              className={`w-full rounded-2xl border-2 p-4 text-left transition-all duration-200 hover:shadow-lg animate-fade-in-up ${
+              className={`w-full rounded-2xl border-2 p-5 text-left transition-all duration-200 hover:shadow-lg animate-fade-in-up ${
                 isSelected
-                  ? 'border-green-500/60 bg-green-50/80 dark:border-green-500/50 dark:bg-green-950/20'
-                  : 'border-border/60 bg-card/50 hover:border-primary/40 dark:border-border/30 dark:hover:border-accent/40'
+                  ? 'border-green-500/60 bg-green-50/80 dark:border-green-500/50 dark:bg-green-950/20 shadow-md'
+                  : 'border-border/60 bg-card/50 hover:border-primary/40 dark:border-border/30 dark:hover:border-accent/40 hover:shadow-md'
               }`}
-              style={{ animationDelay: `${i * 30}ms` }}
+              style={{ animationDelay: `${i * 80}ms` }}
             >
-              <div className="flex items-center gap-3">
+              <div className="flex items-start gap-4">
                 <div
-                  className="flex items-center justify-center w-12 h-12 rounded-xl shrink-0"
-                  style={{ backgroundColor: `${catColor}18`, color: catColor }}
+                  className="flex items-center justify-center w-14 h-14 rounded-xl shrink-0"
+                  style={{ backgroundColor: ct.colorBg, color: ct.color }}
                 >
-                  <Icon className="w-5 h-5" />
+                  <Icon className="w-7 h-7" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h4 className="text-sm font-semibold text-foreground truncate">{cat.name}</h4>
-                  {cat.description && (
-                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{cat.description}</p>
-                  )}
-                </div>
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 transition-all ${
-                  isSelected ? 'bg-green-500 text-white scale-100' : 'border-2 border-muted-foreground/30 scale-90'
-                }`}>
-                  {isSelected && (
-                    <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                  )}
+                  <div className="flex items-center gap-3 mb-1">
+                    <h4 className="text-base font-bold text-foreground">{ct.label}</h4>
+                    <div className={`h-6 w-6 rounded-full flex items-center justify-center shrink-0 transition-all ${
+                      isSelected ? 'bg-green-500 text-white scale-100' : 'border-2 border-muted-foreground/30 scale-90'
+                    }`}>
+                      {isSelected && (
+                        <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </div>
+                  </div>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {ct.description}
+                  </p>
+                  <div className="flex flex-wrap gap-1.5 mt-3">
+                    {ct.features.map((f) => (
+                      <span
+                        key={f}
+                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium ${
+                          isSelected
+                            ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                            : 'bg-muted/50 text-muted-foreground'
+                        }`}
+                      >
+                        <Check className="w-2.5 h-2.5" />
+                        {f}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               </div>
             </button>

@@ -246,7 +246,7 @@ export async function runComparison(
   needs: CoverageNeeds,
   userId?: string
 ) {
-  const selectedCats: string[] = needs.guaranteeCategories || [];
+  const selectedContractType: string = needs.contractType || "";
   const contractDuration = needs.contractDuration || 12;
   const pricingVehicle = toPricingVehicle(vehicle);
 
@@ -291,6 +291,11 @@ export async function runComparison(
   const results: InsurerOffer[] = [];
 
   for (const offer of offers) {
+    // Filter by selected contract type
+    if (selectedContractType && offer.contractType !== selectedContractType) {
+      continue;
+    }
+
     const offerFeatures = parseJsonArray(offer.features);
     const offerFuelTypes = parseJsonArray(offer.fuelTypes);
     const offerVehicleUsage = parseJsonArray(offer.vehicleUsage);
@@ -311,43 +316,9 @@ export async function runComparison(
       continue;
     }
 
-    const matchedCategories = matchCategories(selectedCats, offerFeatures);
-
-    // Fallback: for unmatched categories, check if insurer has coverages belonging to them
-    if (selectedCats.length > 0) {
-      const unmatched = selectedCats.filter((c) => !matchedCategories.includes(c));
-      if (unmatched.length > 0) {
-        const insurerCoverages = coveragesByInsurer.get(offer.insurerId) || [];
-        const coverageCatCodes = new Set(
-          insurerCoverages
-            .map((c) => c.category?.code)
-            .filter(Boolean) as string[]
-        );
-        const coverageMatched = unmatched.filter((cat) => coverageCatCodes.has(cat));
-        if (coverageMatched.length > 0) {
-          matchedCategories.push(...coverageMatched);
-        }
-      }
-    }
-
-    // Second fallback: try matching by offer name/description keywords for still unmatched
-    if (selectedCats.length > 0) {
-      const stillUnmatched = selectedCats.filter((c) => !matchedCategories.includes(c));
-      if (stillUnmatched.length > 0) {
-        const offerText = `${offer.name} ${offer.description || ""} ${offer.contractType || ""}`.toUpperCase();
-        const fallbackMatched = stillUnmatched.filter((cat) => {
-          const keywords = CATEGORY_FEATURE_KEYWORDS[cat] || [];
-          return keywords.some((kw) => offerText.includes(kw.toUpperCase()));
-        });
-        if (fallbackMatched.length > 0) {
-          matchedCategories.push(...fallbackMatched);
-        }
-      }
-    }
-
-    if (selectedCats.length > 0 && matchedCategories.length === 0) {
-      continue;
-    }
+    // Use all known category codes to match against offer features
+    const allCategoryCodes = Object.keys(CATEGORY_FEATURE_KEYWORDS);
+    const matchedCategories = matchCategories(allCategoryCodes, offerFeatures);
 
     const insurerCoverages = coveragesByInsurer.get(offer.insurerId) || [];
     let { grossPremium, pricingBreakdown } = priceCoverages(

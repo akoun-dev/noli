@@ -25,7 +25,7 @@ export const vehicleInfoSchema = z.object({
 });
 
 export const coverageNeedsSchema = z.object({
-  guaranteeCategories: z.array(z.string()).min(1, "Sélectionnez au moins une catégorie"),
+  contractType: z.string().min(1, "Sélectionnez un type de contrat"),
   contractDuration: z.number().int().min(1).max(12).optional().default(12),
 });
 
