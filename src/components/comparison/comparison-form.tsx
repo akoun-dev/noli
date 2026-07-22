@@ -71,9 +71,9 @@ const CONTRACT_TYPES: {
 
 // ─── Constants ─────────────────────────────────────────────────────
 const STEPS = [
-  { id: 1, label: "Profil assuré", icon: User },
+  { id: 1, label: "Profil de l'assuré", icon: User },
   { id: 2, label: "Informations véhicule", icon: Car },
-  { id: 3, label: "Type de contrat", icon: Shield },
+  { id: 3, label: "Options", icon: Shield },
 ];
 
 const FUEL_OPTIONS = [
@@ -351,7 +351,7 @@ function Step1({
     <div className="space-y-5 animate-fade-in">
       <div>
         <h2 className="font-[family-name:var(--font-space-grotesk)] text-xl font-bold text-foreground">
-          Profil assuré
+          Profil de l&apos;assuré
         </h2>
         <p className="text-sm text-muted-foreground mt-1">
           Ces informations nous permettent de vous identifier et d&apos;éditer votre police d&apos;assurance
@@ -657,10 +657,10 @@ function Step3({
     <div className="space-y-5 animate-fade-in">
       <div>
         <h2 className="font-[family-name:var(--font-space-grotesk)] text-xl font-bold text-foreground">
-          Type de contrat
+          Options
         </h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Choisissez le niveau de couverture qui correspond à vos besoins.
+          Couverture et options
         </p>
       </div>
 
