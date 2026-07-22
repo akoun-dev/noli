@@ -25,11 +25,22 @@ export async function POST(request: NextRequest) {
     // Générer une référence unique
     const ref = `NOLI-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
+    // Look up the offer by insurerId and name to link it
+    let offerId: string | null = null;
+    if (offer.insurerId && offer.name) {
+      const foundOffer = await db.insuranceOffer.findFirst({
+        where: { insurerId: offer.insurerId, name: offer.name },
+        select: { id: true },
+      });
+      offerId = foundOffer?.id || null;
+    }
+
     // Créer le devis en DB (anonyme — pas de userId)
     const quote = await db.quote.create({
       data: {
         reference: ref,
         status: "PENDING",
+        offerId,
         estimatedPrice: Math.round(offer.monthlyPrice || offer.annualPrice / 12 || 0),
         personalData: JSON.stringify(personalInfo),
         vehicleData: JSON.stringify(vehicleInfo || {}),

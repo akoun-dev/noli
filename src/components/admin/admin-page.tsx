@@ -18,6 +18,7 @@ import {
   UserCog,
   LogOut,
   ChevronRight,
+  Phone,
 } from "lucide-react";
 import { NotificationDropdown } from "@/components/shared/notification-dropdown";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
@@ -47,6 +48,7 @@ import { InsuranceOffersTab } from "./insurance-offers-tab";
 import { CoverageCategoriesTab } from "./coverage-categories-tab";
 import { CoveragesTab } from "./coverages-tab";
 import { DevisTab } from "./devis-tab";
+import { RappelsTab } from "./rappels-tab";
 import { SettingsTab } from "./settings-tab";
 import { AuditLogsTab } from "./audit-logs-tab";
 import { BackupsTab } from "./backups-tab";
@@ -61,6 +63,7 @@ const sidebarItems = [
   { id: "coverage-categories", label: "Cat. Garanties", icon: ShieldCheck },
   { id: "coverages", label: "Garanties", icon: Shield },
   { id: "devis", label: "Devis", icon: Receipt },
+  { id: "rappels", label: "Rappels", icon: Phone },
   { id: "audit-logs", label: "Journaux d'audit", icon: ClipboardList },
   { id: "backups", label: "Sauvegardes", icon: Database },
   { id: "roles", label: "Rôles & Permissions", icon: UserCog },
@@ -152,6 +155,8 @@ function renderTab(tab: string) {
       return <CoveragesTab />;
     case "devis":
       return <DevisTab />;
+    case "rappels":
+      return <RappelsTab />;
     case "audit-logs":
       return <AuditLogsTab />;
     case "backups":

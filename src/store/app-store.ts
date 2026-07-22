@@ -73,6 +73,7 @@ const defaultVehicleInfo: VehicleInfo = {
   newValue: "",
   currentValue: "",
   usage: "personnel",
+  effectiveDate: "",
 };
 
 const defaultCoverageNeeds: CoverageNeeds = {

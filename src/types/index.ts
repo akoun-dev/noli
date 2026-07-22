@@ -32,6 +32,7 @@ export interface VehicleInfo {
   newValue: string;
   currentValue: string;
   usage: string;
+  effectiveDate: string;
 }
 
 export interface CoverageNeeds {

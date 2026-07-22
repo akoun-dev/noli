@@ -85,8 +85,11 @@ interface MatrixFiscalPowerTariff {
 
 interface MatrixFormula {
   name: string;
+  label?: string;
   baseRate: number;
   ceiling?: number;
+  usePlaces?: boolean;
+  placesTariffs?: Array<{ places: number; prime: number; label: string }>;
 }
 
 interface MatrixCategoryTariff {
@@ -269,6 +272,11 @@ export function calculateGuaranteePremium(
       if (f.primeFixe != null && f.baseRate == null) {
         f.baseRate = 100;
         f.ceiling = f.primeFixe;
+      }
+      // Also normalize 'prime' field from UI (FormulaConfig) to baseRate/ceiling
+      if (f.prime != null && f.baseRate == null) {
+        f.baseRate = 100;
+        f.ceiling = f.prime;
       }
     }
   }
@@ -577,6 +585,26 @@ function calculateMatrixBased(
     case "FORMULA": {
       const formulas = meta.formulas || [];
       const tariffs = meta.tariffs || [];
+
+      // 0) Cherche dans les formules avec usePlaces → prime par nombre de places
+      const seatsNum = seatsRaw === "+8" ? 9 : (parseInt(seatsRaw) || 0);
+      const formulaWithPlaces = formulas.find((f) => {
+        if (!f.usePlaces || !Array.isArray(f.placesTariffs)) return false;
+        return f.placesTariffs.some(
+          (pt) => pt.places === seatsNum && pt.prime > 0
+        );
+      });
+      if (formulaWithPlaces) {
+        const pt = formulaWithPlaces.placesTariffs!.find(
+          (t) => t.places === seatsNum
+        );
+        if (pt) {
+          amount = pt.prime;
+          breakdown = `Formule « ${formulaWithPlaces.label || formulaWithPlaces.name} » → ${seatsRaw} place(s) → prime ${amount.toLocaleString("fr-FR")} FCFA`;
+          source = "FORMULE";
+          break;
+        }
+      }
 
       // 1) Cherche dans tariffs par formulaName correspondant aux sièges
       const seatsLabel = seatsRaw === "+8" ? "+8" : seatsRaw;

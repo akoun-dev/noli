@@ -66,6 +66,27 @@ export async function POST(request: NextRequest) {
           console.error("[callback] Erreur notification:", notifErr);
         }
       }
+
+      // Notifier aussi les admins
+      const adminProfiles = await db.profile.findMany({
+        where: { role: "ADMIN", isActive: true },
+        select: { id: true },
+      });
+      for (const ap of adminProfiles) {
+        try {
+          await db.notification.create({
+            data: {
+              userId: ap.id,
+              type: "CALLBACK",
+              title: "📞 Demande de rappel",
+              message: `${clientName} — ${phone}${preferredTime ? ` (${preferredTime})` : ""}`,
+              link: callbackData,
+            },
+          });
+        } catch (notifErr) {
+          console.error("[callback] Erreur notification admin:", notifErr);
+        }
+      }
     }
 
     console.log("[callback] Demande de rappel enregistrée pour", insurerName, "→", phone);

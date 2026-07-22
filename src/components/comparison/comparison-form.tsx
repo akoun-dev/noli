@@ -98,6 +98,12 @@ const CONTRACT_DURATION_OPTIONS = [
   { value: "12", label: "12 mois" },
 ];
 
+const TRUST_INDICATORS = [
+  { icon: Shield, text: "Paiement sécurisé" },
+  { icon: ShieldCheck, text: "Modification possible" },
+  { icon: Check, text: "Sans engagement" },
+];
+
 // ─── Types ────────────────────────────────────────────────────────
 export function ComparisonForm() {
   const {
@@ -145,6 +151,7 @@ export function ComparisonForm() {
     if (!vehicleInfo.newValue.trim()) e.newValue = "Requis";
     if (!vehicleInfo.currentValue.trim()) e.currentValue = "Requis";
     if (!vehicleInfo.usage) e.usage = "Requis";
+    if (!vehicleInfo.effectiveDate?.trim()) e.effectiveDate = "Requis";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -310,6 +317,19 @@ export function ComparisonForm() {
             </Button>
           )}
         </div>
+
+        {/* Trust indicators */}
+        <div className="flex flex-wrap items-center justify-center gap-4 pt-2 text-xs text-muted-foreground">
+          {TRUST_INDICATORS.map((indicator, i) => {
+            const Icon = indicator.icon;
+            return (
+              <div key={i} className="flex items-center gap-1.5">
+                <Icon className="w-3.5 h-3.5 text-primary/70" />
+                <span>{indicator.text}</span>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -334,7 +354,7 @@ function Step1({
           Profil assuré
         </h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Pour identifier et éditer votre contrat d&apos;assurance
+          Ces informations nous permettent de vous identifier et d&apos;éditer votre police d&apos;assurance
         </p>
       </div>
 
@@ -425,8 +445,8 @@ function Step2({
   errors,
   FieldError,
 }: {
-  vehicleInfo: Record<string, string>;
-  setVehicleInfo: (info: Record<string, unknown>) => void;
+  vehicleInfo: import("@/types").VehicleInfo;
+  setVehicleInfo: (info: Partial<import("@/types").VehicleInfo>) => void;
   coverageNeeds: { contractType: string; contractDuration: number };
   setCoverageNeeds: (info: Record<string, unknown>) => void;
   errors: Record<string, string>;
@@ -439,7 +459,7 @@ function Step2({
           Informations véhicule
         </h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Pour obtenir un devis personnalisé
+          Renseignez les caractéristiques de votre véhicule pour obtenir un devis personnalisé
         </p>
       </div>
 
@@ -601,6 +621,23 @@ function Step2({
             ))}
           </SelectContent>
         </Select>
+      </div>
+
+      {/* Date d'effet */}
+      <div className="space-y-2">
+        <Label htmlFor="effectiveDate">Date d&apos;effet souhaitée *</Label>
+        <Input
+          id="effectiveDate"
+          type="date"
+          className={`w-full ${errors.effectiveDate ? "border-destructive" : ""}`}
+          value={vehicleInfo.effectiveDate || ""}
+          onChange={(e) => setVehicleInfo({ effectiveDate: e.target.value })}
+          min={new Date().toISOString().slice(0, 10)}
+        />
+        <p className="text-xs text-muted-foreground">
+          À partir de cette date, votre couverture sera effective
+        </p>
+        <FieldError field="effectiveDate" />
       </div>
     </div>
   );

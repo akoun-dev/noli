@@ -374,16 +374,18 @@ async function saveQuote(
     const autoCat = await db.insuranceCategory.findFirst({
       where: { name: { contains: "Auto" } },
     });
+    const topOffer = results.length > 0 ? results[0] : null;
     await db.quote.create({
       data: {
         reference: ref,
         userId,
         categoryId: autoCat?.id || null,
+        offerId: topOffer?.id || null,
         status: "PENDING",
         personalData: JSON.stringify(personal),
         vehicleData: JSON.stringify(vehicle),
         coverageRequirements: JSON.stringify(needs),
-        estimatedPrice: results.length > 0 ? results[0].monthlyPrice : 0,
+        estimatedPrice: topOffer ? topOffer.monthlyPrice : 0,
       },
     });
 
