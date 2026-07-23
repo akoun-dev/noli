@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { existsSync, mkdirSync, copyFileSync, statSync } from 'fs'
 import { join } from 'path'
+import { requireAuth } from '@/lib/auth-guard'
 
 export async function GET() {
   const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
