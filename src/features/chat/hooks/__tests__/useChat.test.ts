@@ -1,10 +1,10 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { useChat } from '../useChat';
-import { chatService, ChatMessage, ChatRoom, TypingIndicator } from '../services/chatService';
+import { chatService, ChatMessage, ChatRoom, TypingIndicator } from '../../services/chatService';
 
 // Mock chatService
-vi.mock('../services/chatService', () => ({
+vi.mock('../../services/chatService', () => ({
   chatService: {
     onMessage: vi.fn(),
     onTyping: vi.fn(),

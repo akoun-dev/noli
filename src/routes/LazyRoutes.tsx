@@ -41,12 +41,12 @@ export const InsurerDashboardPage = lazy(() => import('@/pages/insurer/InsurerDa
 export const AdminDashboardPage = lazy(() => import('@/pages/admin/AdminDashboardPage'))
 
 // Pages utilisateur - Priorité moyenne
-export const UserProfilePage = lazy(() => import('@/pages/user/UserProfilePage'))
-export const UserQuotesPage = lazy(() => import('@/pages/user/UserQuotesPage'))
-export const UserPoliciesPage = lazy(() => import('@/pages/user/UserPoliciesPage'))
-export const PaymentsPage = lazy(() => import('@/pages/user/PaymentsPage'))
-export const ComparisonHistoryPage = lazy(() => import('@/pages/user/ComparisonHistoryPage'))
-export const UserNotificationsPage = lazy(() => import('@/pages/user/UserNotificationsPage'))
+export const UserProfilePage = lazy(() => import('@/features/user/pages/UserProfilePage'))
+export const UserQuotesPage = lazy(() => import('@/features/user/pages/UserQuotesPage'))
+export const UserPoliciesPage = lazy(() => import('@/features/user/pages/UserPoliciesPage'))
+export const PaymentsPage = lazy(() => import('@/features/payments/pages/PaymentsPage'))
+export const ComparisonHistoryPage = lazy(() => import('@/features/comparison/pages/ComparisonHistoryPage'))
+export const UserNotificationsPage = lazy(() => import('@/features/user/pages/UserNotificationsPage'))
 export const DocumentsPage = lazy(() => import('@/pages/user/DocumentsPage'))
 export const MyReviewsPage = lazy(() => import('@/pages/user/MyReviewsPage'))
 

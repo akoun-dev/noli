@@ -1,5 +1,7 @@
 import React from "react";
 import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { personalInfoSchema } from "@/lib/zod-schemas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,10 +22,8 @@ interface PersonalInfoFormData {
 }
 
 const Step1Personal: React.FC<Step1PersonalProps> = ({ onNext }: Step1PersonalProps) => {
-  console.log('Step1Personal rendering...');
-
-  // Initialize form without zodResolver to isolate the issue
   const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm<PersonalInfoFormData>({
+    resolver: zodResolver(personalInfoSchema),
     defaultValues: {
       firstName: '',
       lastName: '',
@@ -33,14 +33,9 @@ const Step1Personal: React.FC<Step1PersonalProps> = ({ onNext }: Step1PersonalPr
     },
   });
 
-  console.log('useForm initialized successfully');
-
-  const onSubmit = (data: PersonalInfoFormData) => {
-    console.log('Form submitted:', data);
+  const onSubmit = (_data: PersonalInfoFormData) => {
     onNext();
   };
-
-  console.log('Rendering form...');
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 max-w-3xl mx-auto">
