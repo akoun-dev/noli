@@ -15,7 +15,7 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/hooks/use-toast'
-import { registerSchema, type RegisterFormData } from '@/lib/zod-schemas'
+import { type RegisterFormData } from '@/lib/zod-schemas'
 import { z } from 'zod'
 
 const RegisterPage = () => {

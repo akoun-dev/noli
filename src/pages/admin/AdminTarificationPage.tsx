@@ -62,7 +62,6 @@ import {
   Zap,
   Fuel
 } from 'lucide-react';
-import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 const FIRE_THEFT_DEFAULT_CONFIG: FireTheftConfig = {

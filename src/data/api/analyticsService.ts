@@ -1,5 +1,4 @@
 import { supabase } from '@/lib/supabase';
-import { Database } from '@/types/database';
 import { FallbackService } from '@/lib/api/fallback';
 import { features } from '@/lib/config/features';
 

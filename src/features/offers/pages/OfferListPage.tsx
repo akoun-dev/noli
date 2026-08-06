@@ -31,7 +31,6 @@ import {
 } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
-import { Input } from '@/components/ui/input'
 import { Slider } from '@/components/ui/slider'
 import OfferCompareModal from '@/features/offers/components/OfferCompareModal'
 import EnhancedCompareModal from '@/features/offers/components/EnhancedCompareModal'

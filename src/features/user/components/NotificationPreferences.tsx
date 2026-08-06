@@ -3,11 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
 import { Mail, Bell, MessageCircle, MessageSquare, Send } from 'lucide-react';
 import { NotificationPreferences } from '../../notifications/services/notificationService';
 import { useUpdateNotificationPreferences } from '../../notifications/services/notificationService';
-import { toast } from 'sonner';
 
 interface NotificationPreferencesProps {
   preferences: NotificationPreferences;

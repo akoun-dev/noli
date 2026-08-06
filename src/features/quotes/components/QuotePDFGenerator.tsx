@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { logger } from "@/lib/logger"
-import { Download, FileText, Loader2, Share2, Mail, MessageSquare } from 'lucide-react';
+import { Download, FileText, Loader2, Mail, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useNotifications } from '@/features/notifications/hooks/useNotifications';

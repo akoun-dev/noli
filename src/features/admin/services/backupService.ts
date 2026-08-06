@@ -1,4 +1,4 @@
-import { Backup, BackupConfig, BackupInclude, BackupSchedule, RestoreJob } from '@/types/admin';
+import { Backup, BackupConfig, BackupInclude, RestoreJob } from '@/types/admin';
 
 const mockBackups: Backup[] = [
   {

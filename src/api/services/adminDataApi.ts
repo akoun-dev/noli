@@ -1,4 +1,4 @@
-import { apiClient, ApiResponse, PaginatedResponse } from '../apiClient';
+import { apiClient, ApiResponse } from '../apiClient';
 
 // Types
 export interface ImportJob {

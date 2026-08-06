@@ -1,6 +1,4 @@
 import React, { useState } from 'react';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
 import { useUserQuotes, useQuoteStats, useDownloadQuotePdf } from '../services/quoteService';
 import { QuoteCard } from '../components/QuoteCard';
 import { QuoteFilters } from '../components/QuoteFilters';
@@ -9,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileText, Clock, CheckCircle, XCircle, AlertCircle, Calendar, Search, Plus, TrendingUp, Shield, Car } from 'lucide-react';
+import { FileText, Clock, CheckCircle, XCircle, Plus, TrendingUp, Car } from 'lucide-react';
 import { toast } from 'sonner';
 
 export const UserQuotesPage: React.FC = () => {

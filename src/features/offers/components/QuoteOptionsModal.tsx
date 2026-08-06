@@ -1,9 +1,8 @@
-import { Mail, MessageCircle, Phone, X, Download, MessageSquare } from "lucide-react";
+import { Mail, Phone, X, Download, MessageSquare } from "lucide-react";
 import { logger } from "@/lib/logger"
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
 import { QuotePDFGenerator } from "@/features/quotes/components/QuotePDFGenerator";
 import { useNotifications } from "@/features/notifications/hooks/useNotifications";
 import { quoteService, QuoteRequest } from "@/services/quoteService";

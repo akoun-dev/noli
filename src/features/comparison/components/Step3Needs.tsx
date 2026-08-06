@@ -6,7 +6,6 @@ import { useCompare } from '@/features/comparison/services/ComparisonContext'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 // Removed coverage type radio group
-import { Checkbox } from '@/components/ui/checkbox'
 import {
   Select,
   SelectContent,
@@ -15,7 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Card } from '@/components/ui/card'
-import { ArrowRight, ArrowLeft, AlertTriangle, Shield, Car, MessageCircle, Download, Mail } from 'lucide-react'
+import { ArrowRight, ArrowLeft, AlertTriangle, Shield, MessageCircle, Download, Mail } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useNavigate } from 'react-router-dom'
 import SimplifiedCoverageSelector from '@/components/coverage/SimplifiedCoverageSelector'

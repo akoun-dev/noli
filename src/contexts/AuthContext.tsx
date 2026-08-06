@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { useNavigate } from 'react-router-dom'
 import { User } from '@/types'
 import { authService } from '@/data/api/authService'
-import { supabase, supabaseHelpers } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 import { logger } from '@/lib/logger'
 import { secureAuthService } from '@/lib/secure-auth'
 import { usePermissionCache } from '@/lib/permission-cache'

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { MessageCircle, X, Send, Minimize2, Maximize2, User, Bot, Clock, Check, CheckCheck } from "lucide-react";
+import { MessageCircle, X, Send, Minimize2, Maximize2, User, Bot, Check, CheckCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";

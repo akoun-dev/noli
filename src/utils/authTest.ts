@@ -5,7 +5,7 @@
 
 import { authService } from '@/data/api/authService';
 import { logger } from "@/lib/logger"
-import { supabaseHelpers, supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 
 export interface TestResult {
   testName: string;

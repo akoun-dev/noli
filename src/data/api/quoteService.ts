@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase'
-import { Database, DatabaseQuote, DatabaseQuoteOffer } from '@/types/database'
+import { Database, DatabaseQuoteOffer } from '@/types/database'
 
 // Types pour les devis
 export interface QuoteRequest {

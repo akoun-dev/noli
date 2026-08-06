@@ -26,13 +26,10 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 import { useClientCommunication } from '../hooks/useClientCommunication';
-import { Client, CommunicationTemplate } from '../services/clientCommunicationService';
+import { Client } from '../services/clientCommunicationService';
 
 export interface Campaign {
   id: string;

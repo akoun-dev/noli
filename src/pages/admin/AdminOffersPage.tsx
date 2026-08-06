@@ -8,7 +8,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
@@ -42,7 +41,7 @@ import {
 } from 'lucide-react';
 import { guaranteeService } from '@/features/tarification/services/guaranteeService';
 import { pricingService } from '@/features/tarification/services/pricingService';
-import { offerService, type Offer, type Insurer, type OfferAnalytics, type OfferFormData, type OfferStats } from '@/features/admin/services/offerService';
+import { offerService, type Offer, type Insurer, type OfferAnalytics, type OfferStats } from '@/features/admin/services/offerService';
 import type { Guarantee, InsurancePackage } from '@/types/tarification';
 import { toast } from 'sonner';
 import { logger } from '@/lib/logger';

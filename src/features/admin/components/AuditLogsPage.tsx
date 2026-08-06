@@ -17,7 +17,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { auditService } from '../services/auditService';
-import { AuditLog, AuditLogFilters, AuditAction, AuditLogExport } from '@/types/admin';
+import { AuditLog, AuditLogFilters, AuditAction } from '@/types/admin';
 import {
   Search,
   Download,

@@ -1,5 +1,3 @@
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
 
 export interface Client {
   id: string;

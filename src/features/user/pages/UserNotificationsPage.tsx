@@ -15,8 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 // import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Bell, Mail, MessageCircle, Check, Settings, Filter, Calendar, Search, Trash2, Inbox } from 'lucide-react';
-import { toast } from 'sonner';
+import { Bell, Mail, MessageCircle, Check, Settings, Search, Inbox } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 export const UserNotificationsPage: React.FC = () => {
