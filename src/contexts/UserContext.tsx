@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react'
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react'
 import { useAuth } from './AuthContext'
 import { logger } from '@/lib/logger'
 import { ProfileUpdate } from '@/types/database'
