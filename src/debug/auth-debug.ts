@@ -61,8 +61,10 @@ export class AuthDebugger {
       try {
         logger.info(`Test de la fonction RPC: ${funcName}`)
 
-        // Tester avec des paramètres vides pour voir si la fonction existe
-        const { data, error } = await supabase.rpc(funcName)
+        // Tester avec des paramètres vides pour voir si la fonction existe.
+        // `funcName` est un nom dynamique (debug) : cast requis car .rpc() est
+        // désormais typé strictement sur les noms de fonctions connus.
+        const { data, error } = await supabase.rpc(funcName as never)
 
         if (error) {
           logger.error(`❌ Fonction ${funcName} erreur:`, error)
