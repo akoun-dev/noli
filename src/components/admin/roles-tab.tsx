@@ -357,7 +357,7 @@ export function RolesTab() {
             onClick={() => selectRole(role)}
             className={`w-full text-left rounded-lg p-3 transition-colors ${
               selectedRoleId === role.id
-                ? "bg-[#B9E54D]/10 border border-[#B9E54D]/40"
+                ? "bg-brand/10 border border-brand/40"
                 : "hover:bg-muted border border-transparent"
             }`}
           >
@@ -382,7 +382,7 @@ export function RolesTab() {
             onClick={() => selectRole(role)}
             className={`w-full text-left rounded-lg p-3 transition-colors ${
               selectedRoleId === role.id
-                ? "bg-[#B9E54D]/10 border border-[#B9E54D]/40"
+                ? "bg-brand/10 border border-brand/40"
                 : "hover:bg-muted border border-transparent"
             }`}
           >
@@ -472,7 +472,7 @@ export function RolesTab() {
             Gérez les rôles et les permissions d&apos;accès de la plateforme.
           </p>
         </div>
-        <Button onClick={openCreate} className="bg-[#B9E54D] text-black hover:bg-[#a5d044]">
+        <Button onClick={openCreate} className="bg-brand text-black hover:bg-brand-hover">
           <Plus className="h-4 w-4 mr-2" />
           Nouveau rôle
         </Button>
@@ -509,7 +509,7 @@ export function RolesTab() {
                 <Button
                   onClick={handleSavePermissions}
                   disabled={savingPermissions || selectedRole.isDefault}
-                  className="bg-[#B9E54D] text-black hover:bg-[#a5d044]"
+                  className="bg-brand text-black hover:bg-brand-hover"
                 >
                   {savingPermissions ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
                   Enregistrer les permissions
@@ -556,7 +556,7 @@ export function RolesTab() {
                   onClick={handleSavePermissions}
                   disabled={savingPermissions || selectedRole.isDefault}
                   size="sm"
-                  className="bg-[#B9E54D] text-black hover:bg-[#a5d044]"
+                  className="bg-brand text-black hover:bg-brand-hover"
                 >
                   {savingPermissions ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
                   Enregistrer
@@ -606,7 +606,7 @@ export function RolesTab() {
             <Button
               onClick={handleSaveRole}
               disabled={savingRole}
-              className="bg-[#B9E54D] text-black hover:bg-[#a5d044]"
+              className="bg-brand text-black hover:bg-brand-hover"
             >
               {savingRole ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
               {editingRole ? "Enregistrer" : "Créer le rôle"}

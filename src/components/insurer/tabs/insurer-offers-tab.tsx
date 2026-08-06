@@ -344,7 +344,7 @@ export function InsurerOffersTab() {
           </p>
         </div>
         <Button
-          className="bg-[#B9E54D] text-black hover:bg-[#a5d044]"
+          className="bg-brand text-black hover:bg-brand-hover"
           onClick={openCreate}
         >
           <Plus className="mr-2 h-4 w-4" />
@@ -489,7 +489,7 @@ export function InsurerOffersTab() {
                             key={i}
                             className="text-sm text-muted-foreground flex items-center gap-2"
                           >
-                            <span className="h-1.5 w-1.5 rounded-full bg-[#B9E54D] shrink-0" />
+                            <span className="h-1.5 w-1.5 rounded-full bg-brand shrink-0" />
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <span className="truncate">{f}</span>
@@ -777,7 +777,7 @@ export function InsurerOffersTab() {
                                     >
                                       <div className={`flex h-4 w-4 items-center justify-center rounded-sm border transition-colors shrink-0 ${
                                         isSelected
-                                          ? "bg-[#B9E54D] text-black border-[#B9E54D]"
+                                          ? "bg-brand text-black border-brand"
                                           : "border-muted-foreground/30"
                                       }`}>
                                         {isSelected && <Check className="h-3 w-3" />}
@@ -786,7 +786,7 @@ export function InsurerOffersTab() {
                                       {c.isMandatory && (
                                         <Badge
                                           variant="default"
-                                          className="text-[10px] px-1.5 py-0 bg-[#B9E54D] text-black hover:bg-[#a5d044] shrink-0"
+                                          className="text-[10px] px-1.5 py-0 bg-brand text-black hover:bg-brand-hover shrink-0"
                                         >
                                           Obligatoire
                                         </Badge>
@@ -831,7 +831,7 @@ export function InsurerOffersTab() {
               Annuler
             </Button>
             <Button
-              className="bg-[#B9E54D] text-black hover:bg-[#a5d044]"
+              className="bg-brand text-black hover:bg-brand-hover"
               onClick={handleSubmit}
               disabled={submitting || !form.name.trim()}
             >

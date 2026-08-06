@@ -349,7 +349,7 @@ export function DevisTab() {
           })()}
           <DialogFooter>
             <Button variant="outline" onClick={() => setDetailOpen(false)}>Fermer</Button>
-            <Button onClick={handleSaveDetail} disabled={saving} className="bg-[#B9E54D] text-black hover:bg-[#a5d044]">
+            <Button onClick={handleSaveDetail} disabled={saving} className="bg-brand text-black hover:bg-brand-hover">
               {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Enregistrer
             </Button>

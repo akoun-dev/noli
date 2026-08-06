@@ -190,7 +190,8 @@ function buildOfferResult(
   grossPremium: number,
   pricingBreakdown: PricingBreakdown[],
   contractDuration: number = 12,
-  coverageDescriptions: Record<string, string> = {}
+  coverageDescriptions: Record<string, string> = {},
+  preferredContractType?: string | null
 ): InsurerOffer {
   const { score, reasons } = scoreOffer(
     {
@@ -207,7 +208,8 @@ function buildOfferResult(
       priceMax: offer.priceMax,
     },
     pricingVehicle,
-    matchedCategories
+    matchedCategories,
+    preferredContractType
   );
 
   let computedPremium = 0;
@@ -286,11 +288,10 @@ export async function runComparison(
   const results: InsurerOffer[] = [];
 
   for (const offer of offers) {
-    // Filter by selected contract type
-    if (selectedContractType && offer.contractType !== selectedContractType) {
-      continue;
-    }
-
+    // Le type de contrat choisi n'est PAS un filtre strict : toutes les offres
+    // éligibles sont présentées. Le type choisi est favorisé dans le classement
+    // (bonus de pertinence dans scoreOffer), et le filtre « Formules » côté
+    // résultats permet à l'utilisateur d'affiner.
     const offerFeatures = parseJsonArray(offer.features);
     const offerFuelTypes = parseJsonArray(offer.fuelTypes);
     const offerVehicleUsage = parseJsonArray(offer.vehicleUsage);
@@ -339,7 +340,8 @@ export async function runComparison(
       grossPremium,
       pricingBreakdown,
       contractDuration,
-      coverageDescriptions
+      coverageDescriptions,
+      selectedContractType
     );
     results.push(built);
   }

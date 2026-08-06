@@ -197,7 +197,7 @@ export function NotificationDropdown({ userId }: { userId: string }) {
                   {/* Unread dot */}
                   <div className="flex items-start pt-1.5">
                     {!n.isRead && (
-                      <span className="block h-2 w-2 shrink-0 rounded-full bg-[#B9E54D]" />
+                      <span className="block h-2 w-2 shrink-0 rounded-full bg-brand" />
                     )}
                   </div>
 

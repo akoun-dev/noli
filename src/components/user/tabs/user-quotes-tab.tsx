@@ -128,7 +128,7 @@ export function UserQuotesTab() {
               size="sm"
               className={`rounded-full text-xs shrink-0 ${
                 isActive
-                  ? "bg-[#B9E54D] text-black hover:bg-[#a5d044]"
+                  ? "bg-brand text-black hover:bg-brand-hover"
                   : ""
               }`}
               onClick={() => setActiveFilter(tab.id)}

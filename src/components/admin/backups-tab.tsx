@@ -22,7 +22,6 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 
 interface Backup {
@@ -122,6 +121,27 @@ export function BackupsTab() {
       } else {
         toast({ title: "Erreur", description: "Impossible de supprimer.", variant: "destructive" });
       }
+    } catch {
+      toast({ title: "Erreur", description: "Erreur réseau.", variant: "destructive" });
+    }
+  };
+
+  const handleDownload = async (backup: Backup) => {
+    try {
+      const res = await fetch(`/api/admin/backups/${backup.id}`);
+      if (!res.ok) {
+        toast({ title: "Erreur", description: "Impossible de télécharger la sauvegarde.", variant: "destructive" });
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = backup.filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     } catch {
       toast({ title: "Erreur", description: "Erreur réseau.", variant: "destructive" });
     }
@@ -302,7 +322,7 @@ export function BackupsTab() {
             <Button
               onClick={handleSaveSchedule}
               disabled={savingSchedule}
-              className="bg-[#B9E54D] text-black hover:bg-[#a5d044]"
+              className="bg-brand text-black hover:bg-brand-hover"
             >
               {savingSchedule && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Enregistrer
@@ -403,15 +423,15 @@ export function BackupsTab() {
                           </AlertDialogContent>
                         </AlertDialog>
 
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button variant="outline" size="sm" disabled>
-                              <Download className="h-3.5 w-3.5 mr-1" />
-                              Télécharger
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Fonctionnalité en développement</TooltipContent>
-                        </Tooltip>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={b.status !== "COMPLETED"}
+                          onClick={() => handleDownload(b)}
+                        >
+                          <Download className="h-3.5 w-3.5 mr-1" />
+                          Télécharger
+                        </Button>
 
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
@@ -490,15 +510,16 @@ export function BackupsTab() {
                       </AlertDialogContent>
                     </AlertDialog>
 
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button variant="outline" size="sm" className="flex-1" disabled>
-                          <Download className="h-3.5 w-3.5 mr-1" />
-                          Télécharger
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Fonctionnalité en développement</TooltipContent>
-                    </Tooltip>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      disabled={b.status !== "COMPLETED"}
+                      onClick={() => handleDownload(b)}
+                    >
+                      <Download className="h-3.5 w-3.5 mr-1" />
+                      Télécharger
+                    </Button>
 
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
@@ -539,7 +560,7 @@ export function BackupsTab() {
             Gérez les sauvegardes de données et planifiez des sauvegardes automatiques.
           </p>
         </div>
-        <Button onClick={handleCreate} disabled={creating} className="bg-[#B9E54D] text-black hover:bg-[#a5d044]">
+        <Button onClick={handleCreate} disabled={creating} className="bg-brand text-black hover:bg-brand-hover">
           {creating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
           Nouvelle sauvegarde
         </Button>

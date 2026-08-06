@@ -1145,7 +1145,7 @@ export function CoveragesTab() {
                         type="button"
                         variant={tierceVehicleCategory === cat ? "default" : "outline"}
                         size="sm"
-                        className={`rounded-r-none ${tierceVehicleCategory === cat ? "bg-[#B9E54D] text-black hover:bg-[#a5d044]" : ""}`}
+                        className={`rounded-r-none ${tierceVehicleCategory === cat ? "bg-brand text-black hover:bg-brand-hover" : ""}`}
                         onClick={() => {
                           setTierceVehicleCategory(cat);
                           setCategoryTariffs(getDefaultCategoryTariffs(
@@ -1160,7 +1160,7 @@ export function CoveragesTab() {
                         type="button"
                         variant={tierceVehicleCategory === cat ? "default" : "outline"}
                         size="sm"
-                        className={`h-8 w-6 p-0 rounded-l-none border-l-0 ${tierceVehicleCategory === cat ? "bg-[#B9E54D] text-black hover:bg-[#a5d044]" : "text-muted-foreground hover:text-destructive"}`}
+                        className={`h-8 w-6 p-0 rounded-l-none border-l-0 ${tierceVehicleCategory === cat ? "bg-brand text-black hover:bg-brand-hover" : "text-muted-foreground hover:text-destructive"}`}
                         onClick={() => {
                           const filtered = categoryTariffs.filter(ct => ct.vehicleCategory !== cat);
                           const remaining = tierceCategories.filter(c => c !== cat);
@@ -1447,7 +1447,7 @@ export function CoveragesTab() {
               <SelectItem value="MATRIX_BASED">Matrice</SelectItem>
             </SelectContent>
           </Select>
-          <Button className="bg-[#B9E54D] text-black hover:bg-[#a5d044]" onClick={openCreate}>
+          <Button className="bg-brand text-black hover:bg-brand-hover" onClick={openCreate}>
             <Plus className="h-4 w-4 mr-2" />Ajouter
           </Button>
         </div>
@@ -1522,7 +1522,7 @@ export function CoveragesTab() {
           {/* Mobile cards */}
           <div className="md:hidden space-y-3">
             {items.map((item) => (
-              <Card key={item.id} className={`rounded-xl border shadow-sm cursor-pointer transition-colors ${selectedId === item.id ? "ring-2 ring-[#B9E54D]" : ""}`} onClick={() => handleRowClick(item.id)}>
+              <Card key={item.id} className={`rounded-xl border shadow-sm cursor-pointer transition-colors ${selectedId === item.id ? "ring-2 ring-brand" : ""}`} onClick={() => handleRowClick(item.id)}>
                 <CardContent className="p-4 space-y-2">
                   <div className="flex items-start justify-between">
                     <div className="flex-1 min-w-0">
@@ -1568,7 +1568,7 @@ export function CoveragesTab() {
               </div>
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" onClick={() => setSelectedId(null)}><X className="h-4 w-4 mr-1" />Fermer</Button>
-                <Button className="bg-[#B9E54D] text-black hover:bg-[#a5d044]" size="sm" onClick={openTrCreate}>
+                <Button className="bg-brand text-black hover:bg-brand-hover" size="sm" onClick={openTrCreate}>
                   <Plus className="h-4 w-4 mr-1" />Ajouter
                 </Button>
               </div>
@@ -1629,7 +1629,7 @@ export function CoveragesTab() {
           <div className="flex items-center justify-center gap-2 pb-2">
             {[1, 2, 3].map((s) => (
               <div key={s} className="flex items-center gap-2">
-                <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${step > s ? "bg-emerald-500 text-white" : step === s ? "bg-[#B9E54D] text-black" : "bg-muted text-muted-foreground"}`}>
+                <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${step > s ? "bg-emerald-500 text-white" : step === s ? "bg-brand text-black" : "bg-muted text-muted-foreground"}`}>
                   {step > s ? <Check className="h-4 w-4" /> : s}
                 </div>
                 {s < 3 && <div className={`h-0.5 w-12 ${step > s ? "bg-emerald-500" : "bg-muted"}`} />}
@@ -1698,14 +1698,14 @@ export function CoveragesTab() {
                         }}
                         className={`w-full flex items-start gap-4 rounded-xl border-2 p-4 text-left transition-all ${
                           isSelected
-                            ? "border-[#B9E54D] bg-[#B9E54D]/5 shadow-sm"
+                            ? "border-brand bg-brand/5 shadow-sm"
                             : "border-border hover:border-muted-foreground/30 bg-card"
                         }`}
                       >
                         <div
                           className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors ${
                             isSelected
-                              ? "bg-[#B9E54D] text-black"
+                              ? "bg-brand text-black"
                               : "bg-muted text-muted-foreground"
                           }`}
                         >
@@ -1717,7 +1717,7 @@ export function CoveragesTab() {
                               {opt.label}
                             </span>
                             {isSelected && (
-                              <Check className="h-4 w-4 text-[#B9E54D]" />
+                              <Check className="h-4 w-4 text-brand" />
                             )}
                           </div>
                           <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
@@ -1751,12 +1751,12 @@ export function CoveragesTab() {
               <Button variant="outline" onClick={() => setStep(step - 1)}><ChevronLeft className="h-4 w-4 mr-1" />Précédent</Button>
             )}
             {step < 3 && (
-              <Button className="bg-[#B9E54D] text-black hover:bg-[#a5d044]" onClick={() => setStep(step + 1)} disabled={step === 1 && (!step1.name.trim() || !step1.insurerId)}>
+              <Button className="bg-brand text-black hover:bg-brand-hover" onClick={() => setStep(step + 1)} disabled={step === 1 && (!step1.name.trim() || !step1.insurerId)}>
                 Suivant<ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             )}
             {step === 3 && (
-              <Button className="bg-[#B9E54D] text-black hover:bg-[#a5d044]" onClick={handleSave} disabled={saving}>
+              <Button className="bg-brand text-black hover:bg-brand-hover" onClick={handleSave} disabled={saving}>
                 {saving ? "Enregistrement..." : editing ? "Modifier" : "Créer"}
               </Button>
             )}
@@ -1788,7 +1788,7 @@ export function CoveragesTab() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setTrDialogOpen(false)}>Annuler</Button>
-            <Button className="bg-[#B9E54D] text-black hover:bg-[#a5d044]" onClick={saveTr} disabled={trSaving}>{trSaving ? "..." : trEditing ? "Modifier" : "Ajouter"}</Button>
+            <Button className="bg-brand text-black hover:bg-brand-hover" onClick={saveTr} disabled={trSaving}>{trSaving ? "..." : trEditing ? "Modifier" : "Ajouter"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

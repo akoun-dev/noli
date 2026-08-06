@@ -296,3 +296,151 @@ export function downloadQuotePDF(
   // ═══════════════════ DOWNLOAD ═══════════════════
   doc.save(`NOLI-Devis-${ref}.pdf`);
 }
+
+// ── Attestation d'assurance ──────────────────────────────────────────────────
+
+export interface AttestationContract {
+  reference: string;
+  insurerName: string;
+  offerName: string | null;
+  premium: number | null;
+  startDate: string | null;
+  endDate: string | null;
+  clientName?: string;
+}
+
+/**
+ * Generate and download an insurance attestation (certificate) PDF.
+ */
+export function downloadAttestationPDF(contract: AttestationContract) {
+  const doc = new jsPDF({ format: "a4", unit: "mm" });
+  const pageW = 210; // A4 width in mm
+  const margin = 20;
+  const contentW = pageW - 2 * margin;
+  let y = margin;
+
+  // ═══════════════════ HEADER ═══════════════════
+  doc.setFillColor(ACCENT);
+  doc.rect(0, 0, pageW, 6, "F");
+  doc.setFillColor(PRIMARY);
+  doc.rect(0, 6, pageW, 18, "F");
+  doc.setTextColor("#FFFFFF");
+  doc.setFontSize(16);
+  doc.setFont("helvetica", "bold");
+  doc.text("NOLI ASSURANCE", margin, 18);
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "normal");
+  doc.text("Comparateur d'assurances en C\u00f4te d'Ivoire", margin, 24);
+
+  const today = new Date().toLocaleDateString("fr-FR", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+  doc.setFontSize(9);
+  doc.text(`Date : ${today}`, pageW - margin, 16, { align: "right" });
+  doc.text(`R\u00e9f : ${contract.reference}`, pageW - margin, 22, { align: "right" });
+
+  y = 32;
+
+  // ═══════════════════ TITLE ═══════════════════
+  doc.setTextColor(PRIMARY);
+  doc.setFontSize(18);
+  doc.setFont("helvetica", "bold");
+  doc.text("ATTESTATION D'ASSURANCE", margin, y);
+  y += 8;
+  doc.setDrawColor(ACCENT);
+  doc.setLineWidth(1.5);
+  doc.line(margin, y, margin + 80, y);
+  y += 14;
+
+  // ═══════════════════ CONTRACT INFO ═══════════════════
+  roundedRect(doc, margin, y, contentW, 44, 3, LIGHT_GRAY);
+  doc.setTextColor(PRIMARY);
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "bold");
+  doc.text("INFORMATIONS DU CONTRAT", margin + 4, y + 7);
+  doc.setTextColor("#374151");
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.text(`R\u00e9f\u00e9rence : ${contract.reference}`, margin + 4, y + 16);
+  doc.text(`Assureur : ${contract.insurerName}`, margin + 4, y + 23);
+  doc.text(`Formule : ${contract.offerName || "Non sp\u00e9cifi\u00e9"}`, margin + contentW / 2 + 4, y + 16);
+  doc.text(`Prime : ${fmt(contract.premium)}`, margin + contentW / 2 + 4, y + 23);
+  if (contract.clientName) {
+    doc.text(`Assur\u00e9 : ${contract.clientName}`, margin + 4, y + 30);
+  }
+  y += 50;
+
+  // ═══════════════════ VALIDITY ═══════════════════
+  doc.setTextColor(PRIMARY);
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.text("P\u00c9RIODE DE VALIDIT\u00c9", margin, y);
+  y += 6;
+  doc.setDrawColor(ACCENT);
+  doc.setLineWidth(1.5);
+  doc.line(margin, y, margin + 55, y);
+  y += 10;
+
+  roundedRect(doc, margin, y, contentW, 26, 3, ACCENT + "30");
+  doc.setTextColor(PRIMARY);
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "bold");
+  doc.text("Du", margin + 6, y + 12);
+  doc.text("Au", margin + 70, y + 12);
+  doc.setTextColor("#374151");
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.text(
+    contract.startDate
+      ? new Date(contract.startDate).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
+      : "—",
+    margin + 16,
+    y + 12
+  );
+  doc.text(
+    contract.endDate
+      ? new Date(contract.endDate).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
+      : "—",
+    margin + 86,
+    y + 12
+  );
+  y += 34;
+
+  // ═══════════════════ FOOTER ═══════════════════
+  if (y > 230) {
+    doc.addPage();
+    y = margin;
+  }
+
+  doc.setTextColor(GRAY);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "italic");
+  const note =
+    "La pr\u00e9sente attestation certifie qu'un contrat d'assurance est actif pour la p\u00e9riode mentionn\u00e9e ci-dessus. " +
+    "Elle n'engage la compagnie que dans les limites des conditions g\u00e9n\u00e9rales et particuli\u00e8res du contrat.";
+  const lines = doc.splitTextToSize(note, contentW);
+  doc.text(lines, margin, y);
+
+  const footerY = 280;
+  doc.setFillColor(PRIMARY);
+  doc.rect(0, footerY, pageW, 17, "F");
+  doc.setTextColor("#FFFFFF");
+  doc.setFontSize(7);
+  doc.setFont("helvetica", "normal");
+  doc.text(
+    "NOLI Assurance - Comparateur d'assurances en C\u00f4te d'Ivoire",
+    margin,
+    footerY + 7
+  );
+  doc.text("Contact : contact@noli.ci | +225 27 00 00 00 00", margin, footerY + 13);
+  doc.text(
+    "Attestation d'assurance - document non n\u00e9gociable.",
+    pageW - margin,
+    footerY + 13,
+    { align: "right" }
+  );
+
+  doc.save(`${contract.reference}-Attestation.pdf`);
+}

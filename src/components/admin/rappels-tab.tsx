@@ -154,7 +154,7 @@ export function RappelsTab() {
             key={f.id}
             variant={activeFilter === f.id ? "default" : "outline"}
             size="sm"
-            className={activeFilter === f.id ? "bg-[#B9E54D] text-black hover:bg-[#a5d044]" : ""}
+            className={activeFilter === f.id ? "bg-brand text-black hover:bg-brand-hover" : ""}
             onClick={() => setActiveFilter(f.id)}
           >
             {f.label}

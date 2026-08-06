@@ -226,11 +226,12 @@ beforeEach(() => {
 });
 
 describe("runComparison", () => {
-  it("filtre les offres hors type de contrat et inéligibles", async () => {
+  it("renvoie toutes les formules éligibles (le type choisi n'est pas un filtre strict)", async () => {
     const { results, total } = await runComparison(personal, vehicle, needs);
 
-    expect(total).toBe(2);
-    expect(results.map((r) => r.id)).toEqual(["offer-1", "offer-4"]);
+    // offer-2 exclue (plage CV), offer-3 (basic) désormais incluse
+    expect(total).toBe(3);
+    expect(results.map((r) => r.id)).toEqual(["offer-1", "offer-4", "offer-3"]);
   });
 
   it("calcule la prime, le score et les garanties de l'offre retenue", async () => {
@@ -246,8 +247,8 @@ describe("runComparison", () => {
     expect(top.matchedGuarantees).toEqual(["BRIS_GLACES", "ASSISTANCE"]);
     expect(top.pricingBreakdown).toHaveLength(3);
     // Les restrictions carburant/usage sont appliquées (voir fix safeParseStringArray) :
-    // 2 garanties × 25 + contrat 30 + prix 20 + CV 15 + VN 10 + carburant 10 + usage 10
-    expect(top.relevanceScore).toBe(145);
+    // 2 garanties × 25 + contrat 30 + BONUS type correspondant 30 + prix 20 + CV 15 + VN 10 + carburant 10 + usage 10
+    expect(top.relevanceScore).toBe(175);
   });
 
   it("trie par score décroissant puis par prix croissant", async () => {

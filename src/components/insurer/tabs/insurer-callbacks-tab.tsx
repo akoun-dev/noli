@@ -169,7 +169,7 @@ export function InsurerCallbacksTab() {
             size="sm"
             className={
               activeFilter === f.id
-                ? "bg-[#B9E54D] text-black hover:bg-[#a5d044]"
+                ? "bg-brand text-black hover:bg-brand-hover"
                 : ""
             }
             onClick={() => setActiveFilter(f.id)}

@@ -244,7 +244,7 @@ export function UserNotificationsTab() {
                       {n.title}
                     </p>
                     {!n.isRead && (
-                      <span className="h-2 w-2 rounded-full bg-[#B9E54D] shrink-0" />
+                      <span className="h-2 w-2 rounded-full bg-brand shrink-0" />
                     )}
                   </div>
                   <p className="text-sm text-muted-foreground mt-0.5">

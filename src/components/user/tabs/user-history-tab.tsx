@@ -66,7 +66,7 @@ export function UserHistoryTab() {
             onClick={() => setActiveFilter(f)}
             className={`text-xs px-3 py-1.5 rounded-full transition-colors ${
               activeFilter === f
-                ? "bg-[#B9E54D] text-black font-medium"
+                ? "bg-brand text-black font-medium"
                 : "bg-muted text-muted-foreground hover:bg-muted/80"
             }`}
           >
@@ -93,7 +93,7 @@ export function UserHistoryTab() {
             pour vous permettre de retrouver facilement vos recherches.
           </p>
           <Button
-            className="bg-[#B9E54D] text-black hover:bg-[#a5d044] rounded-full shadow-sm"
+            className="bg-brand text-black hover:bg-brand-hover rounded-full shadow-sm"
             onClick={() => {
               setComparisonStep(1);
               setView("compare");

@@ -1448,6 +1448,19 @@ function OfferCard({
                                                 <span className="text-foreground/90 flex-1 min-w-0">
                                                     {resolvedName}
                                                 </span>
+                                                {pricing && (
+                                                    <span
+                                                        className={`text-xs font-semibold shrink-0 tabular-nums mt-0.5 ${
+                                                            pricing.amount === 0
+                                                                ? "text-green-600"
+                                                                : "text-foreground"
+                                                        }`}
+                                                    >
+                                                        {pricing.amount === 0
+                                                            ? "Inclus"
+                                                            : `${formatFCFA(pricing.amount)}/an`}
+                                                    </span>
+                                                )}
                                                 <Tooltip>
                                                     <TooltipTrigger asChild>
                                                         <button
@@ -1478,6 +1491,46 @@ function OfferCard({
                                                                     non
                                                                     disponible
                                                                 </p>
+                                                            )}
+                                                            {pricing && (
+                                                                <div className="border-t border-background/20 pt-1.5 mt-1.5 space-y-1">
+                                                                    {pricing.coverageCapital != null &&
+                                                                        pricing.coverageCapital > 0 && (
+                                                                            <p className="text-background/90">
+                                                                                Capital
+                                                                                garanti :{" "}
+                                                                                <span className="font-bold text-background">
+                                                                                    {formatFCFA(
+                                                                                        pricing.coverageCapital
+                                                                                    )}
+                                                                                </span>
+                                                                            </p>
+                                                                        )}
+                                                                    <p className="text-background/90">
+                                                                        Coût :{" "}
+                                                                        <span className="font-bold text-background">
+                                                                            {pricing.amount ===
+                                                                            0
+                                                                                ? "Gratuit"
+                                                                                : `${formatFCFA(pricing.amount)}/an`}
+                                                                        </span>
+                                                                    </p>
+                                                                    <p className="text-background/90">
+                                                                        Méthode :{" "}
+                                                                        <span className="font-semibold text-background">
+                                                                            {
+                                                                                pricing.method
+                                                                            }
+                                                                        </span>
+                                                                    </p>
+                                                                    {pricing.breakdown && (
+                                                                        <p className="text-background/80 whitespace-pre-line text-xs">
+                                                                            {
+                                                                                pricing.breakdown
+                                                                            }
+                                                                        </p>
+                                                                    )}
+                                                                </div>
                                                             )}
                                                         </div>
                                                     </TooltipContent>
@@ -1761,17 +1814,10 @@ export function ResultsPage() {
         new Set()
     )
 
-    const contractTypeToLabel: Record<string, string> = {
-        basic: "Tiers",
-        third_party_plus: "Tiers+",
-        all_risks: "Tous Risques",
-        premium: "Premium",
-        premium_plus: "Premium+",
-    }
-    const initialCoverageFilter = coverageNeeds.contractType
-        ? contractTypeToLabel[coverageNeeds.contractType] || "all"
-        : "all"
-    const [coverageFilter, setCoverageFilter] = useState<string>(initialCoverageFilter)
+    // Le filtre « Formules » démarre sur « Tous » : la comparaison renvoie
+    // toutes les formules éligibles (le type choisi au formulaire n'est qu'un
+    // critère de classement, pas un filtre strict).
+    const [coverageFilter, setCoverageFilter] = useState<string>("all")
     const [budgetMax, setBudgetMax] = useState<number>(effectiveBudgetMax)
     const [priceMode, setPriceMode] = useState<"annual" | "monthly">("annual")
     const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)

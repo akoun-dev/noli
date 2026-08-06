@@ -164,7 +164,7 @@ export function UserPaymentsTab() {
               <Switch checked={autoPay} onCheckedChange={setAutoPay} />
             </div>
             {autoPay && (
-              <div className="flex items-center gap-2 rounded-lg bg-[#B9E54D]/10 p-3 text-xs text-[#8ab530]">
+              <div className="flex items-center gap-2 rounded-lg bg-brand/10 p-3 text-xs text-[#8ab530]">
                 <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
                 Le paiement automatique sera activé dès votre premier contrat souscrit.
               </div>

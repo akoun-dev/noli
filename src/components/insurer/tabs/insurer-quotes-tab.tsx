@@ -7,6 +7,8 @@ import {
   XCircle,
   Clock,
   FileEdit,
+  Loader2,
+  RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useToast } from "@/hooks/use-toast";
 
 interface QuoteRow {
   id: string;
@@ -27,6 +30,7 @@ interface QuoteRow {
   categoryName: string;
   offerName: string;
   estimatedPrice: number | null;
+  finalPrice: number | null;
   status: string;
   createdAt: string;
 }
@@ -64,46 +68,87 @@ const statusIcons: Record<string, React.ReactNode> = {
 };
 
 export function InsurerQuotesTab() {
+  const { toast } = useToast();
   const [quotes, setQuotes] = useState<QuoteRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState("all");
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
 
-  const fetchQuotes = useCallback(() => {
-    // Fetch all quotes (insurer sees all — in production, filter by insurerId)
-    fetch("/api/quotes?all=true&limit=100")
-      .then((r) => {
-        if (!r.ok) throw new Error("Erreur serveur");
-        return r.json();
-      })
-      .then((data) => {
-        const raw = data.quotes || data;
-        if (Array.isArray(raw)) {
-          setQuotes(
-            raw.map((q: Record<string, unknown>) => ({
-              id: q.id as string,
-              reference: (q.reference as string) || "—",
-              clientName:
-                ((q.user as Record<string, unknown>)?.firstName as string)
-                ? [((q.user as Record<string, unknown>)?.firstName as string), ((q.user as Record<string, unknown>)?.lastName as string)].filter(Boolean).join(" ")
-                : ((q.personalData as Record<string, unknown>)?.lastName as string) || "—",
-              categoryName:
-                ((q.category as Record<string, unknown>)?.name as string) || "—",
-              offerName:
-                ((q.offer as Record<string, unknown>)?.name as string) || "—",
-              estimatedPrice: (q.estimatedPrice as number) || null,
-              status: (q.status as string) || "DRAFT",
-              createdAt: q.createdAt as string,
-            }))
-          );
-        }
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+  const fetchQuotes = useCallback(async () => {
+    setLoading(true);
+    try {
+      // Route dédiée : les devis sont filtrés côté serveur par assureur
+      // (via la session, jamais via /api/quotes?all=true)
+      const res = await fetch(`/api/insurer/quotes?limit=100`);
+      if (!res.ok) throw new Error("Erreur serveur");
+      const data = await res.json();
+      const raw = data.quotes || [];
+      if (Array.isArray(raw)) {
+        setQuotes(
+          raw.map((q: Record<string, unknown>) => ({
+            id: q.id as string,
+            reference: (q.reference as string) || "—",
+            clientName:
+              (q.userName as string) ||
+              ((q.personalData as Record<string, unknown>)?.lastName as string) ||
+              "—",
+            categoryName: (q.categoryName as string) || "—",
+            offerName: (q.offerName as string) || "—",
+            estimatedPrice: (q.estimatedPrice as number) ?? null,
+            finalPrice: (q.finalPrice as number) ?? null,
+            status: (q.status as string) || "DRAFT",
+            createdAt: q.createdAt as string,
+          }))
+        );
+      }
+    } catch {
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les devis.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
 
   useEffect(() => {
     fetchQuotes();
   }, [fetchQuotes]);
+
+  const handleStatusChange = async (quoteId: string, newStatus: string) => {
+    if (updatingId) return;
+    setUpdatingId(quoteId);
+    try {
+      const res = await fetch(`/api/insurer/quotes/${quoteId}/status`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Erreur lors de la mise à jour");
+      }
+      toast({
+        title:
+          newStatus === "APPROVED"
+            ? "Devis approuvé"
+            : newStatus === "REJECTED"
+              ? "Devis refusé"
+              : "Devis remis en attente",
+        description: "Le client a été notifié.",
+      });
+      fetchQuotes();
+    } catch (err) {
+      toast({
+        title: "Erreur",
+        description: err instanceof Error ? err.message : "Erreur inconnue",
+        variant: "destructive",
+      });
+    } finally {
+      setUpdatingId(null);
+    }
+  };
 
   const filteredQuotes =
     activeFilter === "all"
@@ -113,11 +158,22 @@ export function InsurerQuotesTab() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h2 className="text-2xl font-bold">Devis Reçus</h2>
-        <p className="text-muted-foreground mt-1">
-          Consultez et gérez les devis soumis par les clients.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h2 className="text-2xl font-bold">Devis Reçus</h2>
+          <p className="text-muted-foreground mt-1">
+            Consultez et gérez les devis soumis pour vos offres.
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={fetchQuotes}
+          disabled={loading}
+        >
+          <RefreshCw className={`size-4 mr-1.5 ${loading ? "animate-spin" : ""}`} />
+          Actualiser
+        </Button>
       </div>
 
       {/* Status filter tabs */}
@@ -129,7 +185,7 @@ export function InsurerQuotesTab() {
             size="sm"
             className={
               activeFilter === f.id
-                ? "bg-[#B9E54D] text-black hover:bg-[#a5d044]"
+                ? "bg-brand text-black hover:bg-brand-hover"
                 : ""
             }
             onClick={() => setActiveFilter(f.id)}
@@ -163,11 +219,11 @@ export function InsurerQuotesTab() {
             <p className="text-sm text-muted-foreground mt-1 max-w-md">
               {activeFilter !== "all"
                 ? `Aucun devis avec le statut "${statusLabels[activeFilter]}". Essayez un autre filtre.`
-                : "Aucun devis n'a été soumis pour le moment. Les devis apparaissent ici lorsqu'un client en demande un."}
+                : "Aucun devis n'a été soumis pour vos offres pour le moment."}
             </p>
           </div>
         ) : (
-          <div className="max-h-96 overflow-y-auto">
+          <div className="max-h-[600px] overflow-y-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -175,7 +231,7 @@ export function InsurerQuotesTab() {
                   <TableHead>Client</TableHead>
                   <TableHead>Catégorie</TableHead>
                   <TableHead>Offre</TableHead>
-                  <TableHead>Montant estimé</TableHead>
+                  <TableHead>Montant</TableHead>
                   <TableHead>Statut</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -191,11 +247,11 @@ export function InsurerQuotesTab() {
                     <TableCell>{q.categoryName}</TableCell>
                     <TableCell>{q.offerName}</TableCell>
                     <TableCell>
-                      {q.estimatedPrice
-                        ? new Intl.NumberFormat("fr-FR").format(
-                            q.estimatedPrice
-                          ) + " FCFA"
-                        : "—"}
+                      {q.finalPrice != null
+                        ? new Intl.NumberFormat("fr-FR").format(q.finalPrice) + " FCFA"
+                        : q.estimatedPrice != null
+                          ? new Intl.NumberFormat("fr-FR").format(q.estimatedPrice) + " FCFA"
+                          : "—"}
                     </TableCell>
                     <TableCell>
                       <Badge
@@ -218,17 +274,23 @@ export function InsurerQuotesTab() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-950/30 h-8 text-xs disabled:opacity-50"
-                            disabled
+                            className="text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-950/30 h-8 text-xs"
+                            disabled={updatingId === q.id}
+                            onClick={() => handleStatusChange(q.id, "APPROVED")}
                           >
-                            <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
+                            {updatingId === q.id ? (
+                              <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
+                            )}
                             Accepter
                           </Button>
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 h-8 text-xs disabled:opacity-50"
-                            disabled
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 h-8 text-xs"
+                            disabled={updatingId === q.id}
+                            onClick={() => handleStatusChange(q.id, "REJECTED")}
                           >
                             <XCircle className="mr-1 h-3.5 w-3.5" />
                             Refuser
@@ -236,11 +298,13 @@ export function InsurerQuotesTab() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950/30 h-8 text-xs disabled:opacity-50"
-                            disabled
+                            className="text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950/30 h-8 text-xs"
+                            disabled={updatingId === q.id}
+                            onClick={() => handleStatusChange(q.id, "PENDING")}
+                            title="Remettre en attente"
                           >
                             <FileEdit className="mr-1 h-3.5 w-3.5" />
-                            Contre-proposition
+                            Remettre en attente
                           </Button>
                         </div>
                       )}
@@ -250,10 +314,38 @@ export function InsurerQuotesTab() {
                         </span>
                       )}
                       {q.status === "APPROVED" && (
-                        <span className="text-xs text-green-600">Traité</span>
+                        <div className="flex items-center justify-end gap-1">
+                          <span className="text-xs text-green-600 mr-1">
+                            Traité
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-muted-foreground hover:text-foreground h-8 text-xs"
+                            disabled={updatingId === q.id}
+                            onClick={() => handleStatusChange(q.id, "PENDING")}
+                          >
+                            <Clock className="mr-1 h-3.5 w-3.5" />
+                            Réouvrir
+                          </Button>
+                        </div>
                       )}
                       {q.status === "REJECTED" && (
-                        <span className="text-xs text-red-600">Traité</span>
+                        <div className="flex items-center justify-end gap-1">
+                          <span className="text-xs text-red-600 mr-1">
+                            Traité
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-muted-foreground hover:text-foreground h-8 text-xs"
+                            disabled={updatingId === q.id}
+                            onClick={() => handleStatusChange(q.id, "PENDING")}
+                          >
+                            <Clock className="mr-1 h-3.5 w-3.5" />
+                            Réouvrir
+                          </Button>
+                        </div>
                       )}
                     </TableCell>
                   </TableRow>

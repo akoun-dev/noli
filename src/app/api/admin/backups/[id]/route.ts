@@ -1,12 +1,52 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth-guard'
 import { db, mapRow } from '@/lib/db'
-import { existsSync, unlinkSync, copyFileSync } from 'fs'
+import { existsSync, unlinkSync, copyFileSync, readFileSync } from 'fs'
 import { join } from 'path'
 
 async function findBackup(id: string) {
   const { data } = await db.from("backups").select("*").eq("id", id).maybeSingle()
   return mapRow<{ id: string; path: string | null; filename: string }>(data)
+}
+
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
+    const { id } = await params
+
+    const backup = await findBackup(id)
+    if (!backup) {
+      return NextResponse.json(
+        { error: 'Sauvegarde non trouvée' },
+        { status: 404 }
+      )
+    }
+
+    const backupPath = backup.path || join(/* turbopackIgnore: true */ process.cwd(), 'db', 'backups', backup.filename)
+    if (!existsSync(backupPath)) {
+      return NextResponse.json(
+        { error: 'Fichier de sauvegarde introuvable sur le serveur' },
+        { status: 404 }
+      )
+    }
+
+    const content = readFileSync(backupPath)
+    return new NextResponse(content, {
+      headers: {
+        'Content-Type': 'application/octet-stream',
+        'Content-Disposition': `attachment; filename="${backup.filename.replace(/"/g, '')}"`,
+      },
+    })
+  } catch (error) {
+    console.error('Erreur lors du téléchargement de la sauvegarde:', error)
+    return NextResponse.json(
+      { error: 'Erreur lors du téléchargement de la sauvegarde' },
+      { status: 500 }
+    )
+  }
 }
 
 export async function DELETE(

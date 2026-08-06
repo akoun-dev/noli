@@ -36,9 +36,11 @@ export function InsurerSettingsTab() {
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [profileName, setProfileName] = useState(user.name || "");
   const [profileEmail, setProfileEmail] = useState(user.email || "");
+  const [profileCurrentPassword, setProfileCurrentPassword] = useState("");
   const [profilePassword, setProfilePassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [savingCompany, setSavingCompany] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
   const [logoUploading, setLogoUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -63,9 +65,101 @@ export function InsurerSettingsTab() {
       .finally(() => setLoading(false));
   }, [user.id]);
 
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+  const handleSaveCompany = async () => {
+    if (!companyName.trim()) {
+      toast({
+        title: "Nom requis",
+        description: "Veuillez renseigner le nom de l'entreprise.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setSavingCompany(true);
+    try {
+      const res = await fetch("/api/insurer/me", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: companyName,
+          contactEmail: companyEmail,
+          phone: companyPhone,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({
+          title: "Erreur",
+          description: data.error || "Impossible d'enregistrer les informations.",
+          variant: "destructive",
+        });
+        return;
+      }
+      setCompanyName(data.name || companyName);
+      setCompanyEmail(data.contactEmail || companyEmail);
+      setCompanyPhone(data.phone || companyPhone);
+      toast({
+        title: "Entreprise mise à jour",
+        description: "Vos informations ont été enregistrées.",
+      });
+    } catch {
+      toast({
+        title: "Erreur",
+        description: "Impossible d'enregistrer les informations.",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingCompany(false);
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    if (profilePassword && !profileCurrentPassword) {
+      toast({
+        title: "Mot de passe actuel requis",
+        description: "Renseignez votre mot de passe actuel pour le modifier.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setSavingProfile(true);
+    try {
+      const [firstName = "", ...rest] = profileName.trim().split(" ");
+      const lastName = rest.join(" ");
+      const res = await fetch("/api/user/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firstName,
+          lastName,
+          currentPassword: profileCurrentPassword || undefined,
+          newPassword: profilePassword || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({
+          title: "Erreur",
+          description: data.error || "Impossible de mettre à jour le profil.",
+          variant: "destructive",
+        });
+        return;
+      }
+      setProfileName(data.profile?.name || profileName);
+      setProfilePassword("");
+      setProfileCurrentPassword("");
+      toast({
+        title: "Profil mis à jour",
+        description: "Vos informations de connexion ont été enregistrées.",
+      });
+    } catch {
+      toast({
+        title: "Erreur",
+        description: "Impossible de mettre à jour le profil.",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingProfile(false);
+    }
   };
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -149,7 +243,7 @@ export function InsurerSettingsTab() {
           <Card>
             <CardHeader>
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#B9E54D]">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand">
                   <ImageIcon className="h-5 w-5 text-black" />
                 </div>
                 <div>
@@ -217,7 +311,7 @@ export function InsurerSettingsTab() {
           <Card>
             <CardHeader>
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#B9E54D]">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand">
                   <Building2 className="h-5 w-5 text-black" />
                 </div>
                 <div>
@@ -283,11 +377,16 @@ export function InsurerSettingsTab() {
                 </div>
               </div>
               <Button
-                className="bg-[#B9E54D] text-black hover:bg-[#a5d044]"
-                onClick={handleSave}
+                className="bg-brand text-black hover:bg-brand-hover"
+                onClick={handleSaveCompany}
+                disabled={savingCompany}
               >
-                <Save className="mr-2 h-4 w-4" />
-                {saved ? "Enregistré !" : "Enregistrer"}
+                {savingCompany ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="mr-2 h-4 w-4" />
+                )}
+                {savingCompany ? "Enregistrement…" : "Enregistrer"}
               </Button>
             </CardContent>
           </Card>
@@ -340,24 +439,42 @@ export function InsurerSettingsTab() {
                 <Label htmlFor="profile-password">
                   Changer le mot de passe
                 </Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="profile-password"
-                    type="password"
-                    value={profilePassword}
-                    onChange={(e) => setProfilePassword(e.target.value)}
-                    placeholder="Nouveau mot de passe"
-                    className="pl-9"
-                  />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="profile-current-password"
+                      type="password"
+                      value={profileCurrentPassword}
+                      onChange={(e) => setProfileCurrentPassword(e.target.value)}
+                      placeholder="Mot de passe actuel"
+                      className="pl-9"
+                    />
+                  </div>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="profile-password"
+                      type="password"
+                      value={profilePassword}
+                      onChange={(e) => setProfilePassword(e.target.value)}
+                      placeholder="Nouveau mot de passe"
+                      className="pl-9"
+                    />
+                  </div>
                 </div>
               </div>
               <Button
                 variant="outline"
-                onClick={handleSave}
+                onClick={handleSaveProfile}
+                disabled={savingProfile}
               >
-                <Save className="mr-2 h-4 w-4" />
-                Mettre à jour le profil
+                {savingProfile ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="mr-2 h-4 w-4" />
+                )}
+                {savingProfile ? "Enregistrement…" : "Mettre à jour le profil"}
               </Button>
             </CardContent>
           </Card>

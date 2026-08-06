@@ -100,7 +100,7 @@ export function UserDashboardTab() {
       label: "Devis en cours",
       value: pendingCount + draftCount,
       icon: FileText,
-      color: "bg-[#B9E54D]/15 text-black dark:text-[#B9E54D]",
+      color: "bg-brand/15 text-black dark:text-brand",
     },
     {
       label: "Contrats actifs",
@@ -260,8 +260,8 @@ export function UserDashboardTab() {
               }}
             >
               <CardContent className="p-4 flex items-center gap-3">
-                <div className="rounded-lg bg-[#B9E54D]/15 p-2.5 group-hover:bg-[#B9E54D]/25 transition-colors">
-                  <Plus className="h-5 w-5 text-black dark:text-[#B9E54D]" />
+                <div className="rounded-lg bg-brand/15 p-2.5 group-hover:bg-brand/25 transition-colors">
+                  <Plus className="h-5 w-5 text-black dark:text-brand" />
                 </div>
                 <div>
                   <p className="text-sm font-medium">Nouvelle comparaison</p>

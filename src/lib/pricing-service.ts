@@ -867,7 +867,8 @@ export function calculateNetPremium(
 export function scoreOffer(
   offer: OfferInput,
   vehicleData: VehiclePricingData,
-  matchedGuarantees: string[]
+  matchedGuarantees: string[],
+  preferredContractType?: string | null
 ): ScoreResult {
   let score = 0;
   const reasons: string[] = [];
@@ -899,6 +900,14 @@ export function scoreOffer(
     reasons.push(
       `+${pts} pts — type de contrat « ${labels[contractType] || contractType} »`
     );
+
+    // Bonus si le type de l'offre correspond au besoin exprimé par l'utilisateur
+    if (preferredContractType && contractType === preferredContractType) {
+      score += 30;
+      reasons.push(
+        `+30 pts — type de contrat « ${labels[contractType] || contractType} » correspondant à votre besoin`
+      );
+    }
   }
 
   // +5 à +20 pts si le prix de l'offre est dans une plage raisonnable

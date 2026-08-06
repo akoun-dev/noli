@@ -1610,7 +1610,7 @@ export function InsurerGuaranteesTab() {
                         type="button"
                         variant={tierceVehicleCategory === cat ? "default" : "outline"}
                         size="sm"
-                        className={`rounded-r-none ${tierceVehicleCategory === cat ? "bg-[#B9E54D] text-black hover:bg-[#a5d044]" : ""}`}
+                        className={`rounded-r-none ${tierceVehicleCategory === cat ? "bg-brand text-black hover:bg-brand-hover" : ""}`}
                         onClick={() => {
                           setTierceVehicleCategory(cat);
                           setCategoryTariffs(getDefaultCategoryTariffs(
@@ -1625,7 +1625,7 @@ export function InsurerGuaranteesTab() {
                         type="button"
                         variant={tierceVehicleCategory === cat ? "default" : "outline"}
                         size="sm"
-                        className={`h-8 w-6 p-0 rounded-l-none border-l-0 ${tierceVehicleCategory === cat ? "bg-[#B9E54D] text-black hover:bg-[#a5d044]" : "text-muted-foreground hover:text-destructive"}`}
+                        className={`h-8 w-6 p-0 rounded-l-none border-l-0 ${tierceVehicleCategory === cat ? "bg-brand text-black hover:bg-brand-hover" : "text-muted-foreground hover:text-destructive"}`}
                         onClick={() => {
                           const filtered = categoryTariffs.filter(ct => ct.vehicleCategory !== cat);
                           const remaining = tierceCategories.filter(c => c !== cat);
@@ -1793,7 +1793,7 @@ export function InsurerGuaranteesTab() {
           </p>
         </div>
         <Button
-          className="bg-[#B9E54D] text-black hover:bg-[#a5d044]"
+          className="bg-brand text-black hover:bg-brand-hover"
           onClick={openCreate}
           disabled={!insurerId}
         >
@@ -1981,7 +1981,7 @@ export function InsurerGuaranteesTab() {
                     step > s
                       ? "bg-emerald-500 text-white"
                       : step === s
-                        ? "bg-[#B9E54D] text-black"
+                        ? "bg-brand text-black"
                         : "bg-muted text-muted-foreground"
                   }`}
                 >
@@ -2066,14 +2066,14 @@ export function InsurerGuaranteesTab() {
                         }}
                         className={`w-full flex items-start gap-4 rounded-xl border-2 p-4 text-left transition-all ${
                           isSelected
-                            ? "border-[#B9E54D] bg-[#B9E54D]/5 shadow-sm"
+                            ? "border-brand bg-brand/5 shadow-sm"
                             : "border-border hover:border-muted-foreground/30 bg-card"
                         }`}
                       >
                         <div
                           className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors ${
                             isSelected
-                              ? "bg-[#B9E54D] text-black"
+                              ? "bg-brand text-black"
                               : "bg-muted text-muted-foreground"
                           }`}
                         >
@@ -2085,7 +2085,7 @@ export function InsurerGuaranteesTab() {
                               {opt.label}
                             </span>
                             {isSelected && (
-                              <Check className="h-4 w-4 text-[#B9E54D]" />
+                              <Check className="h-4 w-4 text-brand" />
                             )}
                           </div>
                           <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
@@ -2131,7 +2131,7 @@ export function InsurerGuaranteesTab() {
             )}
             {step < 3 && (
               <Button
-                className="bg-[#B9E54D] text-black hover:bg-[#a5d044]"
+                className="bg-brand text-black hover:bg-brand-hover"
                 onClick={() => setStep(step + 1)}
                 disabled={(step === 1 && !step1.name.trim()) || (step === 2 && !calcType)}
               >
@@ -2141,7 +2141,7 @@ export function InsurerGuaranteesTab() {
             )}
             {step === 3 && (
               <Button
-                className="bg-[#B9E54D] text-black hover:bg-[#a5d044]"
+                className="bg-brand text-black hover:bg-brand-hover"
                 onClick={handleSave}
                 disabled={saving}
               >

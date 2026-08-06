@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   Search, Filter, Download, Clock, User, Edit, Trash,
-  ArrowUpDown, ChevronLeft, ChevronRight, FileText,
+  ArrowUpDown, ChevronLeft, ChevronRight, FileText, Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -78,6 +78,7 @@ export function AuditLogsTab() {
   const [pages, setPages] = useState(1);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
 
   // Expanded detail
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -129,8 +130,67 @@ export function AuditLogsTab() {
     setPage(1);
   };
 
-  const handleExport = () => {
-    toast({ title: "Export en cours...", description: "Le fichier sera prêt sous peu." });
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const params = new URLSearchParams();
+      if (actionFilter !== "all") params.set("action", actionFilter);
+      if (entityFilter !== "all") params.set("entity", entityFilter);
+      if (startDate) params.set("startDate", startDate);
+      if (endDate) params.set("endDate", endDate);
+      if (search) params.set("search", search);
+      params.set("page", "1");
+      params.set("limit", "10000");
+
+      const res = await fetch(`/api/admin/audit-logs?${params}`);
+      if (!res.ok) {
+        toast({ title: "Erreur", description: "Impossible d'exporter les journaux.", variant: "destructive" });
+        return;
+      }
+      const data: AuditLogsResponse = await res.json();
+
+      if (data.logs.length === 0) {
+        toast({ title: "Aucune donnée", description: "Aucun journal à exporter avec ces filtres." });
+        return;
+      }
+
+      const headers = ["Date", "Utilisateur", "Email", "Action", "Entité", "ID Entité", "Détails", "IP"];
+      const escape = (v: unknown) => {
+        const s = String(v ?? "");
+        return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+      };
+      const rows = data.logs.map((l) =>
+        [
+          new Date(l.createdAt).toLocaleString("fr-FR"),
+          l.userName || "",
+          l.userEmail || "",
+          ACTION_LABELS[l.action] || l.action,
+          l.entity,
+          l.entityId,
+          typeof l.details === "string" ? l.details : JSON.stringify(l.details),
+          l.ipAddress,
+        ]
+          .map(escape)
+          .join(";")
+      );
+
+      const csv = "\uFEFF" + [headers.join(";"), ...rows].join("\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `audit-logs-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast({ title: "Export réussi", description: `${data.logs.length} journal(aux) exporté(s) en CSV.` });
+    } catch {
+      toast({ title: "Erreur", description: "Erreur réseau.", variant: "destructive" });
+    } finally {
+      setExporting(false);
+    }
   };
 
   // Stats
@@ -419,7 +479,7 @@ export function AuditLogsTab() {
                     key={pageNum}
                     variant={pageNum === page ? "default" : "outline"}
                     size="icon"
-                    className={pageNum === page ? "bg-[#B9E54D] text-black hover:bg-[#a5d044]" : ""}
+                    className={pageNum === page ? "bg-brand text-black hover:bg-brand-hover" : ""}
                     onClick={() => setPage(pageNum)}
                   >
                     {pageNum}
@@ -451,9 +511,13 @@ export function AuditLogsTab() {
             Consultez et filtrez l&apos;historique de toutes les actions effectuées sur la plateforme.
           </p>
         </div>
-        <Button onClick={handleExport} className="bg-[#B9E54D] text-black hover:bg-[#a5d044]">
-          <Download className="h-4 w-4 mr-2" />
-          Exporter les journaux
+        <Button onClick={handleExport} disabled={exporting} className="bg-brand text-black hover:bg-brand-hover">
+          {exporting ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            <Download className="h-4 w-4 mr-2" />
+          )}
+          {exporting ? "Export…" : "Exporter les journaux"}
         </Button>
       </div>
 

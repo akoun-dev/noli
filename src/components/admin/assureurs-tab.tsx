@@ -167,7 +167,7 @@ export function AssureursTab() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Rechercher..." value={search} onChange={(e) => { setSearch(e.target.value); setLoading(true); }} className="pl-9 w-56" />
           </div>
-          <Button className="bg-[#B9E54D] text-black hover:bg-[#a5d044]" onClick={openCreate}>
+          <Button className="bg-brand text-black hover:bg-brand-hover" onClick={openCreate}>
             <Plus className="h-4 w-4 mr-2" />Ajouter
           </Button>
         </div>
@@ -273,7 +273,7 @@ export function AssureursTab() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Annuler</Button>
-            <Button className="bg-[#B9E54D] text-black hover:bg-[#a5d044]" onClick={handleSave} disabled={saving}>{saving ? "Enregistrement..." : editing ? "Modifier" : "Créer"}</Button>
+            <Button className="bg-brand text-black hover:bg-brand-hover" onClick={handleSave} disabled={saving}>{saving ? "Enregistrement..." : editing ? "Modifier" : "Créer"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

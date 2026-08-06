@@ -113,7 +113,7 @@ export function UserSettingsTab() {
           <Card className="bg-card rounded-xl border">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
-                <Settings className="size-5 text-[#B9E54D]" />
+                <Settings className="size-5 text-brand" />
                 Paramètres du compte
               </CardTitle>
               <CardDescription>Gérez vos préférences de notification et de langue.</CardDescription>
@@ -191,7 +191,7 @@ export function UserSettingsTab() {
           <Card className="bg-card rounded-xl border">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
-                <Lock className="size-5 text-[#B9E54D]" />
+                <Lock className="size-5 text-brand" />
                 Sécurité
               </CardTitle>
               <CardDescription>Modifiez votre mot de passe pour sécuriser votre compte.</CardDescription>
@@ -226,7 +226,7 @@ export function UserSettingsTab() {
               </div>
               {passwordError && <p className="text-xs text-destructive">{passwordError}</p>}
               <div className="pt-2">
-                <Button className="bg-[#B9E54D] text-black hover:bg-[#a5d044]" onClick={handlePasswordChange} disabled={changingPassword || !currentPassword || !newPassword || !confirmPassword}>
+                <Button className="bg-brand text-black hover:bg-brand-hover" onClick={handlePasswordChange} disabled={changingPassword || !currentPassword || !newPassword || !confirmPassword}>
                   {changingPassword ? <Loader2 className="size-4 animate-spin mr-2" /> : <Save className="size-4 mr-2" />}
                   Changer le mot de passe
                 </Button>

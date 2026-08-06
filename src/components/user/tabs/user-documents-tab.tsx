@@ -1,10 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { FolderOpen, FileCheck, FileText, Receipt, Download, Lock, AlertCircle } from "lucide-react";
+import {
+  FolderOpen,
+  FileCheck,
+  FileText,
+  Receipt,
+  Download,
+  Lock,
+  AlertCircle,
+  Building2,
+} from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { downloadAttestationPDF } from "@/lib/generate-pdf";
 
 const docCategories = [
   {
@@ -30,8 +42,49 @@ const docCategories = [
   },
 ];
 
+interface Contract {
+  id: string;
+  reference: string;
+  status: string;
+  startDate: string | null;
+  endDate: string | null;
+  premium: number | null;
+  insurer: { name: string } | null;
+  offer: { name: string } | null;
+}
+
 export function UserDocumentsTab() {
-  const [loading] = useState(false);
+  const [contracts, setContracts] = useState<Contract[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchContracts = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch("/api/user/contracts");
+        const data = await res.json();
+        if (res.ok) setContracts(data.contracts || []);
+      } catch {
+        // keep empty
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchContracts();
+  }, []);
+
+  const activeContracts = contracts.filter((c) => c.status === "ACTIVE");
+
+  const handleDownload = (contract: Contract) => {
+    downloadAttestationPDF({
+      reference: contract.reference,
+      insurerName: contract.insurer?.name || "Assureur",
+      offerName: contract.offer?.name || null,
+      premium: contract.premium,
+      startDate: contract.startDate,
+      endDate: contract.endDate,
+    });
+  };
 
   if (loading) {
     return (
@@ -61,39 +114,78 @@ export function UserDocumentsTab() {
         </p>
       </motion.div>
 
-      {/* État vide amélioré */}
+      {/* Attestations de vos contrats actifs */}
       <motion.div
-        initial={{ opacity: 0, scale: 0.98 }}
-        animate={{ opacity: 1, scale: 1 }}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.1 }}
-        className="rounded-xl border border-dashed bg-card/40 p-10 text-center"
       >
-        <div className="rounded-full bg-gradient-to-br from-blue-500/10 to-purple-500/10 p-4 mx-auto w-fit mb-4">
-          <FolderOpen className="h-10 w-10 text-blue-500" />
-        </div>
-        <h3 className="text-lg font-semibold mb-2">Aucun document disponible</h3>
-        <p className="text-sm text-muted-foreground max-w-md mx-auto mb-6">
-          Vos documents (attestations, CGV, quittances) apparaîtront ici automatiquement
-          après souscription à un contrat d&apos;assurance.
-        </p>
+        <h3 className="text-base font-semibold mb-3 flex items-center gap-2">
+          <FileCheck className="h-4 w-4 text-green-500" />
+          Attestations disponibles
+        </h3>
 
-        <div className="flex flex-wrap items-center justify-center gap-6 text-xs text-muted-foreground">
-          <div className="flex items-center gap-1.5">
-            <Lock className="h-3.5 w-3.5 text-green-500" />
-            Documents sécurisés
+        {activeContracts.length === 0 ? (
+          <div className="rounded-xl border border-dashed bg-card/40 p-8 text-center">
+            <div className="rounded-full bg-gradient-to-br from-blue-500/10 to-purple-500/10 p-4 mx-auto w-fit mb-4">
+              <FolderOpen className="h-8 w-8 text-blue-500" />
+            </div>
+            <h4 className="font-semibold mb-1">Aucun document disponible</h4>
+            <p className="text-sm text-muted-foreground max-w-md mx-auto">
+              Vos attestations apparaîtront ici automatiquement dès qu&apos;un contrat
+              sera actif (devis approuvé par l&apos;assureur).
+            </p>
           </div>
-          <div className="flex items-center gap-1.5">
-            <Download className="h-3.5 w-3.5 text-blue-500" />
-            Téléchargement PDF
+        ) : (
+          <div className="space-y-3">
+            {activeContracts.map((contract) => (
+              <Card key={contract.id} className="rounded-xl border bg-card hover:shadow-md transition-shadow">
+                <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100 text-green-600 dark:bg-green-900/40 dark:text-green-400 shrink-0">
+                    <FileCheck className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium truncate">
+                        {contract.insurer?.name || "Assureur"}
+                      </p>
+                      <Badge variant="secondary" className="text-[10px]">
+                        {contract.offer?.name || "Formule"}
+                      </Badge>
+                    </div>
+                    <p className="font-mono text-xs text-muted-foreground mt-0.5">
+                      {contract.reference}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="hidden md:inline-flex text-xs text-muted-foreground items-center gap-1">
+                      <Building2 className="h-3.5 w-3.5" />
+                      {contract.endDate
+                        ? new Date(contract.endDate).toLocaleDateString("fr-FR", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          })
+                        : "Durée indéterminée"}
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="rounded-full"
+                      onClick={() => handleDownload(contract)}
+                    >
+                      <Download className="mr-1.5 h-3.5 w-3.5" />
+                      Attestation PDF
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
-          <div className="flex items-center gap-1.5">
-            <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
-            Mise à jour automatique
-          </div>
-        </div>
+        )}
       </motion.div>
 
-      {/* Catégories de documents améliorées */}
+      {/* Types de documents disponibles */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -120,6 +212,20 @@ export function UserDocumentsTab() {
               </Card>
             );
           })}
+        </div>
+        <div className="flex flex-wrap items-center gap-6 text-xs text-muted-foreground mt-6">
+          <div className="flex items-center gap-1.5">
+            <Lock className="h-3.5 w-3.5 text-green-500" />
+            Documents sécurisés
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Download className="h-3.5 w-3.5 text-blue-500" />
+            Téléchargement PDF
+          </div>
+          <div className="flex items-center gap-1.5">
+            <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
+            Mise à jour automatique
+          </div>
         </div>
       </motion.div>
     </div>

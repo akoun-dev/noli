@@ -288,7 +288,7 @@ export function InsuranceOffersTab() {
             <SelectTrigger className="w-full sm:w-40"><SelectValue placeholder="Type" /></SelectTrigger>
             <SelectContent><SelectItem value="all">Tous</SelectItem><SelectItem value="basic">Tiers Simple</SelectItem><SelectItem value="third_party_plus">Tiers+</SelectItem><SelectItem value="all_risks">Tous Risques</SelectItem></SelectContent>
           </Select>
-          <Button onClick={openCreate} className="bg-[#B9E54D] text-black hover:bg-[#a5d044]"><Plus className="h-4 w-4 mr-1" /> Ajouter</Button>
+          <Button onClick={openCreate} className="bg-brand text-black hover:bg-brand-hover"><Plus className="h-4 w-4 mr-1" /> Ajouter</Button>
         </div>
       </div>
 
@@ -491,7 +491,7 @@ export function InsuranceOffersTab() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setFormOpen(false)}>Annuler</Button>
-            <Button onClick={handleSave} disabled={saving} className="bg-[#B9E54D] text-black hover:bg-[#a5d044]">{saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}{editing ? "Modifier" : "Créer"}</Button>
+            <Button onClick={handleSave} disabled={saving} className="bg-brand text-black hover:bg-brand-hover">{saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}{editing ? "Modifier" : "Créer"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -501,7 +501,7 @@ export function InsuranceOffersTab() {
         <DialogContent className="sm:max-w-2xl max-h-[85vh]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-[#B9E54D]" />
+              <FileText className="h-5 w-5 text-brand" />
               {detailLoading ? <Skeleton className="h-6 w-48" /> : selected?.name}
             </DialogTitle>
             <DialogDescription>{selected?.description}</DialogDescription>

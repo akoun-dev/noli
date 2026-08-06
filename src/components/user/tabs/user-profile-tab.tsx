@@ -208,7 +208,7 @@ export function UserProfileTab() {
           <Card className="bg-card rounded-xl border">
             <CardContent className="p-6 flex flex-col items-center text-center">
               <div className="relative mb-4">
-                <div className="size-[100px] rounded-full bg-[#B9E54D] text-black flex items-center justify-center text-2xl font-bold select-none">
+                <div className="size-[100px] rounded-full bg-brand text-black flex items-center justify-center text-2xl font-bold select-none">
                   {profile ? getInitials(profile.firstName, profile.lastName) : "U"}
                 </div>
                 <div className="absolute bottom-1 right-1 size-7 rounded-full bg-background border border-border flex items-center justify-center">
@@ -251,7 +251,7 @@ export function UserProfileTab() {
             <Card className="bg-card rounded-xl border">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
-                  <User className="size-5 text-[#B9E54D]" />
+                  <User className="size-5 text-brand" />
                   Informations personnelles
                 </CardTitle>
                 <CardDescription>Modifiez vos nom, prénom et numéro de téléphone.</CardDescription>
@@ -277,7 +277,7 @@ export function UserProfileTab() {
                   <p className="text-xs text-muted-foreground">L&apos;adresse e-mail ne peut pas être modifiée.</p>
                 </div>
                 <div className="pt-2">
-                  <Button className="bg-[#B9E54D] text-black hover:bg-[#a5d044]" onClick={handleSaveProfile} disabled={saving}>
+                  <Button className="bg-brand text-black hover:bg-brand-hover" onClick={handleSaveProfile} disabled={saving}>
                     {saving ? <Loader2 className="size-4 animate-spin mr-2" /> : <Save className="size-4 mr-2" />}
                     Enregistrer
                   </Button>
@@ -291,7 +291,7 @@ export function UserProfileTab() {
             <Card className="bg-card rounded-xl border">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
-                  <Lock className="size-5 text-[#B9E54D]" />
+                  <Lock className="size-5 text-brand" />
                   Changer le mot de passe
                 </CardTitle>
                 <CardDescription>Assurez la sécurité de votre compte avec un mot de passe fort.</CardDescription>

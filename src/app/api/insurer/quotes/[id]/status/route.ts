@@ -73,6 +73,41 @@ export async function PUT(
     if (error) throw error;
     const updated = mapRow(data);
 
+    // ── Contrat : naît automatiquement à l'approbation du devis ──
+    if (status === "APPROVED") {
+      const { data: existingContract } = await db
+        .from("contracts")
+        .select("id")
+        .eq("quote_id", id)
+        .maybeSingle();
+
+      // Un contrat ne peut être créé que pour un devis lié à un compte client.
+      if (quote.userId && !existingContract) {
+        const contractRef = `NOLI-CON-${Date.now().toString(36).toUpperCase()}${Math.random()
+          .toString(36)
+          .slice(2, 6)
+          .toUpperCase()}`;
+        const startDate = new Date();
+        const endDate = new Date(startDate);
+        endDate.setFullYear(endDate.getFullYear() + 1);
+
+        const { error: contractError } = await db.from("contracts").insert({
+          reference: contractRef,
+          quote_id: id,
+          profile_id: quote.userId,
+          insurer_id: account.insurerId,
+          offer_id: quote.offerId ?? null,
+          status: "ACTIVE",
+          start_date: startDate.toISOString().split("T")[0],
+          end_date: endDate.toISOString().split("T")[0],
+          premium: quote.finalPrice ?? quote.estimatedPrice ?? null,
+        });
+        if (contractError) {
+          console.error("Erreur création contrat:", contractError);
+        }
+      }
+    }
+
     // Notify the quote owner
     if (quote.userId) {
       if (status === "APPROVED") {
@@ -80,7 +115,7 @@ export async function PUT(
           userId: quote.userId,
           type: "SUCCESS",
           title: "Devis approuvé",
-          message: `Votre devis ${quote.reference} a été approuvé par l'assureur.`,
+          message: `Votre devis ${quote.reference} a été approuvé. Votre contrat est en cours d'activation.`,
         });
       } else if (status === "REJECTED") {
         createNotification({
