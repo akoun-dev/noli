@@ -51,6 +51,11 @@ import { toast } from 'sonner'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { logger } from '@/lib/logger'
+import {
+  validateUploadFile,
+  buildSafeStorageKey,
+  ACCEPTED_UPLOAD_ATTR,
+} from '@/lib/file-upload'
 
 interface Document {
   id: string
@@ -164,29 +169,45 @@ export default function DocumentsPage() {
 
       for (let i = 0; i < files.length; i++) {
         const file = files[i]
-        const fileName = `${user.id}/${Date.now()}-${file.name}`
 
-        // Upload to Supabase Storage
+        // Validate content, type and size before touching storage. The bucket
+        // RLS policies + bucket limits are the authoritative server-side guard;
+        // this rejects bad files early with a clear message.
+        const validation = await validateUploadFile(file)
+        if (!validation.isValid) {
+          throw new Error(`${file.name} : ${validation.error}`)
+        }
+
+        // Never build the storage path from the raw file name (path traversal /
+        // overwrite / predictable keys). Use a safe, random key instead.
+        const storageKey = buildSafeStorageKey(user.id, file.name)
+
+        // Upload to Supabase Storage (private bucket)
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('documents')
-          .upload(fileName, file, {
+          .upload(storageKey, file, {
             cacheControl: '3600',
             upsert: false,
+            contentType: file.type || undefined,
           })
 
         if (uploadError) throw uploadError
 
-        // Get public URL
-        const { data: urlData } = supabase.storage.from('documents').getPublicUrl(fileName)
+        // Bucket is private: hand back a short-lived signed URL for immediate
+        // preview and keep the path so it can be re-signed later.
+        const { data: signed } = await supabase.storage
+          .from('documents')
+          .createSignedUrl(uploadData.path, 60 * 60)
 
         uploadedDocuments.push({
           id: uploadData.path,
+          path: uploadData.path,
           file_name: file.name,
           original_name: file.name,
           file_size: file.size,
           file_type: file.type,
           mime_type: file.type,
-          file_url: urlData.publicUrl,
+          file_url: signed?.signedUrl ?? '#',
           category: 'OTHER',
           status: 'PENDING',
           created_at: new Date().toISOString(),
@@ -210,7 +231,11 @@ export default function DocumentsPage() {
       logger.error('Upload error:', error)
       setIsUploading(false)
       setUploadProgress(0)
-      toast.error("Erreur lors de l'upload des documents")
+      const message =
+        error instanceof Error && error.message
+          ? error.message
+          : "Erreur lors de l'upload des documents"
+      toast.error(message)
     },
   })
 
@@ -395,7 +420,7 @@ export default function DocumentsPage() {
                   id='file-upload'
                   type='file'
                   multiple
-                  accept='.pdf,.jpg,.jpeg,.png,.doc,.docx'
+                  accept={ACCEPTED_UPLOAD_ATTR}
                   onChange={handleFileUpload}
                   className='hidden'
                   disabled={isUploading}

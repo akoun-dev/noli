@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import { logger } from '@/lib/logger'
+import { validateUploadFile, buildSafeStorageKey } from '@/lib/file-upload'
 
 export interface Document {
   id: string
@@ -62,22 +63,30 @@ class DocumentService {
     }
   ): Promise<DocumentUploadResult> {
     try {
-      // Generate unique file name
-      const fileExtension = file.name.split('.').pop()
-      const uniqueFileName = `${userId}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}.${fileExtension}`
+      // Validate content/type/size before writing to storage.
+      const validation = await validateUploadFile(file)
+      if (!validation.isValid) {
+        throw new Error(validation.error ?? 'Fichier invalide')
+      }
 
-      // Upload to Supabase Storage
+      // Safe, random storage key — never derived from the raw file name.
+      const storageKey = buildSafeStorageKey(userId, file.name)
+
+      // Upload to Supabase Storage (private bucket)
       const { data, error } = await supabase.storage
         .from(this.storageBucket)
-        .upload(uniqueFileName, file, {
+        .upload(storageKey, file, {
           cacheControl: '3600',
           upsert: false,
+          contentType: file.type || undefined,
         })
 
       if (error) throw error
 
-      // Get public URL
-      const { data: urlData } = supabase.storage.from(this.storageBucket).getPublicUrl(data.path)
+      // Private bucket: return a short-lived signed URL, not a public one.
+      const { data: signed } = await supabase.storage
+        .from(this.storageBucket)
+        .createSignedUrl(data.path, 60 * 60)
 
       logger.info('Document uploaded successfully', {
         userId,
@@ -88,8 +97,8 @@ class DocumentService {
 
       return {
         id: data.path,
-        fileUrl: urlData.publicUrl,
-        fileName: uniqueFileName,
+        fileUrl: signed?.signedUrl ?? '',
+        fileName: data.path,
         originalName: file.name,
         fileSize: file.size,
         fileType: file.type,
@@ -272,34 +281,13 @@ class DocumentService {
   }
 
   /**
-   * Validate file type and size
+   * Validate file type, size and content.
+   * @deprecated Prefer `validateUploadFile` from `@/lib/file-upload` directly.
+   * Kept as a thin async delegate so existing callers keep working with the
+   * stronger (extension + MIME + magic-byte) validation.
    */
-  validateFile(file: File): { isValid: boolean; error?: string } {
-    const maxSize = 10 * 1024 * 1024 // 10MB
-    const allowedTypes = [
-      'application/pdf',
-      'image/jpeg',
-      'image/jpg',
-      'image/png',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    ]
-
-    if (file.size > maxSize) {
-      return {
-        isValid: false,
-        error: 'Le fichier ne doit pas dépasser 10MB',
-      }
-    }
-
-    if (!allowedTypes.includes(file.type)) {
-      return {
-        isValid: false,
-        error: 'Type de fichier non supporté. Types acceptés: PDF, JPG, PNG, DOC, DOCX',
-      }
-    }
-
-    return { isValid: true }
+  async validateFile(file: File): Promise<{ isValid: boolean; error?: string }> {
+    return validateUploadFile(file)
   }
 
   /**
