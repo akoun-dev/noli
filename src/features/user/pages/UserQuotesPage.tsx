@@ -30,13 +30,6 @@ export const UserQuotesPage: React.FC = () => {
     setFilters({});
   };
 
-  const getStatCardColor = (value: number, total: number) => {
-    const percentage = (value / total) * 100;
-    if (percentage > 60) return 'text-green-600';
-    if (percentage > 30) return 'text-yellow-600';
-    return 'text-red-600';
-  };
-
   const getSortedQuotes = (quotes: QuoteWithDetails[]) => {
     if (!quotes) return [];
 

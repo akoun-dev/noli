@@ -17,7 +17,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { roleService } from '../services/roleService';
-import { Role, Permission, UserPermission } from '@/types/admin';
+import { Role, Permission } from '@/types/admin';
 import {
   Plus,
   Edit,

@@ -272,13 +272,6 @@ const UserProfilePage = () => {
     }
   }
 
-  const handleAvatarUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file) {
-      toast.success('Photo de profil téléchargée avec succès')
-    }
-  }
-
   const handleDocumentUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {

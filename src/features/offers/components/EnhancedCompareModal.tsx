@@ -89,17 +89,6 @@ const EnhancedCompareModal = ({ open, onOpenChange, offers }: EnhancedCompareMod
     'internationalAssistance',
   ]
 
-  const radarData = guaranteeFeatures.map((feature) => ({
-    feature: feature.replace(/([A-Z])/g, ' $1').trim(),
-    ...offers.reduce(
-      (acc, offer) => ({
-        ...acc,
-        [offer.insurer]: offer.specificGuarantees && offer.specificGuarantees[feature] ? 1 : 0,
-      }),
-      {}
-    ),
-  }))
-
   // Get all unique features
   const allFeatures = Array.from(new Set(offers.flatMap((o) => o.features)))
 

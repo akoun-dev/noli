@@ -40,14 +40,6 @@ interface KPI {
   description: string;
 }
 
-interface TimeSeriesData {
-  date: string;
-  users: number;
-  quotes: number;
-  conversions: number;
-  clicks: number;
-}
-
 interface ConversionFunnel {
   stage: string;
   count: number;
@@ -70,7 +62,7 @@ export const AdminAnalyticsPage: React.FC = () => {
 
   // React Query hooks
   const { data: platformStats } = usePlatformStats();
-  const { data: activityData } = useActivityData(timeRange as '7d' | '30d' | '90d');
+  useActivityData(timeRange as '7d' | '30d' | '90d');
   const { data: topInsurers, isLoading: insurersLoading } = useTopInsurers();
   const { data: systemHealth } = useSystemHealth();
   const { data: demographics, isLoading: demographicsLoading } = useUserDemographics();
@@ -177,20 +169,6 @@ export const AdminAnalyticsPage: React.FC = () => {
     }
   ];
 
-  const timeSeriesData: TimeSeriesData[] = activityData ? activityData.map(item => ({
-    date: item.date,
-    users: item.newUsers || 0,
-    quotes: item.newQuotes || 0,
-    conversions: item.newPolicies || 0,
-    clicks: Math.floor((item.newUsers || 0) * 0.08)
-  })) : [
-    { date: '2024-01-15', users: 1250, quotes: 340, conversions: 58, clicks: 95 },
-    { date: '2024-01-16', users: 1320, quotes: 365, conversions: 62, clicks: 102 },
-    { date: '2024-01-17', users: 1180, quotes: 312, conversions: 54, clicks: 87 },
-    { date: '2024-01-18', users: 1450, quotes: 398, conversions: 71, clicks: 115 },
-    { date: '2024-01-19', users: 1520, quotes: 425, conversions: 78, clicks: 120 },
-    { date: '2024-01-20', users: 1680, quotes: 467, conversions: 86, clicks: 134 }
-  ];
 
   const getStatusColor = (status: string) => {
     switch (status) {

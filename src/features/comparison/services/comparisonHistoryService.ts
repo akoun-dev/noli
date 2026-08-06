@@ -209,29 +209,6 @@ const mockComparisonHistory: ComparisonHistory[] = [
   },
 ]
 
-const mockStats: ComparisonStats = {
-  totalComparisons: 15,
-  averageOffersPerComparison: 10.5,
-  averageSavings: 25000,
-  popularInsurers: [
-    { insurer: 'NSIA Assurance', count: 8 },
-    { insurer: 'SUNU Assurances', count: 6 },
-    { insurer: "AXA Côte d'Ivoire", count: 5 },
-    { insurer: 'Allianz CI', count: 4 },
-  ],
-  priceTrends: [
-    { date: '2024-01-01', averagePrice: 120000 },
-    { date: '2024-01-08', averagePrice: 125000 },
-    { date: '2024-01-15', averagePrice: 118000 },
-    { date: '2024-01-22', averagePrice: 122000 },
-  ],
-  completionRate: 85,
-  favoriteCoverageTypes: [
-    { type: 'Tous risques', count: 8 },
-    { type: 'Tiers +', count: 5 },
-    { type: 'Tiers', count: 2 },
-  ],
-}
 
 // API Functions
 export const fetchComparisonHistory = async (

@@ -131,22 +131,6 @@ export class ErrorBoundary extends Component<Props, State> {
     const { error, errorInfo } = this.state;
     if (!error) return;
 
-    // Préparer le rapport d'erreur
-    const errorReport = {
-      error: {
-        name: error.name,
-        message: error.message,
-        stack: error.stack,
-      },
-      errorInfo,
-      context: {
-        userAgent: navigator.userAgent,
-        url: window.location.href,
-        timestamp: new Date().toISOString(),
-        retryCount: this.state.retryCount,
-      },
-    };
-
     // Envoyer le rapport à Sentry ou un service de support
     const issueTitle = `Erreur: ${error.name}`;
     const issueBody = `
@@ -205,7 +189,7 @@ ${JSON.stringify(errorInfo, null, 2)}
 
   render() {
     if (this.state.hasError) {
-      const { error, errorInfo } = this.state;
+      const { error } = this.state;
       const { fallback, showError = true } = this.props;
 
       // Si un fallback personnalisé est fourni, l'utiliser

@@ -15,21 +15,6 @@ export const AdminLayout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user } = useAuth();
 
-  const adminNavigation = [
-    { name: 'Tableau de bord', href: '/admin/tableau-de-bord', icon: 'LayoutDashboard' },
-    { name: 'Supervision', href: '/admin/supervision', icon: 'Eye' },
-    { name: 'Utilisateurs', href: '/admin/utilisateurs', icon: 'Users' },
-    { name: 'Assureurs', href: '/admin/assureurs', icon: 'Shield' },
-    { name: 'Offres', href: '/admin/offres', icon: 'Car' },
-    { name: 'Devis', href: '/admin/devis', icon: 'FileText' },
-    { name: 'Analytics', href: '/admin/analytics', icon: 'BarChart3' },
-    { name: 'Modération', href: '/admin/moderation', icon: 'AlertTriangle' },
-    { name: 'Journaux d\'audit', href: '/admin/audit-logs', icon: 'History' },
-    { name: 'Rôles et permissions', href: '/admin/roles', icon: 'UserCog' },
-    { name: 'Backup et restauration', href: '/admin/backup-restore', icon: 'Backup' },
-    { name: 'Données', href: '/admin/donnees', icon: 'Database' },
-    { name: 'Paramètres', href: '/admin/parametres', icon: 'Settings' },
-  ];
 
   const quickStats = [
     { label: 'Utilisateurs', value: '12,543', change: '+12%', icon: Users, color: 'text-blue-600' },

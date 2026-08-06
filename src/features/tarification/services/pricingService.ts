@@ -352,19 +352,6 @@ export class PricingService {
     const customTarifs = guarantee?.parameters?.mtplTariffConfig;
     if (customTarifs) {
       // Tarifs personnalisés disponibles
-      const defaultTarifs = {
-        essence_1_2: 68675,
-        essence_3_6: 87885,
-        essence_7_9: 102345,
-        essence_10_11: 124693,
-        essence_12_plus: 137058,
-        diesel_1: 68675,
-        diesel_2_4: 87885,
-        diesel_5_6: 102345,
-        diesel_7_8: 124693,
-        diesel_9_plus: 137058,
-      };
-
       let tarifKey = '';
       let tarifRange = '';
 

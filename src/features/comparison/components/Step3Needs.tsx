@@ -205,11 +205,6 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
     return 0
   }
 
-  const getCoverageName = (coverageId: string) => {
-    const coverage = findCoverageDetails(coverageId)
-    return coverage?.name || `Garantie ${coverageId}`
-  }
-
   // Create temporary quote for coverage calculation
   useEffect(() => {
     if (user) {

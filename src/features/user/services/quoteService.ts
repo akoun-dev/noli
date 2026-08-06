@@ -42,12 +42,6 @@ export const fetchUserQuotes = async (
   let results: QuoteWithDetails[] = (data || []).map((q: any) => {
     const vehicle = q.vehicle_data || {}
     const needs = q.coverage_requirements || {}
-    const coverageMap: Record<string, string> = {
-      all_risks: 'Tous Risques',
-      third_party_plus: 'Tiers +',
-      basic: 'Tiers',
-      comprehensive: 'Complet',
-    }
 
     return {
       id: q.id,

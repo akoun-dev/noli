@@ -33,15 +33,6 @@ const LoginPage = () => {
   const [rateLimitInfo, setRateLimitInfo] = useState<any>(null)
   const [securityAlerts, setSecurityAlerts] = useState<any[]>([])
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
-    // Clear error when user starts typing
-    if (errors[name as keyof LoginFormData]) {
-      setErrors((prev) => ({ ...prev, [name]: undefined }))
-    }
-  }
-
   const validateForm = () => {
     try {
       loginSchema.parse(formData)

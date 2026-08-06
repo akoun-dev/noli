@@ -11,14 +11,6 @@ interface NotificationPreferencesProps {
   isLoading?: boolean;
 }
 
-const categories = [
-  { key: 'quoteUpdates', label: 'Mises à jour des devis', description: 'Notifications sur les changements de statut de vos devis' },
-  { key: 'policyRenewals', label: 'Renouvellements de contrats', description: 'Rappels avant expiration de vos contrats' },
-  { key: 'paymentReminders', label: 'Rappels de paiement', description: 'Notifications pour les échéances de paiement' },
-  { key: 'marketing', label: 'Marketing', description: 'Offres promotionnelles et communications marketing' },
-  { key: 'systemAlerts', label: 'Alertes système', description: 'Notifications importantes sur le système' },
-];
-
 const channels = [
   { key: 'email', label: 'Email', icon: Mail, color: 'bg-blue-100 text-blue-800' },
   { key: 'push', label: 'Push', icon: Bell, color: 'bg-green-100 text-green-800' },

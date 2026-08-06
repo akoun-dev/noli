@@ -277,10 +277,6 @@ export const CampaignManager: React.FC = () => {
     ));
   };
 
-  const handleArchiveCampaign = (campaignId: string) => {
-    setCampaigns(prev => prev.filter(c => c.id !== campaignId));
-  };
-
   return (
     <div className="space-y-6">
       {/* En-tête */}

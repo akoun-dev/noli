@@ -899,12 +899,6 @@ describe('Comparison Flow Integration', () => {
             <button
               onClick={async () => {
                 dataFlow.step3 = mockInsuranceNeeds
-                const completeData = {
-                  ...(typeof dataFlow.step1 === 'object' ? dataFlow.step1 : {}),
-                  ...(typeof dataFlow.step2 === 'object' ? dataFlow.step2 : {}),
-                  preferences: dataFlow.step3,
-                  results: mockComparisonResults,
-                }
                 await saveComparisonHistory({
                   userId: 'test-user',
                   sessionId: 'test-session',
