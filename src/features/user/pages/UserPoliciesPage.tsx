@@ -7,13 +7,10 @@ import {
   AlertTriangle,
   CheckCircle,
   Clock,
-  XCircle,
   Calendar,
   CreditCard,
   Car,
-  MoreHorizontal,
   Search,
-  Filter,
   Plus,
   Loader2,
 } from 'lucide-react'
@@ -21,14 +18,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+
+
 import {
   Select,
   SelectContent,
@@ -46,7 +37,6 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Separator } from '@/components/ui/separator'
 import { toast } from 'sonner'
 import { Policy, PolicyDocument, Payment } from '@/types'

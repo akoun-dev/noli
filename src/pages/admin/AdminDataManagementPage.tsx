@@ -10,7 +10,6 @@ import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
 import {
-  Database,
   Upload,
   Download,
   CheckCircle,
@@ -20,16 +19,9 @@ import {
   FileText,
   Users,
   Shield,
-  BarChart3,
   Activity,
-  Settings,
   RefreshCw,
   Eye,
-  Edit,
-  Trash2,
-  Search,
-  Filter,
-  Calendar,
   TrendingUp,
   TrendingDown,
   Minus

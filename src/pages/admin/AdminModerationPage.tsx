@@ -10,25 +10,15 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Flag,
-  ThumbsUp,
-  ThumbsDown,
   MessageSquare,
   Eye,
   Edit,
-  Trash2,
   CheckCircle,
   XCircle,
   AlertTriangle,
-  Clock,
   Search,
-  Filter,
-  MoreHorizontal,
   FileText,
-  Users,
-  Shield,
-  BarChart3,
   Activity,
-  Calendar,
   RefreshCw,
   AlertCircle
 } from 'lucide-react';

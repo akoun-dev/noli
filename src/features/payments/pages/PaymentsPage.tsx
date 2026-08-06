@@ -10,7 +10,6 @@ import {
   Plus,
   TrendingUp,
   AlertTriangle,
-  CheckCircle,
   Clock,
   Shield,
   Smartphone,

@@ -10,11 +10,7 @@ import {
   Plus,
   Trash2,
   Star,
-  Edit,
-  Check,
-  X,
-  AlertCircle,
-  Shield
+  Edit
 } from 'lucide-react';
 import {
   PaymentMethod,

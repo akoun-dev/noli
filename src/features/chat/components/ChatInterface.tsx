@@ -4,7 +4,6 @@ import {
   Send,
   Paperclip,
   MapPin,
-  Phone,
   MessageCircle,
   X,
   Minimize2,

@@ -14,7 +14,6 @@ import { UserLayout } from '@/layouts/UserLayout'
 import { InsurerLayout } from '@/layouts/InsurerLayout'
 import { AdminLayout } from '@/layouts/AdminLayout'
 import { AuthGuard } from '@/guards/AuthGuard'
-import { RoleGuard } from '@/guards/RoleGuard'
 
 // Loading component
 const PageLoader = () => (

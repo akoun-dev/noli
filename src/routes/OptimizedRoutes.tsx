@@ -67,7 +67,6 @@ import { AdminLayout } from '@/layouts/AdminLayout'
 
 // Guards and Components
 import { AuthGuard } from '@/guards/AuthGuard'
-import { RoleGuard } from '@/guards/RoleGuard'
 import { DashboardRedirect } from '@/components/auth/DashboardRedirect'
 
 export const OptimizedAppRoutes = () => {

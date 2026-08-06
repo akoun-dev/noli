@@ -9,8 +9,7 @@ import {
   registerSchema,
   resetPasswordSchema,
   type LoginFormData,
-  type RegisterFormData,
-  type ResetPasswordFormData
+  type RegisterFormData
 } from '../zod-schemas'
 
 describe('Enhanced Zod Schemas', () => {

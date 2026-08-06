@@ -15,7 +15,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { roleService } from '../services/roleService';
 import { Role, Permission, UserPermission } from '@/types/admin';
@@ -26,13 +25,8 @@ import {
   Shield,
   Users,
   Settings,
-  Eye,
-  CheckCircle,
-  XCircle,
   Search,
-  Filter,
-  UserPlus,
-  AlertCircle
+  Filter
 } from 'lucide-react';
 
 export function RoleManagementPage() {

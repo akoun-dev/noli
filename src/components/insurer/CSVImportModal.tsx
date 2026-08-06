@@ -18,8 +18,7 @@ import {
   FileText,
   CheckCircle,
   AlertCircle,
-  Eye,
-  X
+  Eye
 } from 'lucide-react';
 import Papa from 'papaparse';
 import { ParsedOffer, CSVRowData } from '@/types/insurance';

@@ -2,16 +2,11 @@ import { useState, useEffect } from 'react';
 import {
   Bell,
   BellRing,
-  X,
   CheckCircle,
   AlertTriangle,
   AlertCircle,
   Info,
-  Clock,
   User,
-  Settings,
-  Filter,
-  Archive,
   Eye,
   EyeOff,
 } from 'lucide-react';

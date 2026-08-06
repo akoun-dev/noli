@@ -14,7 +14,6 @@ import {
 import {
   Bell,
   Search,
-  Filter,
   CheckCircle,
   Clock,
   AlertTriangle,
@@ -22,10 +21,8 @@ import {
   Mail,
   MessageSquare,
   Car,
-  User,
   Settings,
-  Trash2,
-  Archive
+  Trash2
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 

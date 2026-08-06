@@ -6,19 +6,9 @@ import { ThemeToggle } from '@/components/ui/theme-toggle';
 import {
   Users,
   Shield,
-  Car,
   FileText,
-  BarChart3,
-  Settings,
   AlertTriangle,
-  CheckCircle,
-  TrendingUp,
-  Eye,
-  Database,
-  LayoutDashboard,
-  History,
-  UserCog,
-  Backup
+  TrendingUp
 } from 'lucide-react';
 
 export const AdminLayout: React.FC = () => {

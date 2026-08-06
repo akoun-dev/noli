@@ -8,15 +8,7 @@ import {
   Target,
   Clock,
   Star,
-  BarChart3,
-  PieChart,
-  LineChart,
   Download,
-  Filter,
-  Calendar,
-  Award,
-  AlertCircle,
-  CheckCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';

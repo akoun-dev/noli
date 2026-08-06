@@ -14,10 +14,8 @@ import {
   TrendingDown,
   DollarSign,
   Users,
-  Car,
   FileText,
   Target,
-  Calendar,
   Download,
   RefreshCw
 } from 'lucide-react';

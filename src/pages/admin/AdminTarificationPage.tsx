@@ -32,14 +32,10 @@ import {
   CalculationMethodType,
   TierceFranchiseOptionType,
   TierceCapConfig,
-  TarifFixe,
   TarifFixeFormData,
   TarifRC,
-  TarifRCFormData,
   FireTheftConfig,
-  IPTFormulaConfig,
-  IPTConfig,
-  IPTPlacesTariff
+  IPTFormulaConfig
 } from '@/types/tarification';
 import {
   Plus,
@@ -48,21 +44,13 @@ import {
   Search,
   Shield,
   Calculator,
-  Settings,
   CheckCircle,
   XCircle,
   AlertTriangle,
   TrendingUp,
-  Eye,
-  Copy,
-  FileText,
-  Grid3X3,
-  Database,
   Car,
-  Zap,
   Fuel
 } from 'lucide-react';
-import { fr } from 'date-fns/locale';
 
 const FIRE_THEFT_DEFAULT_CONFIG: FireTheftConfig = {
   enabled: true,

@@ -5,7 +5,6 @@
 
 import React, { useState, useEffect } from 'react'
 import { logger } from "@/lib/logger"
-import { Text, Box } from '@react-three/drei'
 import { securityManager, type SecurityRisk } from '@/lib/security-manager'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'

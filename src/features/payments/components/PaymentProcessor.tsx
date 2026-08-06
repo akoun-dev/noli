@@ -20,11 +20,9 @@ import {
   XCircle,
   Clock,
   AlertTriangle,
-  Eye,
   Download
 } from 'lucide-react';
 import {
-  PaymentMethod,
   PaymentTransaction,
   usePaymentMethods,
   useCreatePaymentIntent,

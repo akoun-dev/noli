@@ -20,21 +20,18 @@ import {
 import {
   Calendar,
   Car,
-  Filter,
   Search,
   Share2,
   Star,
   Download,
   Trash2,
-  Edit,
   Eye,
   TrendingUp,
   DollarSign,
   Shield,
   Clock,
   Users,
-  Heart,
-  MoreHorizontal
+  Heart
 } from 'lucide-react';
 import {
   ComparisonHistory,

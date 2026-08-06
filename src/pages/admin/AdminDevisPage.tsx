@@ -10,31 +10,22 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Plus,
-  Edit,
   Trash2,
   Eye,
   Search,
-  Filter,
   Download,
-  Upload,
   TrendingUp,
-  TrendingDown,
   DollarSign,
   FileText,
   Calendar,
   CheckCircle,
   XCircle,
   Clock,
-  BarChart3,
   Copy,
-  MoreHorizontal,
   User,
   Car,
   Shield,
-  AlertCircle,
-  RefreshCw,
-  Mail,
-  Phone
+  AlertCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { logger } from '@/lib/logger';

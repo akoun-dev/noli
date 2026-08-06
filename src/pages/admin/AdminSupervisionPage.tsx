@@ -12,19 +12,13 @@ import {
   Shield,
   FileText,
   TrendingUp,
-  AlertTriangle,
   CheckCircle,
-  Clock,
   Eye,
   Download,
-  BarChart3,
-  Activity,
   DollarSign,
   Search,
-  Filter,
   Plus,
   Edit,
-  Trash2,
   Ban,
   MoreHorizontal,
   RefreshCw
@@ -35,10 +29,7 @@ import type {
   Insurer,
   Offer,
   SupervisionStats,
-  KPI,
-  UserFilters,
-  InsurerFilters,
-  OfferFilters
+  KPI
 } from '@/api/services/adminSupervisionApi';
 
 export const AdminSupervisionPage: React.FC = () => {

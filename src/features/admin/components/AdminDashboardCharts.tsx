@@ -3,8 +3,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
-  LineChart,
-  Line,
   AreaChart,
   Area,
   BarChart,
@@ -25,9 +23,7 @@ import {
   Users,
   FileText,
   Shield,
-  Activity,
   Calendar,
-  Download,
   RefreshCw
 } from 'lucide-react';
 import { usePlatformStats, useActivityData, useUserDemographics, useQuoteAnalytics } from '@/features/admin/services/analyticsService';

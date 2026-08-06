@@ -26,25 +26,18 @@ import {
 import {
   Bell,
   Search,
-  Filter,
   CheckCircle2,
   Archive,
   Trash2,
   Settings,
   Star,
-  Clock,
   AlertTriangle,
   Info,
   Mail,
-  MessageSquare,
-  Smartphone,
-  MoreHorizontal,
   ExternalLink,
-  Eye,
-  EyeOff
+  Eye
 } from 'lucide-react';
 import {
-  Notification,
   NotificationPreferences,
   useNotifications,
   useUnreadNotifications,

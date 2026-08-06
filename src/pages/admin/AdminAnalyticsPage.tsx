@@ -6,29 +6,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import {
-  BarChart3,
   TrendingUp,
   TrendingDown,
-  Users,
-  FileText,
-  MousePointer,
-  DollarSign,
-  Clock,
   CheckCircle,
   AlertTriangle,
   Target,
   Activity,
-  Calendar,
   Download,
   RefreshCw,
-  Eye,
-  Settings,
-  Filter,
-  Plus,
   Minus,
   Zap,
-  Award,
-  Loader2
+  Award
 } from 'lucide-react';
 import {
   usePlatformStats,

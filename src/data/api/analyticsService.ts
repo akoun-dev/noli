@@ -1,6 +1,5 @@
 import { supabase } from '@/lib/supabase';
 import { FallbackService } from '@/lib/api/fallback';
-import { features } from '@/lib/config/features';
 
 // Types pour les analytics
 export interface PlatformStats {

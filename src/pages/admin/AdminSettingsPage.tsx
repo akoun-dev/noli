@@ -4,22 +4,14 @@ import {
   Users,
   Shield,
   Bell,
-  Database,
   Palette,
-  Globe,
-  Mail,
-  Smartphone,
-  Monitor,
   Save,
   RotateCcw,
   Download,
   Upload,
-  ToggleLeft,
-  ToggleRight,
   Check,
   X,
   AlertTriangle,
-  Info,
   RefreshCw
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -40,12 +32,9 @@ import type {
   EmailSettings,
   NotificationSettings,
   UISettings,
-  SettingsExport,
   SettingsImport,
   TestEmailRequest,
-  TestSmsRequest,
-  BackupRequest,
-  Backup
+  TestSmsRequest
 } from "@/api/services/adminSettingsApi";
 import { logger } from '@/lib/logger';
 

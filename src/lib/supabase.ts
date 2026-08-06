@@ -1,5 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
-import type { Database, ProfileUpdate } from '@/types/database'
+import type { Database } from '@/types/database'
 import { logger } from '@/lib/logger'
 import { UserMetadata, AuditMetadata } from '@/types/common'
 

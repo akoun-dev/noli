@@ -1,4 +1,3 @@
-import { useEffect, useRef, useState } from 'react';
 import { logger } from "@/lib/logger"
 
 export interface ChatMessage {

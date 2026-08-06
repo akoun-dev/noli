@@ -1,7 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { DatabaseComparisonHistory } from '@/types/database';
 import { FallbackService } from '@/lib/api/fallback';
-import { features } from '@/lib/config/features';
 
 // Types adaptés pour le service
 export interface ComparisonHistoryFilters {

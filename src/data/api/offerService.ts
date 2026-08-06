@@ -1,8 +1,6 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import { supabasePublic as supabaseREST } from '@/lib/supabase-public'
 import {
-  Database,
   InsuranceOffer as DBInsuranceOffer,
   Insurer as DBInsurer,
   InsuranceCategory as DBInsuranceCategory,

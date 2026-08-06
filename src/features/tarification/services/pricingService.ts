@@ -6,15 +6,12 @@ import {
   Guarantee,
   InsurancePackage,
   TarificationGrids,
-  TarifFixe,
   ICFormulaConfig,
   ICIPTConfig,
   IPTFormulaConfig,
-  IPTConfig,
-  IPTPlacesTariff
+  IPTConfig
 } from '@/types/tarification';
 import { guaranteeService } from './guaranteeService';
-import { logger } from '@/lib/logger';
 
 export class PricingService {
   // Grilles de tarification en mémoire

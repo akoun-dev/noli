@@ -7,12 +7,8 @@ import {
   Send,
   Paperclip,
   Calendar,
-  Clock,
-  User,
   MapPin,
-  TrendingUp,
   FileText,
-  AlertCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -23,7 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useClientCommunication } from '../hooks/useClientCommunication';
-import { Client, Communication } from '../services/clientCommunicationService';
+import { Client } from '../services/clientCommunicationService';
 
 interface ClientContactPanelProps {
   client: Client;

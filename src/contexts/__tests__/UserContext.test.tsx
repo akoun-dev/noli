@@ -2,7 +2,7 @@ import { render, renderHook, act, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import React, { ReactNode } from 'react'
 import { UserProvider, useUser } from '../UserContext'
-import { AuthProvider, useAuth } from '../AuthContext'
+import { AuthProvider } from '../AuthContext'
 import { User } from '@/types'
 
 // Mock console methods to avoid noise in tests

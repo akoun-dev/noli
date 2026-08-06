@@ -6,7 +6,6 @@ import {
   CheckCircle2,
   AlertTriangle,
   Eye,
-  EyeOff,
   Keyboard,
   Smartphone,
   Monitor,
