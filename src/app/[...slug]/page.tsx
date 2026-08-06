@@ -147,21 +147,40 @@ export default function Home() {
     });
   }, [user.isLoggedIn, setUser]);
 
+  // Rôle requis pour chaque vue protégée (undefined = vue publique)
+  const REQUIRED_ROLE: Partial<Record<AppView, "ADMIN" | "USER" | "INSURER">> = {
+    admin: "ADMIN",
+    "user-dashboard": "USER",
+    "insurer-dashboard": "INSURER",
+  };
+
+  // Dérivé pendant le rendu (pas seulement en useEffect) : empêche la
+  // coquille de la vue protégée de s'afficher, ne serait-ce qu'un instant,
+  // avant que la redirection n'ait lieu — y compris pour un visiteur non
+  // connecté, qui n'était auparavant pas du tout redirigé.
+  const requiredRole = REQUIRED_ROLE[currentView];
+  const roleMismatch =
+    !!requiredRole && (!user.isLoggedIn || user.role !== requiredRole);
+
   useEffect(() => {
-    if (currentView === "admin" && user.isLoggedIn && user.role !== "ADMIN") {
-      setView("landing");
+    if (roleMismatch) {
+      setView(user.isLoggedIn ? "landing" : "login");
     }
-    if (currentView === "user-dashboard" && user.isLoggedIn && user.role !== "USER") {
-      setView("landing");
-    }
-    if (currentView === "insurer-dashboard" && user.isLoggedIn && user.role !== "INSURER") {
-      setView("landing");
-    }
-  }, [currentView, user.isLoggedIn, user.role, setView]);
+  }, [roleMismatch, user.isLoggedIn, setView]);
 
   // ── Si chemin inconnu → page 404 ──
   if (notFound) {
     return <NotFoundPage />;
+  }
+
+  // ── Accès non autorisé à une vue protégée : ne rien afficher pendant la
+  //    redirection (le useEffect ci-dessus déclenche le changement de vue) ──
+  if (roleMismatch) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
+    );
   }
 
   const renderView = () => {
