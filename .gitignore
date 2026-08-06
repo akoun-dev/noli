@@ -13,7 +13,9 @@ node_modules
 .pnp.js
 
 # Testing
-coverage
+# NB: keep this anchored to the repo root so it only ignores the Vitest/coverage
+# report directory and NOT source folders named "coverage" (e.g. src/components/coverage).
+/coverage
 /cypress/videos/
 /cypress/screenshots/
 
