@@ -53,7 +53,6 @@ const EnhancedCompareModal = ({ open, onOpenChange, offers }: EnhancedCompareMod
   // Calculate statistics for comparison
   const minPrice = Math.min(...offers.map((o) => o.monthlyPrice))
   const maxPrice = Math.max(...offers.map((o) => o.monthlyPrice))
-  const avgPrice = offers.reduce((sum, o) => sum + o.monthlyPrice, 0) / offers.length
 
   // Calculate savings
   const calculateSavings = (price: number) => {

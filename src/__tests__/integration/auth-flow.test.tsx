@@ -438,8 +438,6 @@ describe('Authentication Flow Integration', () => {
       vi.mocked(authService.forgotPassword).mockResolvedValue(undefined)
 
       // Create a state variable to track success
-      const resetSuccess = false
-      const resetError: string | null = null
 
       const ForgotPasswordPage = () => {
         const [success, setSuccess] = React.useState(false)
@@ -498,7 +496,6 @@ describe('Authentication Flow Integration', () => {
       vi.mocked(authService.forgotPassword).mockRejectedValue(new Error('Email non trouvé'))
 
       // Create a state variable to track error
-      const resetError: string | null = null
 
       const ForgotPasswordPage = () => {
         const [error, setError] = React.useState<string | null>(null)

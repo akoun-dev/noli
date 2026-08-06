@@ -31,7 +31,7 @@ export const AdminDashboardPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('overview');
 
   const { data: stats, isLoading: statsLoading, refetch: refetchStats } = usePlatformStats();
-  const { data: activityData, isLoading: activityLoading } = useActivityData(timeRange);
+  const { data: activityData } = useActivityData(timeRange);
   const { data: topInsurers, isLoading: insurersLoading } = useTopInsurers();
   const { data: systemHealth, isLoading: healthLoading } = useSystemHealth();
   const { data: demographics, isLoading: demographicsLoading } = useUserDemographics();

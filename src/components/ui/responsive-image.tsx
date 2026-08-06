@@ -19,7 +19,6 @@ interface ResponsiveImageProps {
 }
 
 const generateSrcSet = (baseSrc: string, format: string = 'auto') => {
-  const supportedFormats = ['webp', 'avif', 'jpeg', 'png'];
   const widths = [320, 640, 768, 1024, 1280, 1536, 1920, 2048];
 
   return widths.map(width => {
@@ -76,7 +75,6 @@ export const ResponsiveImage: React.FC<ResponsiveImageProps> = ({
   className,
   priority = false,
   sizes,
-  quality = 80,
   format = 'auto',
   placeholder = 'blur',
   blurDataURL,

@@ -18,7 +18,7 @@ const LoginPage = () => {
   const location = useLocation()
   const { login } = useAuth()
   const { toast } = useToast()
-  const { securityContext, assessRisk, addSecurityAlert } = useSecurityContext()
+  const { securityContext, assessRisk } = useSecurityContext()
 
   const [formData, setFormData] = useState<LoginFormData>({
     email: '',
@@ -74,7 +74,7 @@ const LoginPage = () => {
 
     // Évaluer le risque si l'email est valide
     if (value && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-      const { risk, captchaRequired } = await assessRisk(value)
+      const { captchaRequired } = await assessRisk(value)
       setShowCaptcha(captchaRequired)
     }
   }

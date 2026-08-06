@@ -33,7 +33,6 @@ export const ClientContactPanel: React.FC<ClientContactPanelProps> = ({
   const {
     communications,
     sendCommunication,
-    isLoading,
   } = useClientCommunication(insurerId);
 
   const [message, setMessage] = useState('');

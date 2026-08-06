@@ -29,7 +29,7 @@ export const UserNotificationsPage: React.FC = () => {
   useRealTimeNotifications(user?.id || '');
 
   const { data: notificationsData, isLoading: notificationsLoading } = useNotifications(user?.id || '');
-  const { data: unreadNotificationsData, isLoading: unreadLoading } = useUnreadNotifications(user?.id || '');
+  const { data: unreadNotificationsData } = useUnreadNotifications(user?.id || '');
   const { data: stats, isLoading: statsLoading } = useNotificationStats(user?.id || '');
   const { data: preferences, isLoading: preferencesLoading } = useNotificationPreferences(user?.id || '');
   const { mutate: markAsRead } = useMarkAsRead();

@@ -139,7 +139,7 @@ export const PaymentProcessor: React.FC<PaymentProcessorProps> = ({
   const [selectedMethodId, setSelectedMethodId] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
-  const [paymentIntent, setPaymentIntent] = useState<any>(null);
+  const [, setPaymentIntent] = useState<any>(null);
 
   const defaultMethod = paymentMethods?.find(m => m.isDefault);
   const hasMethods = paymentMethods && paymentMethods.length > 0;

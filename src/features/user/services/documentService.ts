@@ -47,7 +47,6 @@ export interface DocumentUploadResult {
 
 class DocumentService {
   private readonly storageBucket = 'documents'
-  private readonly tableName = 'documents' // Note: This table doesn't exist yet in the schema
 
   /**
    * Upload a document to Supabase Storage

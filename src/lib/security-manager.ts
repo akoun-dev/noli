@@ -37,7 +37,6 @@ class SecurityManager {
   private static instance: SecurityManager
   private attempts = new Map<string, AttemptLog[]>()
   private lockedAccounts = new Map<string, number>() // email -> unlock timestamp
-  private suspiciousIPs = new Map<string, number>() // IP -> lock timestamp
 
   private readonly rateLimitConfig: RateLimitConfig = {
     maxAttempts: 5,

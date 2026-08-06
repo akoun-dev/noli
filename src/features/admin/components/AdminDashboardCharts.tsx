@@ -42,7 +42,7 @@ export const AdminDashboardCharts: React.FC<AdminDashboardChartsProps> = ({
   onTimeRangeChange,
   onRefresh
 }) => {
-  const { data: stats, isLoading: statsLoading, refetch: refetchStats } = usePlatformStats();
+  const { data: stats, refetch: refetchStats } = usePlatformStats();
   const { data: activityData, isLoading: activityLoading } = useActivityData(timeRange);
   const { data: demographics, isLoading: demographicsLoading } = useUserDemographics();
   const { data: quoteAnalytics, isLoading: quotesLoading } = useQuoteAnalytics();

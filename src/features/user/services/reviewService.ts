@@ -46,7 +46,6 @@ export interface ReviewStats {
 }
 
 class ReviewService {
-  private readonly tableName = 'reviews' // Note: This table doesn't exist yet in the schema
 
   /**
    * Get all reviews for a user

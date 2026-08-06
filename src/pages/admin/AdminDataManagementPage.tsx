@@ -53,8 +53,8 @@ export const AdminDataManagementPage: React.FC = () => {
   // États de chargement
   const [loading, setLoading] = useState(true);
   const [importLoading, setImportLoading] = useState(false);
-  const [validationLoading, setValidationLoading] = useState(false);
-  const [exportLoading, setExportLoading] = useState(false);
+  const [, setValidationLoading] = useState(false);
+  const [, setExportLoading] = useState(false);
 
   // Charger les données au montage du composant
   useEffect(() => {

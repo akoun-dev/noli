@@ -47,7 +47,7 @@ export class AuthTester {
 
   async testConnection(): Promise<void> {
     // Test de connexion à Supabase
-    const { data, error } = await supabase.from('profiles').select('count');
+    const { error } = await supabase.from('profiles').select('count');
     if (error) throw new Error(`Connexion Supabase échouée: ${error.message}`);
   }
 

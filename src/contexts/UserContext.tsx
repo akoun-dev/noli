@@ -142,7 +142,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
       // Mettre à jour le profil dans la base de données en utilisant une approche de contournement
       // pour les problèmes de types TypeScript avec Supabase
-      const { data, error } = await (supabase.from('profiles') as any)
+      const { error } = await (supabase.from('profiles') as any)
         .update({
           ...updateData,
           updated_at: new Date().toISOString()

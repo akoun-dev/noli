@@ -27,7 +27,7 @@ import { toast } from 'sonner';
 import { logger } from '@/lib/logger';
 
 export const AdminModerationPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('reviews');
+  const [activeTab] = useState('reviews');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedReview, setSelectedReview] = useState<Review | null>(null);
@@ -38,13 +38,12 @@ export const AdminModerationPage: React.FC = () => {
   // Data states
   const [reviews, setReviews] = useState<Review[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
-  const [contentItems, setContentItems] = useState<ContentItem[]>([]);
+  const [contentItems] = useState<ContentItem[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [moderationStats, setModerationStats] = useState<ModerationStats | null>(null);
 
   // UI states
   const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Load data

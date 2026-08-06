@@ -44,7 +44,6 @@ export const AdminOffersPage: React.FC = () => {
   const [insurerFilter, setInsurerFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [selectedOffer, setSelectedOffer] = useState<Offer | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
   
@@ -57,7 +56,6 @@ export const AdminOffersPage: React.FC = () => {
   
   // UI states
   const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
 
@@ -914,8 +912,8 @@ const OfferForm: React.FC<{ offer?: any; insurers: any[]; categories: any[] }> =
   };
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [selectedOffer, setSelectedOffer] = useState<any>(null);
+  const [, setIsCreateDialogOpen] = useState(false);
+  const [, setSelectedOffer] = useState<any>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

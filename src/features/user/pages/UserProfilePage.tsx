@@ -115,7 +115,7 @@ const UserProfilePage = () => {
   const { profile, isLoading: profileLoading, updateProfile: updateProfileData } = useUser()
   const { user: authUser } = useAuth()
 
-  const [isEditing, setIsEditing] = useState(false)
+  const [, setIsEditing] = useState(false)
   const [activeTab, setActiveTab] = useState('profile')
   const [showPasswordDialog, setShowPasswordDialog] = useState(false)
   const [show2FADialog, setShow2FADialog] = useState(false)
@@ -144,7 +144,7 @@ const UserProfilePage = () => {
   const [isChangingPassword, setIsChangingPassword] = useState(false)
   const [isSettingUp2FA, setIsSettingUp2FA] = useState(false)
   const [isUpdatingLocation, setIsUpdatingLocation] = useState(false)
-  const [isDeletingAccount, setIsDeletingAccount] = useState(false)
+  const [isDeletingAccount] = useState(false)
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',

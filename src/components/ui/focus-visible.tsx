@@ -55,7 +55,7 @@ interface FocusVisibleProviderProps {
 }
 
 export const FocusVisibleProvider: React.FC<FocusVisibleProviderProps> = ({ children }) => {
-  const isFocusVisible = useFocusVisible();
+  useFocusVisible();
 
   useEffect(() => {
     // Ajouter des styles globaux pour le focus visible

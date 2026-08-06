@@ -279,7 +279,6 @@ export const fetchPlatformOverview = async (): Promise<PlatformOverview> => {
 
     const totalUsers = userStats?.reduce((sum, stat) => sum + stat.total_users, 0) || 0;
     const totalInsurers = userStats?.filter(stat => stat.role === 'INSURER').reduce((sum, stat) => sum + stat.total_users, 0) || 0;
-    const newThisMonth = userStats?.reduce((sum, stat) => sum + stat.new_this_month, 0) || 0;
     const avgGrowthRate = userStats?.length > 0
       ? userStats.reduce((sum, stat) => sum + (stat.growth_rate_percent || 0), 0) / userStats.length
       : 0;
@@ -297,7 +296,6 @@ export const fetchPlatformOverview = async (): Promise<PlatformOverview> => {
       .select('*');
 
     const totalPolicies = policyStats?.reduce((sum, stat) => sum + stat.total_policies, 0) || 0;
-    const activePolicies = policyStats?.reduce((sum, stat) => sum + stat.active_policies, 0) || 0;
 
     // Utiliser la vue analytique pour les assureurs
     const { data: insurerStats } = await fetchInsurerPerformance();

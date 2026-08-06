@@ -44,7 +44,6 @@ export const AdminUsersPage: React.FC = () => {
   const [roleFilter, setRoleFilter] = useState('all');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [showBulkActions, setShowBulkActions] = useState(false);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
 
   // React Query hooks
@@ -55,8 +54,6 @@ export const AdminUsersPage: React.FC = () => {
   });
 
   const { data: stats } = useUserStats();
-  const createUser = useCreateUser();
-  const updateUser = useUpdateUser();
   const deleteUser = useDeleteUser();
   const bulkUpdateUsers = useBulkUpdateUsers();
   const exportUsers = useExportUsers();

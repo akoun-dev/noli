@@ -24,7 +24,6 @@ interface AccessibilityTest {
 }
 
 const AccessibilityDemoPage: React.FC = () => {
-  const [showDetails, setShowDetails] = useState(true)
   const [currentTest, setCurrentTest] = useState<string | null>(null)
 
   const accessibilityTests: AccessibilityTest[] = [

@@ -566,9 +566,6 @@ export const fetchNotificationStats = async (userId: string): Promise<Notificati
 
     // Calculate statistics from real data
     const now = new Date()
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-    const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
 
     const totalQuotes = quotes?.length || 0
     const totalPolicies = policies?.length || 0

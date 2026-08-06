@@ -57,7 +57,7 @@ export const useRealtimeMonitoring = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [systemMetrics, setSystemMetrics] = useState<SystemMetrics | null>(null);
   const [notifications, setNotifications] = useState<RealtimeNotification[]>([]);
-  const [activeUsers, setActiveUsers] = useState<string[]>([]);
+  const [activeUsers] = useState<string[]>([]);
   const channelsRef = useRef<RealtimeChannel[]>([]);
 
   // Gérer la connexion

@@ -864,7 +864,6 @@ describe('Comparison Flow Integration', () => {
       const dataFlow: Record<string, unknown> = {}
 
       const Step1 = () => {
-        const [data, setData] = React.useState<Record<string, unknown>>({})
         return (
           <div>
             <button

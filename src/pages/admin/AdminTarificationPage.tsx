@@ -132,7 +132,7 @@ const getDynamicCoverageDefault = (method: CalculationMethodType): FireTheftConf
 
 export const AdminTarificationPage: React.FC = () => {
   // Important: wait for real authentication before loading data
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const [guarantees, setGuarantees] = useState<Guarantee[]>([]);
   const [tarifFixes, setTarifFixes] = useState<FixedTariffItem[]>([]);
   const [fixedCoverageOptions, setFixedCoverageOptions] = useState<FixedCoverageOption[]>([])
@@ -142,10 +142,9 @@ export const AdminTarificationPage: React.FC = () => {
   const [selectedFormulaName, setSelectedFormulaName] = useState<string>('')
 
   // États pour la Responsabilité Civile
-  const [tarifRC, setTarifRC] = useState<TarifRC[]>([])
-  const [showRCEditForm, setShowRCEditForm] = useState(false)
-  const [editingRC, setEditingRC] = useState<TarifRC | null>(null)
-  const [searchRCEnergy, setSearchRCEnergy] = useState<'Tous' | 'Essence' | 'Diesel'>('Tous')
+  const [, setTarifRC] = useState<TarifRC[]>([])
+  const [, setShowRCEditForm] = useState(false)
+  const [, setEditingRC] = useState<TarifRC | null>(null)
 
   // Fonctions CRUD pour les tarifs RC
   const handleCreateRC = async (tarif: Omit<TarifRC, 'id'>) => {

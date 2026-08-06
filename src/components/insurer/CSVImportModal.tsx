@@ -61,7 +61,7 @@ export const CSVImportModal: React.FC<CSVImportModalProps> = ({
   onClose,
   onImport,
 }) => {
-  const [file, setFile] = useState<File | null>(null);
+  const [, setFile] = useState<File | null>(null);
   const [parsedData, setParsedData] = useState<ParsedOffer[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);

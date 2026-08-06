@@ -33,7 +33,6 @@ interface PerformanceObserverEntry {
 class PerformanceMonitor {
   private static instance: PerformanceMonitor;
   private observers: PerformanceObserver[] = [];
-  private metrics: PerformanceMetrics | null = null;
   private isSupported = 'performance' in window && 'PerformanceObserver' in window;
 
   static getInstance(): PerformanceMonitor {

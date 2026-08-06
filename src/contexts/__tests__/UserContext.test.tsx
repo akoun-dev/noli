@@ -495,7 +495,7 @@ describe('UserContext', () => {
       let setAuthState: React.Dispatch<React.SetStateAction<boolean>>
 
       const DynamicWrapper: React.FC<{ children: ReactNode }> = ({ children }) => {
-        const [isAuthenticated, setIsAuthenticated] = React.useState(false)
+        const [, setIsAuthenticated] = React.useState(false)
         setAuthState = setIsAuthenticated
 
         return (

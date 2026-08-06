@@ -67,10 +67,9 @@ export interface Campaign {
 }
 
 export const CampaignManager: React.FC = () => {
-  const { clients, templates, sendBulkCommunication } = useClientCommunication('insurer-1');
+  const { templates, sendBulkCommunication } = useClientCommunication('insurer-1');
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
-  const [isCreatingCampaign, setIsCreatingCampaign] = useState(false);
+  const [, setIsCreatingCampaign] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
 

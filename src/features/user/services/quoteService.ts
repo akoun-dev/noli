@@ -374,7 +374,6 @@ export const useQuoteStats = () => {
 }
 
 export const useDownloadQuotePdf = () => {
-  const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: downloadQuotePdf,
@@ -388,7 +387,6 @@ export const useDownloadQuotePdf = () => {
 }
 
 export const useSendQuoteNotifications = () => {
-  const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: ({

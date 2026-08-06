@@ -164,7 +164,6 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
       options: formData.insuranceNeeds.options || [],
     },
   })
-  const selectedOptions = watch('options') || []
   const contractDuration = watch('contractDuration') || DEFAULT_CONTRACT_DURATION
   const durationConfig = getDurationConfig(contractDuration)
   const adjustedPremium = Math.round(totalPremium * durationConfig.percentage)

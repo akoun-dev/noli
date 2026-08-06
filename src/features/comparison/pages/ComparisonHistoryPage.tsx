@@ -48,7 +48,7 @@ export const ComparisonHistoryPage: React.FC = () => {
   const { user } = useAuth();
   const [filters, setFilters] = useState<ComparisonFilters>({});
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedComparison, setSelectedComparison] = useState<ComparisonHistory | null>(null);
+  const [, setSelectedComparison] = useState<ComparisonHistory | null>(null);
 
   const { data: history, isLoading } = useComparisonHistory(user?.id || '', filters);
   const { data: stats } = useComparisonStats(user?.id || '');

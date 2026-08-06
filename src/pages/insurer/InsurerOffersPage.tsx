@@ -52,7 +52,7 @@ export const InsurerOffersPage: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [editingOffer, setEditingOffer] = useState<Offer | null>(null);
-  const { data: serverOffers = [], isLoading } = useInsurerOffers();
+  const { data: serverOffers = [] } = useInsurerOffers();
   const createMutation = useCreateInsurerOffer();
   const updateMutation = useUpdateInsurerOffer();
   const deleteMutation = useDeleteInsurerOffer();

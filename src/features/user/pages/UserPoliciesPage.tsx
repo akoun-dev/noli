@@ -58,7 +58,7 @@ const UserPoliciesPage = () => {
   const { user } = useAuth()
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
-  const [selectedPolicy, setSelectedPolicy] = useState<PolicyWithDetails | null>(null)
+  const [, setSelectedPolicy] = useState<PolicyWithDetails | null>(null)
   const [activeTab, setActiveTab] = useState('active')
 
   // Fetch policies from database

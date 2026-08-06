@@ -10,7 +10,6 @@ import { useToast } from "@/hooks/use-toast";
 import { forgotPasswordSchema, type ForgotPasswordFormData } from "@/lib/zod-schemas";
 
 const ForgotPasswordPage = () => {
-  const navigate = useNavigate();
   const { toast } = useToast();
 
   const [formData, setFormData] = useState<ForgotPasswordFormData>({

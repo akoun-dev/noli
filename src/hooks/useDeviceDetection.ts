@@ -24,7 +24,6 @@ const getDeviceInfo = (): DeviceInfo => {
   const userAgent = navigator.userAgent.toLowerCase();
   const screenWidth = window.screen.width;
   const screenHeight = window.screen.height;
-  const devicePixelRatio = window.devicePixelRatio || 1;
 
   // Device type detection
   const isMobile = /android|webos|iphone|ipod|blackberry|iemobile|opera mini/i.test(userAgent) ||

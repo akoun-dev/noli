@@ -15,7 +15,7 @@ export const UserQuotesPage: React.FC = () => {
   const [sortBy, setSortBy] = useState<string>('date-desc');
   const { data: quotes, isLoading, error } = useUserQuotes(filters);
   const { data: stats, isLoading: statsLoading } = useQuoteStats();
-  const { mutate: downloadPdf, isPending: isDownloading } = useDownloadQuotePdf();
+  const { mutate: downloadPdf } = useDownloadQuotePdf();
 
   const handleViewQuote = (quoteId: string) => {
     // Navigate to quote details page (to be implemented)

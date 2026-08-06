@@ -55,7 +55,6 @@ export class InsurerAlertService {
   private static instance: InsurerAlertService;
   private alerts: InsurerAlert[] = [];
   private listeners: ((alerts: InsurerAlert[]) => void)[] = [];
-  private wsConnection: WebSocket | null = null;
   private settings: AlertSettings = {
     enableNotifications: true,
     enableEmailAlerts: true,

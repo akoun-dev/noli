@@ -1138,8 +1138,6 @@ class CoverageTarificationService {
     }
 
     // Value-specific validations
-    const coveragesNeedingSI = ['INCENDIE', 'VOL', 'VOL_MAINS_ARMEES'];
-    const coveragesNeedingVN = ['BRIS_GLACES', 'BRIS_GLACES_TOITS', 'TIERCE_COMPLETE', 'TIERCE_COLLISION'];
 
     if (!vehicleData.sum_insured || vehicleData.sum_insured <= 0) {
       warnings.push('Valeur du véhicule (SI) non spécifiée, requise pour: Incendie, Vol');

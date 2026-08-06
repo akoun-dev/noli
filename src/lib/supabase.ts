@@ -151,7 +151,7 @@ export const supabaseHelpers = {
         setTimeout(() => reject(new Error('Refresh timeout after 7 seconds')), 7000)
       )
 
-      const refreshResult = await Promise.race([refreshPromise, timeoutPromise])
+      await Promise.race([refreshPromise, timeoutPromise])
       logger.auth('✅ Nettoyage de session terminé')
     } catch (refreshError) {
       logger.warn('Session refresh error during signOut cleanup (expected):', refreshError)

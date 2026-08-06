@@ -10,7 +10,6 @@ import { useToast } from "@/hooks/use-toast";
 import { resetPasswordSchema, type ResetPasswordFormData } from "@/lib/zod-schemas";
 
 const ResetPasswordPage = () => {
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { resetPassword } = useAuth();
   const { toast } = useToast();

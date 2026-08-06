@@ -25,7 +25,6 @@ const Step2Vehicle: React.FC<Step2VehicleProps> = ({ onNext, onBack }: Step2Vehi
   const { formData, updateVehicleInfo } = useCompare()
 
   const {
-    register,
     handleSubmit,
     formState: { errors },
     setValue,

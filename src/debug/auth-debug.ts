@@ -12,7 +12,7 @@ export class AuthDebugger {
       logger.info('Test de connexion à Supabase...')
 
       // Test simple de connexion
-      const { data, error } = await supabase.from('profiles').select('count').limit(1)
+      const { error } = await supabase.from('profiles').select('count').limit(1)
 
       if (error) {
         logger.error('Erreur de connexion Supabase:', error)
@@ -32,7 +32,7 @@ export class AuthDebugger {
       logger.info('Test de la table auth.users...')
 
       // Vérifier si on peut accéder à auth.users
-      const { data, error } = await supabase.rpc('test_auth_users_access')
+      const { error } = await supabase.rpc('test_auth_users_access')
 
       if (error) {
         logger.error('Erreur accès auth.users:', error)
@@ -64,7 +64,7 @@ export class AuthDebugger {
         // Tester avec des paramètres vides pour voir si la fonction existe.
         // `funcName` est un nom dynamique (debug) : cast requis car .rpc() est
         // désormais typé strictement sur les noms de fonctions connus.
-        const { data, error } = await supabase.rpc(funcName as never)
+        const { error } = await supabase.rpc(funcName as never)
 
         if (error) {
           logger.error(`❌ Fonction ${funcName} erreur:`, error)
@@ -86,7 +86,7 @@ export class AuthDebugger {
     try {
       logger.info('Test de la table profiles...')
 
-      const { data, error } = await supabase.from('profiles').select('*').limit(1)
+      const { error } = await supabase.from('profiles').select('*').limit(1)
 
       if (error) {
         logger.error('Erreur table profiles:', error)

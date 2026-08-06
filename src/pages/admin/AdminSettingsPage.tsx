@@ -42,8 +42,8 @@ const AdminSettingsPage = () => {
   const [activeTab, setActiveTab] = useState('general');
   const [isSaving, setIsSaving] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [testEmailLoading, setTestEmailLoading] = useState(false);
-  const [testSmsLoading, setTestSmsLoading] = useState(false);
+  const [, setTestEmailLoading] = useState(false);
+  const [, setTestSmsLoading] = useState(false);
 
   // États pour les données API
   const [systemSettings, setSystemSettings] = useState<SystemSettings>({

@@ -67,13 +67,12 @@ interface PerformanceMetric {
 
 export const AdminAnalyticsPage: React.FC = () => {
   const [timeRange, setTimeRange] = useState('30d');
-  const [selectedMetric, setSelectedMetric] = useState('conversion');
 
   // React Query hooks
-  const { data: platformStats, isLoading: statsLoading } = usePlatformStats();
-  const { data: activityData, isLoading: activityLoading } = useActivityData(timeRange as '7d' | '30d' | '90d');
+  const { data: platformStats } = usePlatformStats();
+  const { data: activityData } = useActivityData(timeRange as '7d' | '30d' | '90d');
   const { data: topInsurers, isLoading: insurersLoading } = useTopInsurers();
-  const { data: systemHealth, isLoading: healthLoading } = useSystemHealth();
+  const { data: systemHealth } = useSystemHealth();
   const { data: demographics, isLoading: demographicsLoading } = useUserDemographics();
   const { data: quoteAnalytics, isLoading: quotesLoading } = useQuoteAnalytics();
   const exportReport = useExportAnalyticsReport();

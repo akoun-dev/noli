@@ -40,7 +40,6 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ userRole }) => {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const location = useLocation()
-  const navigate = useNavigate()
   const { user, logout } = useAuth()
 
   const currentRole = userRole || user?.role || 'USER'

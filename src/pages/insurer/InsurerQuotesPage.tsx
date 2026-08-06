@@ -65,7 +65,7 @@ export const InsurerQuotesPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [priorityFilter, setPriorityFilter] = useState<string>('all')
   const [quotes, setQuotes] = useState<Quote[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [, setIsLoading] = useState(true)
 
   useEffect(() => {
     const loadQuotes = async () => {
