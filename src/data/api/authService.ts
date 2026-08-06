@@ -234,8 +234,12 @@ export class AuthService {
 
       // 1. Créer l'utilisateur avec auto-confirmation (développement uniquement)
       // Utiliser le rôle fourni ou le déterminer automatiquement
-      let userRole: 'USER' | 'INSURER' | 'ADMIN'
-      if (data.role) {
+      // Security: never let a self-service registration provision an ADMIN
+      // account. Only USER / INSURER may be chosen from the client; ADMIN is
+      // provisioned by another admin (or the backend). This is enforced again
+      // at the database level by the enforce_profile_privileges trigger.
+      let userRole: 'USER' | 'INSURER'
+      if (data.role && data.role !== 'ADMIN') {
         userRole = data.role
       } else {
         userRole = data.companyName ? 'INSURER' : 'USER'
