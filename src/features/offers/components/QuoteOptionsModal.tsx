@@ -1,4 +1,5 @@
 import { Mail, MessageCircle, Phone, X, Download, MessageSquare } from "lucide-react";
+import { logger } from "@/lib/logger"
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";

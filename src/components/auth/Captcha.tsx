@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react'
+import { logger } from "@/lib/logger"
 import { Canvas } from '@react-three/fiber'
 import { Text, Box } from '@react-three/drei'
 import { securityManager, type SecurityRisk } from '@/lib/security-manager'

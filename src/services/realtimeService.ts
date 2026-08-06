@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger"
 export interface QuoteUpdateEvent {
   quoteId: string;
   status: 'pending' | 'approved' | 'rejected' | 'expired';

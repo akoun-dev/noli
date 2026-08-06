@@ -1,4 +1,5 @@
 import jsPDF from 'jspdf';
+import { logger } from "@/lib/logger"
 import html2canvas from 'html2canvas';
 import { QuoteWithDetails } from '../types/quote';
 

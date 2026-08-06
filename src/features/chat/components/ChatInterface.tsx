@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { logger } from "@/lib/logger"
 import {
   Send,
   Paperclip,

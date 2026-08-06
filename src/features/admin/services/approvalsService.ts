@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { logger } from "@/lib/logger"
 import { supabase } from '@/lib/supabase';
 
 // Types pour les approbations

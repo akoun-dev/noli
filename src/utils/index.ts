@@ -1,4 +1,5 @@
 // Currency formatting for West African CFA franc
+import { logger } from "@/lib/logger"
 export const formatCurrency = (amount: number, currency: string = 'XOF'): string => {
   return new Intl.NumberFormat('fr-CI', {
     style: 'currency',

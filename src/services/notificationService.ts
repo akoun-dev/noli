@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger"
 export interface EmailTemplate {
   to: string;
   subject: string;
