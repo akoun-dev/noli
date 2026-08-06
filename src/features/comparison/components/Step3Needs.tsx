@@ -18,8 +18,6 @@ import { Card } from '@/components/ui/card'
 import { ArrowRight, ArrowLeft, AlertTriangle, Shield, Car, MessageCircle, Download, Mail } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useNavigate } from 'react-router-dom'
-import { CoverageSelector } from '@/components/coverage/CoverageSelector'
-import ProgressiveCoverageSelector from '@/components/coverage/ProgressiveCoverageSelector'
 import SimplifiedCoverageSelector from '@/components/coverage/SimplifiedCoverageSelector'
 import {
   coverageTarificationService,
