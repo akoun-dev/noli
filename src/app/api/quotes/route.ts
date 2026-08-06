@@ -1,35 +1,28 @@
-import { db } from "@/lib/db";
+import { db, mapRows } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
+import { getSessionProfile } from "@/lib/auth-guard";
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId");
-    const all = searchParams.get("all") === "true";
-    const limit = parseInt(searchParams.get("limit") || "50", 10);
-
-    const whereClause: Record<string, unknown> = {};
-    if (userId && !all) {
-      whereClause.userId = userId;
+    const sessionProfile = await getSessionProfile();
+    if (!sessionProfile) {
+      return NextResponse.json({ error: "Authentification requise" }, { status: 401 });
     }
 
-    const quotes = await db.quote.findMany({
-      where: whereClause,
-      include: {
-        user: { select: { id: true, firstName: true, lastName: true, email: true } },
-        category: { select: { id: true, name: true } },
-        offer: {
-          select: {
-            id: true,
-            name: true,
-            insurer: { select: { id: true, name: true, logoUrl: true } },
-          },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-      take: limit,
-    });
+    const { searchParams } = new URL(request.url);
+    const limit = parseInt(searchParams.get("limit") || "50", 10);
 
+    const { data, error } = await db
+      .from("quotes")
+      .select(
+        "*, user:profiles(id, firstName:first_name, lastName:last_name, email), category:insurance_categories(id, name), offer:insurance_offers(id, name, insurer:insurers(id, name, logoUrl:logo_url))"
+      )
+      .eq("user_id", sessionProfile.id)
+      .order("created_at", { ascending: false })
+      .limit(limit);
+    if (error) throw error;
+
+    const quotes = mapRows(data || []);
     return NextResponse.json({ quotes });
   } catch (error) {
     console.error("Quotes error:", error);

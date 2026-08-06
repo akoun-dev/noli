@@ -1,19 +1,23 @@
-import { db } from "@/lib/db";
+import { db, mapRows } from "@/lib/db";
 import { NextResponse } from "next/server";
+
+type CoverageCategoryRow = {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  displayOrder: number;
+};
 
 export async function GET() {
   try {
-    const categories = await db.coverageCategory.findMany({
-      where: { isActive: true },
-      select: {
-        id: true,
-        code: true,
-        name: true,
-        description: true,
-        displayOrder: true,
-      },
-      orderBy: { displayOrder: "asc" },
-    });
+    const { data, error } = await db
+      .from("coverage_categories")
+      .select("id, code, name, description, displayOrder:display_order")
+      .eq("is_active", true)
+      .order("display_order", { ascending: true });
+    if (error) throw error;
+    const categories = mapRows<CoverageCategoryRow>(data || []);
 
     // Return categories with an ID that can be used as frontend selection key (use code)
     return NextResponse.json(

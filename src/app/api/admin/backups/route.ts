@@ -1,17 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { db, mapRow, mapRows } from '@/lib/db'
 import { existsSync, mkdirSync, copyFileSync, statSync } from 'fs'
 import { join } from 'path'
 import { requireAuth } from '@/lib/auth-guard'
 
+async function upsertSetting(key: string, value: string, category: string, label: string, type: string) {
+  const { data: existing } = await db
+    .from("system_settings")
+    .select("id")
+    .eq("key", key)
+    .maybeSingle()
+  if (existing) {
+    const { error } = await db.from("system_settings").update({ value }).eq("key", key)
+    if (error) throw error
+  } else {
+    const { error } = await db.from("system_settings").insert({ key, value, category, label, type })
+    if (error) throw error
+  }
+}
+
 export async function GET() {
   const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
   try {
-    const backups = await db.backup.findMany({
-      orderBy: { createdAt: 'desc' },
-    })
+    const { data, error } = await db
+      .from("backups")
+      .select("*")
+      .order("created_at", { ascending: false })
+    if (error) throw error
 
-    return NextResponse.json({ backups })
+    return NextResponse.json({ backups: mapRows(data || []) })
   } catch (error) {
     console.error('Erreur lors de la récupération des sauvegardes:', error)
     return NextResponse.json(
@@ -39,38 +56,17 @@ export async function POST(request: NextRequest) {
       }
 
       await Promise.all([
-        db.systemSetting.upsert({
-          where: { key: 'backup_schedule' },
-          update: { value: JSON.stringify(schedule) },
-          create: {
-            key: 'backup_schedule',
-            value: JSON.stringify(schedule),
-            category: 'general',
-            label: 'Planification sauvegarde',
-            type: 'json',
-          },
-        }),
-        db.systemSetting.upsert({
-          where: { key: 'backup_enabled' },
-          update: { value: String(enabled) },
-          create: {
-            key: 'backup_enabled',
-            value: String(enabled),
-            category: 'general',
-            label: 'Sauvegarde automatique activée',
-            type: 'boolean',
-          },
-        }),
+        upsertSetting('backup_schedule', JSON.stringify(schedule), 'general', 'Planification sauvegarde', 'json'),
+        upsertSetting('backup_enabled', String(enabled), 'general', 'Sauvegarde automatique activée', 'boolean'),
       ])
 
-      await db.auditLog.create({
-        data: {
-          action: 'SETTINGS_CHANGE',
-          entity: 'Backup',
-          details: JSON.stringify({ schedule, enabled }),
-          userName: 'SYSTEM',
-        },
+      const { error: auditError } = await db.from("audit_logs").insert({
+        action: 'SETTINGS_CHANGE',
+        entity: 'Backup',
+        details: JSON.stringify({ schedule, enabled }),
+        user_name: 'SYSTEM',
       })
+      if (auditError) throw auditError
 
       return NextResponse.json({ success: true })
     }
@@ -99,14 +95,13 @@ export async function POST(request: NextRequest) {
     try {
       copyFileSync(dbPath, destPath)
     } catch (copyError) {
-      await db.auditLog.create({
-        data: {
-          action: 'BACKUP_CREATE',
-          entity: 'Backup',
-          details: JSON.stringify({ filename, error: 'Échec de la copie du fichier' }),
-          userName: 'SYSTEM',
-        },
+      const { error: auditError } = await db.from("audit_logs").insert({
+        action: 'BACKUP_CREATE',
+        entity: 'Backup',
+        details: JSON.stringify({ filename, error: 'Échec de la copie du fichier' }),
+        user_name: 'SYSTEM',
       })
+      if (auditError) throw auditError
 
       return NextResponse.json(
         { error: 'Échec de la copie du fichier de base de données' },
@@ -117,25 +112,28 @@ export async function POST(request: NextRequest) {
     const fileStat = statSync(destPath)
     const fileSize = fileStat.size
 
-    const backup = await db.backup.create({
-      data: {
+    const { data: backupData, error } = await db
+      .from("backups")
+      .insert({
         filename,
-        fileSize,
+        file_size: fileSize,
         status: 'COMPLETED',
         type: 'MANUAL',
         path: destPath,
-      },
-    })
+      })
+      .select()
+      .single()
+    if (error) throw error
+    const backup = mapRow(backupData)
 
-    await db.auditLog.create({
-      data: {
-        action: 'BACKUP_CREATE',
-        entity: 'Backup',
-        entityId: backup.id,
-        details: JSON.stringify({ filename, fileSize, type: 'MANUAL' }),
-        userName: 'SYSTEM',
-      },
+    const { error: auditError } = await db.from("audit_logs").insert({
+      action: 'BACKUP_CREATE',
+      entity: 'Backup',
+      entity_id: backup!.id,
+      details: JSON.stringify({ filename, fileSize, type: 'MANUAL' }),
+      user_name: 'SYSTEM',
     })
+    if (auditError) throw auditError
 
     return NextResponse.json({ backup }, { status: 201 })
   } catch (error) {

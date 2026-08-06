@@ -840,14 +840,37 @@ function ComparisonModal({
                                                                         <span
                                                                             className={`text-sm font-bold tabular-nums cursor-default ${
                                                                                 hasGuarantee
-                                                                                    ? "text-green-600 dark:text-green-400"
+                                                                                    ? pricing
+                                                                                        ? pricing.amount === 0
+                                                                                            ? "text-green-600 dark:text-green-400"
+                                                                                            : "text-foreground"
+                                                                                        : "text-green-600 dark:text-green-400"
                                                                                     : "text-muted-foreground/40"
                                                                             }`}
                                                                         >
                                                                             {hasGuarantee
-                                                                                ? "✓"
+                                                                                ? pricing
+                                                                                    ? pricing.amount === 0
+                                                                                        ? "Gratuit"
+                                                                                        : formatFCFA(
+                                                                                              pricing.amount
+                                                                                          )
+                                                                                    : "✓"
                                                                                 : "—"}
                                                                         </span>
+                                                                        {hasGuarantee &&
+                                                                            pricing &&
+                                                                            pricing.coverageCapital !=
+                                                                                null &&
+                                                                            pricing.coverageCapital >
+                                                                                0 && (
+                                                                                <span className="block text-[10px] text-muted-foreground/70 mt-0.5 font-normal">
+                                                                                    Capital :{" "}
+                                                                                    {formatFCFA(
+                                                                                        pricing.coverageCapital
+                                                                                    )}
+                                                                                </span>
+                                                                            )}
                                                                     </TooltipTrigger>
                                                                     <TooltipContent
                                                                         side="bottom"
@@ -874,6 +897,50 @@ function ComparisonModal({
                                                                                             non
                                                                                             disponible
                                                                                         </p>
+                                                                                    )}
+                                                                                    {pricing && (
+                                                                                        <div className="border-t border-background/20 pt-1.5 mt-1.5 space-y-1">
+                                                                                            {pricing.coverageCapital !=
+                                                                                                null &&
+                                                                                                pricing.coverageCapital >
+                                                                                                    0 && (
+                                                                                                    <p className="text-background/90">
+                                                                                                        Capital
+                                                                                                        garanti :{" "}
+                                                                                                        <span className="font-bold text-background">
+                                                                                                            {formatFCFA(
+                                                                                                                pricing.coverageCapital
+                                                                                                            )}
+                                                                                                        </span>
+                                                                                                    </p>
+                                                                                                )}
+                                                                                            <p className="text-background/90">
+                                                                                                Montant :{" "}
+                                                                                                <span className="font-bold text-background">
+                                                                                                    {pricing.amount ===
+                                                                                                    0
+                                                                                                        ? "Gratuit"
+                                                                                                        : formatFCFA(
+                                                                                                              pricing.amount
+                                                                                                          )}
+                                                                                                </span>
+                                                                                            </p>
+                                                                                            <p className="text-background/90">
+                                                                                                Méthode :{" "}
+                                                                                                <span className="font-semibold text-background">
+                                                                                                    {
+                                                                                                        pricing.method
+                                                                                                    }
+                                                                                                </span>
+                                                                                            </p>
+                                                                                            {pricing.breakdown && (
+                                                                                                <p className="text-background/80 whitespace-pre-line text-xs">
+                                                                                                    {
+                                                                                                        pricing.breakdown
+                                                                                                    }
+                                                                                                </p>
+                                                                                            )}
+                                                                                        </div>
                                                                                     )}
                                                                                 </>
                                                                             ) : (
@@ -1142,6 +1209,19 @@ function OfferCard({
                                         <span className="text-foreground/90 flex-1 min-w-0">
                                             {feature}
                                         </span>
+                                        {pricing && (
+                                            <span
+                                                className={`text-xs font-semibold shrink-0 tabular-nums mt-0.5 ${
+                                                    pricing.amount === 0
+                                                        ? "text-green-600"
+                                                        : "text-foreground"
+                                                }`}
+                                            >
+                                                {pricing.amount === 0
+                                                    ? "Inclus"
+                                                    : `${formatFCFA(pricing.amount)}/an`}
+                                            </span>
+                                        )}
                                         <Tooltip>
                                             <TooltipTrigger asChild>
                                                 <button
@@ -1169,6 +1249,40 @@ function OfferCard({
                                                             Description non
                                                             disponible
                                                         </p>
+                                                    )}
+                                                    {pricing && (
+                                                        <div className="border-t border-background/20 pt-1.5 mt-1.5 space-y-1">
+                                                            {pricing.coverageCapital != null &&
+                                                                pricing.coverageCapital > 0 && (
+                                                                    <p className="text-background/90">
+                                                                        Capital
+                                                                        garanti :{" "}
+                                                                        <span className="font-bold text-background">
+                                                                            {formatFCFA(
+                                                                                pricing.coverageCapital
+                                                                            )}
+                                                                        </span>
+                                                                    </p>
+                                                                )}
+                                                            <p className="text-background/90">
+                                                                Coût :{" "}
+                                                                <span className="font-bold text-background">
+                                                                    {pricing.amount ===
+                                                                    0
+                                                                        ? "Gratuit"
+                                                                        : formatFCFA(
+                                                                              pricing.amount
+                                                                          )}
+                                                                </span>
+                                                            </p>
+                                                            {pricing.breakdown && (
+                                                                <p className="text-background/80 whitespace-pre-line text-xs">
+                                                                    {
+                                                                        pricing.breakdown
+                                                                    }
+                                                                </p>
+                                                            )}
+                                                        </div>
                                                     )}
                                                 </div>
                                             </TooltipContent>

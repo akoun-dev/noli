@@ -1,25 +1,43 @@
-import { db } from "@/lib/db";
+import { db, mapRow } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
+import { getInsurerAccount, getSessionProfile, requireAuth } from "@/lib/auth-guard";
+
+async function resolveInsurerId(): Promise<string | null> {
+  const profile = await getSessionProfile();
+  if (!profile) return null;
+  const account = await getInsurerAccount(profile.id);
+  return account?.insurerId || null;
+}
 
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const guard = await requireAuth(["INSURER"]);
+    if (guard) return guard;
+
+    const insurerId = await resolveInsurerId();
     const { id } = await params;
 
-    const offer = await db.insuranceOffer.findUnique({
-      where: { id },
-      include: {
-        category: { select: { id: true, name: true, icon: true } },
-        insurer: { select: { id: true, name: true, code: true, logoUrl: true } },
-      },
-    });
+    const { data } = await db
+      .from("insurance_offers")
+      .select("*, category:insurance_categories(id, name, icon), insurer:insurers(id, name, code, logoUrl:logo_url)")
+      .eq("id", id)
+      .maybeSingle();
+    const offer = mapRow(data);
 
     if (!offer) {
       return NextResponse.json(
         { error: "Offre non trouvée" },
         { status: 404 }
+      );
+    }
+
+    if (!insurerId || offer.insurerId !== insurerId) {
+      return NextResponse.json(
+        { error: "Accès refusé" },
+        { status: 403 }
       );
     }
 
@@ -41,6 +59,10 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const guard = await requireAuth(["INSURER"]);
+    if (guard) return guard;
+
+    const insurerId = await resolveInsurerId();
     const { id } = await params;
     const body = await request.json();
     const {
@@ -64,7 +86,12 @@ export async function PUT(
       vehicleUsage,
     } = body;
 
-    const existing = await db.insuranceOffer.findUnique({ where: { id } });
+    const { data: existingData } = await db
+      .from("insurance_offers")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+    const existing = mapRow(existingData);
     if (!existing) {
       return NextResponse.json(
         { error: "Offre non trouvée" },
@@ -72,33 +99,40 @@ export async function PUT(
       );
     }
 
-    const updated = await db.insuranceOffer.update({
-      where: { id },
-      data: {
-        ...(categoryId !== undefined ? { categoryId: categoryId || null } : {}),
+    if (!insurerId || existing.insurerId !== insurerId) {
+      return NextResponse.json(
+        { error: "Accès refusé" },
+        { status: 403 }
+      );
+    }
+
+    const { data, error } = await db
+      .from("insurance_offers")
+      .update({
+        ...(categoryId !== undefined ? { category_id: categoryId || null } : {}),
         ...(name !== undefined ? { name } : {}),
         ...(description !== undefined ? { description: description || null } : {}),
-        ...(priceMin !== undefined ? { priceMin: priceMin != null ? Number(priceMin) : null } : {}),
-        ...(priceMax !== undefined ? { priceMax: priceMax != null ? Number(priceMax) : null } : {}),
-        ...(coverageAmount !== undefined ? { coverageAmount: coverageAmount != null ? Number(coverageAmount) : null } : {}),
+        ...(priceMin !== undefined ? { price_min: priceMin != null ? Number(priceMin) : null } : {}),
+        ...(priceMax !== undefined ? { price_max: priceMax != null ? Number(priceMax) : null } : {}),
+        ...(coverageAmount !== undefined ? { coverage_amount: coverageAmount != null ? Number(coverageAmount) : null } : {}),
         ...(deductible !== undefined ? { deductible: Number(deductible) } : {}),
         ...(features !== undefined ? { features: JSON.stringify(features) } : {}),
-        ...(contractType !== undefined ? { contractType: contractType || null } : {}),
-        ...(isActive !== undefined ? { isActive: Boolean(isActive) } : {}),
-        ...(fiscalPowerMin !== undefined ? { fiscalPowerMin: fiscalPowerMin ? Number(fiscalPowerMin) : null } : {}),
-        ...(fiscalPowerMax !== undefined ? { fiscalPowerMax: fiscalPowerMax ? Number(fiscalPowerMax) : null } : {}),
-        ...(fuelTypes !== undefined ? { fuelTypes: Array.isArray(fuelTypes) ? JSON.stringify(fuelTypes) : (fuelTypes || "[]") } : {}),
-        ...(newValueMin !== undefined ? { newValueMin: newValueMin ? Number(newValueMin) : null } : {}),
-        ...(newValueMax !== undefined ? { newValueMax: newValueMax ? Number(newValueMax) : null } : {}),
-        ...(venalValueMin !== undefined ? { venalValueMin: venalValueMin ? Number(venalValueMin) : null } : {}),
-        ...(venalValueMax !== undefined ? { venalValueMax: venalValueMax ? Number(venalValueMax) : null } : {}),
-        ...(vehicleUsage !== undefined ? { vehicleUsage: Array.isArray(vehicleUsage) ? JSON.stringify(vehicleUsage) : (vehicleUsage || "[]") } : {}),
-      },
-      include: {
-        category: { select: { id: true, name: true, icon: true } },
-        insurer: { select: { id: true, name: true, code: true, logoUrl: true } },
-      },
-    });
+        ...(contractType !== undefined ? { contract_type: contractType || null } : {}),
+        ...(isActive !== undefined ? { is_active: Boolean(isActive) } : {}),
+        ...(fiscalPowerMin !== undefined ? { fiscal_power_min: fiscalPowerMin ? Number(fiscalPowerMin) : null } : {}),
+        ...(fiscalPowerMax !== undefined ? { fiscal_power_max: fiscalPowerMax ? Number(fiscalPowerMax) : null } : {}),
+        ...(fuelTypes !== undefined ? { fuel_types: Array.isArray(fuelTypes) ? JSON.stringify(fuelTypes) : (fuelTypes || "[]") } : {}),
+        ...(newValueMin !== undefined ? { new_value_min: newValueMin ? Number(newValueMin) : null } : {}),
+        ...(newValueMax !== undefined ? { new_value_max: newValueMax ? Number(newValueMax) : null } : {}),
+        ...(venalValueMin !== undefined ? { venal_value_min: venalValueMin ? Number(venalValueMin) : null } : {}),
+        ...(venalValueMax !== undefined ? { venal_value_max: venalValueMax ? Number(venalValueMax) : null } : {}),
+        ...(vehicleUsage !== undefined ? { vehicle_usage: Array.isArray(vehicleUsage) ? JSON.stringify(vehicleUsage) : (vehicleUsage || "[]") } : {}),
+      })
+      .eq("id", id)
+      .select("*, category:insurance_categories(id, name, icon), insurer:insurers(id, name, code, logoUrl:logo_url)")
+      .single();
+    if (error) throw error;
+    const updated = mapRow(data);
 
     return NextResponse.json({
       ...updated,
@@ -118,9 +152,18 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const guard = await requireAuth(["INSURER"]);
+    if (guard) return guard;
+
+    const insurerId = await resolveInsurerId();
     const { id } = await params;
 
-    const existing = await db.insuranceOffer.findUnique({ where: { id } });
+    const { data: existingData } = await db
+      .from("insurance_offers")
+      .select("id, insurer_id")
+      .eq("id", id)
+      .maybeSingle();
+    const existing = mapRow(existingData);
     if (!existing) {
       return NextResponse.json(
         { error: "Offre non trouvée" },
@@ -128,10 +171,14 @@ export async function DELETE(
       );
     }
 
-    await db.insuranceOffer.update({
-      where: { id },
-      data: { isActive: false },
-    });
+    if (!insurerId || existing.insurerId !== insurerId) {
+      return NextResponse.json(
+        { error: "Accès refusé" },
+        { status: 403 }
+      );
+    }
+
+    await db.from("insurance_offers").update({ is_active: false }).eq("id", id);
 
     return NextResponse.json({ success: true });
   } catch (error) {

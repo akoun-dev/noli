@@ -1,11 +1,17 @@
-import { db } from "@/lib/db";
+import { db, mapRow, mapRows } from "@/lib/db";
 import { NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
 import { COVERAGE_CODE_MAP } from "@/lib/constants";
+import { requireAuth } from "@/lib/auth-guard";
 
 export async function POST() {
   try {
-    if ((await db.insurer.count()) > 0) {
+    const guard = await requireAuth(["ADMIN"]);
+    if (guard) return guard;
+
+    const { count: insurerCount } = await db
+      .from("insurers")
+      .select("id", { count: "exact", head: true });
+    if ((insurerCount || 0) > 0) {
       // Ensure coverage categories exist
       const catData = [
         { code: "RESPONSABILITE_CIVILE", name: "Responsabilité Civile", displayOrder: 1 },
@@ -22,11 +28,10 @@ export async function POST() {
         { code: "ACCESSOIRES", name: "Accessoires", displayOrder: 12 },
       ];
       for (const c of catData) {
-        await db.coverageCategory.upsert({
-          where: { code: c.code },
-          create: c,
-          update: { name: c.name, displayOrder: c.displayOrder, isActive: true },
-        });
+        await db.from("coverage_categories").upsert(
+          { code: c.code, name: c.name, display_order: c.displayOrder, is_active: true },
+          { onConflict: "code" }
+        );
       }
 
       // Update coverage names: replace abbreviations with full names
@@ -37,27 +42,29 @@ export async function POST() {
         "Extension BDG toit ouvrant": "Extension Bris de Glaces toit ouvrant",
       };
       for (const [oldName, newName] of Object.entries(nameFixes)) {
-        await db.coverage.updateMany({ where: { name: oldName }, data: { name: newName } });
+        await db.from("coverages").update({ name: newName }).eq("name", oldName);
       }
       // Update offer features: resolve codes to names
-      const allOffers = await db.insuranceOffer.findMany();
+      const { data: allOffersData } = await db.from("insurance_offers").select("id, features");
+      const allOffers = mapRows<{ id: string; features: string | null }>(allOffersData || []);
       for (const o of allOffers) {
         const features: string[] = JSON.parse(o.features || "[]");
         const resolved = features.map((f: string) => COVERAGE_CODE_MAP[f] || nameFixes[f] || f);
         if (JSON.stringify(resolved) !== o.features) {
-          await db.insuranceOffer.update({
-            where: { id: o.id },
-            data: { features: JSON.stringify(resolved) },
-          });
+          await db.from("insurance_offers").update({ features: JSON.stringify(resolved) }).eq("id", o.id);
         }
       }
       return NextResponse.json({ message: "Déjà initialisé — noms mis à jour" });
     }
 
     // ── Insurance Categories ──────────────────────────────────
-    const autoCat = await db.insuranceCategory.create({
-      data: { name: "Assurance Auto", icon: "Car", description: "Assurance automobile tous risques" },
-    });
+    const { data: autoCatData, error: autoCatError } = await db
+      .from("insurance_categories")
+      .insert({ name: "Assurance Auto", icon: "Car", description: "Assurance automobile tous risques" })
+      .select()
+      .single();
+    if (autoCatError) throw autoCatError;
+    const autoCat = mapRow<{ id: string }>(autoCatData)!;
 
     // ── Coverage Categories ────────────────────────────────────
     const catData = [
@@ -76,7 +83,13 @@ export async function POST() {
     ];
     const cats: { id: string; code: string }[] = [];
     for (const c of catData) {
-      const created = await db.coverageCategory.create({ data: c });
+      const { data, error } = await db
+        .from("coverage_categories")
+        .insert({ code: c.code, name: c.name, display_order: c.displayOrder })
+        .select()
+        .single();
+      if (error) throw error;
+      const created = mapRow<{ id: string; code: string }>(data)!;
       cats.push({ id: created.id, code: created.code });
     }
     const catMap = new Map(cats.map((c) => [c.code, c.id]));
@@ -99,7 +112,13 @@ export async function POST() {
     ];
     const insurers: { id: string; code: string; name: string; mult: number }[] = [];
     for (const i of insurerData) {
-      const created = await db.insurer.create({ data: i });
+      const { data, error } = await db
+        .from("insurers")
+        .insert({ code: i.code, name: i.name, contact_email: i.contactEmail, phone: i.phone, website: i.website })
+        .select()
+        .single();
+      if (error) throw error;
+      const created = mapRow<{ id: string; code: string; name: string }>(data)!;
       const p = pricing[i.code];
       insurers.push({ id: created.id, code: created.code, name: created.name, mult: p ? p[0] / 25000 : 1 });
     }
@@ -174,40 +193,43 @@ export async function POST() {
     for (const ins of insurers) {
       for (const tmpl of coverageTemplates) {
         const covCode = `${tmpl.code}_${ins.code}`;
-        await db.coverage.create({
-          data: {
-            code: covCode, type: tmpl.type, name: tmpl.name,
-            description: `Garantie ${tmpl.name} — ${ins.name}`,
-            calculationType: tmpl.calcType,
-            categoryId: catMap.get(tmpl.catCode) || null,
-            insurerId: ins.id, isMandatory: tmpl.mandatory,
-            metadata: JSON.stringify(tmpl.meta),
-            displayOrder: coverageTemplates.indexOf(tmpl) + 1,
-            variableSource: (tmpl as any).varSrc || null,
-            ratePercent: (tmpl as any).ratePct ?? null,
-            conditionedByNewValue: (tmpl as any).condByNV || false,
-            newValueThreshold: (tmpl as any).nvThreshold ?? null,
-            rateBelowThreshold: (tmpl as any).rateBelow ?? null,
-            rateAboveThreshold: (tmpl as any).rateAbove ?? null,
-            fixedAmount: (tmpl as any).fixedAmt ?? null,
-            matrixDimension: (tmpl as any).matrixDim || null,
-          },
+        const { error } = await db.from("coverages").insert({
+          code: covCode, type: tmpl.type, name: tmpl.name,
+          description: `Garantie ${tmpl.name} — ${ins.name}`,
+          calculation_type: tmpl.calcType,
+          category_id: catMap.get(tmpl.catCode) || null,
+          insurer_id: ins.id, is_mandatory: tmpl.mandatory,
+          metadata: JSON.stringify(tmpl.meta),
+          display_order: coverageTemplates.indexOf(tmpl) + 1,
+          variable_source: (tmpl as any).varSrc || null,
+          rate_percent: (tmpl as any).ratePct ?? null,
+          conditioned_by_new_value: (tmpl as any).condByNV || false,
+          new_value_threshold: (tmpl as any).nvThreshold ?? null,
+          rate_below_threshold: (tmpl as any).rateBelow ?? null,
+          rate_above_threshold: (tmpl as any).rateAbove ?? null,
+          fixed_amount: (tmpl as any).fixedAmt ?? null,
+          matrix_dimension: (tmpl as any).matrixDim || null,
         });
+        if (error) throw error;
       }
 
       // RC tariff rules
-      const rcCoverage = await db.coverage.findFirst({ where: { code: `RC_${ins.code}` } });
+      const { data: rcData } = await db
+        .from("coverages")
+        .select("id")
+        .eq("code", `RC_${ins.code}`)
+        .maybeSingle();
+      const rcCoverage = mapRow<{ id: string }>(rcData);
       if (rcCoverage) {
         for (const fuel of ["ESSENCE", "DIESEL"]) {
           for (const cv of cvRanges) {
             const basePrice = rcPrices[cv.range as keyof typeof rcPrices];
-            await db.coverageTariffRule.create({
-              data: {
-                coverageId: rcCoverage.id,
-                fuelType: fuel, minFiscalPower: cv.min, maxFiscalPower: cv.max,
-                fixedAmount: Math.round(basePrice * ins.mult),
-              },
+            const { error } = await db.from("coverage_tariff_rules").insert({
+              coverage_id: rcCoverage.id,
+              fuel_type: fuel, min_fiscal_power: cv.min, max_fiscal_power: cv.max,
+              fixed_amount: Math.round(basePrice * ins.mult),
             });
+            if (error) throw error;
           }
         }
       }
@@ -231,58 +253,26 @@ export async function POST() {
         const minPrice = basePrices[i];
         const margin = margins[contractTypes[i]];
         const maxPrice = Math.round(minPrice * (1 + margin));
-        await db.insuranceOffer.create({
-          data: {
-            insurerId: ins.id, categoryId: autoCat.id, name: names[i],
-            description: `Offre ${names[i]} — ${ins.name}`,
-            priceMin: minPrice, priceMax: maxPrice,
-            deductible: deductibles[i],
-            features: JSON.stringify(featureSets[i]),
-            contractType: contractTypes[i],
-          },
+        const { error } = await db.from("insurance_offers").insert({
+          insurer_id: ins.id, category_id: autoCat.id, name: names[i],
+          description: `Offre ${names[i]} — ${ins.name}`,
+          price_min: minPrice, price_max: maxPrice,
+          deductible: deductibles[i],
+          features: JSON.stringify(featureSets[i]),
+          contract_type: contractTypes[i],
         });
+        if (error) throw error;
       }
     }
 
     // ── Insurance Packages ─────────────────────────────────────
-    await db.insurancePackage.createMany({
-      data: [
-        { name: "Pack Pickup Ivory", description: "Pack gratuit réservé aux pick-up ≤ 3 tonnes", basePrice: 0 },
-        { name: "Pack Pickup Bronze", description: "Pack assurance pick-up niveau Bronze", basePrice: 48000 },
-        { name: "Pack Pickup Silver", description: "Pack assurance pick-up niveau Silver", basePrice: 65000 },
-        { name: "Pack Pickup Gold", description: "Pack assurance pick-up niveau Gold", basePrice: 85000 },
-      ],
-    });
-
-    // ── Test Accounts ─────────────────────────────────────────
-    const profiles = await db.profile.createMany({
-      data: [
-        {
-          email: "admin@noli.ci",
-          password: bcrypt.hashSync("Admin@2025", 10),
-          firstName: "Admin",
-          lastName: "NOLI",
-          phone: "+225 01 00 00 00",
-          role: "ADMIN",
-        },
-        {
-          email: "user@test.ci",
-          password: bcrypt.hashSync("User@2025", 10),
-          firstName: "Jean",
-          lastName: "Dupont",
-          phone: "+225 07 01 02 03",
-          role: "USER",
-        },
-        {
-          email: "assureur@saham.ci",
-          password: bcrypt.hashSync("Assureur@2025", 10),
-          firstName: "Compte",
-          lastName: "SAHAM",
-          phone: "+225 07 10 10 10",
-          role: "INSURER",
-        },
-      ],
-    });
+    const { error: packagesError } = await db.from("insurance_packages").insert([
+      { name: "Pack Pickup Ivory", description: "Pack gratuit réservé aux pick-up ≤ 3 tonnes", base_price: 0 },
+      { name: "Pack Pickup Bronze", description: "Pack assurance pick-up niveau Bronze", base_price: 48000 },
+      { name: "Pack Pickup Silver", description: "Pack assurance pick-up niveau Silver", base_price: 65000 },
+      { name: "Pack Pickup Gold", description: "Pack assurance pick-up niveau Gold", base_price: 85000 },
+    ]);
+    if (packagesError) throw packagesError;
 
     return NextResponse.json({
       message: "Base de données initialisée",
@@ -291,7 +281,7 @@ export async function POST() {
       insuranceCategories: 1,
       insuranceOffers: insurers.length * 3,
       insurancePackages: 4,
-      profiles: profiles.length,
+      profiles: 0,
     });
   } catch (error) {
     console.error("Erreur seed:", error);

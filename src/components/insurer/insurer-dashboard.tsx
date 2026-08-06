@@ -128,7 +128,7 @@ export function InsurerDashboard() {
 
   const fetchStats = useCallback(() => {
     if (!user.id) return;
-    fetch(`/api/insurer/stats?userId=${user.id}`)
+    fetch(`/api/insurer/stats`)
       .then((res) => res.json())
       .then((data) => {
         setStats(data);

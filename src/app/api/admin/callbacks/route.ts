@@ -1,4 +1,4 @@
-import { db } from "@/lib/db";
+import { db, mapRows } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-guard";
 
@@ -14,19 +14,21 @@ export async function GET(request: NextRequest) {
     const { searchParams } = request.nextUrl;
     const status = searchParams.get("status") || "all";
 
-    const where: Record<string, unknown> = {
-      userId: profile.id,
-      type: "CALLBACK",
-    };
+    let query = db
+      .from("notifications")
+      .select("*")
+      .eq("user_id", profile.id)
+      .eq("type", "CALLBACK")
+      .order("created_at", { ascending: false })
+      .limit(200);
 
-    if (status === "read") where.isRead = true;
-    if (status === "unread") where.isRead = false;
+    if (status === "read") query = query.eq("is_read", true);
+    if (status === "unread") query = query.eq("is_read", false);
 
-    const callbacks = await db.notification.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      take: 200,
-    });
+    const { data, error } = await query;
+    if (error) throw error;
+
+    const callbacks = mapRows(data || []);
 
     const formatted = callbacks.map((c) => {
       let data: Record<string, unknown> = {};
@@ -41,7 +43,7 @@ export async function GET(request: NextRequest) {
         title: c.title,
         message: c.message,
         isRead: c.isRead,
-        createdAt: c.createdAt.toISOString(),
+        createdAt: c.createdAt,
         phone: data.phone || null,
         preferredTime: data.preferredTime || null,
         clientName: data.clientName || null,
@@ -77,10 +79,11 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    await db.notification.update({
-      where: { id },
-      data: { isRead: isRead ?? true },
-    });
+    const { error } = await db
+      .from("notifications")
+      .update({ is_read: isRead ?? true })
+      .eq("id", id);
+    if (error) throw error;
 
     return NextResponse.json({ success: true });
   } catch (error) {

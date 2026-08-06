@@ -1,6 +1,7 @@
-import { db } from "@/lib/db";
+import { db, mapRow } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { createNotification } from "@/lib/notifications";
+import { getInsurerAccount, getSessionProfile, requireAuth } from "@/lib/auth-guard";
 
 const VALID_STATUSES = ["APPROVED", "REJECTED", "PENDING"];
 
@@ -9,21 +10,12 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
-    const { searchParams } = request.nextUrl;
-    const userId = searchParams.get("userId");
+    const guard = await requireAuth(["INSURER"]);
+    if (guard) return guard;
 
-    if (!userId) {
-      return NextResponse.json(
-        { error: "Le paramètre userId est requis" },
-        { status: 400 }
-      );
-    }
-
-    const account = await db.insurerAccount.findFirst({
-      where: { profileId: userId },
-      select: { insurerId: true },
-    });
+    const profile = await getSessionProfile();
+    if (!profile) return NextResponse.json({ error: "Authentification requise" }, { status: 401 });
+    const account = await getInsurerAccount(profile.id);
 
     if (!account) {
       return NextResponse.json(
@@ -32,6 +24,7 @@ export async function PUT(
       );
     }
 
+    const { id } = await params;
     const body = await request.json();
     const { status } = body;
 
@@ -43,10 +36,12 @@ export async function PUT(
     }
 
     // Verify the quote exists and belongs to this insurer's offers
-    const quote = await db.quote.findUnique({
-      where: { id },
-      include: { offer: { select: { insurerId: true } } },
-    });
+    const { data: quoteData } = await db
+      .from("quotes")
+      .select("*, offer:insurance_offers(insurer_id)")
+      .eq("id", id)
+      .maybeSingle();
+    const quote = mapRow(quoteData);
 
     if (!quote) {
       return NextResponse.json(
@@ -66,13 +61,17 @@ export async function PUT(
 
     // If approving and no finalPrice set, use estimatedPrice
     if (status === "APPROVED" && quote.finalPrice === null && quote.estimatedPrice !== null) {
-      updateData.finalPrice = quote.estimatedPrice;
+      updateData.final_price = quote.estimatedPrice;
     }
 
-    const updated = await db.quote.update({
-      where: { id },
-      data: updateData,
-    });
+    const { data, error } = await db
+      .from("quotes")
+      .update(updateData)
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) throw error;
+    const updated = mapRow(data);
 
     // Notify the quote owner
     if (quote.userId) {

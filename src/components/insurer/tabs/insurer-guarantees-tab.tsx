@@ -464,9 +464,9 @@ export function InsurerGuaranteesTab() {
   const [deleting, setDeleting] = useState(false);
 
   /* ── Fetch helpers ── */
-  const fetchInsurer = useCallback(async (userId: string) => {
+  const fetchInsurer = useCallback(async () => {
     try {
-      const res = await fetch(`/api/insurer/account?userId=${userId}`);
+      const res = await fetch(`/api/insurer/account`);
       if (!res.ok) throw new Error();
       const data = await res.json();
       setInsurerId(data.id);
@@ -477,9 +477,9 @@ export function InsurerGuaranteesTab() {
     }
   }, []);
 
-  const fetchCoverages = useCallback(async (iid: string) => {
+  const fetchCoverages = useCallback(async () => {
     try {
-      const res = await fetch(`/api/insurer/coverages?insurerId=${iid}`);
+      const res = await fetch(`/api/insurer/coverages`);
       if (!res.ok) throw new Error();
       const data = await res.json();
       setCoverages(data.coverages || []);
@@ -512,7 +512,7 @@ export function InsurerGuaranteesTab() {
 
   const refreshData = useCallback(async () => {
     if (!insurerId) return;
-    await fetchCoverages(insurerId);
+    await fetchCoverages();
   }, [insurerId, fetchCoverages]);
 
   /* ── Init ── */
@@ -522,8 +522,8 @@ export function InsurerGuaranteesTab() {
       return;
     }
     (async () => {
-      const iid = await fetchInsurer(user.id!);
-      if (iid) await fetchCoverages(iid);
+      const iid = await fetchInsurer();
+      if (iid) await fetchCoverages();
       await Promise.all([fetchCategories(), fetchInsuranceCategories()]);
       setLoading(false);
     })();

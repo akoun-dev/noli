@@ -21,7 +21,7 @@ export interface PersonalInfo {
   firstName: string;
   email: string;
   phone: string;
-  whatsappOptIn: boolean;
+  whatsappOptIn?: boolean;
 }
 
 export interface VehicleInfo {
@@ -32,7 +32,7 @@ export interface VehicleInfo {
   newValue: string;
   currentValue: string;
   usage: string;
-  effectiveDate: string;
+  effectiveDate?: string;
 }
 
 export interface CoverageNeeds {

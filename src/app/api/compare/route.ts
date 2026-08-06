@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { compareRequestSchema } from "@/lib/validation";
 import { runComparison } from "@/lib/compare-service";
+import { getSessionProfile } from "@/lib/auth-guard";
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,7 +13,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: firstError }, { status: 400 });
     }
 
-    const { personalInfo, vehicleInfo, coverageNeeds, userId } = parsed.data;
+    const { personalInfo, vehicleInfo, coverageNeeds } = parsed.data;
+
+    // L'identité provient de la session (jamais du client) :
+    // un devis n'est lié à un compte que si l'utilisateur est connecté.
+    const sessionProfile = await getSessionProfile();
+    const userId = sessionProfile?.id;
+
     const result = await runComparison(personalInfo, vehicleInfo, coverageNeeds, userId);
 
     return NextResponse.json(result);

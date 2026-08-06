@@ -3,10 +3,10 @@ import { NextResponse } from "next/server";
 
 export async function GET() {
   try {
-    const [insurers, offers, profiles] = await Promise.all([
-      db.insurer.count(),
-      db.insuranceOffer.count(),
-      db.profile.count(),
+    const [{ count: insurers }, { count: offers }, { count: profiles }] = await Promise.all([
+      db.from("insurers").select("id", { count: "exact", head: true }),
+      db.from("insurance_offers").select("id", { count: "exact", head: true }),
+      db.from("profiles").select("id", { count: "exact", head: true }),
     ]);
 
     return NextResponse.json({ insurers, offers, users: profiles });

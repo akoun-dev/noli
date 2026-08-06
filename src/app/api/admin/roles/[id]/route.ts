@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { db, mapRow } from "@/lib/db";
 import { requireAuth } from "@/lib/auth-guard";
 
 /* ── GET : Rôle unique avec permissions ──────────────────────── */
@@ -10,13 +10,15 @@ export async function GET(
   try {
     const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
     const { id } = await params;
-    const role = await db.role.findUnique({
-      where: { id },
-      include: {
-        permissions: { include: { permission: true } },
-        profiles: true,
-      },
-    });
+    const { data, error } = await db
+      .from("roles")
+      .select(
+        "*, permissions:role_permissions(permission:permissions(id, code, name, category)), profile_roles(profile_id)"
+      )
+      .eq("id", id)
+      .maybeSingle();
+    if (error) throw error;
+    const role = mapRow(data);
 
     if (!role) {
       return NextResponse.json({ error: "Rôle non trouvé" }, { status: 404 });
@@ -27,13 +29,13 @@ export async function GET(
       name: role.name,
       description: role.description,
       isDefault: role.isDefault,
-      permissions: role.permissions.map((rp) => ({
+      permissions: ((role.permissions as any[]) || []).map((rp) => ({
         id: rp.permission.id,
         code: rp.permission.code,
         name: rp.permission.name,
         category: rp.permission.category,
       })),
-      profileCount: role.profiles.length,
+      profileCount: ((role.profileRoles as any[]) || []).length,
       createdAt: role.createdAt,
       updatedAt: role.updatedAt,
     });
@@ -58,39 +60,39 @@ export async function PUT(
       permissionIds?: string[];
     };
 
-    const existing = await db.role.findUnique({ where: { id } });
+    const { data: existingData } = await db.from("roles").select("id").eq("id", id).maybeSingle();
+    const existing = mapRow(existingData);
     if (!existing) {
       return NextResponse.json({ error: "Rôle non trouvé" }, { status: 404 });
     }
 
     // Mise à jour des champs
-    await db.role.update({
-      where: { id },
-      data: {
-        ...(name !== undefined && { name }),
-        ...(description !== undefined && { description }),
-      },
-    });
+    const updateData: Record<string, unknown> = {};
+    if (name !== undefined) updateData.name = name;
+    if (description !== undefined) updateData.description = description;
+    const { error: updError } = await db.from("roles").update(updateData).eq("id", id);
+    if (updError) throw updError;
 
     // Synchronisation des permissions
     if (permissionIds) {
-      await db.rolePermission.deleteMany({ where: { roleId: id } });
+      const { error: delError } = await db.from("role_permissions").delete().eq("role_id", id);
+      if (delError) throw delError;
       if (permissionIds.length > 0) {
-        await db.rolePermission.createMany({
-          data: permissionIds.map((pid) => ({ roleId: id, permissionId: pid })),
-        });
+        const { error: insError } = await db
+          .from("role_permissions")
+          .insert(permissionIds.map((pid) => ({ role_id: id, permission_id: pid })));
+        if (insError) throw insError;
       }
     }
 
-    await db.auditLog.create({
-      data: {
-        action: "UPDATE",
-        entity: "Role",
-        entityId: id,
-        details: JSON.stringify({ name, description, permissionCount: permissionIds?.length }),
-        userName: "SYSTEM",
-      },
+    const { error: auditError } = await db.from("audit_logs").insert({
+      action: "UPDATE",
+      entity: "Role",
+      entity_id: id,
+      details: JSON.stringify({ name, description, permissionCount: permissionIds?.length }),
+      user_name: "SYSTEM",
     });
+    if (auditError) throw auditError;
 
     return NextResponse.json({ success: true });
   } catch (err) {
@@ -107,7 +109,8 @@ export async function DELETE(
   try {
     const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
     const { id } = await params;
-    const role = await db.role.findUnique({ where: { id } });
+    const { data } = await db.from("roles").select("*").eq("id", id).maybeSingle();
+    const role = mapRow(data);
 
     if (!role) {
       return NextResponse.json({ error: "Rôle non trouvé" }, { status: 404 });
@@ -120,17 +123,17 @@ export async function DELETE(
       );
     }
 
-    await db.role.delete({ where: { id } });
+    const { error } = await db.from("roles").delete().eq("id", id);
+    if (error) throw error;
 
-    await db.auditLog.create({
-      data: {
-        action: "DELETE",
-        entity: "Role",
-        entityId: id,
-        details: JSON.stringify({ roleName: role.name }),
-        userName: "SYSTEM",
-      },
+    const { error: auditError } = await db.from("audit_logs").insert({
+      action: "DELETE",
+      entity: "Role",
+      entity_id: id,
+      details: JSON.stringify({ roleName: role.name }),
+      user_name: "SYSTEM",
     });
+    if (auditError) throw auditError;
 
     return NextResponse.json({ success: true });
   } catch (err) {

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { db, mapRow, mapRows } from "@/lib/db";
 import { requireAuth } from "@/lib/auth-guard";
 
 /* ── Permissions par défaut ──────────────────────────────────── */
@@ -62,24 +62,29 @@ const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
 };
 
 async function ensureDefaults() {
-  const count = await db.permission.count();
+  const { count } = await db.from("permissions").select("id", { count: "exact", head: true });
   if (count === 0) {
     // Créer les permissions
     for (const p of DEFAULT_PERMISSIONS) {
-      await db.permission.create({ data: p });
+      const { error } = await db.from("permissions").insert({ code: p.code, name: p.name, category: p.category });
+      if (error) throw error;
     }
 
     // Créer les rôles s'ils n'existent pas
     for (const [roleName, permCodes] of Object.entries(DEFAULT_ROLE_PERMISSIONS)) {
-      const role = await db.role.findUnique({ where: { name: roleName } });
+      const { data: roleData } = await db.from("roles").select("*").eq("name", roleName).maybeSingle();
+      const role = mapRow(roleData);
       if (!role) continue;
 
       for (const code of permCodes) {
-        const perm = await db.permission.findUnique({ where: { code } });
+        const { data: permData } = await db.from("permissions").select("*").eq("code", code).maybeSingle();
+        const perm = mapRow(permData);
         if (perm) {
-          await db.rolePermission.create({
-            data: { roleId: role.id, permissionId: perm.id },
+          const { error } = await db.from("role_permissions").insert({
+            role_id: role.id,
+            permission_id: perm.id,
           });
+          if (error) throw error;
         }
       }
     }
@@ -91,7 +96,13 @@ export async function GET() {
   const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
   try {
     await ensureDefaults();
-    const all = await db.permission.findMany({ orderBy: [{ category: "asc" }, { code: "asc" }] });
+    const { data, error } = await db
+      .from("permissions")
+      .select("*")
+      .order("category", { ascending: true })
+      .order("code", { ascending: true });
+    if (error) throw error;
+    const all = mapRows<{ id: string; code: string; name: string; category: string }>(data || []);
 
     const grouped: Record<string, { id: string; code: string; name: string; category: string }[]> = {};
     for (const p of all) {

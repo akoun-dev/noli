@@ -77,7 +77,7 @@ export function UserQuotesTab() {
     if (!user.id) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/quotes?userId=${user.id}`);
+      const res = await fetch(`/api/quotes`);
       if (res.ok) {
         const data = await res.json();
         setQuotes(Array.isArray(data) ? data : data.quotes ?? []);

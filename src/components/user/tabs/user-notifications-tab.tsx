@@ -86,7 +86,7 @@ export function UserNotificationsTab() {
     if (!user.id) return;
     try {
       setLoading(true);
-      const res = await fetch(`/api/notifications?userId=${user.id}`);
+      const res = await fetch(`/api/notifications`);
       if (!res.ok) throw new Error();
       const data: Notification[] = await res.json();
       setNotifications(data);
@@ -131,7 +131,7 @@ export function UserNotificationsTab() {
     if (!user.id || unreadCount === 0) return;
     try {
       setMarkingAll(true);
-      await fetch(`/api/notifications/read-all?userId=${user.id}`, {
+      await fetch(`/api/notifications/read-all`, {
         method: "PUT",
       });
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));

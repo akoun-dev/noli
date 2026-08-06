@@ -1,0 +1,11 @@
+# Supabase CLI configuration for Noli.
+project_id = "noli"
+
+[db.seed]
+enabled = true
+sql_paths = ['./seed.sql']
+
+[functions.send-notification]
+# This function is invoked server-side with the secret key (auth: 'secret').
+# No user JWT is required on the Authorization header.
+verify_jwt = false

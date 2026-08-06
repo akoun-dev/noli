@@ -1,4 +1,4 @@
-import { db } from "@/lib/db";
+import { db, mapRows } from "@/lib/db";
 import type { PersonalInfo, VehicleInfo, CoverageNeeds, InsurerOffer, PricingBreakdown } from "@/types";
 import { createNotification } from "@/lib/notifications";
 import {
@@ -196,12 +196,12 @@ function buildOfferResult(
     {
       fiscalPowerMin: offer.fiscalPowerMin,
       fiscalPowerMax: offer.fiscalPowerMax,
-      fuelTypes: offerFuelTypes,
+      fuelTypes: offerFuelTypes as unknown as string,
       newValueMin: offer.newValueMin,
       newValueMax: offer.newValueMax,
       venalValueMin: offer.venalValueMin,
       venalValueMax: offer.venalValueMax,
-      vehicleUsage: offerVehicleUsage,
+      vehicleUsage: offerVehicleUsage as unknown as string,
       contractType: offer.contractType,
       priceMin: offer.priceMin,
       priceMax: offer.priceMax,
@@ -250,28 +250,23 @@ export async function runComparison(
   const contractDuration = needs.contractDuration || 12;
   const pricingVehicle = toPricingVehicle(vehicle);
 
-  const offers = await db.insuranceOffer.findMany({
-    where: {
-      isActive: true,
-      insurer: { isActive: true },
-    },
-    include: { insurer: true },
-    orderBy: { priceMin: "asc" },
-  });
+  const { data: offersData } = await db
+    .from("insurance_offers")
+    .select("*, insurer:insurers!inner(id, name, logoUrl:logo_url)")
+    .eq("is_active", true)
+    .eq("insurer.is_active", true)
+    .order("price_min", { ascending: true });
+  const offers = mapRows(offersData || []);
 
-  const insurerIds = [...new Set(offers.map((o) => o.insurerId))];
-  const allCoverages = await db.coverage.findMany({
-    where: {
-      insurerId: { in: insurerIds },
-      isActive: true,
-    },
-    include: {
-      category: { select: { id: true, name: true, code: true } },
-      tariffRules: true,
-    },
-  });
+  const insurerIds = [...new Set(offers.map((o: any) => o.insurerId))];
+  const { data: coveragesData } = await db
+    .from("coverages")
+    .select("*, category:coverage_categories(id, name, code), tariff_rules:coverage_tariff_rules(*)")
+    .in("insurer_id", insurerIds)
+    .eq("is_active", true);
+  const allCoverages = mapRows(coveragesData || []);
 
-  const coveragesByInsurer = new Map<string, typeof allCoverages>();
+  const coveragesByInsurer = new Map<string, any[]>();
   for (const c of allCoverages) {
     const list = coveragesByInsurer.get(c.insurerId) || [];
     list.push(c);
@@ -304,12 +299,12 @@ export async function runComparison(
       {
         fiscalPowerMin: offer.fiscalPowerMin,
         fiscalPowerMax: offer.fiscalPowerMax,
-        fuelTypes: offerFuelTypes,
+        fuelTypes: offerFuelTypes as unknown as string,
         newValueMin: offer.newValueMin,
         newValueMax: offer.newValueMax,
         venalValueMin: offer.venalValueMin,
         venalValueMax: offer.venalValueMax,
-        vehicleUsage: offerVehicleUsage,
+        vehicleUsage: offerVehicleUsage as unknown as string,
       },
       pricingVehicle
     )) {
@@ -371,22 +366,24 @@ async function saveQuote(
 ) {
   const ref = `NOLI-${Date.now().toString(36).toUpperCase()}`;
   try {
-    const autoCat = await db.insuranceCategory.findFirst({
-      where: { name: { contains: "Auto" } },
-    });
+    const { data: autoCatData } = await db
+      .from("insurance_categories")
+      .select("id")
+      .ilike("name", "%Auto%")
+      .limit(1)
+      .maybeSingle();
+    const autoCat = mapRows([autoCatData || {}])[0] || null;
     const topOffer = results.length > 0 ? results[0] : null;
-    await db.quote.create({
-      data: {
-        reference: ref,
-        userId,
-        categoryId: autoCat?.id || null,
-        offerId: topOffer?.id || null,
-        status: "PENDING",
-        personalData: JSON.stringify(personal),
-        vehicleData: JSON.stringify(vehicle),
-        coverageRequirements: JSON.stringify(needs),
-        estimatedPrice: topOffer ? topOffer.monthlyPrice : 0,
-      },
+    await db.from("quotes").insert({
+      reference: ref,
+      user_id: userId,
+      category_id: autoCat?.id || null,
+      offer_id: topOffer?.id || null,
+      status: "PENDING",
+      personal_data: JSON.stringify(personal),
+      vehicle_data: JSON.stringify(vehicle),
+      coverage_requirements: JSON.stringify(needs),
+      estimated_price: topOffer ? topOffer.monthlyPrice : 0,
     });
 
     createNotification({
@@ -396,11 +393,16 @@ async function saveQuote(
       message: `Votre devis ${ref} a été envoyé avec succès. ${results.length} offre(s) trouvée(s).`,
     });
 
-    const insurerProfiles = await db.insurerAccount.findMany({
-      where: { insurer: { isActive: true } },
-      select: { profileId: true },
-    });
-    for (const ip of insurerProfiles) {
+    const { data: activeInsurers } = await db
+      .from("insurers")
+      .select("id")
+      .eq("is_active", true);
+    const activeIds = (activeInsurers || []).map((i) => i.id);
+    const { data: insurerProfiles } = await db
+      .from("insurer_accounts")
+      .select("profileId:profile_id")
+      .in("insurer_id", activeIds);
+    for (const ip of insurerProfiles || []) {
       createNotification({
         userId: ip.profileId,
         type: "INFO",

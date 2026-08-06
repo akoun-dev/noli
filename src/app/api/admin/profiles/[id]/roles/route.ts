@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { db, mapRow, mapRows } from "@/lib/db";
 import { requireAuth } from "@/lib/auth-guard";
 
 /* ── GET : Rôles personnalisés d'un profil ───────────────────── */
@@ -10,23 +10,20 @@ export async function GET(
   try {
     const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
     const { id } = await params;
-    const profileRoles = await db.profileRole.findMany({
-      where: { profileId: id },
-      include: {
-        role: {
-          include: {
-            permissions: { include: { permission: true } },
-          },
-        },
-      },
-    });
+    const { data, error } = await db
+      .from("profile_roles")
+      .select(
+        "role:roles(id, name, description, is_default, permissions:role_permissions(permission:permissions(id, code, name, category)))"
+      )
+      .eq("profile_id", id);
+    if (error) throw error;
 
-    const roles = profileRoles.map((pr) => ({
+    const roles = mapRows(data || []).map((pr) => ({
       id: pr.role.id,
       name: pr.role.name,
       description: pr.role.description,
       isDefault: pr.role.isDefault,
-      permissions: pr.role.permissions.map((rp) => ({
+      permissions: (pr.role.permissions || []).map((rp) => ({
         id: rp.permission.id,
         code: rp.permission.code,
         name: rp.permission.name,
@@ -52,31 +49,37 @@ export async function PUT(
     const body = await request.json();
     const { roleIds } = body as { roleIds: string[] };
 
-    const profile = await db.profile.findUnique({ where: { id } });
+    const { data: profileData } = await db
+      .from("profiles")
+      .select("id, email")
+      .eq("id", id)
+      .maybeSingle();
+    const profile = mapRow(profileData);
     if (!profile) {
       return NextResponse.json({ error: "Profil non trouvé" }, { status: 404 });
     }
 
     // Supprimer les anciennes affectations
-    await db.profileRole.deleteMany({ where: { profileId: id } });
+    const { error: delError } = await db.from("profile_roles").delete().eq("profile_id", id);
+    if (delError) throw delError;
 
     // Créer les nouvelles affectations
     if (roleIds && roleIds.length > 0) {
-      await db.profileRole.createMany({
-        data: roleIds.map((roleId) => ({ profileId: id, roleId })),
-      });
+      const { error: insError } = await db
+        .from("profile_roles")
+        .insert(roleIds.map((roleId) => ({ profile_id: id, role_id: roleId })));
+      if (insError) throw insError;
     }
 
-    await db.auditLog.create({
-      data: {
-        action: "UPDATE",
-        entity: "Profile",
-        entityId: id,
-        details: JSON.stringify({ action: "assign_roles", roleIds }),
-        userName: "SYSTEM",
-        userEmail: profile.email,
-      },
+    const { error: auditError } = await db.from("audit_logs").insert({
+      action: "UPDATE",
+      entity: "Profile",
+      entity_id: id,
+      details: JSON.stringify({ action: "assign_roles", roleIds }),
+      user_name: "SYSTEM",
+      user_email: profile.email,
     });
+    if (auditError) throw auditError;
 
     return NextResponse.json({ success: true });
   } catch (err) {

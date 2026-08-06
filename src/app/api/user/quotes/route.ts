@@ -1,6 +1,7 @@
-import { db } from "@/lib/db";
+import { db, mapRow, mapRows } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { sendQuoteConfirmation } from "@/lib/email";
+import { getSessionProfile } from "@/lib/auth-guard";
 
 function parseJsonField<T>(value: string, fallback: T): T {
   try {
@@ -9,6 +10,25 @@ function parseJsonField<T>(value: string, fallback: T): T {
     return fallback;
   }
 }
+
+type QuoteRow = {
+  id: string;
+  reference: string;
+  status: string;
+  estimatedPrice: number | null;
+  finalPrice: number | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+  vehicleData: string;
+  personalData: string;
+  offer: {
+    name: string | null;
+    description: string | null;
+    insurer: { name: string | null; logoUrl: string | null } | null;
+  } | null;
+  category: { name: string | null } | null;
+};
 
 export async function POST(request: NextRequest) {
   try {
@@ -28,26 +48,36 @@ export async function POST(request: NextRequest) {
     // Look up the offer by insurerId and name to link it
     let offerId: string | null = null;
     if (offer.insurerId && offer.name) {
-      const foundOffer = await db.insuranceOffer.findFirst({
-        where: { insurerId: offer.insurerId, name: offer.name },
-        select: { id: true },
-      });
+      const { data, error } = await db
+        .from("insurance_offers")
+        .select("id")
+        .eq("insurer_id", offer.insurerId)
+        .eq("name", offer.name)
+        .maybeSingle();
+      if (error) throw error;
+      const foundOffer = mapRow<{ id: string }>(data);
       offerId = foundOffer?.id || null;
     }
 
-    // Créer le devis en DB (anonyme — pas de userId)
-    const quote = await db.quote.create({
-      data: {
+    // Créer le devis en DB (anonyme si non connecté ; lié à la session sinon)
+    const sessionProfile = await getSessionProfile();
+    const { data, error } = await db
+      .from("quotes")
+      .insert({
         reference: ref,
         status: "PENDING",
-        offerId,
-        estimatedPrice: Math.round(offer.monthlyPrice || offer.annualPrice / 12 || 0),
-        personalData: JSON.stringify(personalInfo),
-        vehicleData: JSON.stringify(vehicleInfo || {}),
-        coverageRequirements: JSON.stringify(coverageNeeds || {}),
+        user_id: sessionProfile?.id || null,
+        offer_id: offerId,
+        estimated_price: Math.round(offer.monthlyPrice || offer.annualPrice / 12 || 0),
+        personal_data: JSON.stringify(personalInfo),
+        vehicle_data: JSON.stringify(vehicleInfo || {}),
+        coverage_requirements: JSON.stringify(coverageNeeds || {}),
         notes: `Demande pour ${offer.insurerName} — ${offer.name || ""}`.trim(),
-      },
-    });
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    const quote = mapRow<{ id: string; status: string; estimatedPrice: number; createdAt: string }>(data)!;
 
     // Envoi d'email (non bloquant)
     if (process.env.RESEND_API_KEY) {
@@ -64,21 +94,21 @@ export async function POST(request: NextRequest) {
 
     // Notifier les assureurs concernés (si userId présent)
     if (offer.insurerId) {
-      const insurerProfiles = await db.insurerAccount.findMany({
-        where: { insurerId: offer.insurerId },
-        select: { profileId: true },
-      });
+      const { data: insurerProfilesData } = await db
+        .from("insurer_accounts")
+        .select("profileId:profile_id")
+        .eq("insurer_id", offer.insurerId);
+      const insurerProfiles = mapRows<{ profileId: string }>(insurerProfilesData || []);
 
       for (const ip of insurerProfiles) {
         try {
-          await db.notification.create({
-            data: {
-              userId: ip.profileId,
-              type: "INFO",
-              title: "Nouvelle demande de devis",
-              message: `Devis ${ref} reçu pour ${offer.insurerName} — ${personalInfo.firstName || ""} ${personalInfo.lastName || ""}`.trim(),
-            },
+          const { error: notifError } = await db.from("notifications").insert({
+            user_id: ip.profileId,
+            type: "INFO",
+            title: "Nouvelle demande de devis",
+            message: `Devis ${ref} reçu pour ${offer.insurerName} — ${personalInfo.firstName || ""} ${personalInfo.lastName || ""}`.trim(),
           });
+          if (notifError) throw notifError;
         } catch (notifErr) {
           console.error("[quote] Erreur notification:", notifErr);
         }
@@ -92,7 +122,7 @@ export async function POST(request: NextRequest) {
         reference: ref,
         status: quote.status,
         estimatedPrice: quote.estimatedPrice,
-        createdAt: quote.createdAt.toISOString(),
+        createdAt: quote.createdAt,
       },
     });
   } catch (error) {
@@ -106,51 +136,44 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
+    const sessionProfile = await getSessionProfile();
+    if (!sessionProfile) {
+      return NextResponse.json({ error: "Authentification requise" }, { status: 401 });
+    }
+
     const { searchParams } = request.nextUrl;
-    const userId = searchParams.get("userId");
     const status = searchParams.get("status");
     const search = searchParams.get("search") || "";
     const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
     const limit = Math.max(1, Math.min(100, parseInt(searchParams.get("limit") || "20", 10)));
 
-    if (!userId) {
-      return NextResponse.json(
-        { error: "Le paramètre userId est requis" },
-        { status: 400 }
-      );
-    }
-
-    const where: Record<string, unknown> = { userId };
+    let quotesQuery = db
+      .from("quotes")
+      .select(
+        "*, user:profiles(id, firstName:first_name, lastName:last_name, email), category:insurance_categories(id, name), offer:insurance_offers(id, name, description, insurer:insurers(name, logoUrl:logo_url))"
+      )
+      .eq("user_id", sessionProfile.id)
+      .order("created_at", { ascending: false })
+      .range((page - 1) * limit, page * limit - 1);
+    let countQuery = db
+      .from("quotes")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", sessionProfile.id);
 
     if (status) {
-      where.status = status;
+      quotesQuery = quotesQuery.eq("status", status);
+      countQuery = countQuery.eq("status", status);
     }
 
     if (search) {
-      (where as Record<string, unknown>).OR = [
-        { reference: { contains: search } },
-        { offer: { name: { contains: search } } },
-      ];
+      quotesQuery = quotesQuery.or(`reference.ilike.%${search}%,offer.name.ilike.%${search}%`);
+      countQuery = countQuery.or(`reference.ilike.%${search}%,offer.name.ilike.%${search}%`);
     }
 
-    const [quotes, total] = await Promise.all([
-      db.quote.findMany({
-        where,
-        include: {
-          user: { select: { id: true, firstName: true, lastName: true, email: true } },
-          offer: {
-            include: {
-              insurer: { select: { name: true, logoUrl: true } },
-            },
-          },
-          category: { select: { id: true, name: true } },
-        },
-        orderBy: { createdAt: "desc" },
-        skip: (page - 1) * limit,
-        take: limit,
-      }),
-      db.quote.count({ where }),
-    ]);
+    const [{ data, error }, { count }] = await Promise.all([quotesQuery, countQuery]);
+    if (error) throw error;
+    const quotes = mapRows<QuoteRow>(data || []);
+    const total = count ?? 0;
 
     const formatted = quotes.map((q) => ({
       id: q.id,
@@ -159,8 +182,8 @@ export async function GET(request: NextRequest) {
       estimatedPrice: q.estimatedPrice,
       finalPrice: q.finalPrice,
       notes: q.notes,
-      createdAt: q.createdAt.toISOString(),
-      updatedAt: q.updatedAt.toISOString(),
+      createdAt: q.createdAt,
+      updatedAt: q.updatedAt,
       offerName: q.offer?.name || null,
       offerDescription: q.offer?.description || null,
       categoryName: q.category?.name || null,

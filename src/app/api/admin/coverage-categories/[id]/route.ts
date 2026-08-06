@@ -1,4 +1,4 @@
-import { db } from "@/lib/db";
+import { db, mapRow } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-guard";
 
@@ -10,12 +10,13 @@ export async function GET(
     const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
     const { id } = await params;
 
-    const category = await db.coverageCategory.findUnique({
-      where: { id },
-      include: {
-        _count: { select: { coverages: true } },
-      },
-    });
+    const { data, error } = await db
+      .from("coverage_categories")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+    if (error) throw error;
+    const category = mapRow(data);
 
     if (!category) {
       return NextResponse.json(
@@ -24,7 +25,15 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(category);
+    const { count: coveragesCount } = await db
+      .from("coverages")
+      .select("id", { count: "exact", head: true })
+      .eq("category_id", id);
+
+    return NextResponse.json({
+      ...category,
+      _count: { coverages: coveragesCount || 0 },
+    });
   } catch (error) {
     console.error("Erreur coverage-category GET:", error);
     return NextResponse.json(
@@ -44,7 +53,12 @@ export async function PUT(
     const body = await request.json();
     const { code, name, description, displayOrder, isActive } = body;
 
-    const existing = await db.coverageCategory.findUnique({ where: { id } });
+    const { data: existingData } = await db
+      .from("coverage_categories")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+    const existing = mapRow(existingData);
     if (!existing) {
       return NextResponse.json(
         { error: "Catégorie de garanties introuvable" },
@@ -53,7 +67,11 @@ export async function PUT(
     }
 
     if (code && code !== existing.code) {
-      const codeTaken = await db.coverageCategory.findUnique({ where: { code } });
+      const { data: codeTaken } = await db
+        .from("coverage_categories")
+        .select("id")
+        .eq("code", code)
+        .maybeSingle();
       if (codeTaken) {
         return NextResponse.json(
           { error: "Une catégorie avec ce code existe déjà" },
@@ -62,22 +80,29 @@ export async function PUT(
       }
     }
 
-    const category = await db.coverageCategory.update({
-      where: { id },
-      data: {
+    const { data: category, error } = await db
+      .from("coverage_categories")
+      .update({
         ...(code !== undefined && { code }),
         ...(name !== undefined && { name }),
         ...(description !== undefined && { description: description || null }),
-        ...(displayOrder !== undefined && { displayOrder }),
-        ...(isActive !== undefined && { isActive }),
-      },
+        ...(displayOrder !== undefined && { display_order: displayOrder }),
+        ...(isActive !== undefined && { is_active: isActive }),
+      })
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) throw error;
+
+    await db.from("audit_logs").insert({
+      action: "UPDATE",
+      entity: "CoverageCategory",
+      entity_id: id,
+      details: JSON.stringify({ code: category.code, name: category.name }),
+      user_name: "SYSTEM",
     });
 
-    await db.auditLog.create({
-      data: { action: "UPDATE", entity: "CoverageCategory", entityId: id, details: JSON.stringify({ code: category.code, name: category.name }), userName: "SYSTEM" },
-    });
-
-    return NextResponse.json(category);
+    return NextResponse.json(mapRow(category));
   } catch (error) {
     console.error("Erreur coverage-category PUT:", error);
     return NextResponse.json(
@@ -95,7 +120,12 @@ export async function DELETE(
     const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
     const { id } = await params;
 
-    const existing = await db.coverageCategory.findUnique({ where: { id } });
+    const { data } = await db
+      .from("coverage_categories")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+    const existing = mapRow(data);
     if (!existing) {
       return NextResponse.json(
         { error: "Catégorie de garanties introuvable" },
@@ -103,10 +133,14 @@ export async function DELETE(
       );
     }
 
-    await db.coverageCategory.delete({ where: { id } });
+    await db.from("coverage_categories").delete().eq("id", id);
 
-    await db.auditLog.create({
-      data: { action: "DELETE", entity: "CoverageCategory", entityId: id, details: JSON.stringify({ code: existing.code, name: existing.name }), userName: "SYSTEM" },
+    await db.from("audit_logs").insert({
+      action: "DELETE",
+      entity: "CoverageCategory",
+      entity_id: id,
+      details: JSON.stringify({ code: existing.code, name: existing.name }),
+      user_name: "SYSTEM",
     });
 
     return NextResponse.json({ success: true });

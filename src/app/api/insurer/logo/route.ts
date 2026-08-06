@@ -1,21 +1,25 @@
-import { db } from "@/lib/db";
+import { db, mapRow } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { randomUUID } from "crypto";
+import { getSessionProfile, requireAuth } from "@/lib/auth-guard";
 
 export async function POST(request: NextRequest) {
   try {
-    const userId = request.headers.get("x-user-id");
-    if (!userId) {
-      return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
-    }
+    const guard = await requireAuth(["INSURER"]);
+    if (guard) return guard;
 
-    // Find insurer account
-    const account = await db.insurerAccount.findFirst({
-      where: { profileId: userId },
-      include: { insurer: { select: { id: true, logoUrl: true } } },
-    });
+    const profile = await getSessionProfile();
+    if (!profile) return NextResponse.json({ error: "Authentification requise" }, { status: 401 });
+
+    // Find insurer account from the session (never from a client header)
+    const { data } = await db
+      .from("insurer_accounts")
+      .select("insurer_id, insurer:insurers(id, logoUrl:logo_url)")
+      .eq("profile_id", profile.id)
+      .maybeSingle();
+    const account = mapRow(data);
 
     if (!account) {
       return NextResponse.json(
@@ -31,11 +35,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Fichier requis" }, { status: 400 });
     }
 
-    // Validate file type
-    const allowedTypes = ["image/png", "image/jpeg", "image/webp", "image/svg+xml"];
+    // Validate file type — SVG est interdit (risque XSS stockée)
+    const allowedTypes = ["image/png", "image/jpeg", "image/webp"];
     if (!allowedTypes.includes(file.type)) {
       return NextResponse.json(
-        { error: "Format non supporté. Utilisez PNG, JPG, WebP ou SVG." },
+        { error: "Format non supporté. Utilisez PNG, JPG ou WebP." },
         { status: 400 }
       );
     }
@@ -65,10 +69,7 @@ export async function POST(request: NextRequest) {
     const logoUrl = `/uploads/logos/${filename}`;
 
     // Update insurer in DB
-    await db.insurer.update({
-      where: { id: account.insurerId },
-      data: { logoUrl },
-    });
+    await db.from("insurers").update({ logo_url: logoUrl }).eq("id", account.insurerId);
 
     return NextResponse.json({ success: true, logoUrl });
   } catch (error) {

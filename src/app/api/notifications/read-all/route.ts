@@ -1,30 +1,25 @@
 import { db } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
+import { getSessionProfile } from "@/lib/auth-guard";
 
 export async function PUT(request: NextRequest) {
   try {
-    const userId = request.nextUrl.searchParams.get("userId");
-
-    if (!userId) {
-      return NextResponse.json(
-        { error: "L'identifiant utilisateur est requis" },
-        { status: 400 }
-      );
+    const sessionProfile = await getSessionProfile();
+    if (!sessionProfile) {
+      return NextResponse.json({ error: "Authentification requise" }, { status: 401 });
     }
 
-    const result = await db.notification.updateMany({
-      where: {
-        userId,
-        isRead: false,
-      },
-      data: {
-        isRead: true,
-      },
-    });
+    const { data, error } = await db
+      .from("notifications")
+      .update({ is_read: true })
+      .eq("user_id", sessionProfile.id)
+      .eq("is_read", false)
+      .select();
+    if (error) throw error;
 
     return NextResponse.json({
       success: true,
-      updatedCount: result.count,
+      updatedCount: data?.length || 0,
     });
   } catch (error) {
     return NextResponse.json(

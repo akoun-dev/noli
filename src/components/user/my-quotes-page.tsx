@@ -130,7 +130,7 @@ function QuoteDetailDialog({
 
   useEffect(() => {
     if (!user.id || !quote?.id) return;
-    fetch(`/api/user/quotes/${quote.id}?userId=${user.id}`)
+    fetch(`/api/user/quotes/${quote.id}`)
       .then((res) => res.json())
       .then((data) => {
         if (data.error) setDetail(null);

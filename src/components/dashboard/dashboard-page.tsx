@@ -308,8 +308,8 @@ export function DashboardPage() {
       setQuotesLoading(true);
       try {
         const [quotesRes, profileRes] = await Promise.all([
-          fetch(`/api/quotes?userId=${user.id}`),
-          fetch(`/api/user/profile?userId=${user.id}`),
+          fetch(`/api/quotes`),
+          fetch(`/api/user/profile`),
         ]);
 
         if (quotesRes.ok) {

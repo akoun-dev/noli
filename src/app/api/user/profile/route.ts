@@ -1,7 +1,27 @@
-import { db } from "@/lib/db";
+import { db, mapRow } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
-import { getSessionProfile } from "@/lib/auth-guard";
+import { getSessionProfile, getSupabaseServerClient } from "@/lib/auth-guard";
+
+type ProfileRow = {
+  id: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  phone: string | null;
+  role: string;
+  isActive: boolean;
+  createdAt: string;
+};
+
+type ProfileUpdateRow = {
+  id: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  phone: string | null;
+  role: string;
+  isActive: boolean;
+};
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,19 +36,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
     }
 
-    const profile = await db.profile.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        phone: true,
-        role: true,
-        isActive: true,
-        createdAt: true,
-      },
-    });
+    const { data, error } = await db
+      .from("profiles")
+      .select("id, email, first_name, last_name, phone, role, is_active, created_at")
+      .eq("id", userId)
+      .maybeSingle();
+    if (error) throw error;
+    const profile = mapRow<ProfileRow>(data);
 
     if (!profile) {
       return NextResponse.json({ error: "Profil non trouvé" }, { status: 404 });
@@ -64,47 +78,53 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
     }
 
-    const profile = await db.profile.findUnique({ where: { id: targetId } });
+    const { data, error } = await db
+      .from("profiles")
+      .select("id, email, first_name, last_name, phone, role, is_active, created_at, updated_at")
+      .eq("id", targetId)
+      .maybeSingle();
+    if (error) throw error;
+    const profile = mapRow<ProfileRow>(data);
     if (!profile) {
       return NextResponse.json({ error: "Profil non trouvé" }, { status: 404 });
     }
 
     const updateData: Record<string, unknown> = {
-      firstName: firstName ?? profile.firstName,
-      lastName: lastName ?? profile.lastName,
+      first_name: firstName ?? profile.firstName,
+      last_name: lastName ?? profile.lastName,
       phone: phone ?? profile.phone,
     };
 
     if (currentPassword && newPassword) {
-      const valid = bcrypt.compareSync(currentPassword, profile.password);
-      if (!valid) {
-        return NextResponse.json(
-          { error: "Mot de passe actuel incorrect" },
-          { status: 400 }
-        );
-      }
       if (newPassword.length < 6) {
         return NextResponse.json(
           { error: "Le nouveau mot de passe doit contenir au moins 6 caractères" },
           { status: 400 }
         );
       }
-      updateData.password = bcrypt.hashSync(newPassword, 10);
+      const supabase = await getSupabaseServerClient();
+      const { error: verifyError } = await supabase.auth.signInWithPassword({
+        email: sessionProfile.email,
+        password: currentPassword,
+      });
+      if (verifyError) {
+        return NextResponse.json(
+          { error: "Mot de passe actuel incorrect" },
+          { status: 400 }
+        );
+      }
+      const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
+      if (updateError) throw updateError;
     }
 
-    const updated = await db.profile.update({
-      where: { id: targetId },
-      data: updateData,
-      select: {
-        id: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        phone: true,
-        role: true,
-        isActive: true,
-      },
-    });
+    const { data: updatedData, error: updateError } = await db
+      .from("profiles")
+      .update(updateData)
+      .eq("id", targetId)
+      .select("id, email, first_name, last_name, phone, role, is_active")
+      .single();
+    if (updateError) throw updateError;
+    const updated = mapRow<ProfileUpdateRow>(updatedData)!;
 
     return NextResponse.json({
       profile: {

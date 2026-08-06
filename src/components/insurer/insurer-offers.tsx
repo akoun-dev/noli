@@ -166,7 +166,6 @@ export function InsurerOffers() {
     if (!user.id) return;
     setLoading(true);
     const params = new URLSearchParams({
-      userId: user.id,
       page: "1",
       limit: "50",
       search,

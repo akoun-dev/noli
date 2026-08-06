@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth-guard'
-import { db } from '@/lib/db'
+import { db, mapRow } from '@/lib/db'
 import { existsSync, unlinkSync, copyFileSync } from 'fs'
 import { join } from 'path'
+
+async function findBackup(id: string) {
+  const { data } = await db.from("backups").select("*").eq("id", id).maybeSingle()
+  return mapRow<{ id: string; path: string | null; filename: string }>(data)
+}
 
 export async function DELETE(
   _request: NextRequest,
@@ -12,9 +17,7 @@ export async function DELETE(
     const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
     const { id } = await params
 
-    const backup = await db.backup.findUnique({
-      where: { id },
-    })
+    const backup = await findBackup(id)
 
     if (!backup) {
       return NextResponse.json(
@@ -31,19 +34,17 @@ export async function DELETE(
       }
     }
 
-    await db.backup.delete({
-      where: { id },
-    })
+    const { error } = await db.from("backups").delete().eq("id", id)
+    if (error) throw error
 
-    await db.auditLog.create({
-      data: {
-        action: 'BACKUP_DELETE',
-        entity: 'Backup',
-        entityId: id,
-        details: JSON.stringify({ filename: backup.filename }),
-        userName: 'SYSTEM',
-      },
+    const { error: auditError } = await db.from("audit_logs").insert({
+      action: 'BACKUP_DELETE',
+      entity: 'Backup',
+      entity_id: id,
+      details: JSON.stringify({ filename: backup.filename }),
+      user_name: 'SYSTEM',
     })
+    if (auditError) throw auditError
 
     return NextResponse.json({ success: true })
   } catch (error) {
@@ -73,9 +74,7 @@ export async function POST(
       )
     }
 
-    const backup = await db.backup.findUnique({
-      where: { id },
-    })
+    const backup = await findBackup(id)
 
     if (!backup) {
       return NextResponse.json(
@@ -96,15 +95,14 @@ export async function POST(
 
     copyFileSync(backupPath, dbPath)
 
-    await db.auditLog.create({
-      data: {
-        action: 'BACKUP_RESTORE',
-        entity: 'Backup',
-        entityId: id,
-        details: JSON.stringify({ filename: backup.filename, restoredFrom: backupPath }),
-        userName: 'SYSTEM',
-      },
+    const { error: auditError } = await db.from("audit_logs").insert({
+      action: 'BACKUP_RESTORE',
+      entity: 'Backup',
+      entity_id: id,
+      details: JSON.stringify({ filename: backup.filename, restoredFrom: backupPath }),
+      user_name: 'SYSTEM',
     })
+    if (auditError) throw auditError
 
     return NextResponse.json({ success: true, message: 'Sauvegarde restaurée avec succès' })
   } catch (error) {

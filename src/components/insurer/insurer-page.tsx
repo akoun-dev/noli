@@ -272,7 +272,7 @@ export function InsurerPage() {
   // Fetch insurer info
   useEffect(() => {
     if (!userId) return;
-    fetch(`/api/insurer/me?userId=${userId}`)
+    fetch(`/api/insurer/me`)
       .then((res) => res.json())
       .then((data) => {
         if (data.name) setInsurerName(data.name);

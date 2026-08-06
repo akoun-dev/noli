@@ -282,7 +282,6 @@ export function InsurerQuotes() {
     if (!user.id) return;
     setLoading(true);
     const params = new URLSearchParams({
-      userId: user.id,
       page: "1",
       limit: "50",
       search,
@@ -307,7 +306,7 @@ export function InsurerQuotes() {
     if (!user.id) return;
     setActionLoading(true);
     try {
-      const res = await fetch(`/api/insurer/quotes/${quoteId}/status?userId=${user.id}`, {
+      const res = await fetch(`/api/insurer/quotes/${quoteId}/status`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),

@@ -1,30 +1,33 @@
-import { db } from "@/lib/db";
+import { db, mapRows } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { createNotification } from "@/lib/notifications";
+import { getSessionProfile } from "@/lib/auth-guard";
 
 export async function GET(request: NextRequest) {
   try {
+    const sessionProfile = await getSessionProfile();
+    if (!sessionProfile) {
+      return NextResponse.json({ error: "Authentification requise" }, { status: 401 });
+    }
+
     const { searchParams } = request.nextUrl;
-    const userId = searchParams.get("userId");
     const unreadOnly = searchParams.get("unreadOnly") === "true";
 
-    if (!userId) {
-      return NextResponse.json(
-        { error: "L'identifiant utilisateur est requis" },
-        { status: 400 }
-      );
-    }
+    let query = db
+      .from("notifications")
+      .select("*")
+      .eq("user_id", sessionProfile.id)
+      .order("created_at", { ascending: false })
+      .limit(50);
 
-    const where: Record<string, unknown> = { userId };
     if (unreadOnly) {
-      where.isRead = false;
+      query = query.eq("is_read", false);
     }
 
-    const notifications = await db.notification.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      take: 50,
-    });
+    const { data, error } = await query;
+    if (error) throw error;
+
+    const notifications = mapRows(data || []);
 
     return NextResponse.json(notifications);
   } catch (error) {
@@ -37,21 +40,26 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { userId, type, title, message, link } = body;
+    const sessionProfile = await getSessionProfile();
+    if (!sessionProfile) {
+      return NextResponse.json({ error: "Authentification requise" }, { status: 401 });
+    }
 
-    if (!userId || !title || !message) {
+    const body = await request.json();
+    const { type, title, message, link } = body;
+
+    if (!title || !message) {
       return NextResponse.json(
         {
-          error:
-            "Les champs userId, title et message sont obligatoires",
+          error: "Les champs title et message sont obligatoires",
         },
         { status: 400 }
       );
     }
 
+    // Une notification créée via l'API ne peut être destinée qu'au profil connecté.
     const notification = await createNotification({
-      userId,
+      userId: sessionProfile.id,
       type,
       title,
       message,

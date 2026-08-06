@@ -1,4 +1,4 @@
-import { db } from "@/lib/db";
+import { db, mapRow, mapRows } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-guard";
 
@@ -8,25 +8,33 @@ export async function GET(request: NextRequest) {
     const { searchParams } = request.nextUrl;
     const search = searchParams.get("search") || "";
 
-    const where: Record<string, unknown> = {};
+    let query = db
+      .from("profiles")
+      .select("*")
+      .order("created_at", { ascending: false });
+
     if (search) {
-      where.OR = [
-        { firstName: { contains: search } },
-        { lastName: { contains: search } },
-        { email: { contains: search } },
-        { phone: { contains: search } },
-      ];
+      query = query.or(
+        `first_name.ilike.%${search}%,last_name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%`
+      );
     }
 
-    const profiles = await db.profile.findMany({
-      where,
-      include: {
-        _count: { select: { quotes: true } },
-      },
-      orderBy: { createdAt: "desc" },
-    });
+    const { data, error } = await query;
+    if (error) throw error;
 
-    return NextResponse.json(profiles);
+    const profiles = mapRows(data || []);
+
+    const profilesWithCount = await Promise.all(
+      profiles.map(async (p) => {
+        const { count } = await db
+          .from("quotes")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", p.id);
+        return { ...p, _count: { quotes: count ?? 0 } };
+      })
+    );
+
+    return NextResponse.json(profilesWithCount);
   } catch (error) {
     console.error("Erreur profiles GET:", error);
     return NextResponse.json(
@@ -49,8 +57,12 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const existing = await db.profile.findUnique({ where: { id } });
-    if (!existing) {
+    const { data: existingData } = await db
+      .from("profiles")
+      .select("id")
+      .eq("id", id)
+      .maybeSingle();
+    if (!existingData) {
       return NextResponse.json(
         { error: "Profil introuvable" },
         { status: 404 }
@@ -65,16 +77,22 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const profile = await db.profile.update({
-      where: { id },
-      data: {
-        ...(firstName !== undefined && { firstName: firstName || null }),
-        ...(lastName !== undefined && { lastName: lastName || null }),
-        ...(phone !== undefined && { phone: phone || null }),
-        ...(role !== undefined && { role }),
-        ...(isActive !== undefined && { isActive }),
-      },
-    });
+    const updateData: Record<string, unknown> = {};
+    if (firstName !== undefined) updateData.first_name = firstName || null;
+    if (lastName !== undefined) updateData.last_name = lastName || null;
+    if (phone !== undefined) updateData.phone = phone || null;
+    if (role !== undefined) updateData.role = role;
+    if (isActive !== undefined) updateData.is_active = isActive;
+
+    const { data: profileData, error } = await db
+      .from("profiles")
+      .update(updateData)
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) throw error;
+
+    const profile = mapRow(profileData);
 
     return NextResponse.json(profile);
   } catch (error) {

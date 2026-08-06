@@ -1,5 +1,6 @@
-import { db } from "@/lib/db";
+import { db, mapRow } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
+import { getSessionProfile } from "@/lib/auth-guard";
 
 function parseJsonField<T>(value: string, fallback: T): T {
   try {
@@ -9,41 +10,80 @@ function parseJsonField<T>(value: string, fallback: T): T {
   }
 }
 
+type QuoteDetail = {
+  id: string;
+  userId: string;
+  reference: string;
+  status: string;
+  estimatedPrice: number | null;
+  finalPrice: number | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+  vehicleData: string;
+  personalData: string;
+  coverageRequirements: string;
+  category: { id: string; name: string; description: string | null } | null;
+  offer: {
+    id: string;
+    name: string;
+    description: string | null;
+    priceMin: number | null;
+    priceMax: number | null;
+    coverageAmount: number | null;
+    deductible: number | null;
+    contractType: string | null;
+    features: string;
+    category: { id: string; name: string } | null;
+    insurer: {
+      id: string;
+      code: string;
+      name: string;
+      logoUrl: string | null;
+      contactEmail: string | null;
+      phone: string | null;
+      website: string | null;
+    } | null;
+  } | null;
+  coverageLines: Array<{
+    id: string;
+    premiumAmount: number | null;
+    calculationParameters: string;
+    isIncluded: boolean;
+    isMandatory: boolean;
+    coverage: {
+      id: string;
+      code: string;
+      name: string;
+      type: string;
+      description: string | null;
+      isMandatory: boolean;
+    };
+  }>;
+};
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
-    const { searchParams } = request.nextUrl;
-    const userId = searchParams.get("userId");
-
-    if (!userId) {
-      return NextResponse.json(
-        { error: "Le paramètre userId est requis" },
-        { status: 400 }
-      );
+    const sessionProfile = await getSessionProfile();
+    if (!sessionProfile) {
+      return NextResponse.json({ error: "Authentification requise" }, { status: 401 });
     }
 
-    const quote = await db.quote.findUnique({
-      where: { id },
-      include: {
-        user: { select: { id: true, firstName: true, lastName: true, email: true, phone: true } },
-        category: { select: { id: true, name: true, description: true } },
-        offer: {
-          include: {
-            insurer: { select: { id: true, code: true, name: true, logoUrl: true, contactEmail: true, phone: true, website: true } },
-            category: { select: { id: true, name: true } },
-          },
-        },
-        coverageLines: {
-          include: {
-            coverage: { select: { id: true, code: true, name: true, type: true, description: true, isMandatory: true } },
-          },
-          orderBy: { createdAt: "asc" },
-        },
-      },
-    });
+    const { id } = await params;
+
+    const { data, error } = await db
+      .from("quotes")
+      .select(
+        "*, user:profiles(id, firstName:first_name, lastName:last_name, email, phone), category:insurance_categories(id, name, description), offer:insurance_offers(id, name, description, priceMin:price_min, priceMax:price_max, coverageAmount:coverage_amount, deductible, contractType:contract_type, features, insurer:insurers(id, code, name, logoUrl:logo_url, contactEmail:contact_email, phone, website), category:insurance_categories(id, name)), coverageLines:quote_coverages(id, premiumAmount:premium_amount, calculationParameters:calculation_parameters, isIncluded:is_included, isMandatory:is_mandatory, coverage:coverages(id, code, name, type, description, isMandatory:is_mandatory))"
+      )
+      .eq("id", id)
+      .order("created_at", { ascending: true, referencedTable: "coverageLines" })
+      .maybeSingle();
+    if (error) throw error;
+    const quote = mapRow<QuoteDetail>(data);
 
     if (!quote) {
       return NextResponse.json(
@@ -52,8 +92,8 @@ export async function GET(
       );
     }
 
-    // Auth check: ensure the quote belongs to the requesting user
-    if (quote.userId !== userId) {
+    // Auth check: ensure the quote belongs to the requesting user (session)
+    if (quote.userId !== sessionProfile.id) {
       return NextResponse.json(
         { error: "Vous n'êtes pas autorisé à consulter ce devis" },
         { status: 403 }
@@ -67,8 +107,8 @@ export async function GET(
       estimatedPrice: quote.estimatedPrice,
       finalPrice: quote.finalPrice,
       notes: quote.notes,
-      createdAt: quote.createdAt.toISOString(),
-      updatedAt: quote.updatedAt.toISOString(),
+      createdAt: quote.createdAt,
+      updatedAt: quote.updatedAt,
       vehicleData: parseJsonField(quote.vehicleData, {}),
       personalData: parseJsonField(quote.personalData, {}),
       coverageRequirements: parseJsonField(quote.coverageRequirements, {}),

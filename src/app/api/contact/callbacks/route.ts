@@ -1,34 +1,42 @@
-import { db } from "@/lib/db";
+import { db, mapRow, mapRows } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
+import { getSessionProfile } from "@/lib/auth-guard";
+
+type CallbackRow = {
+  id: string;
+  title: string;
+  message: string;
+  isRead: boolean;
+  createdAt: string;
+  link: string | null;
+};
 
 export async function GET(request: NextRequest) {
   try {
+    const sessionProfile = await getSessionProfile();
+    if (!sessionProfile) {
+      return NextResponse.json({ error: "Authentification requise" }, { status: 401 });
+    }
+
     const { searchParams } = request.nextUrl;
-    const userId = searchParams.get("userId");
     const status = searchParams.get("status") || "all";
 
-    if (!userId) {
-      return NextResponse.json(
-        { error: "L'identifiant utilisateur est requis" },
-        { status: 400 }
-      );
-    }
-
-    const where: Record<string, unknown> = {
-      userId,
-      type: "CALLBACK",
-    };
+    let query = db
+      .from("notifications")
+      .select("*")
+      .eq("user_id", sessionProfile.id)
+      .eq("type", "CALLBACK")
+      .order("created_at", { ascending: false })
+      .limit(100);
 
     if (status !== "all") {
-      if (status === "read") where.isRead = true;
-      if (status === "unread") where.isRead = false;
+      if (status === "read") query = query.eq("is_read", true);
+      if (status === "unread") query = query.eq("is_read", false);
     }
 
-    const callbacks = await db.notification.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      take: 100,
-    });
+    const { data, error } = await query;
+    if (error) throw error;
+    const callbacks = mapRows<CallbackRow>(data || []);
 
     const formatted = callbacks.map((c) => {
       let callbackData: Record<string, unknown> = {};
@@ -43,7 +51,7 @@ export async function GET(request: NextRequest) {
         title: c.title,
         message: c.message,
         isRead: c.isRead,
-        createdAt: c.createdAt.toISOString(),
+        createdAt: c.createdAt,
         phone: callbackData.phone || null,
         preferredTime: callbackData.preferredTime || null,
         clientName: callbackData.clientName || null,
@@ -70,6 +78,11 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
+    const sessionProfile = await getSessionProfile();
+    if (!sessionProfile) {
+      return NextResponse.json({ error: "Authentification requise" }, { status: 401 });
+    }
+
     const body = await request.json();
     const { id, isRead } = body;
 
@@ -80,10 +93,35 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const updated = await db.notification.update({
-      where: { id },
-      data: { isRead: isRead ?? true },
-    });
+    const { data: existingData } = await db
+      .from("notifications")
+      .select("id, user_id")
+      .eq("id", id)
+      .maybeSingle();
+    const existing = mapRow<{ id: string; userId: string }>(existingData);
+    if (!existing) {
+      return NextResponse.json(
+        { error: "Notification introuvable" },
+        { status: 404 }
+      );
+    }
+
+    // Ownership : on ne modifie que ses propres notifications
+    if (existing.userId !== sessionProfile.id) {
+      return NextResponse.json(
+        { error: "Accès refusé" },
+        { status: 403 }
+      );
+    }
+
+    const { data, error } = await db
+      .from("notifications")
+      .update({ is_read: isRead ?? true })
+      .eq("id", id)
+      .select("*")
+      .single();
+    if (error) throw error;
+    const updated = mapRow(data);
 
     return NextResponse.json({ success: true, notification: updated });
   } catch (error) {

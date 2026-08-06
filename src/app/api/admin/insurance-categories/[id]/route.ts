@@ -1,4 +1,4 @@
-import { db } from "@/lib/db";
+import { db, mapRow } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-guard";
 
@@ -10,12 +10,13 @@ export async function GET(
     const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
     const { id } = await params;
 
-    const category = await db.insuranceCategory.findUnique({
-      where: { id },
-      include: {
-        _count: { select: { offers: true, quotes: true } },
-      },
-    });
+    const { data, error } = await db
+      .from("insurance_categories")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+    if (error) throw error;
+    const category = mapRow(data);
 
     if (!category) {
       return NextResponse.json(
@@ -24,7 +25,19 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(category);
+    const { count: offersCount } = await db
+      .from("insurance_offers")
+      .select("id", { count: "exact", head: true })
+      .eq("category_id", id);
+    const { count: quotesCount } = await db
+      .from("quotes")
+      .select("id", { count: "exact", head: true })
+      .eq("category_id", id);
+
+    return NextResponse.json({
+      ...category,
+      _count: { offers: offersCount || 0, quotes: quotesCount || 0 },
+    });
   } catch (error) {
     console.error("Erreur insurance-category GET:", error);
     return NextResponse.json(
@@ -44,7 +57,11 @@ export async function PUT(
     const body = await request.json();
     const { name, description, icon, isActive } = body;
 
-    const existing = await db.insuranceCategory.findUnique({ where: { id } });
+    const { data: existing } = await db
+      .from("insurance_categories")
+      .select("id")
+      .eq("id", id)
+      .maybeSingle();
     if (!existing) {
       return NextResponse.json(
         { error: "Catégorie introuvable" },
@@ -52,21 +69,28 @@ export async function PUT(
       );
     }
 
-    const category = await db.insuranceCategory.update({
-      where: { id },
-      data: {
+    const { data: category, error } = await db
+      .from("insurance_categories")
+      .update({
         ...(name !== undefined && { name }),
         ...(description !== undefined && { description: description || null }),
         ...(icon !== undefined && { icon: icon || null }),
-        ...(isActive !== undefined && { isActive }),
-      },
+        ...(isActive !== undefined && { is_active: isActive }),
+      })
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) throw error;
+
+    await db.from("audit_logs").insert({
+      action: "UPDATE",
+      entity: "InsuranceCategory",
+      entity_id: id,
+      details: JSON.stringify({ name: category.name }),
+      user_name: "SYSTEM",
     });
 
-    await db.auditLog.create({
-      data: { action: "UPDATE", entity: "InsuranceCategory", entityId: id, details: JSON.stringify({ name: category.name }), userName: "SYSTEM" },
-    });
-
-    return NextResponse.json(category);
+    return NextResponse.json(mapRow(category));
   } catch (error) {
     console.error("Erreur insurance-category PUT:", error);
     return NextResponse.json(
@@ -84,7 +108,12 @@ export async function DELETE(
     const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
     const { id } = await params;
 
-    const existing = await db.insuranceCategory.findUnique({ where: { id } });
+    const { data } = await db
+      .from("insurance_categories")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+    const existing = mapRow(data);
     if (!existing) {
       return NextResponse.json(
         { error: "Catégorie introuvable" },
@@ -92,10 +121,14 @@ export async function DELETE(
       );
     }
 
-    await db.insuranceCategory.delete({ where: { id } });
+    await db.from("insurance_categories").delete().eq("id", id);
 
-    await db.auditLog.create({
-      data: { action: "DELETE", entity: "InsuranceCategory", entityId: id, details: JSON.stringify({ name: existing.name }), userName: "SYSTEM" },
+    await db.from("audit_logs").insert({
+      action: "DELETE",
+      entity: "InsuranceCategory",
+      entity_id: id,
+      details: JSON.stringify({ name: existing.name }),
+      user_name: "SYSTEM",
     });
 
     return NextResponse.json({ success: true });

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { db, mapRow } from "@/lib/db";
 import { requireAuth } from "@/lib/auth-guard";
 
 export async function DELETE(
@@ -10,7 +10,13 @@ export async function DELETE(
     const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
     const { id } = await params;
 
-    const rule = await db.coverageTariffRule.findUnique({ where: { id } });
+    const { data, error } = await db
+      .from("coverage_tariff_rules")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+    if (error) throw error;
+    const rule = mapRow(data);
     if (!rule) {
       return NextResponse.json(
         { error: "Règle tarifaire introuvable" },
@@ -18,16 +24,14 @@ export async function DELETE(
       );
     }
 
-    await db.coverageTariffRule.delete({ where: { id } });
+    await db.from("coverage_tariff_rules").delete().eq("id", id);
 
-    await db.auditLog.create({
-      data: {
-        action: "DELETE",
-        entity: "CoverageTariffRule",
-        entityId: id,
-        details: JSON.stringify({ coverageId: rule.coverageId, fuelType: rule.fuelType, minFiscalPower: rule.minFiscalPower, maxFiscalPower: rule.maxFiscalPower }),
-        userName: "SYSTEM",
-      },
+    await db.from("audit_logs").insert({
+      action: "DELETE",
+      entity: "CoverageTariffRule",
+      entity_id: id,
+      details: JSON.stringify({ coverageId: rule.coverageId, fuelType: rule.fuelType, minFiscalPower: rule.minFiscalPower, maxFiscalPower: rule.maxFiscalPower }),
+      user_name: "SYSTEM",
     });
 
     return NextResponse.json({ success: true });

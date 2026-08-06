@@ -71,7 +71,7 @@ export function InsurerCallbacksTab() {
   const fetchCallbacks = useCallback(async () => {
     if (!user.id) return;
     try {
-      const res = await fetch(`/api/contact/callbacks?userId=${user.id}`);
+      const res = await fetch(`/api/contact/callbacks`);
       const data = await res.json();
       setCallbacks(data.callbacks || []);
     } catch (err) {

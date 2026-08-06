@@ -1,4 +1,4 @@
-import { db } from "@/lib/db";
+import { db, mapRow, mapRows } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-guard";
 
@@ -18,14 +18,13 @@ export async function GET(
     const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
     const { id } = await params;
 
-    const coverage = await db.coverage.findUnique({
-      where: { id },
-      include: {
-        insurer: { select: { id: true, name: true, code: true } },
-        category: { select: { id: true, name: true, code: true } },
-        tariffRules: { orderBy: { minFiscalPower: "asc" } },
-      },
-    });
+    const { data, error } = await db
+      .from("coverages")
+      .select("*, insurer:insurers(id, name, code), category:coverage_categories(id, name, code)")
+      .eq("id", id)
+      .maybeSingle();
+    if (error) throw error;
+    const coverage = mapRow(data);
 
     if (!coverage) {
       return NextResponse.json(
@@ -34,7 +33,18 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(parseMetadata(coverage as unknown as Record<string, unknown>));
+    const { data: rulesData } = await db
+      .from("coverage_tariff_rules")
+      .select("*")
+      .eq("coverage_id", id)
+      .order("min_fiscal_power", { ascending: true });
+
+    return NextResponse.json(
+      parseMetadata({
+        ...coverage,
+        tariffRules: mapRows(rulesData || []),
+      } as unknown as Record<string, unknown>)
+    );
   } catch (error) {
     console.error("Erreur coverage GET:", error);
     return NextResponse.json(
@@ -81,7 +91,12 @@ export async function PUT(
       requiresGuarantee,
     } = body;
 
-    const existing = await db.coverage.findUnique({ where: { id } });
+    const { data: existingData } = await db
+      .from("coverages")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+    const existing = mapRow(existingData);
     if (!existing) {
       return NextResponse.json(
         { error: "Garantie introuvable" },
@@ -90,7 +105,11 @@ export async function PUT(
     }
 
     if (code && code !== existing.code) {
-      const codeTaken = await db.coverage.findUnique({ where: { code } });
+      const { data: codeTaken } = await db
+        .from("coverages")
+        .select("id")
+        .eq("code", code)
+        .maybeSingle();
       if (codeTaken) {
         return NextResponse.json(
           { error: "Une garantie avec ce code existe déjà" },
@@ -99,45 +118,52 @@ export async function PUT(
       }
     }
 
-    const coverage = await db.coverage.update({
-      where: { id },
-      data: {
+    const { data: coverage, error } = await db
+      .from("coverages")
+      .update({
         ...(code !== undefined && { code }),
         ...(type !== undefined && { type }),
         ...(name !== undefined && { name }),
         ...(description !== undefined && { description: description || null }),
-        ...(calculationType !== undefined && { calculationType }),
-        ...(categoryId !== undefined && { categoryId: categoryId && categoryId !== "__none__" ? categoryId : null }),
-        ...(insurerId !== undefined && { insurerId }),
-        ...(isMandatory !== undefined && { isMandatory }),
-        ...(isOptional !== undefined && { isOptional }),
+        ...(calculationType !== undefined && { calculation_type: calculationType }),
+        ...(categoryId !== undefined && { category_id: categoryId && categoryId !== "__none__" ? categoryId : null }),
+        ...(insurerId !== undefined && { insurer_id: insurerId }),
+        ...(isMandatory !== undefined && { is_mandatory: isMandatory }),
+        ...(isOptional !== undefined && { is_optional: isOptional }),
         ...(conditions !== undefined && { conditions: typeof conditions === "string" ? conditions : (conditions ? JSON.stringify(conditions) : "{}") }),
-        ...(isActive !== undefined && { isActive }),
-        ...(displayOrder !== undefined && { displayOrder }),
+        ...(isActive !== undefined && { is_active: isActive }),
+        ...(displayOrder !== undefined && { display_order: displayOrder }),
         ...(metadata !== undefined && {
           metadata: typeof metadata === "object" ? JSON.stringify(metadata) : (metadata || "{}"),
         }),
-        ...(variableSource !== undefined && { variableSource }),
-        ...(ratePercent !== undefined && { ratePercent }),
-        ...(conditionedByNewValue !== undefined && { conditionedByNewValue }),
-        ...(newValueThreshold !== undefined && { newValueThreshold }),
-        ...(rateBelowThreshold !== undefined && { rateBelowThreshold }),
-        ...(rateAboveThreshold !== undefined && { rateAboveThreshold }),
-        ...(fixedAmount !== undefined && { fixedAmount }),
-        ...(packPriceReduced !== undefined && { packPriceReduced }),
+        ...(variableSource !== undefined && { variable_source: variableSource }),
+        ...(ratePercent !== undefined && { rate_percent: ratePercent }),
+        ...(conditionedByNewValue !== undefined && { conditioned_by_new_value: conditionedByNewValue }),
+        ...(newValueThreshold !== undefined && { new_value_threshold: newValueThreshold }),
+        ...(rateBelowThreshold !== undefined && { rate_below_threshold: rateBelowThreshold }),
+        ...(rateAboveThreshold !== undefined && { rate_above_threshold: rateAboveThreshold }),
+        ...(fixedAmount !== undefined && { fixed_amount: fixedAmount }),
+        ...(packPriceReduced !== undefined && { pack_price_reduced: packPriceReduced }),
         ...(capital !== undefined && { capital }),
-        ...(minAmount !== undefined && { minAmount }),
-        ...(maxAmount !== undefined && { maxAmount }),
-        ...(matrixDimension !== undefined && { matrixDimension }),
-        ...(requiresGuarantee !== undefined && { requiresGuarantee }),
-      },
+        ...(minAmount !== undefined && { min_amount: minAmount }),
+        ...(maxAmount !== undefined && { max_amount: maxAmount }),
+        ...(matrixDimension !== undefined && { matrix_dimension: matrixDimension }),
+        ...(requiresGuarantee !== undefined && { requires_guarantee: requiresGuarantee }),
+      })
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) throw error;
+
+    await db.from("audit_logs").insert({
+      action: "UPDATE",
+      entity: "Coverage",
+      entity_id: id,
+      details: JSON.stringify({ code: coverage.code, name: coverage.name }),
+      user_name: "SYSTEM",
     });
 
-    await db.auditLog.create({
-      data: { action: "UPDATE", entity: "Coverage", entityId: id, details: JSON.stringify({ code: coverage.code, name: coverage.name }), userName: "SYSTEM" },
-    });
-
-    return NextResponse.json(parseMetadata(coverage as unknown as Record<string, unknown>));
+    return NextResponse.json(parseMetadata(mapRow(coverage) as unknown as Record<string, unknown>));
   } catch (error) {
     console.error("Erreur coverage PUT:", error);
     const msg = error instanceof Error ? error.message : String(error);
@@ -156,7 +182,12 @@ export async function DELETE(
     const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
     const { id } = await params;
 
-    const existing = await db.coverage.findUnique({ where: { id } });
+    const { data } = await db
+      .from("coverages")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+    const existing = mapRow(data);
     if (!existing) {
       return NextResponse.json(
         { error: "Garantie introuvable" },
@@ -164,10 +195,14 @@ export async function DELETE(
       );
     }
 
-    await db.coverage.delete({ where: { id } });
+    await db.from("coverages").delete().eq("id", id);
 
-    await db.auditLog.create({
-      data: { action: "DELETE", entity: "Coverage", entityId: id, details: JSON.stringify({ code: existing.code, name: existing.name }), userName: "SYSTEM" },
+    await db.from("audit_logs").insert({
+      action: "DELETE",
+      entity: "Coverage",
+      entity_id: id,
+      details: JSON.stringify({ code: existing.code, name: existing.name }),
+      user_name: "SYSTEM",
     });
 
     return NextResponse.json({ success: true });

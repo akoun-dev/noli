@@ -92,7 +92,7 @@ export default function UserProfilePage() {
     if (!user.id) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/user/profile?userId=${user.id}`);
+      const res = await fetch(`/api/user/profile`);
       if (!res.ok) throw new Error("Erreur lors du chargement");
       const data = await res.json();
       const p: UserProfile = data.profile;

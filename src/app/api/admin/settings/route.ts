@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { db, mapRow, mapRows } from "@/lib/db";
 import { requireAuth } from "@/lib/auth-guard";
 
 /* ── Default settings (seeded if missing) ─────────────────────── */
@@ -53,9 +53,11 @@ const DEFAULTS: {
 
 async function ensureDefaults() {
   for (const def of DEFAULTS) {
-    const existing = await db.systemSetting.findUnique({ where: { key: def.key } });
+    const { data } = await db.from("system_settings").select("*").eq("key", def.key).maybeSingle();
+    const existing = mapRow(data);
     if (!existing) {
-      await db.systemSetting.create({ data: def });
+      const { error } = await db.from("system_settings").insert({ ...def });
+      if (error) throw error;
     }
   }
 }
@@ -66,7 +68,12 @@ export async function GET() {
   const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
   try {
     await ensureDefaults();
-    const all = await db.systemSetting.findMany({ orderBy: { category: "asc" } });
+    const { data, error } = await db
+      .from("system_settings")
+      .select("*")
+      .order("category", { ascending: true });
+    if (error) throw error;
+    const all = mapRows<{ key: string; value: string; label: string; type: string; category: string }>(data || []);
 
     const grouped: Record<string, { key: string; value: string; label: string; type: string }[]> = {};
     for (const s of all) {
@@ -98,26 +105,28 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: "Clé et valeur requis" }, { status: 400 });
     }
 
-    await db.systemSetting.upsert({
-      where: { key },
-      update: { value },
-      create: {
+    const { data: existing } = await db.from("system_settings").select("id").eq("key", key).maybeSingle();
+    if (existing) {
+      const { error } = await db.from("system_settings").update({ value }).eq("key", key);
+      if (error) throw error;
+    } else {
+      const { error } = await db.from("system_settings").insert({
         key,
         value,
         category: "general",
         label: key,
         type: "text",
-      },
-    });
+      });
+      if (error) throw error;
+    }
 
-    await db.auditLog.create({
-      data: {
-        action: "SETTINGS_CHANGE",
-        entity: "Settings",
-        details: JSON.stringify({ key, value }),
-        userName: "SYSTEM",
-      },
+    const { error: auditError } = await db.from("audit_logs").insert({
+      action: "SETTINGS_CHANGE",
+      entity: "Settings",
+      details: JSON.stringify({ key, value }),
+      user_name: "SYSTEM",
     });
+    if (auditError) throw auditError;
 
     return NextResponse.json({ success: true });
   } catch (err) {

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
-import { Prisma } from '@prisma/client'
+import { db, mapRows } from '@/lib/db'
 import { requireAuth } from '@/lib/auth-guard'
 
 export async function GET(request: NextRequest) {
@@ -17,47 +16,39 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '50', 10)))
     const skip = (page - 1) * limit
 
-    const where: Prisma.AuditLogWhereInput = {}
-
-    if (action) {
-      where.action = action
-    }
-    if (entity) {
-      where.entity = entity
-    }
-    if (userId) {
-      where.userId = userId
-    }
-    if (startDate || endDate) {
-      where.createdAt = {}
-      if (startDate) {
-        where.createdAt.gte = new Date(startDate)
-      }
+    const applyFilters = (q: any) => {
+      if (action) q = q.eq("action", action)
+      if (entity) q = q.eq("entity", entity)
+      if (userId) q = q.eq("user_id", userId)
+      if (startDate) q = q.gte("created_at", new Date(startDate).toISOString())
       if (endDate) {
         const end = new Date(endDate)
         end.setHours(23, 59, 59, 999)
-        where.createdAt.lte = end
+        q = q.lte("created_at", end.toISOString())
       }
-    }
-    if (search) {
-      where.OR = [
-        { userName: { contains: search } },
-        { userEmail: { contains: search } },
-        { action: { contains: search } },
-        { entity: { contains: search } },
-        { details: { contains: search } },
-      ]
+      if (search) {
+        q = q.or(
+          `user_name.ilike.%${search}%,user_email.ilike.%${search}%,action.ilike.%${search}%,entity.ilike.%${search}%,details.ilike.%${search}%`
+        )
+      }
+      return q
     }
 
-    const [logs, total] = await Promise.all([
-      db.auditLog.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-        skip,
-        take: limit,
-      }),
-      db.auditLog.count({ where }),
-    ])
+    const [{ data: logsData, error: logsError }, { count: total, error: countError }] =
+      await Promise.all([
+        applyFilters(
+          db
+            .from("audit_logs")
+            .select("*")
+            .order("created_at", { ascending: false })
+            .range(skip, skip + limit - 1)
+        ),
+        applyFilters(db.from("audit_logs").select("id", { count: "exact", head: true })),
+      ])
+    if (logsError) throw logsError
+    if (countError) throw countError
+
+    const logs = mapRows(logsData || [])
 
     const formattedLogs = logs.map((log) => ({
       id: log.id,
@@ -81,8 +72,8 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       logs: formattedLogs,
-      total,
-      pages: Math.ceil(total / limit),
+      total: total ?? 0,
+      pages: Math.ceil((total ?? 0) / limit),
     })
   } catch (error) {
     console.error('Erreur lors de la récupération des journaux d\'audit:', error)

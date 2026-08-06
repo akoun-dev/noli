@@ -1,21 +1,13 @@
 import { db } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
 import { registerSchema, loginSchema, emailSchema } from "@/lib/validation";
-import { createSession, destroySession } from "@/lib/auth-guard";
-
-function hashPassword(password: string): string {
-  return bcrypt.hashSync(password, 10);
-}
-
-function verifyPassword(password: string, hash: string): boolean {
-  return bcrypt.compareSync(password, hash);
-}
+import { getSessionProfile, getSupabaseServerClient } from "@/lib/auth-guard";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { action, email, name, phone, password, role, companyName, companyEmail, companyPhone, companyWebsite } = body;
+    const { action, email, password, name, phone, role, companyName, companyEmail, companyPhone, companyWebsite } = body;
+    const supabase = await getSupabaseServerClient();
 
     if (action === "register") {
       const parsed = registerSchema.safeParse({ email, name, password, phone, role, companyName, companyEmail, companyPhone, companyWebsite });
@@ -25,28 +17,58 @@ export async function POST(request: NextRequest) {
       }
 
       const selectedRole = parsed.data.role;
-
-      const existing = await db.profile.findUnique({ where: { email } });
-      if (existing) {
-        return NextResponse.json({ error: "Cet email est déjà utilisé" }, { status: 409 });
-      }
-
       const parts = name.trim().split(/\s+/);
       const firstName = parts[0] || "";
       const lastName = parts.slice(1).join(" ") || "";
 
-      const profile = await db.profile.create({
-        data: {
-          email,
-          password: hashPassword(password),
-          firstName,
-          lastName,
-          phone: phone || null,
-          role: selectedRole,
+      // Création du compte Supabase Auth (le profil est créé automatiquement
+      // par le trigger on_auth_user_created à partir de user_metadata).
+      const { data: authData, error: signUpError } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          data: {
+            role: selectedRole,
+            firstName,
+            lastName,
+            phone: phone || null,
+          },
         },
       });
 
-      // If INSURER, create the Insurer record + InsurerAccount automatically
+      if (signUpError) {
+        const message = signUpError.message?.toLowerCase().includes("registered")
+          ? "Cet email est déjà utilisé"
+          : signUpError.message;
+        const status = signUpError.message?.toLowerCase().includes("registered") ? 409 : 400;
+        return NextResponse.json({ error: message }, { status });
+      }
+
+      const userId = authData.user?.id;
+      if (!userId) {
+        return NextResponse.json({ error: "Erreur lors de la création du compte" }, { status: 500 });
+      }
+
+      // L'app n'exige pas de vérification d'email (comportement de l'ancien
+      // flux Prisma) : confirmation automatique via la clé service_role.
+      const { error: confirmError } = await db.auth.admin.updateUserById(userId, {
+        email_confirm: true,
+      });
+      if (confirmError) {
+        console.warn("[auth] Confirmation email auto impossible:", confirmError.message);
+      }
+
+      // Établit la session (cookie httpOnly) : connexion immédiate après
+      // l'inscription, comme attendu par le front.
+      const { error: signInAfterSignUpError } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+      if (signInAfterSignUpError) {
+        console.warn("[auth] Session immédiate impossible:", signInAfterSignUpError.message);
+      }
+
+      // Si INSURER, créer la compagnie + la liaison automatiquement
       if (selectedRole === "INSURER" && companyName?.trim()) {
         const code = companyName
           .trim()
@@ -56,32 +78,32 @@ export async function POST(request: NextRequest) {
           .replace(/^_|_$/g, "")
           .slice(0, 20);
 
-        const insurer = await db.insurer.create({
-          data: {
+        const { data: insurer, error: insurerError } = await db
+          .from("insurers")
+          .insert({
             code,
             name: companyName.trim(),
-            contactEmail: companyEmail?.trim() || email,
+            contact_email: companyEmail?.trim() || email,
             phone: companyPhone?.trim() || phone,
             website: companyWebsite?.trim() || null,
-          },
-        });
+          })
+          .select()
+          .single();
 
-        await db.insurerAccount.create({
-          data: {
-            profileId: profile.id,
-            insurerId: insurer.id,
-          },
-        });
+        if (!insurerError && insurer) {
+          await db.from("insurer_accounts").insert({
+            profile_id: userId,
+            insurer_id: insurer.id,
+          });
+        }
       }
-
-      await createSession(profile.id);
 
       return NextResponse.json({
         user: {
-          id: profile.id,
-          email: profile.email,
-          name: [profile.firstName, profile.lastName].filter(Boolean).join(" "),
-          role: profile.role,
+          id: userId,
+          email: email.trim(),
+          name: [firstName, lastName].filter(Boolean).join(" "),
+          role: selectedRole,
         },
       });
     }
@@ -93,34 +115,39 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: firstError }, { status: 400 });
       }
 
-      const profile = await db.profile.findUnique({ where: { email } });
-      if (!profile || !profile.password) {
+      const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+
+      if (signInError || !authData.user) {
         return NextResponse.json({ error: "Email ou mot de passe incorrect" }, { status: 401 });
       }
 
-      const valid = verifyPassword(password, profile.password);
-      if (!valid) {
-        return NextResponse.json({ error: "Email ou mot de passe incorrect" }, { status: 401 });
-      }
+      // Vérifier que le compte est actif
+      const { data: profile } = await db
+        .from("profiles")
+        .select("role, is_active, first_name, last_name")
+        .eq("id", authData.user.id)
+        .maybeSingle();
 
-      if (!profile.isActive) {
+      if (!profile || !profile.is_active) {
+        await supabase.auth.signOut();
         return NextResponse.json({ error: "Compte désactivé. Contactez le support." }, { status: 403 });
       }
 
-      await createSession(profile.id);
-
       return NextResponse.json({
         user: {
-          id: profile.id,
-          email: profile.email,
-          name: [profile.firstName, profile.lastName].filter(Boolean).join(" "),
+          id: authData.user.id,
+          email: email.trim(),
+          name: [profile.first_name, profile.last_name].filter(Boolean).join(" "),
           role: profile.role,
         },
       });
     }
 
     if (action === "logout") {
-      await destroySession();
+      await supabase.auth.signOut();
       return NextResponse.json({ message: "Déconnecté" });
     }
 
@@ -129,11 +156,13 @@ export async function POST(request: NextRequest) {
       if (!parsed.success) {
         return NextResponse.json({ error: "Adresse email invalide" }, { status: 400 });
       }
+      await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/forgot`,
+      });
       return NextResponse.json({ message: "Si un compte existe avec cet email, un lien de réinitialisation a été envoyé." });
     }
 
     if (action === "me") {
-      const { getSessionProfile } = await import("@/lib/auth-guard");
       const profile = await getSessionProfile();
       if (!profile) {
         return NextResponse.json({ error: "Non authentifié" }, { status: 401 });

@@ -1,4 +1,4 @@
-import { db } from "@/lib/db";
+import { db, mapRows } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { sendCallbackConfirmation } from "@/lib/email";
 
@@ -31,10 +31,11 @@ export async function POST(request: NextRequest) {
 
     // Notifier les comptes assureurs concernés
     if (insurerId) {
-      const insurerProfiles = await db.insurerAccount.findMany({
-        where: { insurerId },
-        select: { profileId: true },
-      });
+      const { data: insurerProfilesData } = await db
+        .from("insurer_accounts")
+        .select("profileId:profile_id")
+        .eq("insurer_id", insurerId);
+      const insurerProfiles = mapRows<{ profileId: string }>(insurerProfilesData || []);
 
       const clientName = personalInfo?.firstName || personalInfo?.lastName
         ? `${personalInfo.firstName || ""} ${personalInfo.lastName || ""}`.trim()
@@ -53,36 +54,36 @@ export async function POST(request: NextRequest) {
 
       for (const ip of insurerProfiles) {
         try {
-          await db.notification.create({
-            data: {
-              userId: ip.profileId,
-              type: "CALLBACK",
-              title: "📞 Demande de rappel",
-              message: `${clientName} — ${phone}${preferredTime ? ` (${preferredTime})` : ""}`,
-              link: callbackData,
-            },
+          const { error: notifErr } = await db.from("notifications").insert({
+            user_id: ip.profileId,
+            type: "CALLBACK",
+            title: "📞 Demande de rappel",
+            message: `${clientName} — ${phone}${preferredTime ? ` (${preferredTime})` : ""}`,
+            link: callbackData,
           });
+          if (notifErr) throw notifErr;
         } catch (notifErr) {
           console.error("[callback] Erreur notification:", notifErr);
         }
       }
 
       // Notifier aussi les admins
-      const adminProfiles = await db.profile.findMany({
-        where: { role: "ADMIN", isActive: true },
-        select: { id: true },
-      });
+      const { data: adminProfilesData } = await db
+        .from("profiles")
+        .select("id")
+        .eq("role", "ADMIN")
+        .eq("is_active", true);
+      const adminProfiles = mapRows<{ id: string }>(adminProfilesData || []);
       for (const ap of adminProfiles) {
         try {
-          await db.notification.create({
-            data: {
-              userId: ap.id,
-              type: "CALLBACK",
-              title: "📞 Demande de rappel",
-              message: `${clientName} — ${phone}${preferredTime ? ` (${preferredTime})` : ""}`,
-              link: callbackData,
-            },
+          const { error: notifErr } = await db.from("notifications").insert({
+            user_id: ap.id,
+            type: "CALLBACK",
+            title: "📞 Demande de rappel",
+            message: `${clientName} — ${phone}${preferredTime ? ` (${preferredTime})` : ""}`,
+            link: callbackData,
           });
+          if (notifErr) throw notifErr;
         } catch (notifErr) {
           console.error("[callback] Erreur notification admin:", notifErr);
         }

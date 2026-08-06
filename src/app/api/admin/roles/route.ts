@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { db, mapRow, mapRows } from "@/lib/db";
 import { requireAuth } from "@/lib/auth-guard";
 
 /* ── Default roles (seeded if missing) ────────────────────────── */
@@ -30,9 +30,15 @@ const ROLE_LABELS: Record<string, string> = {
 
 async function ensureDefaults() {
   for (const def of DEFAULT_ROLES) {
-    const existing = await db.role.findUnique({ where: { name: def.name } });
+    const { data } = await db.from("roles").select("*").eq("name", def.name).maybeSingle();
+    const existing = mapRow(data);
     if (!existing) {
-      await db.role.create({ data: def });
+      const { error } = await db.from("roles").insert({
+        name: def.name,
+        description: def.description,
+        is_default: def.isDefault,
+      });
+      if (error) throw error;
     }
   }
 }
@@ -43,14 +49,15 @@ export async function GET() {
   const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
   try {
     await ensureDefaults();
-    const roles = await db.role.findMany({
-      include: {
-        permissions: {
-          include: { permission: true },
-        },
-      },
-      orderBy: { name: "asc" },
-    });
+    const { data, error } = await db
+      .from("roles")
+      .select(
+        "*, permissions:role_permissions(permission:permissions(id, code, name, category))"
+      )
+      .order("name", { ascending: true });
+    if (error) throw error;
+
+    const roles = mapRows(data || []);
 
     const result = roles.map((r) => ({
       id: r.id,
@@ -58,8 +65,8 @@ export async function GET() {
       label: ROLE_LABELS[r.name] || r.name,
       description: r.description || "",
       isDefault: r.isDefault,
-      permissionCount: r.permissions.length,
-      permissions: r.permissions.map((rp) => ({
+      permissionCount: (r.permissions || []).length,
+      permissions: (r.permissions || []).map((rp) => ({
         id: rp.permission.id,
         code: rp.permission.code,
         name: rp.permission.name,
@@ -89,37 +96,42 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Nom du rôle requis" }, { status: 400 });
     }
 
-    const existing = await db.role.findUnique({ where: { name: name.trim() } });
+    const { data: existingData } = await db.from("roles").select("id").eq("name", name.trim()).maybeSingle();
+    const existing = mapRow(existingData);
     if (existing) {
       return NextResponse.json({ error: "Un rôle avec ce nom existe déjà" }, { status: 409 });
     }
 
-    const role = await db.role.create({
-      data: {
+    const { data: roleData, error } = await db
+      .from("roles")
+      .insert({
         name: name.trim(),
         description: description || null,
-        isDefault: false,
-      },
-    });
+        is_default: false,
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    const role = mapRow(roleData);
 
     if (permissionIds && permissionIds.length > 0) {
-      await db.rolePermission.createMany({
-        data: permissionIds.map((pid) => ({ roleId: role.id, permissionId: pid })),
-      });
+      const { error: rpError } = await db
+        .from("role_permissions")
+        .insert(permissionIds.map((pid) => ({ role_id: role!.id, permission_id: pid })));
+      if (rpError) throw rpError;
     }
 
-    await db.auditLog.create({
-      data: {
-        action: "CREATE",
-        entity: "Role",
-        entityId: role.id,
-        details: JSON.stringify({ name: role.name, permissionCount: permissionIds?.length || 0 }),
-        userName: "SYSTEM",
-      },
+    const { error: auditError } = await db.from("audit_logs").insert({
+      action: "CREATE",
+      entity: "Role",
+      entity_id: role!.id,
+      details: JSON.stringify({ name: role!.name, permissionCount: permissionIds?.length || 0 }),
+      user_name: "SYSTEM",
     });
+    if (auditError) throw auditError;
 
     return NextResponse.json(
-      { id: role.id, name: role.name, description: role.description },
+      { id: role!.id, name: role!.name, description: role!.description },
       { status: 201 }
     );
   } catch (err) {

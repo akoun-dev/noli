@@ -1,30 +1,21 @@
-import { db } from "@/lib/db";
+import { db, mapRow } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
+import { getSessionProfile, requireAuth } from "@/lib/auth-guard";
 
 export async function GET(request: NextRequest) {
   try {
-    const userId = request.nextUrl.searchParams.get("userId");
-    if (!userId) {
-      return NextResponse.json(
-        { error: "Le paramètre userId est requis" },
-        { status: 400 }
-      );
-    }
+    const guard = await requireAuth(["INSURER"]);
+    if (guard) return guard;
 
-    const account = await db.insurerAccount.findFirst({
-      where: { profileId: userId },
-      include: {
-        insurer: {
-          select: {
-            id: true,
-            code: true,
-            name: true,
-            logoUrl: true,
-            isActive: true,
-          },
-        },
-      },
-    });
+    const profile = await getSessionProfile();
+    if (!profile) return NextResponse.json({ error: "Authentification requise" }, { status: 401 });
+
+    const { data } = await db
+      .from("insurer_accounts")
+      .select("insurer:insurers(id, code, name, logoUrl:logo_url, is_active)")
+      .eq("profile_id", profile.id)
+      .maybeSingle();
+    const account = mapRow(data);
 
     if (!account) {
       return NextResponse.json(

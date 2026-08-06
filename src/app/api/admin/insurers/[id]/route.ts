@@ -1,4 +1,4 @@
-import { db } from "@/lib/db";
+import { db, mapRow, mapRows } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-guard";
 
@@ -10,22 +10,13 @@ export async function GET(
     const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
     const { id } = await params;
 
-    const insurer = await db.insurer.findUnique({
-      where: { id },
-      include: {
-        offers: {
-          orderBy: { createdAt: "desc" },
-        },
-        coverages: {
-          include: { category: { select: { id: true, name: true, code: true } } },
-          orderBy: { createdAt: "desc" },
-        },
-        accounts: {
-          include: { profile: { select: { id: true, firstName: true, lastName: true, email: true } } },
-          orderBy: { createdAt: "desc" },
-        },
-      },
-    });
+    const { data, error } = await db
+      .from("insurers")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+    if (error) throw error;
+    const insurer = mapRow(data);
 
     if (!insurer) {
       return NextResponse.json(
@@ -34,7 +25,28 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(insurer);
+    const { data: offersData } = await db
+      .from("insurance_offers")
+      .select("*")
+      .eq("insurer_id", id)
+      .order("created_at", { ascending: false });
+    const { data: coveragesData } = await db
+      .from("coverages")
+      .select("*, category:coverage_categories(id, name, code)")
+      .eq("insurer_id", id)
+      .order("created_at", { ascending: false });
+    const { data: accountsData } = await db
+      .from("insurer_accounts")
+      .select("*, profile:profiles(id, firstName:first_name, lastName:last_name, email)")
+      .eq("insurer_id", id)
+      .order("created_at", { ascending: false });
+
+    return NextResponse.json({
+      ...insurer,
+      offers: mapRows(offersData || []),
+      coverages: mapRows(coveragesData || []),
+      accounts: mapRows(accountsData || []),
+    });
   } catch (error) {
     console.error("Erreur insurer GET:", error);
     return NextResponse.json(
@@ -55,7 +67,12 @@ export async function PUT(
     const { code, name, logoUrl, contactEmail, phone, website, isActive } =
       body;
 
-    const existing = await db.insurer.findUnique({ where: { id } });
+    const { data: existingData } = await db
+      .from("insurers")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+    const existing = mapRow(existingData);
     if (!existing) {
       return NextResponse.json(
         { error: "Assureur introuvable" },
@@ -64,7 +81,11 @@ export async function PUT(
     }
 
     if (code && code !== existing.code) {
-      const codeTaken = await db.insurer.findUnique({ where: { code } });
+      const { data: codeTaken } = await db
+        .from("insurers")
+        .select("id")
+        .eq("code", code)
+        .maybeSingle();
       if (codeTaken) {
         return NextResponse.json(
           { error: "Un assureur avec ce code existe déjà" },
@@ -73,30 +94,31 @@ export async function PUT(
       }
     }
 
-    const insurer = await db.insurer.update({
-      where: { id },
-      data: {
+    const { data: insurer, error } = await db
+      .from("insurers")
+      .update({
         ...(code !== undefined && { code }),
         ...(name !== undefined && { name }),
-        ...(logoUrl !== undefined && { logoUrl: logoUrl || null }),
-        ...(contactEmail !== undefined && { contactEmail: contactEmail || null }),
+        ...(logoUrl !== undefined && { logo_url: logoUrl || null }),
+        ...(contactEmail !== undefined && { contact_email: contactEmail || null }),
         ...(phone !== undefined && { phone: phone || null }),
         ...(website !== undefined && { website: website || null }),
-        ...(isActive !== undefined && { isActive }),
-      },
+        ...(isActive !== undefined && { is_active: isActive }),
+      })
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) throw error;
+
+    await db.from("audit_logs").insert({
+      action: "UPDATE",
+      entity: "Insurer",
+      entity_id: id,
+      details: JSON.stringify({ code: insurer.code, name: insurer.name }),
+      user_name: "SYSTEM",
     });
 
-    await db.auditLog.create({
-      data: {
-        action: "UPDATE",
-        entity: "Insurer",
-        entityId: id,
-        details: JSON.stringify({ code: insurer.code, name: insurer.name }),
-        userName: "SYSTEM",
-      },
-    });
-
-    return NextResponse.json(insurer);
+    return NextResponse.json(mapRow(insurer));
   } catch (error) {
     console.error("Erreur insurer PUT:", error);
     return NextResponse.json(
@@ -114,7 +136,12 @@ export async function DELETE(
     const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
     const { id } = await params;
 
-    const existing = await db.insurer.findUnique({ where: { id } });
+    const { data } = await db
+      .from("insurers")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+    const existing = mapRow(data);
     if (!existing) {
       return NextResponse.json(
         { error: "Assureur introuvable" },
@@ -122,16 +149,14 @@ export async function DELETE(
       );
     }
 
-    await db.insurer.delete({ where: { id } });
+    await db.from("insurers").delete().eq("id", id);
 
-    await db.auditLog.create({
-      data: {
-        action: "DELETE",
-        entity: "Insurer",
-        entityId: id,
-        details: JSON.stringify({ code: existing.code, name: existing.name }),
-        userName: "SYSTEM",
-      },
+    await db.from("audit_logs").insert({
+      action: "DELETE",
+      entity: "Insurer",
+      entity_id: id,
+      details: JSON.stringify({ code: existing.code, name: existing.name }),
+      user_name: "SYSTEM",
     });
 
     return NextResponse.json({ success: true });

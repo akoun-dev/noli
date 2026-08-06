@@ -1,5 +1,6 @@
-import { db } from "@/lib/db";
+import { db, mapRows } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
+import { getInsurerAccount, getSessionProfile, requireAuth } from "@/lib/auth-guard";
 
 function parseJsonField<T>(value: string, fallback: T): T {
   try {
@@ -11,25 +12,12 @@ function parseJsonField<T>(value: string, fallback: T): T {
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = request.nextUrl;
-    const userId = searchParams.get("userId");
-    const status = searchParams.get("status");
-    const search = searchParams.get("search") || "";
-    const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
-    const limit = Math.max(1, Math.min(100, parseInt(searchParams.get("limit") || "20", 10)));
+    const guard = await requireAuth(["INSURER"]);
+    if (guard) return guard;
 
-    if (!userId) {
-      return NextResponse.json(
-        { error: "Le paramètre userId est requis" },
-        { status: 400 }
-      );
-    }
-
-    const account = await db.insurerAccount.findFirst({
-      where: { profileId: userId },
-      select: { insurerId: true },
-    });
-
+    const profile = await getSessionProfile();
+    if (!profile) return NextResponse.json({ error: "Authentification requise" }, { status: 401 });
+    const account = await getInsurerAccount(profile.id);
     if (!account) {
       return NextResponse.json(
         { error: "Aucun compte assureur trouvé pour cet utilisateur" },
@@ -37,38 +25,36 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const where: Record<string, unknown> = {
-      offer: { insurerId: account.insurerId },
-    };
+    const { searchParams } = request.nextUrl;
+    const status = searchParams.get("status");
+    const search = searchParams.get("search") || "";
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
+    const limit = Math.max(1, Math.min(100, parseInt(searchParams.get("limit") || "20", 10)));
+
+    let query = db
+      .from("quotes")
+      .select(
+        "*, user:profiles(firstName:first_name, lastName:last_name, email), offer:insurance_offers(name), category:insurance_categories(name)",
+        { count: "exact" }
+      )
+      .eq("offer.insurer_id", account.insurerId)
+      .order("created_at", { ascending: false })
+      .range((page - 1) * limit, (page - 1) * limit + limit - 1);
 
     if (status) {
-      where.status = status;
+      query = query.eq("status", status);
     }
 
     if (search) {
-      (where as Record<string, unknown>).OR = [
-        { reference: { contains: search } },
-        { user: { OR: [
-          { firstName: { contains: search } },
-          { lastName: { contains: search } },
-        ] } },
-      ];
+      query = query.or(
+        `reference.ilike.%${search}%,user.first_name.ilike.%${search}%,user.last_name.ilike.%${search}%`
+      );
     }
 
-    const [quotes, total] = await Promise.all([
-      db.quote.findMany({
-        where,
-        include: {
-          user: { select: { firstName: true, lastName: true, email: true } },
-          offer: { select: { name: true } },
-          category: { select: { name: true } },
-        },
-        orderBy: { createdAt: "desc" },
-        skip: (page - 1) * limit,
-        take: limit,
-      }),
-      db.quote.count({ where }),
-    ]);
+    const { data, count, error } = await query;
+    if (error) throw error;
+    const quotes = mapRows(data || []);
+    const total = count || 0;
 
     const formatted = quotes.map((q) => ({
       id: q.id,
@@ -77,8 +63,8 @@ export async function GET(request: NextRequest) {
       estimatedPrice: q.estimatedPrice,
       finalPrice: q.finalPrice,
       notes: q.notes,
-      createdAt: q.createdAt.toISOString(),
-      updatedAt: q.updatedAt.toISOString(),
+      createdAt: q.createdAt,
+      updatedAt: q.updatedAt,
       offerName: q.offer?.name || null,
       categoryName: q.category?.name || null,
       userName: q.user

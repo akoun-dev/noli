@@ -1,43 +1,41 @@
-import { db } from "@/lib/db";
+import { db, mapRows } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
+import { getSessionProfile } from "@/lib/auth-guard";
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = request.nextUrl;
-    const userId = searchParams.get("userId");
-
-    if (!userId) {
-      return NextResponse.json(
-        { error: "Le paramètre userId est requis" },
-        { status: 400 }
-      );
+    const sessionProfile = await getSessionProfile();
+    if (!sessionProfile) {
+      return NextResponse.json({ error: "Authentification requise" }, { status: 401 });
     }
 
+    const userId = sessionProfile.id;
+
     const [
-      totalQuotes,
-      pendingQuotes,
-      approvedQuotes,
-      rejectedQuotes,
-      draftQuotes,
-      quotesWithPrices,
+      { count: totalQuotes },
+      { count: pendingQuotes },
+      { count: approvedQuotes },
+      { count: rejectedQuotes },
+      { count: draftQuotes },
+      quotesWithPricesResult,
     ] = await Promise.all([
-      db.quote.count({ where: { userId } }),
-      db.quote.count({ where: { userId, status: "PENDING" } }),
-      db.quote.count({ where: { userId, status: "APPROVED" } }),
-      db.quote.count({ where: { userId, status: "REJECTED" } }),
-      db.quote.count({ where: { userId, status: "DRAFT" } }),
-      db.quote.findMany({
-        where: {
-          userId,
-          estimatedPrice: { not: null },
-          offerId: { not: null },
-        },
-        select: {
-          estimatedPrice: true,
-          offer: { select: { priceMin: true, priceMax: true } },
-        },
-      }),
+      db.from("quotes").select("id", { count: "exact", head: true }).eq("user_id", userId),
+      db.from("quotes").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("status", "PENDING"),
+      db.from("quotes").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("status", "APPROVED"),
+      db.from("quotes").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("status", "REJECTED"),
+      db.from("quotes").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("status", "DRAFT"),
+      db.from("quotes")
+        .select("estimatedPrice:estimated_price, offer:insurance_offers(priceMin:price_min, priceMax:price_max)")
+        .eq("user_id", userId)
+        .not("estimated_price", "is", null)
+        .not("offer_id", "is", null),
     ]);
+
+    if (quotesWithPricesResult.error) throw quotesWithPricesResult.error;
+    const quotesWithPrices = mapRows<{
+      estimatedPrice: number | null;
+      offer: { priceMin: number | null; priceMax: number | null } | null;
+    }>(quotesWithPricesResult.data || []);
 
     // Total savings = sum of (priceMax - priceMin) for each quote's linked offer
     const totalSavings = quotesWithPrices.reduce((sum, q) => {

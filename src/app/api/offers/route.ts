@@ -1,4 +1,4 @@
-import { db } from "@/lib/db";
+import { db, mapRows } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { isVehicleEligible, type VehiclePricingData } from "@/lib/pricing-service";
 
@@ -17,30 +17,25 @@ export async function GET(request: NextRequest) {
     const venalValue = searchParams.get("venalValue");
     const vehicleUsage = searchParams.get("vehicleUsage");
 
-    const where: Record<string, unknown> = {
-      isActive: true,
-      insurer: { isActive: true },
-    };
+    let query = db
+      .from("insurance_offers")
+      .select(
+        "*, insurer:insurers!inner(id, name, logoUrl:logo_url, code, is_active), category:insurance_categories(id, name, icon)"
+      )
+      .eq("is_active", true)
+      .eq("insurer.is_active", true);
 
-    if (categoryId) where.categoryId = categoryId;
-    if (insurerId) where.insurerId = insurerId;
-    if (contractType) where.contractType = contractType;
+    if (categoryId) query = query.eq("category_id", categoryId);
+    if (insurerId) query = query.eq("insurer_id", insurerId);
+    if (contractType) query = query.eq("contract_type", contractType);
 
-    const orderBy: Record<string, string> =
-      sortBy === "price_desc"
-        ? { priceMin: "desc" }
-        : sortBy === "name_asc"
-          ? { name: "asc" }
-          : { priceMin: "asc" };
+    const sortCol = sortBy === "name_asc" ? "name" : "price_min";
+    const ascending = sortBy !== "price_desc";
+    query = query.order(sortCol, { ascending });
 
-    const offers = await db.insuranceOffer.findMany({
-      where,
-      include: {
-        insurer: { select: { id: true, name: true, logoUrl: true, code: true } },
-        category: { select: { id: true, name: true, icon: true } },
-      },
-      orderBy,
-    });
+    const { data, error } = await query;
+    if (error) throw error;
+    const offers = mapRows(data || []);
 
     // Build vehicle data object if any vehicle filter is provided
     const hasVehicleFilters = fiscalPower || fuelType || newValue || venalValue || vehicleUsage;
@@ -69,12 +64,12 @@ export async function GET(request: NextRequest) {
             {
               fiscalPowerMin: o.fiscalPowerMin,
               fiscalPowerMax: o.fiscalPowerMax,
-              fuelTypes: offerFuelTypes,
+              fuelTypes: offerFuelTypes as unknown as string,
               newValueMin: o.newValueMin,
               newValueMax: o.newValueMax,
               venalValueMin: o.venalValueMin,
               venalValueMax: o.venalValueMax,
-              vehicleUsage: offerVehicleUsage,
+              vehicleUsage: offerVehicleUsage as unknown as string,
             },
             vehicleData
           );
@@ -82,16 +77,19 @@ export async function GET(request: NextRequest) {
       : offers;
 
     // Also fetch categories and insurers for filtering
-    const categories = await db.insuranceCategory.findMany({
-      where: { isActive: true },
-      orderBy: { name: "asc" },
-    });
+    const { data: categoriesData } = await db
+      .from("insurance_categories")
+      .select("*")
+      .eq("is_active", true)
+      .order("name", { ascending: true });
+    const categories = mapRows(categoriesData || []);
 
-    const insurers = await db.insurer.findMany({
-      where: { isActive: true },
-      select: { id: true, name: true, logoUrl: true, code: true },
-      orderBy: { name: "asc" },
-    });
+    const { data: insurersData } = await db
+      .from("insurers")
+      .select("id, name, logoUrl:logo_url, code")
+      .eq("is_active", true)
+      .order("name", { ascending: true });
+    const insurers = mapRows(insurersData || []);
 
     const formattedOffers = filteredOffers.map((o) => ({
       id: o.id,

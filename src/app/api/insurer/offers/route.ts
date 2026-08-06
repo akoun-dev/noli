@@ -1,35 +1,41 @@
-import { db } from "@/lib/db";
+import { db, mapRow, mapRows } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
+import { getInsurerAccount, getSessionProfile, requireAuth } from "@/lib/auth-guard";
+
+async function resolveInsurerId(): Promise<string | null> {
+  const profile = await getSessionProfile();
+  if (!profile) return null;
+  const account = await getInsurerAccount(profile.id);
+  return account?.insurerId || null;
+}
 
 export async function GET(request: NextRequest) {
   try {
-    const insurerId = request.nextUrl.searchParams.get("insurerId");
-    const activeOnly = request.nextUrl.searchParams.get("active");
+    const guard = await requireAuth(["INSURER"]);
+    if (guard) return guard;
 
+    const insurerId = await resolveInsurerId();
     if (!insurerId) {
       return NextResponse.json(
-        { error: "Le paramètre insurerId est requis" },
-        { status: 400 }
+        { error: "Aucun compte assureur trouvé pour cet utilisateur" },
+        { status: 404 }
       );
     }
+    const activeOnly = request.nextUrl.searchParams.get("active");
 
-    const where: Record<string, unknown> = { insurerId };
+    let query = db
+      .from("insurance_offers")
+      .select("*, category:insurance_categories(id, name, icon), insurer:insurers(id, name, code, logoUrl:logo_url)")
+      .eq("insurer_id", insurerId)
+      .order("created_at", { ascending: false });
+
     if (activeOnly === "true") {
-      where.isActive = true;
+      query = query.eq("is_active", true);
     }
 
-    const offers = await db.insuranceOffer.findMany({
-      where,
-      include: {
-        category: {
-          select: { id: true, name: true, icon: true },
-        },
-        insurer: {
-          select: { id: true, name: true, code: true, logoUrl: true },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-    });
+    const { data, error } = await query;
+    if (error) throw error;
+    const offers = mapRows(data || []);
 
     // Parse features JSON for each offer
     const parsed = offers.map((o) => ({
@@ -49,9 +55,19 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const guard = await requireAuth(["INSURER"]);
+    if (guard) return guard;
+
+    const insurerId = await resolveInsurerId();
+    if (!insurerId) {
+      return NextResponse.json(
+        { error: "Aucun compte assureur trouvé pour cet utilisateur" },
+        { status: 404 }
+      );
+    }
+
     const body = await request.json();
     const {
-      insurerId,
       categoryId,
       name,
       description,
@@ -71,40 +87,40 @@ export async function POST(request: NextRequest) {
       vehicleUsage,
     } = body;
 
-    if (!insurerId || !name) {
+    if (!name) {
       return NextResponse.json(
-        { error: "L'identifiant de l'assureur et le nom sont requis" },
+        { error: "Le nom est requis" },
         { status: 400 }
       );
     }
 
-    const offer = await db.insuranceOffer.create({
-      data: {
-        insurerId,
-        categoryId: categoryId || null,
+    const { data, error } = await db
+      .from("insurance_offers")
+      .insert({
+        insurer_id: insurerId,
+        category_id: categoryId || null,
         name,
         description: description || null,
-        priceMin: priceMin != null ? Number(priceMin) : null,
-        priceMax: priceMax != null ? Number(priceMax) : null,
-        coverageAmount: coverageAmount != null ? Number(coverageAmount) : null,
+        price_min: priceMin != null ? Number(priceMin) : null,
+        price_max: priceMax != null ? Number(priceMax) : null,
+        coverage_amount: coverageAmount != null ? Number(coverageAmount) : null,
         deductible: deductible != null ? Number(deductible) : 0,
         features: JSON.stringify(features || []),
-        contractType: contractType || null,
-        isActive: true,
-        fiscalPowerMin: fiscalPowerMin ? Number(fiscalPowerMin) : null,
-        fiscalPowerMax: fiscalPowerMax ? Number(fiscalPowerMax) : null,
-        fuelTypes: Array.isArray(fuelTypes) ? JSON.stringify(fuelTypes) : (fuelTypes || "[]"),
-        newValueMin: newValueMin ? Number(newValueMin) : null,
-        newValueMax: newValueMax ? Number(newValueMax) : null,
-        venalValueMin: venalValueMin ? Number(venalValueMin) : null,
-        venalValueMax: venalValueMax ? Number(venalValueMax) : null,
-        vehicleUsage: Array.isArray(vehicleUsage) ? JSON.stringify(vehicleUsage) : (vehicleUsage || "[]"),
-      },
-      include: {
-        category: { select: { id: true, name: true, icon: true } },
-        insurer: { select: { id: true, name: true, code: true, logoUrl: true } },
-      },
-    });
+        contract_type: contractType || null,
+        is_active: true,
+        fiscal_power_min: fiscalPowerMin ? Number(fiscalPowerMin) : null,
+        fiscal_power_max: fiscalPowerMax ? Number(fiscalPowerMax) : null,
+        fuel_types: Array.isArray(fuelTypes) ? JSON.stringify(fuelTypes) : (fuelTypes || "[]"),
+        new_value_min: newValueMin ? Number(newValueMin) : null,
+        new_value_max: newValueMax ? Number(newValueMax) : null,
+        venal_value_min: venalValueMin ? Number(venalValueMin) : null,
+        venal_value_max: venalValueMax ? Number(venalValueMax) : null,
+        vehicle_usage: Array.isArray(vehicleUsage) ? JSON.stringify(vehicleUsage) : (vehicleUsage || "[]"),
+      })
+      .select("*, category:insurance_categories(id, name, icon), insurer:insurers(id, name, code, logoUrl:logo_url)")
+      .single();
+    if (error) throw error;
+    const offer = mapRow(data);
 
     return NextResponse.json(
       { ...offer, features: JSON.parse(offer.features || "[]") },

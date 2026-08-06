@@ -18,13 +18,18 @@ export async function createNotification(params: CreateNotificationParams) {
   const validTypes = ["INFO", "SUCCESS", "WARNING", "ERROR"];
   const notificationType = type && validTypes.includes(type) ? type : "INFO";
 
-  return db.notification.create({
-    data: {
-      userId,
+  const { data, error } = await db
+    .from("notifications")
+    .insert({
+      user_id: userId,
       type: notificationType,
       title,
       message,
       link: link ?? null,
-    },
-  });
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
 }

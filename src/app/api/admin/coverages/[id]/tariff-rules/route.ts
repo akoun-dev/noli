@@ -1,4 +1,4 @@
-import { db } from "@/lib/db";
+import { db, mapRow, mapRows } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-guard";
 
@@ -10,7 +10,11 @@ export async function GET(
     const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
     const { id } = await params;
 
-    const coverage = await db.coverage.findUnique({ where: { id } });
+    const { data: coverage } = await db
+      .from("coverages")
+      .select("id")
+      .eq("id", id)
+      .maybeSingle();
     if (!coverage) {
       return NextResponse.json(
         { error: "Garantie introuvable" },
@@ -18,12 +22,14 @@ export async function GET(
       );
     }
 
-    const rules = await db.coverageTariffRule.findMany({
-      where: { coverageId: id },
-      orderBy: { minFiscalPower: "asc" },
-    });
+    const { data: rulesData, error } = await db
+      .from("coverage_tariff_rules")
+      .select("*")
+      .eq("coverage_id", id)
+      .order("min_fiscal_power", { ascending: true });
+    if (error) throw error;
 
-    return NextResponse.json(rules);
+    return NextResponse.json(mapRows(rulesData || []));
   } catch (error) {
     console.error("Erreur tariff-rules GET:", error);
     return NextResponse.json(
@@ -56,7 +62,11 @@ export async function POST(
       conditions,
     } = body;
 
-    const coverage = await db.coverage.findUnique({ where: { id } });
+    const { data: coverage } = await db
+      .from("coverages")
+      .select("id")
+      .eq("id", id)
+      .maybeSingle();
     if (!coverage) {
       return NextResponse.json(
         { error: "Garantie introuvable" },
@@ -64,29 +74,36 @@ export async function POST(
       );
     }
 
-    const rule = await db.coverageTariffRule.create({
-      data: {
-        coverageId: id,
-        vehicleCategory: vehicleCategory || null,
-        minFiscalPower: minFiscalPower ?? null,
-        maxFiscalPower: maxFiscalPower ?? null,
-        minVehicleValue: minVehicleValue ?? null,
-        maxVehicleValue: maxVehicleValue ?? null,
-        fuelType: fuelType || null,
-        formulaName: formulaName || null,
-        baseRate: baseRate ?? null,
-        fixedAmount: fixedAmount ?? null,
-        minAmount: minAmount ?? null,
-        maxAmount: maxAmount ?? null,
+    const { data: rule, error } = await db
+      .from("coverage_tariff_rules")
+      .insert({
+        coverage_id: id,
+        vehicle_category: vehicleCategory || null,
+        min_fiscal_power: minFiscalPower ?? null,
+        max_fiscal_power: maxFiscalPower ?? null,
+        min_vehicle_value: minVehicleValue ?? null,
+        max_vehicle_value: maxVehicleValue ?? null,
+        fuel_type: fuelType || null,
+        formula_name: formulaName || null,
+        base_rate: baseRate ?? null,
+        fixed_amount: fixedAmount ?? null,
+        min_amount: minAmount ?? null,
+        max_amount: maxAmount ?? null,
         conditions: typeof conditions === "object" ? JSON.stringify(conditions) : (conditions || "{}"),
-      },
+      })
+      .select()
+      .single();
+    if (error) throw error;
+
+    await db.from("audit_logs").insert({
+      action: "CREATE",
+      entity: "CoverageTariffRule",
+      entity_id: rule.id,
+      details: JSON.stringify({ coverageId: id, fuelType: rule.fuelType, minFiscalPower: rule.minFiscalPower, maxFiscalPower: rule.maxFiscalPower }),
+      user_name: "SYSTEM",
     });
 
-    await db.auditLog.create({
-      data: { action: "CREATE", entity: "CoverageTariffRule", entityId: rule.id, details: JSON.stringify({ coverageId: id, fuelType: rule.fuelType, minFiscalPower: rule.minFiscalPower, maxFiscalPower: rule.maxFiscalPower }), userName: "SYSTEM" },
-    });
-
-    return NextResponse.json(rule, { status: 201 });
+    return NextResponse.json(mapRow(rule), { status: 201 });
   } catch (error) {
     console.error("Erreur tariff-rules POST:", error);
     return NextResponse.json(

@@ -66,7 +66,7 @@ export function NotificationDropdown({ userId }: { userId: string }) {
   const fetchNotifications = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/notifications?userId=${userId}`);
+      const res = await fetch(`/api/notifications`);
       if (!res.ok) throw new Error();
       const data: Notification[] = await res.json();
       setNotifications(data);
@@ -121,7 +121,7 @@ export function NotificationDropdown({ userId }: { userId: string }) {
 
     try {
       setMarkingAll(true);
-      await fetch(`/api/notifications/read-all?userId=${userId}`, {
+      await fetch(`/api/notifications/read-all`, {
         method: "PUT",
       });
 

@@ -1,24 +1,43 @@
-import { db } from "@/lib/db";
+import { db, mapRow } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
+import { getInsurerAccount, getSessionProfile, requireAuth } from "@/lib/auth-guard";
+
+async function resolveInsurerId(): Promise<string | null> {
+  const profile = await getSessionProfile();
+  if (!profile) return null;
+  const account = await getInsurerAccount(profile.id);
+  return account?.insurerId || null;
+}
 
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const guard = await requireAuth(["INSURER"]);
+    if (guard) return guard;
+
+    const insurerId = await resolveInsurerId();
     const { id } = await params;
 
-    const coverage = await db.coverage.findUnique({
-      where: { id },
-      include: {
-        category: { select: { id: true, name: true, code: true } },
-      },
-    });
+    const { data } = await db
+      .from("coverages")
+      .select("*, category:coverage_categories(id, name, code)")
+      .eq("id", id)
+      .maybeSingle();
+    const coverage = mapRow(data);
 
     if (!coverage) {
       return NextResponse.json(
         { error: "Garantie non trouvée" },
         { status: 404 }
+      );
+    }
+
+    if (!insurerId || coverage.insurerId !== insurerId) {
+      return NextResponse.json(
+        { error: "Accès refusé" },
+        { status: 403 }
       );
     }
 
@@ -37,6 +56,10 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const guard = await requireAuth(["INSURER"]);
+    if (guard) return guard;
+
+    const insurerId = await resolveInsurerId();
     const { id } = await params;
     const body = await request.json();
     const {
@@ -66,7 +89,12 @@ export async function PUT(
       requiresGuarantee,
     } = body;
 
-    const existing = await db.coverage.findUnique({ where: { id } });
+    const { data: existingData } = await db
+      .from("coverages")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+    const existing = mapRow(existingData);
     if (!existing) {
       return NextResponse.json(
         { error: "Garantie non trouvée" },
@@ -74,11 +102,20 @@ export async function PUT(
       );
     }
 
+    if (!insurerId || existing.insurerId !== insurerId) {
+      return NextResponse.json(
+        { error: "Accès refusé" },
+        { status: 403 }
+      );
+    }
+
     // If code is being changed, check uniqueness
     if (code && code !== existing.code) {
-      const codeExists = await db.coverage.findUnique({
-        where: { code: code.toUpperCase().trim() },
-      });
+      const { data: codeExists } = await db
+        .from("coverages")
+        .select("id")
+        .eq("code", code.toUpperCase().trim())
+        .maybeSingle();
       if (codeExists) {
         return NextResponse.json(
           { error: "Une garantie avec ce code existe déjà" },
@@ -87,44 +124,45 @@ export async function PUT(
       }
     }
 
-    const updated = await db.coverage.update({
-      where: { id },
-      data: {
-        ...(categoryId !== undefined ? { categoryId: categoryId || null } : {}),
+    const { data, error } = await db
+      .from("coverages")
+      .update({
+        ...(categoryId !== undefined ? { category_id: categoryId || null } : {}),
         ...(code !== undefined ? { code: code.toUpperCase().trim() } : {}),
         ...(type !== undefined ? { type } : {}),
         ...(name !== undefined ? { name } : {}),
         ...(description !== undefined ? { description: description || null } : {}),
-        ...(calculationType !== undefined ? { calculationType } : {}),
-        ...(isMandatory !== undefined ? { isMandatory: Boolean(isMandatory) } : {}),
-        ...(isOptional !== undefined ? { isOptional: Boolean(isOptional) } : {}),
+        ...(calculationType !== undefined ? { calculation_type: calculationType } : {}),
+        ...(isMandatory !== undefined ? { is_mandatory: Boolean(isMandatory) } : {}),
+        ...(isOptional !== undefined ? { is_optional: Boolean(isOptional) } : {}),
         ...(conditions !== undefined ? { conditions: conditions || "{}" } : {}),
-        ...(displayOrder !== undefined ? { displayOrder: Number(displayOrder) } : {}),
+        ...(displayOrder !== undefined ? { display_order: Number(displayOrder) } : {}),
         ...(metadata !== undefined
           ? {
               metadata:
                 typeof metadata === "string" ? metadata : JSON.stringify(metadata),
             }
           : {}),
-        ...(isActive !== undefined ? { isActive: Boolean(isActive) } : {}),
+        ...(isActive !== undefined ? { is_active: Boolean(isActive) } : {}),
         // Structured columns
-        ...(variableSource !== undefined ? { variableSource: variableSource || null } : {}),
-        ...(ratePercent !== undefined ? { ratePercent: ratePercent != null ? Number(ratePercent) : null } : {}),
-        ...(conditionedByNewValue !== undefined ? { conditionedByNewValue: Boolean(conditionedByNewValue) } : {}),
-        ...(newValueThreshold !== undefined ? { newValueThreshold: newValueThreshold != null ? Number(newValueThreshold) : null } : {}),
-        ...(rateBelowThreshold !== undefined ? { rateBelowThreshold: rateBelowThreshold != null ? Number(rateBelowThreshold) : null } : {}),
-        ...(rateAboveThreshold !== undefined ? { rateAboveThreshold: rateAboveThreshold != null ? Number(rateAboveThreshold) : null } : {}),
-        ...(fixedAmount !== undefined ? { fixedAmount: fixedAmount != null ? Number(fixedAmount) : null } : {}),
-        ...(matrixDimension !== undefined ? { matrixDimension: matrixDimension || null } : {}),
-        ...(minAmount !== undefined ? { minAmount: minAmount != null ? Number(minAmount) : null } : {}),
-        ...(maxAmount !== undefined ? { maxAmount: maxAmount != null ? Number(maxAmount) : null } : {}),
+        ...(variableSource !== undefined ? { variable_source: variableSource || null } : {}),
+        ...(ratePercent !== undefined ? { rate_percent: ratePercent != null ? Number(ratePercent) : null } : {}),
+        ...(conditionedByNewValue !== undefined ? { conditioned_by_new_value: Boolean(conditionedByNewValue) } : {}),
+        ...(newValueThreshold !== undefined ? { new_value_threshold: newValueThreshold != null ? Number(newValueThreshold) : null } : {}),
+        ...(rateBelowThreshold !== undefined ? { rate_below_threshold: rateBelowThreshold != null ? Number(rateBelowThreshold) : null } : {}),
+        ...(rateAboveThreshold !== undefined ? { rate_above_threshold: rateAboveThreshold != null ? Number(rateAboveThreshold) : null } : {}),
+        ...(fixedAmount !== undefined ? { fixed_amount: fixedAmount != null ? Number(fixedAmount) : null } : {}),
+        ...(matrixDimension !== undefined ? { matrix_dimension: matrixDimension || null } : {}),
+        ...(minAmount !== undefined ? { min_amount: minAmount != null ? Number(minAmount) : null } : {}),
+        ...(maxAmount !== undefined ? { max_amount: maxAmount != null ? Number(maxAmount) : null } : {}),
         ...(capital !== undefined ? { capital: capital != null ? Number(capital) : null } : {}),
-        ...(requiresGuarantee !== undefined ? { requiresGuarantee: requiresGuarantee || null } : {}),
-      },
-      include: {
-        category: { select: { id: true, name: true, code: true } },
-      },
-    });
+        ...(requiresGuarantee !== undefined ? { requires_guarantee: requiresGuarantee || null } : {}),
+      })
+      .eq("id", id)
+      .select("*, category:coverage_categories(id, name, code)")
+      .single();
+    if (error) throw error;
+    const updated = mapRow(data);
 
     return NextResponse.json(updated);
   } catch (error) {
@@ -141,9 +179,18 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const guard = await requireAuth(["INSURER"]);
+    if (guard) return guard;
+
+    const insurerId = await resolveInsurerId();
     const { id } = await params;
 
-    const existing = await db.coverage.findUnique({ where: { id } });
+    const { data: existingData } = await db
+      .from("coverages")
+      .select("id, insurer_id")
+      .eq("id", id)
+      .maybeSingle();
+    const existing = mapRow(existingData);
     if (!existing) {
       return NextResponse.json(
         { error: "Garantie non trouvée" },
@@ -151,10 +198,14 @@ export async function DELETE(
       );
     }
 
-    await db.coverage.update({
-      where: { id },
-      data: { isActive: false },
-    });
+    if (!insurerId || existing.insurerId !== insurerId) {
+      return NextResponse.json(
+        { error: "Accès refusé" },
+        { status: 403 }
+      );
+    }
+
+    await db.from("coverages").update({ is_active: false }).eq("id", id);
 
     return NextResponse.json({ success: true });
   } catch (error) {

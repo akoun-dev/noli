@@ -1,39 +1,38 @@
-import { db } from "@/lib/db";
+import { db, mapRow, mapRows } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { updateUserSchema } from "@/lib/validation";
 import { requireAuth } from "@/lib/auth-guard";
 
-const userSelect = {
-  id: true,
-  email: true,
-  firstName: true,
-  lastName: true,
-  phone: true,
-  role: true,
-  isActive: true,
-  createdAt: true,
-  updatedAt: true,
-  _count: { select: { quotes: true } },
-} as const;
-
 export async function GET() {
   const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
   try {
-    const profiles = await db.profile.findMany({
-      select: userSelect,
-      orderBy: { createdAt: "desc" },
-    });
-    const users = profiles.map((p) => ({
-      id: p.id,
-      email: p.email,
-      name: [p.firstName, p.lastName].filter(Boolean).join(" "),
-      phone: p.phone,
-      role: p.role,
-      isActive: p.isActive,
-      createdAt: p.createdAt,
-      updatedAt: p.updatedAt,
-      _count: p._count,
-    }));
+    const { data, error } = await db
+      .from("profiles")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+
+    const profiles = mapRows(data || []);
+
+    const users = await Promise.all(
+      profiles.map(async (p) => {
+        const { count } = await db
+          .from("quotes")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", p.id);
+        return {
+          id: p.id,
+          email: p.email,
+          name: [p.firstName, p.lastName].filter(Boolean).join(" "),
+          phone: p.phone,
+          role: p.role,
+          isActive: p.isActive,
+          createdAt: p.createdAt,
+          updatedAt: p.updatedAt,
+          _count: { quotes: count ?? 0 },
+        };
+      })
+    );
     return NextResponse.json(users);
   } catch (error) {
     console.error("Erreur utilisateurs:", error);
@@ -55,40 +54,49 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: firstError }, { status: 400 });
     }
 
-    const existing = await db.profile.findUnique({
-      where: { id: parsed.data.id },
-      select: { id: true },
-    });
-    if (!existing) {
+    const { data: existingData } = await db
+      .from("profiles")
+      .select("id")
+      .eq("id", parsed.data.id)
+      .maybeSingle();
+    if (!existingData) {
       return NextResponse.json({ error: "Utilisateur non trouvé" }, { status: 404 });
     }
 
     const updateData: Record<string, unknown> = {};
     if (parsed.data.name !== undefined) {
       const parts = parsed.data.name.trim().split(/\s+/);
-      updateData.firstName = parts[0] || "";
-      updateData.lastName = parts.slice(1).join(" ") || "";
+      updateData.first_name = parts[0] || "";
+      updateData.last_name = parts.slice(1).join(" ") || "";
     }
     if (parsed.data.phone !== undefined) updateData.phone = parsed.data.phone;
     if (parsed.data.role !== undefined) updateData.role = parsed.data.role;
-    if (parsed.data.isActive !== undefined) updateData.isActive = parsed.data.isActive;
+    if (parsed.data.isActive !== undefined) updateData.is_active = parsed.data.isActive;
 
-    const profile = await db.profile.update({
-      where: { id: parsed.data.id },
-      data: updateData,
-      select: userSelect,
-    });
+    const { data: profileData, error } = await db
+      .from("profiles")
+      .update(updateData)
+      .eq("id", parsed.data.id)
+      .select()
+      .single();
+    if (error) throw error;
+
+    const profile = mapRow(profileData);
+    const { count } = await db
+      .from("quotes")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", parsed.data.id);
 
     const user = {
-      id: profile.id,
-      email: profile.email,
-      name: [profile.firstName, profile.lastName].filter(Boolean).join(" "),
-      phone: profile.phone,
-      role: profile.role,
-      isActive: profile.isActive,
-      createdAt: profile.createdAt,
-      updatedAt: profile.updatedAt,
-      _count: profile._count,
+      id: profile?.id,
+      email: profile?.email,
+      name: [profile?.firstName, profile?.lastName].filter(Boolean).join(" "),
+      phone: profile?.phone,
+      role: profile?.role,
+      isActive: profile?.isActive,
+      createdAt: profile?.createdAt,
+      updatedAt: profile?.updatedAt,
+      _count: { quotes: count ?? 0 },
     };
     return NextResponse.json(user);
   } catch (error) {

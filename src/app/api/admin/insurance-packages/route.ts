@@ -1,18 +1,36 @@
-import { db } from "@/lib/db";
+import { db, mapRow, mapRows } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-guard";
 
 export async function GET() {
   const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
   try {
-    const packages = await db.insurancePackage.findMany({
-      include: {
-        _count: { select: { coverageLinks: true } },
-      },
-      orderBy: { createdAt: "desc" },
-    });
+    const { data, error } = await db
+      .from("insurance_packages")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    const packages = mapRows(data || []);
 
-    return NextResponse.json(packages);
+    const ids = packages.map((p) => (p as { id: string }).id);
+    const linkCounts = new Map<string, number>();
+    if (ids.length > 0) {
+      const { data: linksData } = await db
+        .from("package_coverages")
+        .select("package_id")
+        .in("package_id", ids);
+      for (const l of linksData || []) {
+        const key = String(l.package_id);
+        linkCounts.set(key, (linkCounts.get(key) || 0) + 1);
+      }
+    }
+
+    const result = packages.map((p) => ({
+      ...p,
+      _count: { coverageLinks: linkCounts.get(String((p as { id: string }).id)) || 0 },
+    }));
+
+    return NextResponse.json(result);
   } catch (error) {
     console.error("Erreur insurance-packages GET:", error);
     return NextResponse.json(
@@ -41,16 +59,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const pkg = await db.insurancePackage.create({
-      data: {
+    const { data: pkg, error } = await db
+      .from("insurance_packages")
+      .insert({
         name,
         description: description || null,
-        basePrice,
-        isActive: isActive ?? true,
-      },
-    });
+        base_price: basePrice,
+        is_active: isActive ?? true,
+      })
+      .select()
+      .single();
+    if (error) throw error;
 
-    return NextResponse.json(pkg, { status: 201 });
+    return NextResponse.json(mapRow(pkg), { status: 201 });
   } catch (error) {
     console.error("Erreur insurance-packages POST:", error);
     return NextResponse.json(

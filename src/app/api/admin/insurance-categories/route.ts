@@ -1,18 +1,48 @@
-import { db } from "@/lib/db";
+import { db, mapRow, mapRows } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-guard";
 
 export async function GET() {
   const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
   try {
-    const categories = await db.insuranceCategory.findMany({
-      include: {
-        _count: { select: { offers: true, quotes: true } },
-      },
-      orderBy: { createdAt: "desc" },
-    });
+    const { data, error } = await db
+      .from("insurance_categories")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    const categories = mapRows(data || []);
 
-    return NextResponse.json(categories);
+    const ids = categories.map((c) => (c as { id: string }).id);
+    const offersCounts = new Map<string, number>();
+    const quotesCounts = new Map<string, number>();
+    if (ids.length > 0) {
+      const { data: offersData } = await db
+        .from("insurance_offers")
+        .select("category_id")
+        .in("category_id", ids);
+      for (const o of offersData || []) {
+        const key = String(o.category_id);
+        offersCounts.set(key, (offersCounts.get(key) || 0) + 1);
+      }
+      const { data: quotesData } = await db
+        .from("quotes")
+        .select("category_id")
+        .in("category_id", ids);
+      for (const q of quotesData || []) {
+        const key = String(q.category_id);
+        quotesCounts.set(key, (quotesCounts.get(key) || 0) + 1);
+      }
+    }
+
+    const result = categories.map((c) => ({
+      ...c,
+      _count: {
+        offers: offersCounts.get(String((c as { id: string }).id)) || 0,
+        quotes: quotesCounts.get(String((c as { id: string }).id)) || 0,
+      },
+    }));
+
+    return NextResponse.json(result);
   } catch (error) {
     console.error("Erreur insurance-categories GET:", error);
     return NextResponse.json(
@@ -35,20 +65,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const category = await db.insuranceCategory.create({
-      data: {
+    const { data: category, error } = await db
+      .from("insurance_categories")
+      .insert({
         name,
         description: description || null,
         icon: icon || null,
-        isActive: isActive ?? true,
-      },
+        is_active: isActive ?? true,
+      })
+      .select()
+      .single();
+    if (error) throw error;
+
+    await db.from("audit_logs").insert({
+      action: "CREATE",
+      entity: "InsuranceCategory",
+      entity_id: category.id,
+      details: JSON.stringify({ name: category.name }),
+      user_name: "SYSTEM",
     });
 
-    await db.auditLog.create({
-      data: { action: "CREATE", entity: "InsuranceCategory", entityId: category.id, details: JSON.stringify({ name: category.name }), userName: "SYSTEM" },
-    });
-
-    return NextResponse.json(category, { status: 201 });
+    return NextResponse.json(mapRow(category), { status: 201 });
   } catch (error) {
     console.error("Erreur insurance-categories POST:", error);
     return NextResponse.json(

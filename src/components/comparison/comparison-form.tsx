@@ -342,7 +342,7 @@ function Step1({
   errors,
   FieldError,
 }: {
-  personalInfo: { lastName: string; firstName: string; email: string; phone: string; whatsappOptIn: boolean };
+  personalInfo: { lastName: string; firstName: string; email: string; phone: string; whatsappOptIn?: boolean };
   setPersonalInfo: (info: Record<string, unknown>) => void;
   errors: Record<string, string>;
   FieldError: ({ field }: { field: string }) => React.ReactNode | null;

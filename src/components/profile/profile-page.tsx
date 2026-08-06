@@ -63,7 +63,7 @@ export function ProfilePage() {
   const fetchProfile = useCallback(async () => {
     if (!user.id) return;
     try {
-      const res = await fetch(`/api/profile?userId=${user.id}`);
+      const res = await fetch(`/api/profile`);
       if (!res.ok) throw new Error();
       const data = await res.json();
       setProfile(data);

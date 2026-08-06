@@ -1,4 +1,4 @@
-import { db } from "@/lib/db";
+import { db, mapRow, mapRows } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-guard";
 
@@ -10,24 +10,13 @@ export async function GET(
     const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
     const { id } = await params;
 
-    const pkg = await db.insurancePackage.findUnique({
-      where: { id },
-      include: {
-        coverageLinks: {
-          include: {
-            coverage: {
-              select: {
-                id: true,
-                name: true,
-                code: true,
-                type: true,
-              },
-            },
-          },
-          orderBy: { createdAt: "asc" },
-        },
-      },
-    });
+    const { data, error } = await db
+      .from("insurance_packages")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+    if (error) throw error;
+    const pkg = mapRow(data);
 
     if (!pkg) {
       return NextResponse.json(
@@ -36,7 +25,16 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(pkg);
+    const { data: linksData } = await db
+      .from("package_coverages")
+      .select("*, coverage:coverages(id, name, code, type)")
+      .eq("package_id", id)
+      .order("created_at", { ascending: true });
+
+    return NextResponse.json({
+      ...pkg,
+      coverageLinks: mapRows(linksData || []),
+    });
   } catch (error) {
     console.error("Erreur insurance-package GET:", error);
     return NextResponse.json(
@@ -56,7 +54,11 @@ export async function PUT(
     const body = await request.json();
     const { name, description, basePrice, isActive } = body;
 
-    const existing = await db.insurancePackage.findUnique({ where: { id } });
+    const { data: existing } = await db
+      .from("insurance_packages")
+      .select("id")
+      .eq("id", id)
+      .maybeSingle();
     if (!existing) {
       return NextResponse.json(
         { error: "Package introuvable" },
@@ -64,17 +66,20 @@ export async function PUT(
       );
     }
 
-    const pkg = await db.insurancePackage.update({
-      where: { id },
-      data: {
+    const { data: pkg, error } = await db
+      .from("insurance_packages")
+      .update({
         ...(name !== undefined && { name }),
         ...(description !== undefined && { description: description || null }),
-        ...(basePrice !== undefined && { basePrice }),
-        ...(isActive !== undefined && { isActive }),
-      },
-    });
+        ...(basePrice !== undefined && { base_price: basePrice }),
+        ...(isActive !== undefined && { is_active: isActive }),
+      })
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) throw error;
 
-    return NextResponse.json(pkg);
+    return NextResponse.json(mapRow(pkg));
   } catch (error) {
     console.error("Erreur insurance-package PUT:", error);
     return NextResponse.json(
@@ -92,7 +97,11 @@ export async function DELETE(
     const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
     const { id } = await params;
 
-    const existing = await db.insurancePackage.findUnique({ where: { id } });
+    const { data: existing } = await db
+      .from("insurance_packages")
+      .select("id")
+      .eq("id", id)
+      .maybeSingle();
     if (!existing) {
       return NextResponse.json(
         { error: "Package introuvable" },
@@ -100,7 +109,7 @@ export async function DELETE(
       );
     }
 
-    await db.insurancePackage.delete({ where: { id } });
+    await db.from("insurance_packages").delete().eq("id", id);
 
     return NextResponse.json({ success: true });
   } catch (error) {

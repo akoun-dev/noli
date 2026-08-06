@@ -1,4 +1,4 @@
-import { db } from "@/lib/db";
+import { db, mapRow, mapRows } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-guard";
 
@@ -18,28 +18,27 @@ export async function GET(request: NextRequest) {
     const contractType = searchParams.get("contractType");
     const search = searchParams.get("search") || "";
 
-    const where: Record<string, unknown> = {};
+    let query = db
+      .from("insurance_offers")
+      .select(
+        "*, insurer:insurers(id, name, code, logoUrl:logo_url), category:insurance_categories(id, name, icon)"
+      )
+      .order("created_at", { ascending: false });
+
     if (insurerId) {
-      where.insurerId = insurerId;
+      query = query.eq("insurer_id", insurerId);
     }
     if (contractType) {
-      where.contractType = contractType;
+      query = query.eq("contract_type", contractType);
     }
     if (search) {
-      where.OR = [
-        { name: { contains: search } },
-      ];
+      query = query.ilike("name", `%${search}%`);
     }
 
-    const offers = await db.insuranceOffer.findMany({
-      where,
-      include: {
-        insurer: { select: { id: true, name: true, code: true, logoUrl: true } },
-        category: { select: { id: true, name: true, icon: true } },
-      },
-      orderBy: { createdAt: "desc" },
-    });
+    const { data, error } = await query;
+    if (error) throw error;
 
+    const offers = mapRows(data || []);
     const parsed = offers.map((o) => parseFeatures(o as unknown as Record<string, unknown>));
     return NextResponse.json(parsed);
   } catch (error) {
@@ -90,41 +89,42 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const offer = await db.insuranceOffer.create({
-      data: {
-        insurerId,
-        categoryId: categoryId || null,
+    const { data: offer, error } = await db
+      .from("insurance_offers")
+      .insert({
+        insurer_id: insurerId,
+        category_id: categoryId || null,
         name,
         description: description || null,
-        priceMin: priceMin ?? null,
-        priceMax: priceMax ?? null,
-        coverageAmount: coverageAmount ?? null,
+        price_min: priceMin ?? null,
+        price_max: priceMax ?? null,
+        coverage_amount: coverageAmount ?? null,
         deductible: deductible ?? 0,
         features: Array.isArray(features) ? JSON.stringify(features) : (features || "[]"),
-        contractType: contractType || null,
-        isActive: isActive ?? true,
-        fiscalPowerMin: fiscalPowerMin ? Number(fiscalPowerMin) : null,
-        fiscalPowerMax: fiscalPowerMax ? Number(fiscalPowerMax) : null,
-        fuelTypes: Array.isArray(fuelTypes) ? JSON.stringify(fuelTypes) : (fuelTypes || "[]"),
-        newValueMin: newValueMin ? Number(newValueMin) : null,
-        newValueMax: newValueMax ? Number(newValueMax) : null,
-        venalValueMin: venalValueMin ? Number(venalValueMin) : null,
-        venalValueMax: venalValueMax ? Number(venalValueMax) : null,
-        vehicleUsage: Array.isArray(vehicleUsage) ? JSON.stringify(vehicleUsage) : (vehicleUsage || "[]"),
-      },
+        contract_type: contractType || null,
+        is_active: isActive ?? true,
+        fiscal_power_min: fiscalPowerMin ? Number(fiscalPowerMin) : null,
+        fiscal_power_max: fiscalPowerMax ? Number(fiscalPowerMax) : null,
+        fuel_types: Array.isArray(fuelTypes) ? JSON.stringify(fuelTypes) : (fuelTypes || "[]"),
+        new_value_min: newValueMin ? Number(newValueMin) : null,
+        new_value_max: newValueMax ? Number(newValueMax) : null,
+        venal_value_min: venalValueMin ? Number(venalValueMin) : null,
+        venal_value_max: venalValueMax ? Number(venalValueMax) : null,
+        vehicle_usage: Array.isArray(vehicleUsage) ? JSON.stringify(vehicleUsage) : (vehicleUsage || "[]"),
+      })
+      .select()
+      .single();
+    if (error) throw error;
+
+    await db.from("audit_logs").insert({
+      action: "CREATE",
+      entity: "InsuranceOffer",
+      entity_id: offer.id,
+      details: JSON.stringify({ name: offer.name, contractType: offer.contractType, insurerId }),
+      user_name: "SYSTEM",
     });
 
-    await db.auditLog.create({
-      data: {
-        action: "CREATE",
-        entity: "InsuranceOffer",
-        entityId: offer.id,
-        details: JSON.stringify({ name: offer.name, contractType: offer.contractType, insurerId }),
-        userName: "SYSTEM",
-      },
-    });
-
-    return NextResponse.json(parseFeatures(offer as unknown as Record<string, unknown>), { status: 201 });
+    return NextResponse.json(parseFeatures(mapRow(offer) as unknown as Record<string, unknown>), { status: 201 });
   } catch (error) {
     console.error("Erreur insurance-offers POST:", error);
     return NextResponse.json(
