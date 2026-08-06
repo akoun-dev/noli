@@ -214,7 +214,7 @@ export const useMarkNotificationAsRead = () => {
       queryClient.invalidateQueries({ queryKey: ['user-notifications'] });
       queryClient.invalidateQueries({ queryKey: ['notification-stats'] });
     },
-    onError: (error) => {
+    onError: (_error) => {
       toast.error('Erreur lors du marquage de la notification comme lue');
     },
   });
@@ -230,7 +230,7 @@ export const useMarkAllNotificationsAsRead = () => {
       queryClient.invalidateQueries({ queryKey: ['notification-stats'] });
       toast.success('Toutes les notifications ont été marquées comme lues');
     },
-    onError: (error) => {
+    onError: (_error) => {
       toast.error('Erreur lors du marquage des notifications');
     },
   });
@@ -245,7 +245,7 @@ export const useUpdateNotificationPreferences = () => {
       queryClient.invalidateQueries({ queryKey: ['notification-preferences'] });
       toast.success('Préférences de notification mises à jour');
     },
-    onError: (error) => {
+    onError: (_error) => {
       toast.error('Erreur lors de la mise à jour des préférences');
     },
   });

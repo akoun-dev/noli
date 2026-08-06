@@ -60,7 +60,7 @@ export const NotificationPreferencesComponent: React.FC<NotificationPreferencesP
   const { mutate: updatePreferences, isPending: isUpdating } = useUpdateNotificationPreferences();
   const isSending = false;
 
-  const handlePreferenceChange = (channel: string, category: string, value: boolean) => {
+  const handlePreferenceChange = (channel: string, _category: string, value: boolean) => {
     setLocalPreferences(prev => ({
       ...prev,
       channels: {

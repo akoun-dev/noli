@@ -77,7 +77,7 @@ export class ErrorBoundary extends Component<Props, State> {
     }
   }
 
-  componentDidUpdate(prevProps: Props, prevState: State) {
+  componentDidUpdate(prevProps: Props, _prevState: State) {
     // Réinitialiser l'état d'erreur si les props changent
     if (
       this.props.resetOnPropsChange &&

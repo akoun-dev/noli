@@ -502,7 +502,7 @@ const quoteService = {
   },
 
   // Exporter les devis
-  async exportQuotes(format: 'csv' | 'excel' = 'csv', filters?: QuoteFilters): Promise<Blob> {
+  async exportQuotes(_format: 'csv' | 'excel' = 'csv', filters?: QuoteFilters): Promise<Blob> {
     const quotes = await this.getAllQuotes(filters)
 
     // Créer le contenu CSV

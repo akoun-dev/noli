@@ -236,7 +236,7 @@ export default function MyReviewsPage() {
     setIsCreateDialogOpen(true)
   }
 
-  const handleDeleteReview = (reviewId: string) => {
+  const handleDeleteReview = (_reviewId: string) => {
     // TODO: Implement actual deletion when reviews table is created
     toast.success('Avis supprimé avec succès')
   }

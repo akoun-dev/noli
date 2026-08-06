@@ -355,7 +355,7 @@ describe('useChat', () => {
       // Assert
       expect(chatService.markAsRead).toHaveBeenCalledWith(mockRoomId, messageIds);
 
-      result.current.messages.forEach((message, index) => {
+      result.current.messages.forEach((message, _index) => {
         if (messageIds.includes(message.id)) {
           expect(message.read).toBe(true);
         }

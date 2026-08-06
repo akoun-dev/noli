@@ -297,7 +297,7 @@ const UserProfilePage = () => {
     // In a real app, this would trigger the actual download
   }
 
-  const handleDeleteDocument = (documentId: string) => {
+  const handleDeleteDocument = (_documentId: string) => {
     if (currentUser) {
       toast.success('Document supprimé avec succès')
     }
@@ -333,7 +333,7 @@ const UserProfilePage = () => {
     }
   }
 
-  const handleUpdatePreferences = async (key: string, value: any) => {
+  const handleUpdatePreferences = async (_key: string, _value: any) => {
     if (!currentUser) return
 
     try {

@@ -167,7 +167,7 @@ export class InsurerAnalyticsService {
 
   // Obtenir les analytics détaillés pour une période
   async getDetailedAnalytics(
-    insurerId: string,
+    _insurerId: string,
     period: AnalyticsPeriod
   ): Promise<DetailedAnalytics> {
     // Simuler un appel API
@@ -185,7 +185,7 @@ export class InsurerAnalyticsService {
   }
 
   // Obtenir les analytics en temps réel
-  async getRealTimeAnalytics(insurerId: string): Promise<{
+  async getRealTimeAnalytics(_insurerId: string): Promise<{
     activeUsers: number;
     pendingQuotes: number;
     todayRevenue: number;
@@ -207,9 +207,9 @@ export class InsurerAnalyticsService {
 
   // Exporter les analytics
   async exportAnalytics(
-    insurerId: string,
+    _insurerId: string,
     period: AnalyticsPeriod,
-    format: 'excel' | 'pdf' | 'csv'
+    _format: 'excel' | 'pdf' | 'csv'
   ): Promise<Blob> {
     await new Promise(resolve => setTimeout(resolve, 2000));
 
@@ -270,7 +270,7 @@ export class InsurerAnalyticsService {
     };
   }
 
-  private generatePerformanceMetrics(period: AnalyticsPeriod): PerformanceMetrics {
+  private generatePerformanceMetrics(_period: AnalyticsPeriod): PerformanceMetrics {
     return {
       averageResponseTime: Math.random() * 8 + 2,
       customerSatisfactionScore: Math.random() * 2 + 3,
@@ -307,7 +307,7 @@ export class InsurerAnalyticsService {
     };
   }
 
-  private generateClientMetrics(period: AnalyticsPeriod): ClientMetrics {
+  private generateClientMetrics(_period: AnalyticsPeriod): ClientMetrics {
     const totalClients = Math.floor(Math.random() * 1000) + 500;
     const activeClients = Math.floor(totalClients * 0.8);
     const newClients = Math.floor(Math.random() * 100) + 30;
@@ -371,7 +371,7 @@ export class InsurerAnalyticsService {
     };
   }
 
-  private generateProductMetrics(period: AnalyticsPeriod): ProductMetrics {
+  private generateProductMetrics(_period: AnalyticsPeriod): ProductMetrics {
     return {
       productPerformance: [
         {

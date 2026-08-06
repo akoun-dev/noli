@@ -36,7 +36,7 @@ export const InsurerDashboardPage: React.FC = () => {
 
   useEffect(() => {
     // S'abonner aux alertes
-    const unsubscribe = insurerAlertService.subscribe((alerts) => {
+    const unsubscribe = insurerAlertService.subscribe((_alerts) => {
       setUnreadAlerts(insurerAlertService.getUnreadAlerts().length);
     });
 

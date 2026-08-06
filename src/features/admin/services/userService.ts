@@ -391,7 +391,7 @@ export const useCreateUser = () => {
       queryClient.invalidateQueries(['admin-users']);
       queryClient.invalidateQueries(['admin-user-stats']);
     },
-    onError: (error) => {
+    onError: (_error) => {
       toast.error('Erreur lors de la création de l\'utilisateur');
     },
   });
@@ -407,7 +407,7 @@ export const useUpdateUser = () => {
       queryClient.invalidateQueries(['admin-users']);
       queryClient.invalidateQueries(['admin-user-stats']);
     },
-    onError: (error) => {
+    onError: (_error) => {
       toast.error('Erreur lors de la mise à jour de l\'utilisateur');
     },
   });
@@ -423,7 +423,7 @@ export const useDeleteUser = () => {
       queryClient.invalidateQueries(['admin-users']);
       queryClient.invalidateQueries(['admin-user-stats']);
     },
-    onError: (error) => {
+    onError: (_error) => {
       toast.error('Erreur lors de la suppression de l\'utilisateur');
     },
   });
@@ -445,7 +445,7 @@ export const useBulkUpdateUsers = () => {
       queryClient.invalidateQueries(['admin-users']);
       queryClient.invalidateQueries(['admin-user-stats']);
     },
-    onError: (error) => {
+    onError: (_error) => {
       toast.error('Erreur lors du traitement groupé des utilisateurs');
     },
   });
@@ -465,7 +465,7 @@ export const useExportUsers = () => {
       URL.revokeObjectURL(url);
       toast.success('Utilisateurs exportés avec succès');
     },
-    onError: (error) => {
+    onError: (_error) => {
       toast.error('Erreur lors de l\'export des utilisateurs');
     },
   });

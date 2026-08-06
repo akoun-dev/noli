@@ -161,7 +161,7 @@ class AnalyticsManager {
             });
           }
         },
-        page: (page, properties) => {
+        page: (page, _properties) => {
           if (typeof window !== 'undefined' && window.gtag) {
             window.gtag('config', import.meta.env.VITE_GA_MEASUREMENT_ID, {
               page_title: page,

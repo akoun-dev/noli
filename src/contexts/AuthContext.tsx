@@ -247,7 +247,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
 
           logger.auth('No session or valid cache found, setting unauthenticated state')
-          setState((prev) => ({
+          setState((_prev) => ({
             user: null,
             isAuthenticated: false,
             isLoading: false,
@@ -260,7 +260,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       } catch (error) {
         logger.error('Auth initialization error:', error)
-        setState((prev) => ({
+        setState((_prev) => ({
           user: null,
           isAuthenticated: false,
           isLoading: false,
@@ -454,7 +454,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => subscription.unsubscribe()
   }, [])
 
-  const login = async (email: string, password: string, securityContextData?: any) => {
+  const login = async (email: string, password: string, _securityContextData?: any) => {
     logger.auth('🔐 AuthContext.login appelé avec:', email)
     setState((prev) => ({ ...prev, isLoading: true }))
 

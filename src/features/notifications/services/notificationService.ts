@@ -523,7 +523,7 @@ export const fetchNotificationPreferences = async (
 }
 
 export const updateNotificationPreferences = async (
-  userId: string,
+  _userId: string,
   preferences: Partial<NotificationPreferences>
 ): Promise<NotificationPreferences> => {
   await new Promise((resolve) => setTimeout(resolve, 800))
@@ -728,7 +728,7 @@ export const useMarkAsRead = () => {
       queryClient.invalidateQueries(['unread-notifications', notification.userId])
       queryClient.invalidateQueries(['notification-stats', notification.userId])
     },
-    onError: (error) => {
+    onError: (_error) => {
       toast.error('Erreur lors du marquage de la notification comme lue')
     },
   })
@@ -745,7 +745,7 @@ export const useMarkAllAsRead = () => {
       queryClient.invalidateQueries(['notification-stats', userId])
       toast.success('Toutes les notifications ont été marquées comme lues')
     },
-    onError: (error) => {
+    onError: (_error) => {
       toast.error('Erreur lors du marquage des notifications comme lues')
     },
   })
@@ -761,7 +761,7 @@ export const useArchiveNotification = () => {
       queryClient.invalidateQueries(['unread-notifications', notification.userId])
       toast.success('Notification archivée avec succès')
     },
-    onError: (error) => {
+    onError: (_error) => {
       toast.error("Erreur lors de l'archivage de la notification")
     },
   })
@@ -782,7 +782,7 @@ export const useDeleteNotification = () => {
       }
       toast.success('Notification supprimée avec succès')
     },
-    onError: (error) => {
+    onError: (_error) => {
       toast.error('Erreur lors de la suppression de la notification')
     },
   })
@@ -811,7 +811,7 @@ export const useUpdateNotificationPreferences = () => {
       queryClient.invalidateQueries(['notification-preferences', preferences.userId])
       toast.success('Préférences mises à jour avec succès')
     },
-    onError: (error) => {
+    onError: (_error) => {
       toast.error('Erreur lors de la mise à jour des préférences')
     },
   })

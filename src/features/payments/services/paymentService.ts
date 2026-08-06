@@ -177,12 +177,12 @@ const mockStats: PaymentStats = {
 };
 
 // API Functions
-export const fetchPaymentMethods = async (userId: string): Promise<PaymentMethod[]> => {
+export const fetchPaymentMethods = async (_userId: string): Promise<PaymentMethod[]> => {
   await new Promise(resolve => setTimeout(resolve, 600));
   return mockPaymentMethods.filter(method => method.isActive);
 };
 
-export const createPaymentMethod = async (userId: string, methodData: Omit<PaymentMethod, 'id' | 'createdAt' | 'isActive'>): Promise<PaymentMethod> => {
+export const createPaymentMethod = async (_userId: string, methodData: Omit<PaymentMethod, 'id' | 'createdAt' | 'isActive'>): Promise<PaymentMethod> => {
   await new Promise(resolve => setTimeout(resolve, 1000));
 
   const newMethod: PaymentMethod = {
@@ -219,7 +219,7 @@ export const deletePaymentMethod = async (methodId: string): Promise<void> => {
   mockPaymentMethods[methodIndex].isActive = false;
 };
 
-export const setDefaultPaymentMethod = async (userId: string, methodId: string): Promise<void> => {
+export const setDefaultPaymentMethod = async (_userId: string, methodId: string): Promise<void> => {
   await new Promise(resolve => setTimeout(resolve, 500));
 
   mockPaymentMethods.forEach(method => {
@@ -344,7 +344,7 @@ export const fetchPaymentStats = async (): Promise<PaymentStats> => {
   return mockStats;
 };
 
-export const validatePaymentMethod = async (methodData: {
+export const validatePaymentMethod = async (_methodData: {
   type: PaymentMethod['type'];
   provider: PaymentMethod['provider'];
   token: string;
@@ -374,7 +374,7 @@ export const useCreatePaymentMethod = () => {
       toast.success('Méthode de paiement ajoutée avec succès');
       queryClient.invalidateQueries(['payment-methods']);
     },
-    onError: (error) => {
+    onError: (_error) => {
       toast.error('Erreur lors de l\'ajout de la méthode de paiement');
     },
   });
@@ -390,7 +390,7 @@ export const useUpdatePaymentMethod = () => {
       toast.success('Méthode de paiement mise à jour avec succès');
       queryClient.invalidateQueries(['payment-methods']);
     },
-    onError: (error) => {
+    onError: (_error) => {
       toast.error('Erreur lors de la mise à jour de la méthode de paiement');
     },
   });
@@ -405,7 +405,7 @@ export const useDeletePaymentMethod = () => {
       toast.success('Méthode de paiement supprimée avec succès');
       queryClient.invalidateQueries(['payment-methods']);
     },
-    onError: (error) => {
+    onError: (_error) => {
       toast.error('Erreur lors de la suppression de la méthode de paiement');
     },
   });
@@ -421,7 +421,7 @@ export const useSetDefaultPaymentMethod = () => {
       toast.success('Méthode de paiement définie par défaut avec succès');
       queryClient.invalidateQueries(['payment-methods']);
     },
-    onError: (error) => {
+    onError: (_error) => {
       toast.error('Erreur lors de la définition de la méthode de paiement par défaut');
     },
   });
@@ -430,7 +430,7 @@ export const useSetDefaultPaymentMethod = () => {
 export const useCreatePaymentIntent = () => {
   return useMutation({
     mutationFn: createPaymentIntent,
-    onError: (error) => {
+    onError: (_error) => {
       toast.error('Erreur lors de la création de l\'intention de paiement');
     },
   });
@@ -450,7 +450,7 @@ export const useProcessPayment = () => {
       queryClient.invalidateQueries(['payment-transactions']);
       queryClient.invalidateQueries(['payment-stats']);
     },
-    onError: (error) => {
+    onError: (_error) => {
       toast.error('Erreur lors du traitement du paiement');
     },
   });
@@ -480,7 +480,7 @@ export const useRefundTransaction = () => {
       queryClient.invalidateQueries(['payment-transactions']);
       queryClient.invalidateQueries(['payment-stats']);
     },
-    onError: (error) => {
+    onError: (_error) => {
       toast.error('Erreur lors du traitement du remboursement');
     },
   });
@@ -497,7 +497,7 @@ export const usePaymentStats = () => {
 export const useValidatePaymentMethod = () => {
   return useMutation({
     mutationFn: validatePaymentMethod,
-    onError: (error) => {
+    onError: (_error) => {
       toast.error('Erreur lors de la validation de la méthode de paiement');
     },
   });

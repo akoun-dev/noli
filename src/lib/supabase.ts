@@ -520,7 +520,7 @@ export const supabaseHelpers = {
   },
 
   // Audit logs (admin seulement)
-  async getAuditLogs(limit = 50, offset = 0) {
+  async getAuditLogs(_limit = 50, _offset = 0) {
     try {
       // Pour l'instant, retourner un tableau vide
       // TODO-1003: Implémenter les logs d'audit quand la table sera créée
@@ -533,7 +533,7 @@ export const supabaseHelpers = {
   },
 
   // Utilisateurs (admin seulement)
-  async getUsers(limit = 50, offset = 0) {
+  async getUsers(_limit = 50, _offset = 0) {
     try {
       // Pour l'instant, retourner les utilisateurs de test
       // TODO-1004: Implémenter la vraie liste d'utilisateurs quand la table profiles sera créée

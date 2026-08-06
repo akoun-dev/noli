@@ -284,7 +284,7 @@ describe('SecurityManager', () => {
       const context = { ip: '192.168.1.100', userAgent: 'test-agent' }
 
       // Simuler plusieurs requêtes simultanées
-      const promises = Array.from({ length: 10 }, (_, i) =>
+      const promises = Array.from({ length: 10 }, (_, _i) =>
         securityManager.checkRateLimit(email, 'login', context)
       )
 

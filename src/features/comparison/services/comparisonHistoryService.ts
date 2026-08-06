@@ -264,7 +264,7 @@ export const fetchComparisonHistory = async (
     }
 
     // Transform quotes to comparison history format
-    let comparisons: ComparisonHistory[] = (quotes || []).map((quote, index) => {
+    let comparisons: ComparisonHistory[] = (quotes || []).map((quote, _index) => {
       const vehicleData = quote.vehicle_data || {}
       const coverageData = quote.coverage_requirements || {}
 
@@ -672,7 +672,7 @@ export const useSaveComparisonHistory = () => {
       toast.success('Comparaison sauvegardée avec succès')
       queryClient.invalidateQueries(['comparison-history'])
     },
-    onError: (error) => {
+    onError: (_error) => {
       toast.error('Erreur lors de la sauvegarde de la comparaison')
     },
   })
@@ -694,7 +694,7 @@ export const useUpdateComparisonHistory = () => {
       queryClient.invalidateQueries(['comparison-history'])
       queryClient.invalidateQueries(['comparison-details'])
     },
-    onError: (error) => {
+    onError: (_error) => {
       toast.error('Erreur lors de la mise à jour de la comparaison')
     },
   })
@@ -709,7 +709,7 @@ export const useDeleteComparisonHistory = () => {
       toast.success('Comparaison supprimée avec succès')
       queryClient.invalidateQueries(['comparison-history'])
     },
-    onError: (error) => {
+    onError: (_error) => {
       toast.error('Erreur lors de la suppression de la comparaison')
     },
   })
@@ -726,7 +726,7 @@ export const useShareComparisonHistory = () => {
       queryClient.invalidateQueries(['comparison-history'])
       queryClient.invalidateQueries(['comparison-details'])
     },
-    onError: (error) => {
+    onError: (_error) => {
       toast.error('Erreur lors du partage de la comparaison')
     },
   })
@@ -751,7 +751,7 @@ export const useSaveComparisonOffer = () => {
       queryClient.invalidateQueries(['comparison-details'])
       queryClient.invalidateQueries(['comparison-history'])
     },
-    onError: (error) => {
+    onError: (_error) => {
       toast.error("Erreur lors de la sauvegarde de l'offre")
     },
   })
@@ -772,7 +772,7 @@ export const useUpdateSavedOffer = () => {
       toast.success('Offre mise à jour avec succès')
       queryClient.invalidateQueries(['comparison-details'])
     },
-    onError: (error) => {
+    onError: (_error) => {
       toast.error("Erreur lors de la mise à jour de l'offre")
     },
   })
@@ -787,7 +787,7 @@ export const useDeleteSavedOffer = () => {
       toast.success('Offre supprimée avec succès')
       queryClient.invalidateQueries(['comparison-details'])
     },
-    onError: (error) => {
+    onError: (_error) => {
       toast.error("Erreur lors de la suppression de l'offre")
     },
   })
@@ -815,7 +815,7 @@ export const useExportComparisonHistory = () => {
       URL.revokeObjectURL(url)
       toast.success('Historique exporté avec succès')
     },
-    onError: (error) => {
+    onError: (_error) => {
       toast.error("Erreur lors de l'export de l'historique")
     },
   })

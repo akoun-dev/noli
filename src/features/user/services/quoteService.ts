@@ -378,10 +378,10 @@ export const useDownloadQuotePdf = () => {
 
   return useMutation({
     mutationFn: downloadQuotePdf,
-    onSuccess: (_, quoteId) => {
+    onSuccess: (_, _quoteId) => {
       toast.success('PDF téléchargé avec succès')
     },
-    onError: (error) => {
+    onError: (_error) => {
       toast.error('Erreur lors du téléchargement du PDF')
     },
   })
@@ -398,10 +398,10 @@ export const useSendQuoteNotifications = () => {
       quoteId: string
       channels: ('email' | 'whatsapp' | 'sms')[]
     }) => sendQuoteNotifications(quoteId, channels),
-    onSuccess: (_, { quoteId, channels }) => {
+    onSuccess: (_, { channels }) => {
       toast.success(`Notifications envoyées avec succès via ${channels.join(', ')}`)
     },
-    onError: (error) => {
+    onError: (_error) => {
       toast.error("Erreur lors de l'envoi des notifications")
     },
   })
@@ -418,14 +418,14 @@ export const useUpdateQuoteStatus = () => {
       quoteId: string
       status: 'approved' | 'rejected' | 'pending'
     }) => updateQuoteStatus(quoteId, status),
-    onSuccess: (_, { quoteId, status }) => {
+    onSuccess: (_, { status }) => {
       toast.success(
         `Statut du devis mis à jour : ${status === 'approved' ? 'Approuvé' : status === 'rejected' ? 'Rejeté' : 'En attente'}`
       )
       // Invalidate quotes query to refresh the list
       queryClient.invalidateQueries({ queryKey: ['user-quotes'] })
     },
-    onError: (error) => {
+    onError: (_error) => {
       toast.error('Erreur lors de la mise à jour du statut')
     },
   })

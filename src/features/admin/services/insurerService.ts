@@ -296,7 +296,7 @@ export const fetchInsurerStats = async (): Promise<InsurerStats> => {
   }
 };
 
-export const exportInsurers = async (format: 'csv' | 'excel' = 'csv'): Promise<Blob> => {
+export const exportInsurers = async (_format: 'csv' | 'excel' = 'csv'): Promise<Blob> => {
   try {
     const insurers = await fetchInsurers();
 
@@ -465,7 +465,7 @@ export const useCreateInsurer = () => {
       queryClient.invalidateQueries(['admin-insurers']);
       queryClient.invalidateQueries(['admin-insurer-stats']);
     },
-    onError: (error) => {
+    onError: (_error) => {
       toast.error('Erreur lors de la création de l\'assureur');
     },
   });
@@ -482,7 +482,7 @@ export const useUpdateInsurer = () => {
       queryClient.invalidateQueries(['admin-insurers']);
       queryClient.invalidateQueries(['admin-insurer-stats']);
     },
-    onError: (error) => {
+    onError: (_error) => {
       toast.error('Erreur lors de la mise à jour de l\'assureur');
     },
   });
@@ -498,7 +498,7 @@ export const useDeleteInsurer = () => {
       queryClient.invalidateQueries(['admin-insurers']);
       queryClient.invalidateQueries(['admin-insurer-stats']);
     },
-    onError: (error) => {
+    onError: (_error) => {
       toast.error('Erreur lors de la suppression de l\'assureur');
     },
   });
@@ -515,7 +515,7 @@ export const useUpdateInsurerStatus = () => {
       queryClient.invalidateQueries(['admin-insurers']);
       queryClient.invalidateQueries(['admin-insurer-stats']);
     },
-    onError: (error) => {
+    onError: (_error) => {
       toast.error('Erreur lors de la mise à jour du statut');
     },
   });
@@ -531,7 +531,7 @@ export const useApproveInsurer = () => {
       queryClient.invalidateQueries(['admin-insurers']);
       queryClient.invalidateQueries(['admin-insurer-stats']);
     },
-    onError: (error) => {
+    onError: (_error) => {
       toast.error('Erreur lors de l\'approbation de l\'assureur');
     },
   });
@@ -551,7 +551,7 @@ export const useExportInsurers = () => {
       URL.revokeObjectURL(url);
       toast.success('Assureurs exportés avec succès');
     },
-    onError: (error) => {
+    onError: (_error) => {
       toast.error('Erreur lors de l\'export des assureurs');
     },
   });
@@ -560,7 +560,7 @@ export const useExportInsurers = () => {
 export const useSearchInsurers = () => {
   return useMutation({
     mutationFn: searchInsurers,
-    onError: (error) => {
+    onError: (_error) => {
       toast.error('Erreur lors de la recherche des assureurs');
     },
   });

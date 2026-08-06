@@ -383,7 +383,7 @@ export const useUpdateNotificationPreferences = () => {
       toast.success('Préférences de notification mises à jour');
       queryClient.invalidateQueries(['notification-preferences']);
     },
-    onError: (error) => {
+    onError: (_error) => {
       toast.error('Erreur lors de la mise à jour des préférences');
     },
   });
@@ -398,7 +398,7 @@ export const useMarkNotificationAsRead = () => {
       queryClient.invalidateQueries(['notifications']);
       queryClient.invalidateQueries(['notifications', 'unread']);
     },
-    onError: (error) => {
+    onError: (_error) => {
       toast.error('Erreur lors du marquage de la notification');
     },
   });
@@ -414,7 +414,7 @@ export const useMarkAllNotificationsAsRead = () => {
       queryClient.invalidateQueries(['notifications']);
       queryClient.invalidateQueries(['notifications', 'unread']);
     },
-    onError: (error) => {
+    onError: (_error) => {
       toast.error('Erreur lors du marquage des notifications');
     },
   });
@@ -430,7 +430,7 @@ export const useCreateNotification = () => {
       queryClient.invalidateQueries(['notifications']);
       queryClient.invalidateQueries(['notifications', 'unread']);
     },
-    onError: (error) => {
+    onError: (_error) => {
       toast.error('Erreur lors de la création de la notification');
     },
   });
@@ -446,7 +446,7 @@ export const useDeleteNotification = () => {
       queryClient.invalidateQueries(['notifications']);
       queryClient.invalidateQueries(['notifications', 'unread']);
     },
-    onError: (error) => {
+    onError: (_error) => {
       toast.error('Erreur lors de la suppression de la notification');
     },
   });

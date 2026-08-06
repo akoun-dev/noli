@@ -364,7 +364,7 @@ export const DetailedAnalyticsDashboard: React.FC = () => {
               <Card className="p-6">
                 <h3 className="text-lg font-semibold mb-4">Entonnoir de conversion</h3>
                 <div className="space-y-4">
-                  {analytics.conversion.conversionFunnel.map((stage, index) => (
+                  {analytics.conversion.conversionFunnel.map((stage, _index) => (
                     <div key={stage.stage} className="space-y-2">
                       <div className="flex justify-between text-sm">
                         <span>{stage.stage}</span>

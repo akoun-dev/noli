@@ -185,7 +185,7 @@ class ChatService {
   }
 
   // Obtenir l'historique des messages
-  async getChatHistory(roomId: string): Promise<ChatMessage[]> {
+  async getChatHistory(_roomId: string): Promise<ChatMessage[]> {
     // Simuler la récupération de l'historique
     return new Promise((resolve) => {
       setTimeout(() => {
@@ -244,7 +244,7 @@ class ChatService {
   }
 
   // Envoyer un fichier
-  sendFile(file: File, roomId: string) {
+  sendFile(file: File, _roomId: string) {
     const message: Omit<ChatMessage, 'id' | 'timestamp'> = {
       senderId: 'user-1',
       senderName: 'Vous',
@@ -261,7 +261,7 @@ class ChatService {
   }
 
   // Envoyer une localisation
-  sendLocation(location: { lat: number; lng: number; address: string }, roomId: string) {
+  sendLocation(location: { lat: number; lng: number; address: string }, _roomId: string) {
     const message: Omit<ChatMessage, 'id' | 'timestamp'> = {
       senderId: 'user-1',
       senderName: 'Vous',

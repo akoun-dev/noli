@@ -246,7 +246,7 @@ export default function DocumentsPage() {
     uploadDocumentMutation.mutate(files)
   }
 
-  const handleDeleteDocument = (documentId: string) => {
+  const handleDeleteDocument = (_documentId: string) => {
     toast.success('Document supprimé avec succès')
     // TODO: Implement actual deletion from storage and database
   }

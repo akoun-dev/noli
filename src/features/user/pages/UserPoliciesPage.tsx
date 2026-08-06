@@ -253,11 +253,11 @@ const UserPoliciesPage = () => {
     setSelectedPolicy(policy)
   }
 
-  const handleMakePayment = (policyId: string) => {
+  const handleMakePayment = (_policyId: string) => {
     toast.success('Redirection vers le paiement...')
   }
 
-  const handleFileClaim = (policyId: string) => {
+  const handleFileClaim = (_policyId: string) => {
     toast.success('Redirection vers la déclaration de sinistre...')
   }
 

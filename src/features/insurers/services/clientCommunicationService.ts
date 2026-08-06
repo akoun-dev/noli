@@ -79,7 +79,7 @@ export class ClientCommunicationService {
   }
 
   // Récupérer les clients d'un assureur
-  async getClients(insurerId: string): Promise<Client[]> {
+  async getClients(_insurerId: string): Promise<Client[]> {
     // Simulation de récupération depuis API
     await new Promise(resolve => setTimeout(resolve, 500));
 
@@ -219,8 +219,8 @@ export class ClientCommunicationService {
   // Envoyer une communication en masse
   async sendBulkCommunication(
     clientIds: string[],
-    templateId: string,
-    customizations?: Record<string, string>
+    _templateId: string,
+    _customizations?: Record<string, string>
   ): Promise<{ success: string[]; failed: string[] }> {
     await new Promise(resolve => setTimeout(resolve, 2000));
 
@@ -248,7 +248,7 @@ export class ClientCommunicationService {
   }
 
   // Obtenir les templates de communication
-  async getTemplates(insurerId: string): Promise<CommunicationTemplate[]> {
+  async getTemplates(_insurerId: string): Promise<CommunicationTemplate[]> {
     await new Promise(resolve => setTimeout(resolve, 300));
 
     return [
@@ -285,7 +285,7 @@ export class ClientCommunicationService {
   }
 
   // Obtenir les règles d'alerte
-  async getAlertRules(insurerId: string): Promise<AlertRule[]> {
+  async getAlertRules(_insurerId: string): Promise<AlertRule[]> {
     await new Promise(resolve => setTimeout(resolve, 300));
 
     return [
@@ -353,7 +353,7 @@ export class ClientCommunicationService {
   }
 
   // Obtenir les statistiques de communication
-  async getCommunicationStats(insurerId: string, period: '7d' | '30d' | '90d' = '30d'): Promise<{
+  async getCommunicationStats(_insurerId: string, _period: '7d' | '30d' | '90d' = '30d'): Promise<{
     totalSent: number;
     totalDelivered: number;
     totalRead: number;

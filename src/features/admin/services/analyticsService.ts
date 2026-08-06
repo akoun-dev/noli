@@ -601,7 +601,7 @@ export const fetchQuoteAnalytics = async (): Promise<QuoteAnalytics> => {
 
 export const exportAnalyticsReport = async (
   reportType: 'users' | 'quotes' | 'insurers' | 'comprehensive',
-  period: '7d' | '30d' | '90d' = '30d'
+  _period: '7d' | '30d' | '90d' = '30d'
 ): Promise<Blob> => {
   try {
     // Récupérer les données selon le type de rapport

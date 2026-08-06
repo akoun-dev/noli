@@ -55,8 +55,8 @@ class DocumentService {
   async uploadDocument(
     userId: string,
     file: File,
-    category: DocumentCategory,
-    metadata?: {
+    _category: DocumentCategory,
+    _metadata?: {
       quoteId?: string
       policyId?: string
       insurerId?: string

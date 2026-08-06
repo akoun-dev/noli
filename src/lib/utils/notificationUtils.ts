@@ -54,7 +54,7 @@ export const validateNotificationPreferences = (preferences: any) => {
   return true;
 };
 
-export const createNotificationTitle = (type: string, data: any): string => {
+export const createNotificationTitle = (type: string, _data: any): string => {
   switch (type) {
     case 'quote_generated':
       return '📄 Nouveau devis disponible';

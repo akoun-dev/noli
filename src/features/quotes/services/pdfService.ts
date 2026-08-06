@@ -217,7 +217,7 @@ export class PDFService {
     this.doc.setFontSize(11);
     this.doc.setTextColor(0, 0, 0);
 
-    insuranceInfo.features.forEach((feature, index) => {
+    insuranceInfo.features.forEach((feature, _index) => {
       this.doc.text(`• ${feature}`, 25, yPosition);
       yPosition += 7;
     });

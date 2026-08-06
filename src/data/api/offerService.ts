@@ -581,7 +581,7 @@ const offerService = {
   },
 
   // Exporter les offres
-  async exportOffers(format: 'csv' | 'excel' = 'csv'): Promise<Blob> {
+  async exportOffers(_format: 'csv' | 'excel' = 'csv'): Promise<Blob> {
     const offers = await this.getAllOffers()
 
     // Créer le contenu CSV

@@ -278,7 +278,7 @@ export const AdminDashboardCharts: React.FC<AdminDashboardChartsProps> = ({
                     fill="#8884d8"
                     dataKey="value"
                   >
-                    {ageChartData.map((entry, index) => (
+                    {ageChartData.map((_entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>

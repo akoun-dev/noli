@@ -102,7 +102,7 @@ function calculateGrowth(current: number, previous: number): number {
 // Service Supabase
 const supabaseAnalyticsService = {
   // Récupérer les statistiques de la plateforme
-  async fetchPlatformStats(filters?: AnalyticsFilters): Promise<PlatformStats> {
+  async fetchPlatformStats(_filters?: AnalyticsFilters): Promise<PlatformStats> {
     try {
       // Utiliser la vue utilisateur_stats_view si disponible, sinon calculer manuellement
       const { data: userStats, error: userStatsError } = await supabase
@@ -196,7 +196,7 @@ const supabaseAnalyticsService = {
   },
 
   // Récupérer les données d'activité
-  async fetchActivityData(period: '7d' | '30d' | '90d' = '7d', filters?: AnalyticsFilters): Promise<ActivityData[]> {
+  async fetchActivityData(period: '7d' | '30d' | '90d' = '7d', _filters?: AnalyticsFilters): Promise<ActivityData[]> {
     try {
       // Utiliser la vue daily_activity_view si disponible
       const { data: dailyActivity, error } = await supabase
@@ -269,7 +269,7 @@ const supabaseAnalyticsService = {
   },
 
   // Récupérer les meilleurs assureurs
-  async fetchTopInsurers(limit: number = 10, filters?: AnalyticsFilters): Promise<TopInsurer[]> {
+  async fetchTopInsurers(limit: number = 10, _filters?: AnalyticsFilters): Promise<TopInsurer[]> {
     try {
       // Utiliser la vue insurer_performance_view si disponible
       const { data: insurerPerformance, error } = await supabase
@@ -369,7 +369,7 @@ const supabaseAnalyticsService = {
   },
 
   // Récupérer les données démographiques des utilisateurs
-  async fetchUserDemographics(filters?: AnalyticsFilters): Promise<UserDemographics> {
+  async fetchUserDemographics(_filters?: AnalyticsFilters): Promise<UserDemographics> {
     try {
       const { data: users } = await supabase
         .from('profiles')
@@ -471,7 +471,7 @@ const supabaseAnalyticsService = {
   },
 
   // Récupérer les analytics des devis
-  async fetchQuoteAnalytics(filters?: AnalyticsFilters): Promise<QuoteAnalytics> {
+  async fetchQuoteAnalytics(_filters?: AnalyticsFilters): Promise<QuoteAnalytics> {
     try {
       // Utiliser la vue quote_stats_view si disponible
       const { data: quoteStats, error } = await supabase
