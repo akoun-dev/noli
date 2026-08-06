@@ -141,7 +141,7 @@ export function UserProfileTab() {
         throw new Error(err.error || "Erreur lors de la sauvegarde");
       }
       const newName = `${firstName} ${lastName}`.trim();
-      setUser({ name: newName });
+      setUser({ ...user, name: newName });
       toast({
         title: "Profil mis à jour",
         description: "Vos informations personnelles ont été enregistrées.",

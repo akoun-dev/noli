@@ -22,7 +22,7 @@ import { Separator } from "@/components/ui/separator";
 const fmtPrice = (n: number) => new Intl.NumberFormat("fr-FR").format(n) + " FCFA";
 
 interface Pkg { id: string; name: string; description: string | null; basePrice: number; isActive: boolean; _count: { coverageLinks: number }; }
-interface CovMini { id: string; name: string; code: string; type: string; category?: { id: string; name: string; code: string } | null; }
+interface CovMini { id: string; name: string; code: string; type: string; calculationType?: string; category?: { id: string; name: string; code: string } | null; }
 interface PkgDetail extends Pkg { coverageLinks: { id: string; coverageId: string; isMandatory: boolean; coverage: CovMini }[] }
 
 const calcColors: Record<string, string> = { FREE: "bg-emerald-100 text-emerald-800", FIXED_AMOUNT: "bg-blue-100 text-blue-800", VARIABLE_BASED: "bg-orange-100 text-orange-800", MATRIX_BASED: "bg-purple-100 text-purple-800" };

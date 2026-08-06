@@ -661,7 +661,14 @@ function RegisterPage() {
 
       {renderStepIndicator()}
 
-      <form onSubmit={(e) => { e.preventDefault(); step < totalSteps ? handleNext() : handleSubmit(); }} className="space-y-4">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (step < totalSteps) handleNext();
+          else handleSubmit();
+        }}
+        className="space-y-4"
+      >
       {step === 1 && renderStep1()}
       {step === 2 && renderStep2()}
       {step === 3 && role === "INSURER" && (

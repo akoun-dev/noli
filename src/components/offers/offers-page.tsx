@@ -348,9 +348,11 @@ export function OffersPage() {
         description: offer.description,
         monthlyPrice: offer.priceMin,
         annualPrice: offer.priceMax,
+        contractDuration: 12,
         deductible: offer.deductible,
         maxCoverage: offer.coverageAmount,
         features: offer.features,
+        conditions: null,
       });
       setView("compare");
     },

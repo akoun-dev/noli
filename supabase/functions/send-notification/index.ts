@@ -14,7 +14,7 @@ interface NotificationPayload {
   link?: string
 }
 
-export default {
+const sendNotification = {
   fetch: withSupabase({ auth: 'secret' }, async (req, ctx) => {
     const body = (await req.json()) as NotificationPayload
 
@@ -42,3 +42,5 @@ export default {
     return Response.json({ data }, { status: 201 })
   }),
 }
+
+export default sendNotification

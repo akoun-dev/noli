@@ -48,7 +48,7 @@ function parseVehicleInfo(vehicleInfo: string | Record<string, unknown> | null):
     const v = typeof vehicleInfo === 'string' ? JSON.parse(vehicleInfo) : vehicleInfo;
     return [v.marque, v.modele].filter(Boolean).join(" ") || "—";
   } catch {
-    return vehicleInfo;
+    return typeof vehicleInfo === "string" ? vehicleInfo : "—";
   }
 }
 

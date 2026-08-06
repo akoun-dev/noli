@@ -196,12 +196,12 @@ function buildOfferResult(
     {
       fiscalPowerMin: offer.fiscalPowerMin,
       fiscalPowerMax: offer.fiscalPowerMax,
-      fuelTypes: offerFuelTypes as unknown as string,
+      fuelTypes: offerFuelTypes,
       newValueMin: offer.newValueMin,
       newValueMax: offer.newValueMax,
       venalValueMin: offer.venalValueMin,
       venalValueMax: offer.venalValueMax,
-      vehicleUsage: offerVehicleUsage as unknown as string,
+      vehicleUsage: offerVehicleUsage,
       contractType: offer.contractType,
       priceMin: offer.priceMin,
       priceMax: offer.priceMax,
@@ -299,12 +299,12 @@ export async function runComparison(
       {
         fiscalPowerMin: offer.fiscalPowerMin,
         fiscalPowerMax: offer.fiscalPowerMax,
-        fuelTypes: offerFuelTypes as unknown as string,
+        fuelTypes: offerFuelTypes,
         newValueMin: offer.newValueMin,
         newValueMax: offer.newValueMax,
         venalValueMin: offer.venalValueMin,
         venalValueMax: offer.venalValueMax,
-        vehicleUsage: offerVehicleUsage as unknown as string,
+        vehicleUsage: offerVehicleUsage,
       },
       pricingVehicle
     )) {

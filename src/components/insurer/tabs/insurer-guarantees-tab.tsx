@@ -1170,11 +1170,11 @@ export function InsurerGuaranteesTab() {
           </div>
 
           {/* Example calculation */}
-          {metadata.variableSource && metadata.ratePercent ? (
+          {!!metadata.variableSource && !!metadata.ratePercent ? (
             <div className="rounded-lg bg-muted/50 border p-3 text-xs space-y-1">
               <p className="font-medium text-muted-foreground">Exemples de calcul :</p>
               <p className="font-mono">
-                VN 18 000 000 × {metadata.ratePercent}% ={" "}
+                VN 18 000 000 × {(metadata.ratePercent as number) || 0}% ={" "}
                 <span className="font-bold text-foreground">
                   {(
                     18000000 *
@@ -1185,7 +1185,7 @@ export function InsurerGuaranteesTab() {
                 </span>
               </p>
               <p className="font-mono">
-                VN 10 000 000 × {metadata.ratePercent}% ={" "}
+                VN 10 000 000 × {(metadata.ratePercent as number) || 0}% ={" "}
                 <span className="font-bold text-foreground">
                   {(
                     10000000 *
@@ -1213,7 +1213,7 @@ export function InsurerGuaranteesTab() {
               Taux conditionné par seuil de valeur neuve
             </Label>
           </div>
-          {metadata.conditionedByNewValue && (
+          {!!metadata.conditionedByNewValue && (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 rounded-lg border bg-muted/30 p-4">
               <div className="w-full">
                 <Label className="text-xs">
@@ -1273,17 +1273,17 @@ export function InsurerGuaranteesTab() {
           )}
 
           {/* Conditional example */}
-          {metadata.conditionedByNewValue && metadata.newValueThreshold ? (
+          {!!metadata.conditionedByNewValue && !!metadata.newValueThreshold ? (
             <div className="rounded-lg bg-muted/50 border p-3 text-xs space-y-1">
               <p className="font-medium text-muted-foreground">Exemples conditionnels :</p>
               <p className="font-mono">
-                VN 18M ≤ {Number(metadata.newValueThreshold).toLocaleString("fr-FR")} → VN × {metadata.rateBelowThresholdPercent}% ={" "}
+                VN 18M ≤ {Number(metadata.newValueThreshold).toLocaleString("fr-FR")} → VN × {(metadata.rateBelowThresholdPercent as number) || 0}% ={" "}
                 <span className="font-bold text-foreground">
                   {(18000000 * ((metadata.rateBelowThresholdPercent as number) || 0) / 100).toLocaleString("fr-FR")} FCFA
                 </span>
               </p>
               <p className="font-mono">
-                VN 35M &gt; {Number(metadata.newValueThreshold).toLocaleString("fr-FR")} → VN × {metadata.rateAboveThresholdPercent}% ={" "}
+                VN 35M &gt; {Number(metadata.newValueThreshold).toLocaleString("fr-FR")} → VN × {(metadata.rateAboveThresholdPercent as number) || 0}% ={" "}
                 <span className="font-bold text-foreground">
                   {(35000000 * ((metadata.rateAboveThresholdPercent as number) || 0) / 100).toLocaleString("fr-FR")} FCFA
                 </span>

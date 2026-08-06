@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAppStore } from "@/store/app-store";
 import type { AppView } from "@/types";
@@ -101,16 +101,10 @@ export default function Home() {
   const setUser = useAppStore((s) => s.setUser);
   const validated = useRef(false);
   const syncing = useRef(false); // prevent infinite loop
-  const [notFound, setNotFound] = useState(false);
 
-  // ── Détection des chemins inconnus → 404 ──
-  useEffect(() => {
-    if (pathname === "/" || VALID_PATHS.has(pathname)) {
-      setNotFound(false);
-    } else {
-      setNotFound(true);
-    }
-  }, [pathname]);
+  // ── Détection des chemins inconnus → 404 (dérivé pendant le rendu) ──
+  const notFound =
+    pathname !== null && pathname !== "/" && !VALID_PATHS.has(pathname);
 
   // ── Sync view → URL (when user navigates via app) ──
   useEffect(() => {

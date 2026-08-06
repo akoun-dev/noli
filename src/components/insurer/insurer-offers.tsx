@@ -17,26 +17,15 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { useAppStore } from "@/store/app-store";
-
-interface Offer {
-  id: string;
-  name: string;
-  description: string | null;
-  category: string | null;
-  priceMin: number | null;
-  priceMax: number | null;
-  minPrice: number | null;
-  maxPrice: number | null;
-  deductible: number | null;
-  contractType: string | null;
-  isActive: boolean;
-  status: string;
-  features: string | null;
-  quoteCount: number;
-}
+import {
+  mapRawOffers,
+  parseFeatures,
+  type Offer,
+  type RawOffer,
+} from "@/lib/insurer-offers-mapper";
 
 interface OffersResponse {
-  offers: Offer[];
+  offers: RawOffer[];
   total: number;
   page: number;
   limit: number;
@@ -47,20 +36,10 @@ function formatPrice(amount: number | null | undefined): string {
   return new Intl.NumberFormat("fr-FR").format(amount) + " FCFA";
 }
 
-function statusBadge(isActive: boolean) {
-  return isActive
+function statusBadge(status: string) {
+  return status === "active"
     ? <Badge className="bg-green-500/15 text-green-600 hover:bg-green-500/25 border-green-500/20">Active</Badge>
     : <Badge variant="outline" className="text-muted-foreground">Inactive</Badge>;
-}
-
-function parseFeatures(features: string | null): string[] {
-  if (!features) return [];
-  try {
-    const parsed = JSON.parse(features);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
 }
 
 /* ── Offer Detail Dialog ── */
@@ -108,11 +87,11 @@ function OfferDetailDialog({
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-lg border p-3">
               <p className="text-xs text-muted-foreground">Prix min</p>
-              <p className="text-sm font-semibold tabular-nums mt-0.5">{formatPrice(offer.minPrice)}</p>
+              <p className="text-sm font-semibold tabular-nums mt-0.5">{formatPrice(offer.priceMin)}</p>
             </div>
             <div className="rounded-lg border p-3">
               <p className="text-xs text-muted-foreground">Prix max</p>
-              <p className="text-sm font-semibold tabular-nums mt-0.5">{formatPrice(offer.maxPrice)}</p>
+              <p className="text-sm font-semibold tabular-nums mt-0.5">{formatPrice(offer.priceMax)}</p>
             </div>
             <div className="rounded-lg border p-3">
               <p className="text-xs text-muted-foreground">Franchise</p>
@@ -174,23 +153,7 @@ export function InsurerOffers() {
     fetch(`/api/insurer/offers?${params}`)
       .then((res) => res.json())
       .then((data: OffersResponse) => {
-        const mapped = (data.offers || []).map((o: Record<string, unknown>) => ({
-          id: o.id,
-          name: o.name,
-          description: o.description,
-          category: typeof o.category === 'object' && o.category ? (o.category as Record<string, unknown>).name as string : (o.category as string | null),
-          priceMin: o.priceMin as number | null,
-          priceMax: o.priceMax as number | null,
-          minPrice: o.priceMin as number | null,
-          maxPrice: o.priceMax as number | null,
-          deductible: o.deductible as number | null,
-          contractType: o.contractType as string | null,
-          isActive: o.isActive as boolean,
-          status: o.isActive ? "active" : "inactive",
-          features: o.features as string | null,
-          quoteCount: (o._count as Record<string, Record<string, number>>)?.quotes ?? 0,
-        }));
-        setOffers(mapped as Offer[]);
+        setOffers(mapRawOffers(data.offers || []));
         setTotal(data.total || 0);
       })
       .catch(() => {})
@@ -289,10 +252,10 @@ export function InsurerOffers() {
                     <TableCell className="font-medium">{offer.name}</TableCell>
                     <TableCell className="text-muted-foreground">{offer.category || "—"}</TableCell>
                     <TableCell className="text-right tabular-nums text-sm">
-                      {formatPrice(offer.minPrice)}
+                      {formatPrice(offer.priceMin)}
                     </TableCell>
                     <TableCell className="text-right tabular-nums text-sm">
-                      {formatPrice(offer.maxPrice)}
+                      {formatPrice(offer.priceMax)}
                     </TableCell>
                     <TableCell className="text-right tabular-nums text-sm">
                       {formatPrice(offer.deductible)}
@@ -331,7 +294,7 @@ export function InsurerOffers() {
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">
-                      {formatPrice(offer.minPrice)} — {formatPrice(offer.maxPrice)}
+                      {formatPrice(offer.priceMin)} — {formatPrice(offer.priceMax)}
                     </span>
                     <span className="tabular-nums font-medium">{offer.quoteCount} devis</span>
                   </div>

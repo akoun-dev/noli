@@ -237,7 +237,6 @@ export function Header() {
                             : "text-muted-foreground hover:bg-muted hover:text-foreground"
                         }`}
                       >
-                        {item.icon && <item.icon className="size-4" />}
                         {item.label}
                       </motion.button>
                     );

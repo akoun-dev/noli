@@ -98,9 +98,12 @@ export function InsurerSettingsTab() {
       const formData = new FormData();
       formData.append("logo", file);
 
+      const headers: Record<string, string> = {};
+      if (user.id) headers["x-user-id"] = user.id;
+
       const res = await fetch("/api/insurer/logo", {
         method: "POST",
-        headers: { "x-user-id": user.id },
+        headers,
         body: formData,
       });
 

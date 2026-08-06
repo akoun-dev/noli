@@ -166,12 +166,12 @@ interface OfferInput {
   priceMax?: number | null;
   fiscalPowerMin?: number | null;
   fiscalPowerMax?: number | null;
-  fuelTypes?: string;       // JSON string[]
+  fuelTypes?: string | string[];  // JSON string[] ou tableau déjà parsé
   newValueMin?: number | null;
   newValueMax?: number | null;
   venalValueMin?: number | null;
   venalValueMax?: number | null;
-  vehicleUsage?: string;    // JSON string[]
+  vehicleUsage?: string | string[]; // JSON string[] ou tableau déjà parsé
 }
 
 // ── Helpers ──────────────────────────────────────────────────
@@ -191,9 +191,10 @@ function safeParseJSON<T>(raw: string | null | undefined): T {
   }
 }
 
-/** Parse a JSON string field that stores a string array */
-function safeParseStringArray(raw: string | undefined | null): string[] {
+/** Parse a JSON string field that stores a string array (accepte aussi un tableau déjà parsé) */
+function safeParseStringArray(raw: string | string[] | undefined | null): string[] {
   if (!raw) return [];
+  if (Array.isArray(raw)) return raw;
   try {
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];

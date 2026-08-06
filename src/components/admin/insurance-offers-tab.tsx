@@ -321,7 +321,7 @@ export function InsuranceOffersTab() {
                 <TableCell className="text-right font-mono text-sm">{o.priceMax ? fmtPrice(o.priceMax) : "—"}</TableCell>
                 <TableCell className="text-center font-mono text-sm">{o.deductible ? fmtPrice(o.deductible) : "—"}</TableCell>
                 <TableCell className="text-sm">{o.category?.name || "—"}</TableCell>
-                <TableCell className="text-center"><Switch checked={o.isActive} onCheckedChange={(e) => { e.stopPropagation(); handleToggle(o); }} onClick={(e) => e.stopPropagation()} /></TableCell>
+                <TableCell className="text-center"><Switch checked={o.isActive} onCheckedChange={() => handleToggle(o)} onClick={(e) => e.stopPropagation()} /></TableCell>
                 <TableCell>
                   <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openDetail(o)} title="Voir">
@@ -360,7 +360,7 @@ export function InsuranceOffersTab() {
           </div>
           <div className="flex items-center gap-3 mt-2 text-sm">
             {o.priceMin && <span className="font-mono">à partir de {fmtPrice(o.priceMin)}</span>}
-            <Switch checked={o.isActive} onCheckedChange={(e) => { e.stopPropagation(); handleToggle(o); }} onClick={(e) => e.stopPropagation()} />
+            <Switch checked={o.isActive} onCheckedChange={() => handleToggle(o)} onClick={(e) => e.stopPropagation()} />
           </div>
           <div className="flex gap-2 mt-3">
             <Button variant="outline" size="sm" className="flex-1" onClick={(e) => { e.stopPropagation(); openDetail(o); }}><Eye className="h-3.5 w-3.5 mr-1" /> Détails</Button>

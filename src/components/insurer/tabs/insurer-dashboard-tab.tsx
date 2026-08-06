@@ -163,9 +163,9 @@ export function InsurerDashboardTab() {
 
   const fetchStats = useCallback(() => {
     if (!user.id) return;
-    setError(null);
     fetch(`/api/insurer/stats?userId=${user.id}`)
       .then(async (res) => {
+        setError(null);
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
           throw new Error(body.error || "Erreur de chargement");
