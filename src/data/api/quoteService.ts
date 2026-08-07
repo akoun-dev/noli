@@ -17,6 +17,17 @@ type DatabaseQuoteOffer = {
   quote?: { valid_until?: string | null } | null
 }
 
+const QUOTE_OFFER_STATUSES = ['PENDING', 'APPROVED', 'REJECTED', 'EXPIRED'] as const
+type QuoteOfferStatus = (typeof QUOTE_OFFER_STATUSES)[number]
+
+// Normalise une chaîne de statut vers l'énumération quote_offers, ou undefined si invalide
+function toQuoteOfferStatus(value: string): QuoteOfferStatus | undefined {
+  const upper = value.toUpperCase()
+  return (QUOTE_OFFER_STATUSES as readonly string[]).includes(upper)
+    ? (upper as QuoteOfferStatus)
+    : undefined
+}
+
 // Types pour les devis
 export interface QuoteRequest {
   customerInfo: {
@@ -187,7 +198,9 @@ const quoteService = {
         status: 'PENDING',
         personal_data: personalData,
         vehicle_data: vehicleData,
+        property_data: {},
         coverage_requirements: coverageRequirements,
+        estimated_price: null,
         valid_until: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
       })
       .select('*')
@@ -305,8 +318,9 @@ const quoteService = {
       .order('created_at', { ascending: false })
 
     // Appliquer les filtres
-    if (filters?.status) {
-      query = query.eq('status', filters.status.toUpperCase())
+    const statusFilter = filters?.status ? toQuoteOfferStatus(filters.status) : undefined
+    if (statusFilter) {
+      query = query.eq('status', statusFilter)
     }
 
     if (filters?.insurer_id) {
@@ -354,8 +368,9 @@ const quoteService = {
       query = query.eq('quote.user_id', filters.user_id)
     }
 
-    if (filters?.status) {
-      query = query.eq('status', filters.status.toUpperCase())
+    const statusFilter = filters?.status ? toQuoteOfferStatus(filters.status) : undefined
+    if (statusFilter) {
+      query = query.eq('status', statusFilter)
     }
 
     if (filters?.insurer_id) {
@@ -438,10 +453,15 @@ const quoteService = {
 
   // Mettre à jour le statut d'un devis
   async updateQuoteStatus(quoteId: string, status: string): Promise<boolean> {
+    const normalizedStatus = toQuoteOfferStatus(status)
+    if (!normalizedStatus) {
+      throw new Error(`Statut de devis invalide: ${status}`)
+    }
+
     const { error } = await supabase
       .from('quote_offers')
       .update({
-        status: status.toUpperCase(),
+        status: normalizedStatus,
         updated_at: new Date().toISOString(),
       })
       .eq('id', quoteId)
