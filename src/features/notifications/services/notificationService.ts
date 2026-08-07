@@ -1,5 +1,5 @@
 import React from 'react'
-import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery, keepPreviousData } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { logger } from '@/lib/logger'
@@ -91,8 +91,8 @@ export interface NotificationPreferences {
 export interface NotificationStats {
   total: number
   unread: number
-  byType: Record<NotificationType, number>
-  byCategory: Record<NotificationCategory, number>
+  byType: Partial<Record<NotificationType, number>>
+  byCategory: Partial<Record<NotificationCategory, number>>
   today: number
   thisWeek: number
   thisMonth: number
@@ -257,7 +257,7 @@ export const fetchNotifications = async (
           category: 'quotes',
           channels: ['in_app', 'email'],
           createdAt: quote.created_at,
-          data: { quoteId: quote.id, amount: quote.estimated_price },
+          data: { quoteId: quote.id, amount: quote.estimated_price ?? undefined },
           isSystem: false,
         })
 
@@ -503,7 +503,7 @@ export const fetchNotificationStats = async (userId: string): Promise<Notificati
     // Fetch real data to calculate stats
     const { data: quotes, error: quotesError } = await supabase
       .from('quotes')
-      .select('id, created_at, status')
+      .select('id, created_at, status, valid_until')
       .eq('user_id', userId)
 
     const { data: policies, error: policiesError } = await supabase
@@ -658,14 +658,15 @@ export const useNotifications = (
     queryKey: ['notifications', userId, filters, page, limit],
     queryFn: () => fetchNotifications(userId, filters, page, limit),
     staleTime: 2 * 60 * 1000, // 2 minutes
-    keepPreviousData: true,
+    placeholderData: keepPreviousData,
   })
 }
 
 export const useInfiniteNotifications = (userId: string, filters?: NotificationFilters) => {
   return useInfiniteQuery({
     queryKey: ['notifications-infinite', userId, filters],
-    queryFn: ({ pageParam = 1 }) => fetchNotifications(userId, filters, pageParam),
+    queryFn: ({ pageParam }) => fetchNotifications(userId, filters, pageParam),
+    initialPageParam: 1,
     getNextPageParam: (lastPage) =>
       lastPage.page < lastPage.totalPages ? lastPage.page + 1 : undefined,
     staleTime: 2 * 60 * 1000,
