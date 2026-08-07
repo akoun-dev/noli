@@ -200,10 +200,10 @@ const AdminSettingsPage = () => {
           
           const response = await adminSettingsApi.importSettings(request);
           if (response.success) {
-            toast.success(`Paramètres importés avec succès: ${response.data.imported.join(', ')}`);
+            toast.success(`Paramètres importés avec succès: ${response.data?.imported.join(', ')}`);
             loadSettings(); // Recharger les paramètres
           } else {
-            toast.error(`Erreur lors de l'importation: ${response.data.errors.join(', ')}`);
+            toast.error(`Erreur lors de l'importation: ${response.data?.errors.join(', ')}`);
           }
         } catch (error) {
           toast.error('Erreur lors de l\'importation des paramètres');

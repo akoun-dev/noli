@@ -33,7 +33,7 @@ export function BreadcrumbRenderer({
     showHome,
   });
 
-  const finalItems = customItems?.length > 0 ? defaultItems : items;
+  const finalItems = (customItems?.length ?? 0) > 0 ? defaultItems : items;
 
   if (!finalItems || finalItems.length === 0) {
     return null;

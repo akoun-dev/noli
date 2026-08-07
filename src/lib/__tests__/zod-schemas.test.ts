@@ -33,7 +33,7 @@ describe('Zod Schemas Validation', () => {
       const result = loginSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toBe('Email invalide');
+        expect(result.error!.issues[0].message).toBe('Email invalide');
       }
     });
 
@@ -48,7 +48,7 @@ describe('Zod Schemas Validation', () => {
       const result = loginSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toBe("Email invalide");
+        expect(result.error!.issues[0].message).toBe("Email invalide");
       }
     });
 
@@ -63,7 +63,7 @@ describe('Zod Schemas Validation', () => {
       const result = loginSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toBe('Le mot de passe doit contenir au moins 6 caractères');
+        expect(result.error!.issues[0].message).toBe('Le mot de passe doit contenir au moins 6 caractères');
       }
     });
 
@@ -78,7 +78,7 @@ describe('Zod Schemas Validation', () => {
       const result = loginSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toBe('Le mot de passe est requis');
+        expect(result.error!.issues[0].message).toBe('Le mot de passe est requis');
       }
     });
   });
@@ -126,7 +126,7 @@ describe('Zod Schemas Validation', () => {
       const result = registerSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toBe("Veuillez fournir soit un nom et prénom, soit un nom d'entreprise");
+        expect(result.error!.issues[0].message).toBe("Veuillez fournir soit un nom et prénom, soit un nom d'entreprise");
       }
     });
 
@@ -145,7 +145,7 @@ describe('Zod Schemas Validation', () => {
       const result = registerSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toBe('Le prénom doit contenir au moins 2 caractères');
+        expect(result.error!.issues[0].message).toBe('Le prénom doit contenir au moins 2 caractères');
       }
     });
 
@@ -164,7 +164,7 @@ describe('Zod Schemas Validation', () => {
       const result = registerSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toBe('Le prénom ne peut pas dépasser 50 caractères');
+        expect(result.error!.issues[0].message).toBe('Le prénom ne peut pas dépasser 50 caractères');
       }
     });
 
@@ -183,7 +183,7 @@ describe('Zod Schemas Validation', () => {
       const result = registerSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toBe('Numéro de téléphone invalide (format: +225XXXXXXXXXX ou XXXXXXXXXX)');
+        expect(result.error!.issues[0].message).toBe('Numéro de téléphone invalide (format: +225XXXXXXXXXX ou XXXXXXXXXX)');
       }
     });
 
@@ -232,7 +232,7 @@ describe('Zod Schemas Validation', () => {
       const result = registerSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues.some(issue =>
+        expect(result.error!.issues.some(issue =>
           issue.message === 'Le mot de passe doit contenir au moins une majuscule'
         )).toBe(true);
       }
@@ -253,7 +253,7 @@ describe('Zod Schemas Validation', () => {
       const result = registerSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues.some(issue =>
+        expect(result.error!.issues.some(issue =>
           issue.message === 'Le mot de passe doit contenir au moins une minuscule'
         )).toBe(true);
       }
@@ -274,7 +274,7 @@ describe('Zod Schemas Validation', () => {
       const result = registerSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues.some(issue =>
+        expect(result.error!.issues.some(issue =>
           issue.message === 'Le mot de passe doit contenir au moins un chiffre'
         )).toBe(true);
       }
@@ -295,7 +295,7 @@ describe('Zod Schemas Validation', () => {
       const result = registerSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toBe('Les mots de passe ne correspondent pas');
+        expect(result.error!.issues[0].message).toBe('Les mots de passe ne correspondent pas');
       }
     });
 
@@ -314,7 +314,7 @@ describe('Zod Schemas Validation', () => {
       const result = registerSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toBe("L'email ne peut pas dépasser 255 caractères");
+        expect(result.error!.issues[0].message).toBe("L'email ne peut pas dépasser 255 caractères");
       }
     });
   });
@@ -347,7 +347,7 @@ describe('Zod Schemas Validation', () => {
       const result = personalInfoSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toBe('Email invalide');
+        expect(result.error!.issues[0].message).toBe('Email invalide');
       }
     });
 
@@ -363,7 +363,7 @@ describe('Zod Schemas Validation', () => {
       // Act & Assert
       const result = personalInfoSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
-      expect(result.error.issues).toHaveLength(4);
+      expect(result.error!.issues).toHaveLength(4);
     });
   });
 
@@ -408,7 +408,7 @@ describe('Zod Schemas Validation', () => {
       // Act & Assert
       const result = vehicleInfoSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
-      expect(result.error.issues).toHaveLength(7);
+      expect(result.error!.issues).toHaveLength(7);
     });
 
     it('should accept all valid vehicle usage values', () => {
@@ -528,7 +528,7 @@ describe('Zod Schemas Validation', () => {
       const result = forgotPasswordSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toBe('Email invalide');
+        expect(result.error!.issues[0].message).toBe('Email invalide');
       }
     });
 
@@ -542,7 +542,7 @@ describe('Zod Schemas Validation', () => {
       const result = forgotPasswordSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toBe("Email invalide");
+        expect(result.error!.issues[0].message).toBe("Email invalide");
       }
     });
   });
@@ -570,7 +570,7 @@ describe('Zod Schemas Validation', () => {
       const result = resetPasswordSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toBe('Les mots de passe ne correspondent pas');
+        expect(result.error!.issues[0].message).toBe('Les mots de passe ne correspondent pas');
       }
     });
 
@@ -603,7 +603,7 @@ describe('Zod Schemas Validation', () => {
         const result = resetPasswordSchema.safeParse({ password, confirmPassword });
         expect(result.success).toBe(false);
         if (!result.success) {
-          expect(result.error.issues.some(issue => issue.message === expectedError)).toBe(true);
+          expect(result.error!.issues.some(issue => issue.message === expectedError)).toBe(true);
         }
       });
     });

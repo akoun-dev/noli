@@ -625,7 +625,7 @@ export class PricingService {
     }
 
     // Utiliser les tarifs personnalisés ou les défauts
-    const placesTariffs = formula.placesTariffs ?? defaultFormulas[selectedFormula - 1].placesTariffs;
+    const placesTariffs = formula.placesTariffs ?? defaultFormulas[selectedFormula - 1].placesTariffs ?? [];
 
     // Trouver le tarif correspondant au nombre de places
     const applicableTariff = placesTariffs.find(tariff => tariff.places >= vehiclePlaces)

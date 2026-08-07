@@ -127,8 +127,8 @@ const supabaseAnalyticsService = {
           totalInsurers: userStats.total_users - userStats.active_users, // Approximation
           totalQuotes: quoteStats?.total_quotes || 0,
           totalPolicies: policyStats?.total_policies || 0,
-          conversionRate: quoteStats?.total_quotes > 0
-            ? Math.round((policyStats?.total_policies || 0) / quoteStats.total_quotes * 10000) / 100
+          conversionRate: (quoteStats?.total_quotes ?? 0) > 0
+            ? Math.round((policyStats?.total_policies || 0) / quoteStats!.total_quotes * 10000) / 100
             : 0,
           monthlyGrowth: userStats.growth_rate_percent || 0,
           revenue: policyStats?.total_premium_amount || 0,
@@ -327,8 +327,8 @@ const supabaseAnalyticsService = {
             quotes: quoteCount || 0,
             policies: policyCount || 0,
             revenue,
-            conversionRate: quoteCount > 0 ? Math.round(((policyCount || 0) / quoteCount) * 100) : 0,
-            averagePolicyValue: policyCount > 0 ? Math.round(revenue / policyCount) : 0,
+            conversionRate: (quoteCount ?? 0) > 0 ? Math.round(((policyCount || 0) / (quoteCount ?? 1)) * 100) : 0,
+            averagePolicyValue: (policyCount ?? 0) > 0 ? Math.round(revenue / (policyCount ?? 1)) : 0,
           };
         })
       );

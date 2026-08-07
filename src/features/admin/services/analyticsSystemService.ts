@@ -279,8 +279,8 @@ export const fetchPlatformOverview = async (): Promise<PlatformOverview> => {
 
     const totalUsers = userStats?.reduce((sum, stat) => sum + stat.total_users, 0) || 0;
     const totalInsurers = userStats?.filter(stat => stat.role === 'INSURER').reduce((sum, stat) => sum + stat.total_users, 0) || 0;
-    const avgGrowthRate = userStats?.length > 0
-      ? userStats.reduce((sum, stat) => sum + (stat.growth_rate_percent || 0), 0) / userStats.length
+    const avgGrowthRate = (userStats?.length ?? 0) > 0
+      ? userStats!.reduce((sum, stat) => sum + (stat.growth_rate_percent || 0), 0) / userStats!.length
       : 0;
 
     // Utiliser la vue analytique pour les quotes

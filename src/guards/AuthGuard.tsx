@@ -101,7 +101,7 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({
       INSURER: '/assureur/tableau-de-bord',
       ADMIN: '/admin/tableau-de-bord',
     };
-    return <Navigate to={redirectMap[user.role!]} replace />;
+    return <Navigate to={redirectMap[user!.role!]} replace />;
   }
 
   // Check permission requirement
