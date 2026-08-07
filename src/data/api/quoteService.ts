@@ -101,7 +101,7 @@ function mapDbToQuote(db: DatabaseQuoteOffer): QuoteResponse {
     features: db.offer?.features || [],
     guarantees:
       db.offer?.features?.reduce(
-        (acc, feature) => {
+        (acc: { [key: string]: boolean }, feature: string) => {
           acc[feature] = true
           return acc
         },

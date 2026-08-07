@@ -38,6 +38,7 @@ import {
   Eye
 } from 'lucide-react';
 import {
+  Notification,
   NotificationPreferences,
   useNotifications,
   useUnreadNotifications,
@@ -118,13 +119,13 @@ export const NotificationsPage: React.FC = () => {
 
     switch (activeTab) {
       case 'unread':
-        return filtered.filter(n => n.status === 'unread');
+        return filtered.filter((n: Notification) => n.status === 'unread');
       case 'quotes':
-        return filtered.filter(n => n.category === 'quotes');
+        return filtered.filter((n: Notification) => n.category === 'quotes');
       case 'payments':
-        return filtered.filter(n => n.category === 'payments');
+        return filtered.filter((n: Notification) => n.category === 'payments');
       case 'policies':
-        return filtered.filter(n => n.category === 'policies');
+        return filtered.filter((n: Notification) => n.category === 'policies');
       default:
         return filtered;
     }
@@ -383,7 +384,7 @@ export const NotificationsPage: React.FC = () => {
                 </CardContent>
               </Card>
             ) : (
-              getFilteredNotifications().map((notification) => (
+              getFilteredNotifications().map((notification: Notification) => (
                 <Card
                   key={notification.id}
                   className={`transition-all hover:shadow-md ${
@@ -426,7 +427,7 @@ export const NotificationsPage: React.FC = () => {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => window.location.href = notification.actionUrl}
+                                onClick={() => { if (notification.actionUrl) window.location.href = notification.actionUrl; }}
                               >
                                 <ExternalLink className="h-4 w-4 mr-1" />
                                 {notification.actionText || 'Voir les détails'}

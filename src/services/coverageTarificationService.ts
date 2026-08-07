@@ -596,13 +596,13 @@ class CoverageTarificationService {
           )
           const fixeds = rules
             .map((rr: any) => parseAmount(rr?.fixed_amount))
-            .filter((n): n is number => typeof n === 'number')
+            .filter((n: number | undefined): n is number => typeof n === 'number')
           const mins = rules
             .map((rr: any) => parseAmount(rr?.min_amount))
-            .filter((n): n is number => typeof n === 'number')
+            .filter((n: number | undefined): n is number => typeof n === 'number')
           const maxs = rules
             .map((rr: any) => parseAmount(rr?.max_amount))
-            .filter((n): n is number => typeof n === 'number')
+            .filter((n: number | undefined): n is number => typeof n === 'number')
 
           const estMin = fixeds.length ? Math.min(...fixeds) : mins.length ? Math.min(...mins) : undefined
           const estMax = fixeds.length ? Math.max(...fixeds) : maxs.length ? Math.max(...maxs) : undefined
@@ -660,13 +660,13 @@ class CoverageTarificationService {
           )
           const fixeds = rules
             .map((rr: any) => parseAmount(rr?.fixed_amount))
-            .filter((n): n is number => typeof n === 'number')
+            .filter((n: number | undefined): n is number => typeof n === 'number')
           const mins = rules
             .map((rr: any) => parseAmount(rr?.min_amount))
-            .filter((n): n is number => typeof n === 'number')
+            .filter((n: number | undefined): n is number => typeof n === 'number')
           const maxs = rules
             .map((rr: any) => parseAmount(rr?.max_amount))
-            .filter((n): n is number => typeof n === 'number')
+            .filter((n: number | undefined): n is number => typeof n === 'number')
 
           const estMin = fixeds.length ? Math.min(...fixeds) : mins.length ? Math.min(...mins) : undefined
           const estMax = fixeds.length ? Math.max(...fixeds) : maxs.length ? Math.max(...maxs) : undefined

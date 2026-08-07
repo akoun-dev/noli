@@ -139,7 +139,7 @@ export const PasswordStrengthIndicator: React.FC<PasswordStrengthIndicatorProps>
               <span className="font-medium text-red-800">Problèmes à corriger:</span>
             </div>
             <ul className="space-y-1">
-              {strength.errors.map((error, index) => (
+              {strength.errors.map((error: string, index: number) => (
                 <li key={index} className="text-sm text-red-700 flex items-start">
                   <span className="mr-2">•</span>
                   <span>{error}</span>
