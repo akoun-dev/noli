@@ -135,7 +135,9 @@ export default function CoverageTestPage() {
           status: 'DRAFT' as any,
           personal_data: personalData as any,
           vehicle_data: vehiclePayload as any,
+          property_data: {} as any,
           coverage_requirements: { test_mode: true } as any,
+          estimated_price: 0,
           valid_until: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
         })
         .select('id')

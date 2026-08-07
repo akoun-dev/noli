@@ -602,7 +602,7 @@ export class PricingService {
       : defaultFormulas;
 
     // Obtenir le nombre de places du véhicule
-    const vehiclePlaces = vehicle?.seats ?? parameters?.seats ?? vehicle?.passengerSeats ?? 5;
+    const vehiclePlaces = vehicle?.nbPlaces ?? parameters?.seats ?? 5;
 
     // Obtenir la formule sélectionnée (depuis les parameters ou la formule par défaut)
     const selectedFormula = parameters?.formula_name

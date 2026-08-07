@@ -163,7 +163,7 @@ class DocumentService {
       const documents: Document[] = []
 
       policies?.forEach((policy) => {
-        const docs = policy.coverage_details?.documents || []
+        const docs = (policy.coverage_details as { documents?: any[] } | null)?.documents || []
         docs.forEach((doc: any, index: number) => {
           documents.push({
             id: `${policy.id}-${index}`,
