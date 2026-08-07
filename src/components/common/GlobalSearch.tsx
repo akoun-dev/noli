@@ -65,7 +65,7 @@ export function GlobalSearch() {
       shortcut: '⌘A',
       action: () => {
         navigate('/');
-        setOpen(false);
+        closeSearch();
       },
       category: 'navigation',
     },
@@ -77,7 +77,7 @@ export function GlobalSearch() {
       shortcut: '⌘D',
       action: () => {
         navigate('/tableau-de-bord');
-        setOpen(false);
+        closeSearch();
       },
       category: 'navigation',
     },
@@ -89,7 +89,7 @@ export function GlobalSearch() {
       shortcut: '⌘C',
       action: () => {
         navigate('/comparer');
-        setOpen(false);
+        closeSearch();
       },
       category: 'navigation',
     },
@@ -100,7 +100,7 @@ export function GlobalSearch() {
       icon: FileText,
       action: () => {
         navigate('/mes-devis');
-        setOpen(false);
+        closeSearch();
       },
       category: 'navigation',
     },
@@ -111,7 +111,7 @@ export function GlobalSearch() {
       icon: Shield,
       action: () => {
         navigate('/mes-contrats');
-        setOpen(false);
+        closeSearch();
       },
       category: 'navigation',
     },
@@ -122,7 +122,7 @@ export function GlobalSearch() {
       icon: User,
       action: () => {
         navigate('/profil');
-        setOpen(false);
+        closeSearch();
       },
       category: 'navigation',
     },
@@ -137,7 +137,7 @@ export function GlobalSearch() {
       icon: BarChart3,
       action: () => {
         navigate('/admin');
-        setOpen(false);
+        closeSearch();
       },
       category: 'navigation',
     },
@@ -148,7 +148,7 @@ export function GlobalSearch() {
       icon: Users,
       action: () => {
         navigate('/admin/utilisateurs');
-        setOpen(false);
+        closeSearch();
       },
       category: 'navigation',
     },
@@ -159,7 +159,7 @@ export function GlobalSearch() {
       icon: Building,
       action: () => {
         navigate('/admin/assureurs');
-        setOpen(false);
+        closeSearch();
       },
       category: 'navigation',
     },
@@ -170,7 +170,7 @@ export function GlobalSearch() {
       icon: TrendingUp,
       action: () => {
         navigate('/admin/analytics');
-        setOpen(false);
+        closeSearch();
       },
       category: 'navigation',
     },
@@ -181,7 +181,7 @@ export function GlobalSearch() {
       icon: Settings,
       action: () => {
         navigate('/admin/parametres');
-        setOpen(false);
+        closeSearch();
       },
       category: 'navigation',
     },
@@ -196,7 +196,7 @@ export function GlobalSearch() {
       icon: Plus,
       action: () => {
         navigate('/comparer');
-        setOpen(false);
+        closeSearch();
       },
       category: 'actions',
     },
@@ -207,7 +207,7 @@ export function GlobalSearch() {
       icon: MessageSquare,
       action: () => {
         navigate('/contact');
-        setOpen(false);
+        closeSearch();
       },
       category: 'actions',
     },
@@ -218,7 +218,7 @@ export function GlobalSearch() {
       icon: CreditCard,
       action: () => {
         navigate('/paiements');
-        setOpen(false);
+        closeSearch();
       },
       category: 'actions',
     },
@@ -229,7 +229,7 @@ export function GlobalSearch() {
       icon: Bell,
       action: () => {
         navigate('/notifications');
-        setOpen(false);
+        closeSearch();
       },
       category: 'actions',
     },
@@ -244,7 +244,7 @@ export function GlobalSearch() {
       icon: HelpCircle,
       action: () => {
         navigate('/aide');
-        setOpen(false);
+        closeSearch();
       },
       category: 'help',
     },
@@ -255,7 +255,7 @@ export function GlobalSearch() {
       icon: FileCheck,
       action: () => {
         navigate('/faq');
-        setOpen(false);
+        closeSearch();
       },
       category: 'help',
     },
@@ -266,7 +266,7 @@ export function GlobalSearch() {
       icon: Phone,
       action: () => {
         navigate('/contact');
-        setOpen(false);
+        closeSearch();
       },
       category: 'help',
     },
@@ -281,7 +281,7 @@ export function GlobalSearch() {
       icon: LogOut,
       action: () => {
         // Implémenter la déconnexion
-        setOpen(false);
+        closeSearch();
       },
       category: 'user',
     },
