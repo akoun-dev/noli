@@ -589,8 +589,8 @@ describe('Authentication Flow Integration', () => {
       // Arrange
       let onAuthStateChangeCallback: (event: string, session: unknown) => void
 
-      // @ts-expect-error - Typage complexe de Supabase dans les tests
       vi.mocked(supabase.auth.onAuthStateChange).mockImplementation(
+        // @ts-expect-error - Typage complexe de Supabase dans les tests
         (callback: (event: string, session: unknown) => void) => {
           onAuthStateChangeCallback = callback
           return {

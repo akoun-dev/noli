@@ -140,7 +140,6 @@ export class AuthService {
       // Analyser les anomalies pour cette connexion réussie
       if (data.user?.id && context?.deviceFingerprint) {
         const anomalyAlerts = await anomalyDetector.analyzeLoginAttempt({
-          id: data.user.id,
           userId: data.user.id,
           email: credentials.email,
           timestamp: Date.now(),

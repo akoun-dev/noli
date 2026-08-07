@@ -299,8 +299,6 @@ describe('UserContext', () => {
       })
 
       // Mock implementation to throw error during update
-      let updateCall: (data: unknown) => Promise<void>
-
       // We need to mock the context implementation to throw an error
       // This is a limitation of the current implementation where the error is caught internally
       // For now, we'll test the loading state behavior

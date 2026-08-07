@@ -117,7 +117,7 @@ const UserPoliciesPage = () => {
               daysUntilRenewal,
               isExpiringSoon: daysUntilExpiry <= 30 && daysUntilExpiry > 0,
               isOverdue: daysUntilExpiry < 0,
-              vehicle: policy.coverage_details?.vehicle || {
+              vehicle: (policy.coverage_details as { vehicle?: any; deductible?: number } | null)?.vehicle || {
                 id: 'unknown',
                 type: 'voiture',
                 brand: 'Non spécifié',
@@ -134,13 +134,13 @@ const UserPoliciesPage = () => {
                 level: 'basic',
               },
               guarantees: [], // Simplified for now
-              franchise: policy.coverage_details?.deductible || 0,
+              franchise: (policy.coverage_details as { deductible?: number } | null)?.deductible || 0,
               documents: [], // TODO: Fetch from documents table when created
               paymentHistory: [], // Simplified for now
               claims: [], // TODO: Fetch from claims table when created
               createdAt: new Date(policy.created_at),
               updatedAt: new Date(policy.updated_at),
-            } as PolicyWithDetails
+            } as unknown as PolicyWithDetails
           }) || []
         )
       } catch (err) {
