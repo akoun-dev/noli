@@ -4,9 +4,7 @@ export const emailSchema = z.string().email("Adresse email invalide");
 
 export const passwordSchema = z
   .string()
-  .min(8, "Le mot de passe doit contenir au moins 8 caractères")
-  .regex(/[a-zA-Z]/, "Le mot de passe doit contenir au moins une lettre")
-  .regex(/[0-9]/, "Le mot de passe doit contenir au moins un chiffre");
+  .min(6, "Le mot de passe doit contenir au moins 6 caractères");
 
 export const personalInfoSchema = z.object({
   lastName: z.string().min(1, "Le nom est requis"),

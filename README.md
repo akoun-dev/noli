@@ -7,31 +7,39 @@ Plateforme de comparaison d'assurances multi-assureurs avec interface admin, esp
 ## Stack
 
 - **Framework** : Next.js 16 (App Router)
-- **Langage** : TypeScript (strict)
-- **Base de données** : Postgres via [Supabase](https://supabase.com) (`@supabase/supabase-js`, `@supabase/ssr`)
+- **Langage** : TypeScript
+- **Base de données / Auth** : Supabase (Postgres + Supabase Auth, migrations SQL dans `supabase/migrations/`)
 - **UI** : Tailwind CSS v4 + shadcn/ui
 - **State** : Zustand
-- **Auth** : Supabase Auth (cookies httpOnly, session côté serveur — voir `src/lib/auth-guard.ts`)
 - **Validation** : Zod v4
 - **Tests** : Vitest + Testing Library + @vitest/coverage-v8
 
+> ⚠️ Le projet a migré de Prisma/SQLite vers Supabase. La dépendance
+> `next-auth` présente dans `package.json` n'est plus utilisée dans le code
+> (l'authentification passe entièrement par Supabase Auth via
+> `src/lib/auth-guard.ts`) — à retirer lors d'un prochain nettoyage de
+> dépendances.
+
 ## Configuration
 
-Copier `.env.example` en `.env` et renseigner les variables Supabase (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`) ainsi que `RESEND_API_KEY` pour l'envoi d'emails. Le schéma de base de données est géré via les migrations dans `supabase/migrations/`.
+Copier `.env.example` en `.env` et renseigner les clés Supabase du projet
+(`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
+`SUPABASE_SERVICE_ROLE_KEY`) ainsi que `RESEND_API_KEY` pour les emails.
+
+Les migrations SQL (schéma + policies RLS) se trouvent dans
+`supabase/migrations/` et s'appliquent via la CLI Supabase
+(`supabase db push` / `supabase migration up`, selon votre workflow).
 
 ## Scripts
 
 | Commande | Description |
 |----------|-------------|
-| `bun dev` / `npm run dev` | Lance le serveur de développement |
-| `bun run build` / `npm run build` | Build de production (standalone) |
-| `bun run start` / `npm run start` | Démarre le build de production |
-| `bun run test` / `npm run test` | Exécute les tests unitaires |
+| `bun dev` | Lance le serveur de développement |
+| `bun run build` | Build de production |
+| `bun run test` | Exécute les tests unitaires |
 | `bun run test:coverage` | Exécute les tests avec rapport de couverture |
 | `bun run test:coverage:badge` | Génère le rapport de couverture + le badge SVG |
-| `bun run lint` / `npm run lint` | Vérification ESLint |
-
-> ℹ️ Il n'y a pas de scripts `db:push` / `db:generate` (pas de Prisma) : le schéma est appliqué via les migrations Supabase (`supabase/migrations/`), à exécuter avec la CLI Supabase (`supabase db push`).
+| `bun run lint` | Vérification ESLint |
 
 ## Structure du projet
 

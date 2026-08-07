@@ -1,33 +1,30 @@
 import type { NextConfig } from "next";
 
 const securityHeaders = [
-  { key: "X-Content-Type-Options", value: "nosniff" },
+  // Empêche l'embarquement de l'app dans une iframe tierce (clickjacking).
   { key: "X-Frame-Options", value: "DENY" },
+  // Empêche le navigateur de deviner le type MIME des ressources.
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  // Limite les informations envoyées dans l'en-tête Referer vers d'autres origines.
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+  // Désactive par défaut les API sensibles du navigateur non utilisées par l'app.
   {
-    key: "Content-Security-Policy",
-    value: [
-      "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-      "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: https: blob:",
-      "font-src 'self' data:",
-      "connect-src 'self' https://*.supabase.co",
-      "frame-ancestors 'none'",
-    ].join("; "),
+    key: "Permissions-Policy",
+    value: "camera=(), microphone=(), geolocation=(), payment=()",
+  },
+  // Force HTTPS pendant 2 ans, y compris pour les sous-domaines.
+  {
+    key: "Strict-Transport-Security",
+    value: "max-age=63072000; includeSubDomains; preload",
   },
 ];
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  // Réactivé : détecte en développement les effets de bord non idempotents
-  // (double rendu) avant qu'ils n'atteignent la production.
   reactStrictMode: true,
+  // Le typage est vérifié via `tsc --noEmit` en CI/pre-commit ; ne jamais
+  // masquer les erreurs de build ici (cela a déjà causé des régressions).
   typescript: {
-    // ignoreBuildErrors désactivé : le build échoue désormais si TypeScript
-    // détecte une erreur de typage (aucune erreur résiduelle au 06/08/2026,
-    // vérifié via `npx tsc --noEmit`).
     ignoreBuildErrors: false,
   },
   async headers() {

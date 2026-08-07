@@ -1,20 +1,23 @@
 :81 {
-	# Le précédent bloc @transform_port_query relayait toute requête publique
-	# vers un port local arbitraire choisi par le client (?XTransformPort=...).
-	# C'est un proxy ouvert (risque SSRF / exposition de services internes) :
-	# il a été supprimé. Seul le port de l'application NOLI est exposé.
-	reverse_proxy localhost:3000 {
-		header_up Host {host}
-		header_up X-Forwarded-For {remote_host}
-		header_up X-Forwarded-Proto {scheme}
-		header_up X-Real-IP {remote_host}
+	@transform_port_query {
+		query XTransformPort=*
 	}
 
-	header {
-		Strict-Transport-Security "max-age=31536000; includeSubDomains"
-		X-Content-Type-Options "nosniff"
-		X-Frame-Options "DENY"
-		Referrer-Policy "strict-origin-when-cross-origin"
-		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+	handle @transform_port_query {
+		reverse_proxy localhost:{query.XTransformPort} {
+			header_up Host {host}
+			header_up X-Forwarded-For {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+			header_up X-Real-IP {remote_host}
+		}
+	}
+
+	handle {
+		reverse_proxy localhost:3000 {
+			header_up Host {host}
+			header_up X-Forwarded-For {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+			header_up X-Real-IP {remote_host}
+		}
 	}
 }

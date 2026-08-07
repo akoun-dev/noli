@@ -2,36 +2,11 @@ import { db } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { registerSchema, loginSchema, emailSchema } from "@/lib/validation";
 import { getSessionProfile, getSupabaseServerClient } from "@/lib/auth-guard";
-import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
-
-// Limites par action sensible (fenêtre glissante de 15 minutes, par IP).
-const RATE_LIMITS: Record<string, { limit: number; windowSeconds: number }> = {
-  login: { limit: 10, windowSeconds: 15 * 60 },
-  register: { limit: 5, windowSeconds: 15 * 60 },
-  forgot: { limit: 5, windowSeconds: 15 * 60 },
-};
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { action, email, password, name, phone, role, companyName, companyEmail, companyPhone, companyWebsite } = body;
-
-    const rateLimitConfig = RATE_LIMITS[action as string];
-    if (rateLimitConfig) {
-      const ip = getClientIp(request);
-      const { allowed, retryAfterSeconds } = checkRateLimit(
-        `auth:${action}:${ip}`,
-        rateLimitConfig.limit,
-        rateLimitConfig.windowSeconds
-      );
-      if (!allowed) {
-        return NextResponse.json(
-          { error: "Trop de tentatives. Réessayez dans quelques minutes." },
-          { status: 429, headers: { "Retry-After": String(retryAfterSeconds) } }
-        );
-      }
-    }
-
     const supabase = await getSupabaseServerClient();
 
     if (action === "register") {
