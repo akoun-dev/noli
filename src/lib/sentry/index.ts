@@ -3,8 +3,6 @@
  */
 
 import * as Sentry from '@sentry/react';
-import { BrowserTracing } from '@sentry/tracing';
-import { Replay } from '@sentry/replay';
 import { logger } from '@/lib/logger';
 
 // Configuration de l'environnement
@@ -26,15 +24,8 @@ export const initSentry = (): void => {
 
       // Performance monitoring
       integrations: [
-        new BrowserTracing({
-          // Options de tracing
-          tracePropagationTargets: [
-            'localhost',
-            /^https:\/\/yourdomain\.io/,
-            import.meta.env.VITE_SUPABASE_URL,
-          ],
-        }),
-        new Replay({
+        Sentry.browserTracingIntegration(),
+        Sentry.replayIntegration({
           // Session replay
           maskAllText: false,
           blockAllMedia: false,
@@ -92,16 +83,12 @@ export const initSentry = (): void => {
         return event;
       },
 
-      // Configuration des tags
-      tags: {
-        service: 'noli-frontend',
-        version: import.meta.env.VITE_APP_VERSION || '1.0.0',
-        environment: import.meta.env.MODE,
-      },
-
-      // Configuration du contexte
+      // Configuration du contexte et des tags
       initialScope: {
         tags: {
+          service: 'noli-frontend',
+          version: import.meta.env.VITE_APP_VERSION || '1.0.0',
+          environment: import.meta.env.MODE,
           framework: 'react',
           bundler: 'vite',
         },
@@ -119,8 +106,7 @@ export const initSentry = (): void => {
       // Options de débogage
       debug: isDevelopment,
 
-      // Désactiver l'auto tracking de certains événements
-      autoSessionTracking: true,
+      // Le suivi de session est activé par défaut dans le SDK
       sendDefaultPii: false,
       sendClientReports: true,
     });
@@ -175,9 +161,9 @@ export const addSentryBreadcrumb = (
   Sentry.addBreadcrumb({
     category,
     message,
-    level,
+    level: level === 'warn' ? 'warning' : level,
     data,
-    timestamp: new Date().toISOString(),
+    timestamp: Date.now() / 1000,
   });
 
   logger.debug('Sentry breadcrumb added', { category, message, level });
@@ -188,7 +174,8 @@ export const captureSentryMessage = (
   level: 'debug' | 'info' | 'warn' | 'error' = 'info',
   context?: Record<string, any>
 ): void => {
-  Sentry.captureMessage(message, level, {
+  Sentry.captureMessage(message, {
+    level: level === 'warn' ? 'warning' : level,
     extra: context,
   });
 
@@ -212,23 +199,19 @@ export const captureSentryException = (
 };
 
 // Configuration du monitoring de performance
-export const startTransaction = (name: string, op: string): Sentry.Transaction | undefined => {
-  const transaction = Sentry.startTransaction({
+export const startTransaction = (name: string, op: string): Sentry.Span => {
+  const span = Sentry.startInactiveSpan({
     name,
     op,
   });
 
   logger.debug('Sentry transaction started', { name, op });
-  return transaction;
+  return span;
 };
 
-export const finishTransaction = (transaction: Sentry.Transaction): void => {
-  transaction.finish();
-  logger.debug('Sentry transaction finished', {
-    name: transaction.name,
-    op: transaction.op,
-    duration: transaction.endTimestamp - transaction.startTimestamp,
-  });
+export const finishTransaction = (span: Sentry.Span): void => {
+  span.end();
+  logger.debug('Sentry transaction finished');
 };
 
 // Hooks React pour le monitoring
@@ -276,4 +259,4 @@ export const shouldIgnoreError = (error: Error): boolean => {
 
 // Export des fonctions principales
 export { Sentry };
-export type { SentryOptions } from '@sentry/react/types/options';
+export type { BrowserOptions as SentryOptions } from '@sentry/react';
