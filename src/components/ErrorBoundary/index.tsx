@@ -47,7 +47,7 @@ export class ErrorBoundary extends Component<Props, State> {
     });
 
     // Logging structuré
-    logger.errorBoundary(error, errorInfo, {
+    logger.error('React error boundary caught an error', error, {
       componentStack: errorInfo.componentStack,
       retryCount: this.state.retryCount,
     });
@@ -335,7 +335,7 @@ export const useErrorHandler = () => {
         });
         throw error;
       }
-    });
+    }) as unknown as T;
   }, [handleError]);
 
   return { handleError, wrapAsync };
