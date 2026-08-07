@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { QuoteWithDetails, QuoteHistoryFilters, QuoteHistoryStats } from '../types/quote'
-import { PDFService } from '../../../services/pdfService'
+import { pdfService } from '@/features/quotes/services/pdfService'
 import { NotificationService } from '../../../services/notificationService'
 import { supabase } from '@/lib/supabase'
 
@@ -252,7 +252,7 @@ export const downloadQuotePdf = async (quoteId: string): Promise<void> => {
   const personal = (data.quote?.personal_data ?? {}) as QuotePersonalData
   const needs = (data.quote?.coverage_requirements ?? {}) as QuoteCoverageRequirements
 
-  const blob = await PDFService.generateQuotePDF({
+  const blob = await pdfService.generateQuotePDF({
     id: data.id,
     createdAt: new Date(data.created_at),
     customerInfo: {

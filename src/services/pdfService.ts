@@ -1,7 +1,7 @@
 import jsPDF from 'jspdf';
 import { logger } from "@/lib/logger"
 import html2canvas from 'html2canvas';
-import { QuoteWithDetails } from '../types/quote';
+import { QuoteWithDetails } from '@/features/user/types/quote';
 
 export class PDFService {
   static async generateQuotePDF(quote: QuoteWithDetails): Promise<Blob> {

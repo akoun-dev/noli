@@ -1,5 +1,21 @@
 import { supabase } from '@/lib/supabase'
-import { Database, DatabaseQuoteOffer } from '@/types/database'
+import { Database } from '@/types/database'
+
+// Forme minimale d'une ligne quote_offers accompagnée de ses relations jointes
+// (insurer, offer, quote). Les colonnes réellement récupérées varient selon le
+// `select` utilisé, donc les champs sont optionnels sauf `id` et `created_at`.
+type DatabaseQuoteOffer = {
+  id: string
+  quote_id?: string
+  offer_id?: string
+  insurer_id?: string | null
+  price?: number | null
+  status?: string | null
+  created_at: string
+  insurer?: { name?: string | null; logo_url?: string | null } | null
+  offer?: { name?: string | null; deductible?: number | null; features?: string[] | null } | null
+  quote?: { valid_until?: string | null } | null
+}
 
 // Types pour les devis
 export interface QuoteRequest {
@@ -86,8 +102,8 @@ export interface QuoteStats {
 function mapDbToQuote(db: DatabaseQuoteOffer): QuoteResponse {
   return {
     id: db.id,
-    quoteId: db.quote_id,
-    offerId: db.offer_id,
+    quoteId: db.quote_id || '',
+    offerId: db.offer_id || '',
     insurerId: db.insurer_id || '',
     insurerName: db.insurer?.name || 'Assureur',
     insurerLogo: db.insurer?.logo_url || undefined,

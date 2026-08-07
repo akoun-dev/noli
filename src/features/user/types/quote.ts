@@ -2,7 +2,7 @@ import { Quote, ComparisonRequest } from '@/types';
 
 export type { ComparisonRequest };
 
-export interface QuoteWithDetails extends Quote {
+export interface QuoteWithDetails extends Omit<Quote, 'createdAt'> {
   insurerName: string;
   insurerLogo: string;
   vehicleInfo: {
