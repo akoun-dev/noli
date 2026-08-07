@@ -79,15 +79,6 @@ const EnhancedCompareModal = ({ open, onOpenChange, offers }: EnhancedCompareMod
   }))
 
   // Prepare data for radar chart (features comparison)
-  const guaranteeFeatures = [
-    'assistance24h',
-    'vehicleReplacement',
-    'driverProtection',
-    'glassBreakage',
-    'legalProtection',
-    'newVehicleValue',
-    'internationalAssistance',
-  ]
 
   // Get all unique features
   const allFeatures = Array.from(new Set(offers.flatMap((o) => o.features)))

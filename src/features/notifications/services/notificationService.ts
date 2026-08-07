@@ -215,40 +215,6 @@ const mockPreferences: NotificationPreferences = {
   frequency: 'immediate',
 }
 
-const mockStats: NotificationStats = {
-  total: 156,
-  unread: 12,
-  byType: {
-    quote_generated: 45,
-    quote_approved: 23,
-    quote_expired: 8,
-    payment_received: 34,
-    payment_failed: 5,
-    payment_reminder: 12,
-    policy_created: 18,
-    policy_renewal_reminder: 7,
-    policy_expired: 2,
-    account_update: 15,
-    security_alert: 3,
-    system_maintenance: 8,
-    new_feature: 12,
-    marketing: 25,
-    support_message: 6,
-  },
-  byCategory: {
-    quotes: 76,
-    payments: 51,
-    policies: 27,
-    account: 15,
-    security: 3,
-    system: 8,
-    marketing: 25,
-    support: 6,
-  },
-  today: 3,
-  thisWeek: 18,
-  thisMonth: 67,
-}
 
 // Real-time simulation
 let notificationListeners: ((notification: Notification) => void)[] = []

@@ -324,14 +324,6 @@ export default function DocumentsPage() {
     return stats.filter((stat) => stat.count > 0)
   }
 
-  const getStatsByStatus = () => {
-    const stats = Object.entries(DOCUMENT_STATUS).map(([key, value]) => ({
-      status: key,
-      ...value,
-      count: documents.filter((doc) => doc.status === key).length,
-    }))
-    return stats.filter((stat) => stat.count > 0)
-  }
 
   return (
     <div className='min-h-screen bg-gray-50 py-8'>

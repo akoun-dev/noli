@@ -9,15 +9,6 @@ export const InsurerLayout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user } = useAuth();
 
-  const insurerNavigation = [
-    { name: 'Tableau de bord', href: '/assureur/tableau-de-bord', icon: 'LayoutDashboard' },
-    { name: 'Mes Offres', href: '/assureur/offres', icon: 'Car' },
-    { name: 'Devis Reçus', href: '/assureur/devis', icon: 'FileText', badge: '3' },
-    { name: 'Notifications', href: '/assureur/notifications', icon: 'Bell', badge: '2' },
-    { name: 'Analytics', href: '/assureur/analytics', icon: 'BarChart3' },
-    { name: 'Clients', href: '/assureur/clients', icon: 'Users' },
-    { name: 'Paramètres', href: '/assureur/parametres', icon: 'Settings' },
-  ];
 
   return (
     <div className="min-h-screen bg-background">

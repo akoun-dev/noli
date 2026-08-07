@@ -1,4 +1,3 @@
-import { createClient } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { logger } from '@/lib/logger';
 import type {
@@ -13,13 +12,6 @@ import type {
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// Client public pour les requêtes sans authentification
-const supabasePublic = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: false,
-    autoRefreshToken: false,
-  },
-});
 
 // Essayer avec le client supabase-public.ts qui utilise fetch natif
 import { supabasePublic as supabasePublicFetch } from '@/lib/supabase-public';

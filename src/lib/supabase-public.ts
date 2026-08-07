@@ -32,51 +32,6 @@ export class SupabasePublicClient {
     this.apiKey = apiKey
   }
 
-  private isJwt(key: string): boolean {
-    return typeof key === 'string' && key.split('.').length >= 3
-  }
-
-  private async request<T>(
-    endpoint: string,
-    options: RequestInit = {}
-  ): Promise<SupabaseResponse<T>> {
-    try {
-      const url = `${this.baseUrl}/rest/v1${endpoint}`
-
-      const headers: Record<string, string> = {
-        apikey: this.apiKey,
-        'Content-Type': 'application/json',
-        'X-Application-Name': 'noli-assurance-public',
-        ...(options.headers as any),
-      }
-      if (this.isJwt(this.apiKey)) {
-        headers['Authorization'] = `Bearer ${this.apiKey}`
-      }
-
-      const response = await fetch(url, { ...options, headers })
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        return {
-          data: null,
-          error: {
-            message: errorData.message || `HTTP ${response.status}`,
-            code: errorData.code,
-          },
-        }
-      }
-
-      const data = await response.json()
-      return { data, error: null }
-    } catch (error) {
-      return {
-        data: null,
-        error: {
-          message: error instanceof Error ? error.message : 'Network error',
-        },
-      }
-    }
-  }
 
   // Méthode pour interroger une table
   from<T>(table: string) {

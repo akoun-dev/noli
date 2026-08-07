@@ -32,9 +32,7 @@ import type {
   EmailSettings,
   NotificationSettings,
   UISettings,
-  SettingsImport,
-  TestEmailRequest,
-  TestSmsRequest
+  SettingsImport
 } from "@/api/services/adminSettingsApi";
 import { logger } from '@/lib/logger';
 
@@ -42,8 +40,6 @@ const AdminSettingsPage = () => {
   const [activeTab, setActiveTab] = useState('general');
   const [isSaving, setIsSaving] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [, setTestEmailLoading] = useState(false);
-  const [, setTestSmsLoading] = useState(false);
 
   // États pour les données API
   const [systemSettings, setSystemSettings] = useState<SystemSettings>({
@@ -220,52 +216,7 @@ const AdminSettingsPage = () => {
     }
   };
 
-  const handleTestEmail = async () => {
-    setTestEmailLoading(true);
-    try {
-      const request: TestEmailRequest = {
-        to: systemSettings.adminEmail,
-        subject: 'Test email configuration',
-        template: 'custom',
-        customContent: 'Ceci est un email de test pour vérifier la configuration SMTP.'
-      };
-      
-      const response = await adminSettingsApi.testEmailSettings(request);
-      if (response.success) {
-        toast.success(response.data.message);
-      } else {
-        toast.error(response.data.message);
-      }
-    } catch (error) {
-      logger.error('Erreur lors du test email:', error);
-      toast.error('Erreur lors du test email');
-    } finally {
-      setTestEmailLoading(false);
-    }
-  };
 
-  const handleTestSms = async () => {
-    setTestSmsLoading(true);
-    try {
-      const request: TestSmsRequest = {
-        to: systemSettings.contactPhone,
-        message: 'Ceci est un SMS de test pour vérifier la configuration SMS.',
-        template: 'custom'
-      };
-      
-      const response = await adminSettingsApi.testSmsProvider('twilio', request);
-      if (response.success) {
-        toast.success(response.data.message);
-      } else {
-        toast.error(response.data.message);
-      }
-    } catch (error) {
-      logger.error('Erreur lors du test SMS:', error);
-      toast.error('Erreur lors du test SMS');
-    } finally {
-      setTestSmsLoading(false);
-    }
-  };
 
   if (loading) {
     return (

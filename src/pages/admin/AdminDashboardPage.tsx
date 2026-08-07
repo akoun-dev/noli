@@ -31,7 +31,7 @@ export const AdminDashboardPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('overview');
 
   const { data: stats, isLoading: statsLoading, refetch: refetchStats } = usePlatformStats();
-  const { data: activityData } = useActivityData(timeRange);
+  useActivityData(timeRange);
   const { data: topInsurers, isLoading: insurersLoading } = useTopInsurers();
   const { data: systemHealth, isLoading: healthLoading } = useSystemHealth();
   const { data: demographics, isLoading: demographicsLoading } = useUserDemographics();
@@ -82,20 +82,6 @@ export const AdminDashboardPage: React.FC = () => {
     }
   };
 
-  const getActivityIcon = (type: string) => {
-    switch (type) {
-      case 'new_user':
-        return <Users className="h-4 w-4 text-blue-600 dark:text-blue-400" />;
-      case 'new_quote':
-        return <FileText className="h-4 w-4 text-green-600 dark:text-green-400" />;
-      case 'new_insurer':
-        return <Shield className="h-4 w-4 text-purple-600 dark:text-purple-400" />;
-      case 'approval':
-        return <CheckCircle className="h-4 w-4 text-orange-600 dark:text-orange-400" />;
-      default:
-        return <Activity className="h-4 w-4 text-muted-foreground" />;
-    }
-  };
 
   // Gestionnaires d'événements pour les approbations
   const handleApprove = async (approval: any) => {
@@ -146,13 +132,6 @@ export const AdminDashboardPage: React.FC = () => {
     }
   ];
 
-  const recentActivities = activityData ? activityData.slice(-5).map((activity, index) => ({
-    id: index + 1,
-    type: index % 4 === 0 ? 'new_user' : index % 4 === 1 ? 'new_quote' : index % 4 === 2 ? 'new_insurer' : 'approval',
-    user: index % 4 === 0 ? `Nouvel utilisateur` : index % 4 === 1 ? `Nouveau devis` : index % 4 === 2 ? `Nouvel assureur` : `Approbation`,
-    action: `${activity.newUsers || activity.newQuotes || activity.newPolicies} activités`,
-    time: new Date(activity.date).toLocaleDateString('fr-FR')
-  })) : [];
 
   return (
     <div className="space-y-6 w-full">

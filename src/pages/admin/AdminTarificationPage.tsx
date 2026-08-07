@@ -143,59 +143,10 @@ export const AdminTarificationPage: React.FC = () => {
 
   // États pour la Responsabilité Civile
   const [, setTarifRC] = useState<TarifRC[]>([])
-  const [, setShowRCEditForm] = useState(false)
-  const [, setEditingRC] = useState<TarifRC | null>(null)
 
   // Fonctions CRUD pour les tarifs RC
-  const handleCreateRC = async (tarif: Omit<TarifRC, 'id'>) => {
-    try {
-      setLoading(true)
-      const newTarif = await guaranteeService.createTarifRC(tarif)
-      setTarifRC(prev => [...prev, newTarif])
-      toast.success('Tranche tarifaire créée avec succès')
-      setShowRCEditForm(false)
-      setEditingRC(null)
-    } catch (error) {
-      logger.error('Error creating RC tariff:', error)
-      toast.error('Erreur lors de la création de la tranche tarifaire')
-    } finally {
-      setLoading(false)
-    }
-  }
 
-  const handleUpdateRC = async (id: string, tarif: Partial<TarifRC>) => {
-    try {
-      setLoading(true)
-      const updatedTarif = await guaranteeService.updateTarifRC(id, tarif)
-      setTarifRC(prev => prev.map(t => t.id === id ? updatedTarif : t))
-      toast.success('Tranche tarifaire mise à jour avec succès')
-      setShowRCEditForm(false)
-      setEditingRC(null)
-    } catch (error) {
-      logger.error('Error updating RC tariff:', error)
-      toast.error('Erreur lors de la mise à jour de la tranche tarifaire')
-    } finally {
-      setLoading(false)
-    }
-  }
 
-  const handleDeleteRC = async (id: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cette tranche tarifaire ?')) {
-      return
-    }
-
-    try {
-      setLoading(true)
-      await guaranteeService.deleteTarifRC(id)
-      setTarifRC(prev => prev.filter(t => t.id !== id))
-      toast.success('Tranche tarifaire supprimée avec succès')
-    } catch (error) {
-      logger.error('Error deleting RC tariff:', error)
-      toast.error('Erreur lors de la suppression de la tranche tarifaire')
-    } finally {
-      setLoading(false)
-    }
-  }
   const [statistics, setStatistics] = useState<{
     totalGuarantees: number;
     activeGuarantees: number;

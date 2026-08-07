@@ -10,16 +10,6 @@ export const UserLayout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const { user } = useAuth()
 
-  const userNavigation = [
-    { name: 'Tableau de bord', href: '/tableau-de-bord', icon: 'LayoutDashboard' },
-    { name: 'Mes Devis', href: '/mes-devis', icon: 'FileText' },
-    { name: 'Mes Contrats', href: '/mes-contrats', icon: 'Shield' },
-    { name: 'Mes Documents', href: '/documents', icon: 'FolderOpen' },
-    { name: 'Mes Avis', href: '/mes-avis', icon: 'Star' },
-    { name: 'Notifications', href: '/notifications', icon: 'Bell' },
-    { name: 'Mon Profil', href: '/profil', icon: 'User' },
-    { name: 'Paramètres', href: '/parametres', icon: 'Settings' },
-  ]
 
   return (
     <div className='min-h-screen bg-background'>

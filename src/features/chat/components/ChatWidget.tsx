@@ -43,9 +43,6 @@ export const ChatWidget: React.FC = () => {
     setIsMinimized(false);
   };
 
-  const handleMinimize = () => {
-    setIsMinimized(true);
-  };
 
   return (
     <>
