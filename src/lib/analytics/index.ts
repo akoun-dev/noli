@@ -453,6 +453,12 @@ declare global {
       timestamp: number;
     }>;
     supabase?: any;
+    Sentry?: {
+      addBreadcrumb: (breadcrumb: Record<string, any>) => void;
+      captureException: (error: unknown, context?: Record<string, any>) => void;
+      lastEventId: () => string | undefined;
+      showReportDialog: (options?: Record<string, any>) => void;
+    };
   }
 }
 

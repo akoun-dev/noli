@@ -176,7 +176,7 @@ class PerformanceMonitor {
   private recordWebVital(name: keyof WebVitals, value: number): void {
     const rating = this.getWebVitalRating(name, value);
 
-    logger.performance(name, value, 'ms');
+    logger.perf(name, value, 'ms');
 
     analytics.track('Web Vital', {
       metric: name,
@@ -219,8 +219,8 @@ class PerformanceMonitor {
     const slowResources = resources.filter(resource => resource.duration > 1000);
     const failedResources = resources.filter(resource => resource.responseStatus >= 400);
 
-    logger.performance('Resources loaded', resources.length, 'files');
-    logger.performance('Total bundle size', totalSize / 1024, 'KB');
+    logger.perf('Resources loaded', resources.length, 'files');
+    logger.perf('Total bundle size', totalSize / 1024, 'KB');
 
     if (slowResources.length > 0) {
       logger.warn(`Slow resources detected: ${slowResources.length}`, {
@@ -263,7 +263,7 @@ class PerformanceMonitor {
     };
 
     Object.entries(metrics).forEach(([metric, value]) => {
-      logger.performance(`Navigation ${metric}`, value, 'ms');
+      logger.perf(`Navigation ${metric}`, value, 'ms');
     });
 
     analytics.track('Navigation Performance', {
@@ -336,7 +336,7 @@ class PerformanceMonitor {
 
         const measure = performance.getEntriesByName(`${pageName} Load Time`)[0];
         if (measure) {
-          logger.performance(`${pageName} load time`, measure.duration, 'ms');
+          logger.perf(`${pageName} load time`, measure.duration, 'ms');
           analytics.trackPageLoad(pageName, measure.duration);
         }
       }, 0);
@@ -363,7 +363,7 @@ class PerformanceMonitor {
 
       const measure = performance.getEntriesByName(`${componentName} Render Time`)[0];
       if (measure) {
-        logger.performance(`${componentName} render time`, measure.duration, 'ms');
+        logger.perf(`${componentName} render time`, measure.duration, 'ms');
 
         if (measure.duration > 100) {
           logger.warn(`Slow render detected: ${componentName}`, {
@@ -397,7 +397,7 @@ class PerformanceMonitor {
 
         const measure = performance.getEntriesByName(`${apiName} API Call`)[0];
         if (measure) {
-          logger.performance(`${apiName} API call`, measure.duration, 'ms');
+          logger.perf(`${apiName} API call`, measure.duration, 'ms');
           analytics.trackApiCall('POST', apiName, 200, measure.duration);
 
           if (measure.duration > 3000) {
@@ -417,7 +417,7 @@ class PerformanceMonitor {
 
       const measure = performance.getEntriesByName(`${apiName} API Call (Failed)`)[0];
       if (measure) {
-        logger.performance(`${apiName} API call (failed)`, measure.duration, 'ms');
+        logger.perf(`${apiName} API call (failed)`, measure.duration, 'ms');
         analytics.trackApiCall('POST', apiName, 500, measure.duration);
       }
 
@@ -434,7 +434,7 @@ class PerformanceMonitor {
       if (navigation) {
         report.push({
           name: 'Navigation Timing',
-          value: navigation.loadEventEnd - navigation.navigationStart,
+          value: navigation.loadEventEnd - navigation.startTime,
           id: 'nav',
           rating: this.getWebVitalRating('TTFB', navigation.responseStart - navigation.requestStart),
         });
@@ -482,4 +482,4 @@ export const performanceMonitor = PerformanceMonitor.getInstance();
 
 // Export des types et classes
 export { PerformanceMonitor };
-export type { PerformanceMetrics, WebVitals, PerformanceObserverEntry };
+export type { PerformanceObserverEntry };
