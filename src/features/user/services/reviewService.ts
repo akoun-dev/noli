@@ -77,7 +77,7 @@ class ReviewService {
           userId,
           insurerId: policy.insurer_id,
           insurerName: policy.insurers?.name || 'Assureur inconnu',
-          insurerLogo: policy.insurers?.logo_url,
+          insurerLogo: policy.insurers?.logo_url ?? undefined,
           rating: this.generateRandomRating(),
           title: this.generateReviewTitle(index),
           content: this.generateReviewContent(index),
@@ -125,7 +125,7 @@ class ReviewService {
         userId,
         insurerId: reviewData.insurerId,
         insurerName: insurer?.name || 'Assureur inconnu',
-        insurerLogo: insurer?.logo_url,
+        insurerLogo: insurer?.logo_url ?? undefined,
         rating: reviewData.rating,
         title: reviewData.title,
         content: reviewData.content,
@@ -247,34 +247,18 @@ class ReviewService {
         `
         )
         .eq('user_id', userId)
-        .neq('insurer_id', null)
+        .not('insurer_id', 'is', null)
 
-      const { data: quotes } = await supabase
-        .from('quotes')
-        .select(
-          `
-          insurer_id
-        `
-        )
-        .eq('user_id', userId)
-        .neq('insurer_id', null)
-
-      const insurerIds = new Set<string>()
       const insurersMap = new Map<string, { id: string; name: string; logo_url?: string }>()
 
       // Add insurers from policies
       policies?.forEach((policy) => {
         if (policy.insurers?.id) {
-          insurerIds.add(policy.insurers.id)
-          insurersMap.set(policy.insurers.id, policy.insurers)
-        }
-      })
-
-      // Add unique insurers from quotes
-      quotes?.forEach((quote) => {
-        if (quote.insurer_id && !insurerIds.has(quote.insurer_id)) {
-          insurerIds.add(quote.insurer_id)
-          // We'd need to fetch insurer details separately
+          insurersMap.set(policy.insurers.id, {
+            id: policy.insurers.id,
+            name: policy.insurers.name,
+            logo_url: policy.insurers.logo_url ?? undefined,
+          })
         }
       })
 
