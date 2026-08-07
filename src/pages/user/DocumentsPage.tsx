@@ -70,6 +70,7 @@ interface Document {
   quote_id?: string
   policy_id?: string
   insurer_id?: string
+  insurer_name?: string
 }
 
 const DOCUMENT_CATEGORIES = [
@@ -128,7 +129,7 @@ export default function DocumentsPage() {
         const extractedDocuments: Document[] = []
 
         policies?.forEach((policy) => {
-          const docs = policy.coverage_details?.documents || []
+          const docs = (policy.coverage_details as { documents?: any[] } | null)?.documents || []
           docs.forEach((doc: any, index: number) => {
             extractedDocuments.push({
               id: `${policy.id}-${index}`,
@@ -253,7 +254,7 @@ export default function DocumentsPage() {
 
   const handleDownloadDocument = (document: Document) => {
     // Create download link
-    const link = document.createElement('a')
+    const link = window.document.createElement('a')
     link.href = document.file_url || '#'
     link.download = document.original_name
     link.click()

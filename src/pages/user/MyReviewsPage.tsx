@@ -106,7 +106,7 @@ export default function MyReviewsPage() {
         // Simplified query to avoid infinite loading
         const { data: policies, error } = await supabase
           .from('policies')
-          .select('id, insurer_id, created_at, updated_at')
+          .select('id, insurer_id, quote_id, created_at, updated_at')
           .eq('user_id', user.id)
 
         if (error) {
@@ -212,7 +212,7 @@ export default function MyReviewsPage() {
       content: formData.content,
       pros: formData.pros || undefined,
       cons: formData.cons || undefined,
-      status: 'pending',
+      status: 'pending' as const,
       helpful_count: 0,
       report_count: 0,
       is_verified: false,
