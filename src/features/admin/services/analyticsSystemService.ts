@@ -1,6 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { logger } from "@/lib/logger"
 import { supabase } from '@/lib/supabase';
+import { Database } from '@/types/database';
+
+type Views = Database['public']['Views'];
 
 // Types pour les données analytiques
 export interface UserStats {
@@ -106,6 +109,105 @@ export interface PlatformOverview {
   monthlyGrowth: number;
 }
 
+// Mappers vue (snake_case) -> type de domaine (camelCase)
+function mapUserStats(r: Views['user_stats_view']['Row']): UserStats {
+  return {
+    role: r.role,
+    totalUsers: r.total_users,
+    activeUsers: r.active_users,
+    inactiveUsers: r.inactive_users,
+    newThisMonth: r.new_this_month,
+    newThisWeek: r.new_this_week,
+    activeThisMonth: r.active_this_month,
+    growthRatePercent: r.growth_rate_percent,
+  };
+}
+
+function mapQuoteStats(r: Views['quote_stats_view']['Row']): QuoteStats {
+  return {
+    status: r.status,
+    totalQuotes: r.total_quotes,
+    quotesThisMonth: r.quotes_this_month,
+    quotesThisWeek: r.quotes_this_week,
+    validQuotes: r.valid_quotes,
+    averagePrice: r.average_price ?? 0,
+    totalValue: r.total_value ?? 0,
+    categoryName: r.category_name ?? undefined,
+    uniqueUsers: r.unique_users,
+  };
+}
+
+function mapPolicyStats(r: Views['policy_stats_view']['Row']): PolicyStats {
+  return {
+    status: r.status,
+    totalPolicies: r.total_policies,
+    activePolicies: r.active_policies,
+    expiredPolicies: r.expired_policies,
+    policiesThisMonth: r.policies_this_month,
+    totalPremiumAmount: r.total_premium_amount ?? 0,
+    averagePremium: r.average_premium ?? 0,
+    paymentFrequency: r.payment_frequency ?? undefined,
+    insurerName: r.insurer_name ?? undefined,
+    uniqueCustomers: r.unique_customers,
+  };
+}
+
+function mapPaymentStats(r: Views['payment_stats_view']['Row']): PaymentStats {
+  return {
+    status: r.status,
+    totalPayments: r.total_payments,
+    totalAmount: r.total_amount ?? 0,
+    averageAmount: r.average_amount ?? 0,
+    paymentsThisMonth: r.payments_this_month,
+    paymentsThisWeek: r.payments_this_week,
+    paymentMethod: r.payment_method ?? undefined,
+    uniquePayers: r.unique_payers,
+  };
+}
+
+function mapInsurerPerformance(r: Views['insurer_performance_view']['Row']): InsurerPerformance {
+  return {
+    insurerId: r.insurer_id,
+    insurerName: r.insurer_name,
+    rating: r.rating ?? 0,
+    totalOffers: r.total_offers,
+    activeOffers: r.active_offers,
+    totalQuoteOffers: r.total_quote_offers,
+    approvedOffers: r.approved_offers,
+    totalPolicies: r.total_policies,
+    activePremiumRevenue: r.active_premium_revenue ?? 0,
+    averageApprovedPrice: r.average_approved_price ?? 0,
+    approvalRatePercent: r.approval_rate_percent ?? 0,
+    uniqueCustomers: r.unique_customers,
+  };
+}
+
+function mapDailyActivity(r: Views['daily_activity_view']['Row']): DailyActivity {
+  return {
+    activityDate: r.activity_date,
+    newUsers: r.new_users,
+    newQuotes: r.new_quotes,
+    newPolicies: r.new_policies,
+    newPayments: r.new_payments,
+  };
+}
+
+function mapCategoryTrend(r: Views['category_trends_view']['Row']): CategoryTrend {
+  return {
+    categoryId: r.category_id,
+    categoryName: r.category_name,
+    icon: r.icon ?? '',
+    totalQuotes: r.total_quotes,
+    quotesThisMonth: r.quotes_this_month,
+    totalOffersReceived: r.total_offers_received,
+    approvedOffers: r.approved_offers,
+    totalPolicies: r.total_policies,
+    averageQuotePrice: r.average_quote_price ?? 0,
+    averageApprovedPrice: r.average_approved_price ?? 0,
+    conversionRatePercent: r.conversion_rate_percent ?? 0,
+  };
+}
+
 // API Functions pour utiliser les vues analytiques
 
 export const fetchUserStats = async (role?: string): Promise<UserStats[]> => {
@@ -125,7 +227,7 @@ export const fetchUserStats = async (role?: string): Promise<UserStats[]> => {
       throw error;
     }
 
-    return data || [];
+    return (data || []).map(mapUserStats);
   } catch (error) {
     logger.error('Error in fetchUserStats:', error);
     throw error;
@@ -143,7 +245,7 @@ export const fetchQuoteStats = async (): Promise<QuoteStats[]> => {
       throw error;
     }
 
-    return data || [];
+    return (data || []).map(mapQuoteStats);
   } catch (error) {
     logger.error('Error in fetchQuoteStats:', error);
     throw error;
@@ -161,7 +263,7 @@ export const fetchPolicyStats = async (): Promise<PolicyStats[]> => {
       throw error;
     }
 
-    return data || [];
+    return (data || []).map(mapPolicyStats);
   } catch (error) {
     logger.error('Error in fetchPolicyStats:', error);
     throw error;
@@ -179,7 +281,7 @@ export const fetchPaymentStats = async (): Promise<PaymentStats[]> => {
       throw error;
     }
 
-    return data || [];
+    return (data || []).map(mapPaymentStats);
   } catch (error) {
     logger.error('Error in fetchPaymentStats:', error);
     throw error;
@@ -198,7 +300,7 @@ export const fetchInsurerPerformance = async (): Promise<InsurerPerformance[]> =
       throw error;
     }
 
-    return data || [];
+    return (data || []).map(mapInsurerPerformance);
   } catch (error) {
     logger.error('Error in fetchInsurerPerformance:', error);
     throw error;
@@ -218,7 +320,7 @@ export const fetchDailyActivity = async (days = 30): Promise<DailyActivity[]> =>
       throw error;
     }
 
-    return data || [];
+    return (data || []).map(mapDailyActivity);
   } catch (error) {
     logger.error('Error in fetchDailyActivity:', error);
     throw error;
@@ -237,13 +339,13 @@ export const fetchConversionFunnel = async (): Promise<ConversionFunnel> => {
       throw error;
     }
 
-    return data || {
-      usersCreated: 0,
-      usersWithQuotes: 0,
-      quotesCreated: 0,
-      offersMade: 0,
-      offersApproved: 0,
-      policiesIssued: 0,
+    return {
+      usersCreated: data?.users_created ?? 0,
+      usersWithQuotes: data?.users_with_quotes ?? 0,
+      quotesCreated: data?.quotes_created ?? 0,
+      offersMade: data?.offers_made ?? 0,
+      offersApproved: data?.offers_approved ?? 0,
+      policiesIssued: data?.policies_issued ?? 0,
     };
   } catch (error) {
     logger.error('Error in fetchConversionFunnel:', error);
@@ -263,7 +365,7 @@ export const fetchCategoryTrends = async (): Promise<CategoryTrend[]> => {
       throw error;
     }
 
-    return data || [];
+    return (data || []).map(mapCategoryTrend);
   } catch (error) {
     logger.error('Error in fetchCategoryTrends:', error);
     throw error;
@@ -298,13 +400,13 @@ export const fetchPlatformOverview = async (): Promise<PlatformOverview> => {
     const totalPolicies = policyStats?.reduce((sum, stat) => sum + stat.total_policies, 0) || 0;
 
     // Utiliser la vue analytique pour les assureurs
-    const { data: insurerStats } = await fetchInsurerPerformance();
+    const insurerStats = await fetchInsurerPerformance();
     const totalInsurersFromView = insurerStats?.length || 0;
 
     // Utiliser la vue analytique pour le funnel
-    const { data: funnel } = await fetchConversionFunnel();
-    const conversionRate = funnel?.users_created > 0
-      ? Math.round((funnel.policies_issued / funnel.users_created) * 10000) / 100
+    const funnel = await fetchConversionFunnel();
+    const conversionRate = funnel.usersCreated > 0
+      ? Math.round((funnel.policiesIssued / funnel.usersCreated) * 10000) / 100
       : 0;
 
     // Calculer le revenu total à partir des polices actives

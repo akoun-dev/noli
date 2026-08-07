@@ -2,6 +2,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { logger } from "@/lib/logger"
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
+import { Database, Json } from '@/types/database';
+
+type NotificationPreferencesRow =
+  Database['public']['Tables']['notification_preferences']['Row'];
 
 // Types pour le système de notifications
 export interface Notification {
@@ -93,6 +97,85 @@ export interface UpdateNotificationPreferencesRequest {
   timezone?: string;
 }
 
+function mapCategories(value: Json | null): NotificationPreferences['categories'] {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as NotificationPreferences['categories'])
+    : {};
+}
+
+function mapNotificationRow(
+  row: Database['public']['Tables']['notifications']['Row']
+): Notification {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    title: row.title,
+    message: row.message,
+    type: row.type,
+    category: row.category,
+    read: row.read,
+    actionUrl: row.action_url ?? undefined,
+    actionText: row.action_text ?? undefined,
+    metadata:
+      row.metadata && typeof row.metadata === 'object' && !Array.isArray(row.metadata)
+        ? (row.metadata as Record<string, unknown>)
+        : undefined,
+    expiresAt: row.expires_at ?? undefined,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function mapTemplateRow(
+  row: Database['public']['Tables']['notification_templates']['Row']
+): NotificationTemplate {
+  return {
+    id: row.id,
+    name: row.name,
+    titleTemplate: row.title_template,
+    messageTemplate: row.message_template,
+    type: row.type,
+    category: row.category,
+    variables: Array.isArray(row.variables) ? (row.variables as string[]) : [],
+    actionUrlTemplate: row.action_url_template ?? undefined,
+    actionTextTemplate: row.action_text_template ?? undefined,
+    isActive: row.is_active,
+  };
+}
+
+function mapLogRow(
+  row: Database['public']['Tables']['notification_logs']['Row']
+): NotificationLog {
+  return {
+    id: row.id,
+    notificationId: row.notification_id ?? undefined,
+    userId: row.user_id ?? undefined,
+    channel: row.channel,
+    status: row.status,
+    provider: row.provider ?? undefined,
+    externalId: row.external_id ?? undefined,
+    errorMessage: row.error_message ?? undefined,
+    sentAt: row.sent_at ?? undefined,
+    deliveredAt: row.delivered_at ?? undefined,
+    createdAt: row.created_at,
+  };
+}
+
+function mapPreferencesRow(row: NotificationPreferencesRow): NotificationPreferences {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    emailEnabled: row.email_enabled,
+    pushEnabled: row.push_enabled,
+    smsEnabled: row.sms_enabled,
+    whatsappEnabled: row.whatsapp_enabled,
+    categories: mapCategories(row.categories),
+    quietHoursStart: row.quiet_hours_start,
+    quietHoursEnd: row.quiet_hours_end,
+    timezone: row.timezone,
+  };
+}
+
 // API Functions
 
 export const fetchNotifications = async (userId?: string, limit = 50): Promise<Notification[]> => {
@@ -116,7 +199,7 @@ export const fetchNotifications = async (userId?: string, limit = 50): Promise<N
       throw error;
     }
 
-    return data || [];
+    return (data || []).map(mapNotificationRow);
   } catch (error) {
     logger.error('Error in fetchNotifications:', error);
     throw error;
@@ -145,7 +228,7 @@ export const fetchUnreadNotifications = async (userId?: string): Promise<Notific
       throw error;
     }
 
-    return data || [];
+    return (data || []).map(mapNotificationRow);
   } catch (error) {
     logger.error('Error in fetchUnreadNotifications:', error);
     throw error;
@@ -172,7 +255,7 @@ export const fetchNotificationPreferences = async (userId?: string): Promise<Not
       throw error;
     }
 
-    return data;
+    return data ? mapPreferencesRow(data) : null;
   } catch (error) {
     logger.error('Error in fetchNotificationPreferences:', error);
     throw error;
@@ -206,7 +289,7 @@ export const updateNotificationPreferences = async (
       throw error;
     }
 
-    return data;
+    return mapPreferencesRow(data);
   } catch (error) {
     logger.error('Error in updateNotificationPreferences:', error);
     throw error;
@@ -312,7 +395,7 @@ export const fetchNotificationTemplates = async (): Promise<NotificationTemplate
       throw error;
     }
 
-    return data || [];
+    return (data || []).map(mapTemplateRow);
   } catch (error) {
     logger.error('Error in fetchNotificationTemplates:', error);
     throw error;
@@ -340,7 +423,7 @@ export const fetchNotificationLogs = async (userId?: string, limit = 100): Promi
       throw error;
     }
 
-    return data || [];
+    return (data || []).map(mapLogRow);
   } catch (error) {
     logger.error('Error in fetchNotificationLogs:', error);
     throw error;
