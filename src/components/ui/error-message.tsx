@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AlertTriangle, Info, CheckCircle, XCircle, RefreshCw, ExternalLink, Mail, Phone } from 'lucide-react';
+import { AlertTriangle, Info, CheckCircle, XCircle, RefreshCw, ExternalLink, Mail, Phone, X } from 'lucide-react';
 import { Button } from './button';
 import { cn } from '@/lib/utils';
 

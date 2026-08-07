@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useUserQuotes, useQuoteStats, useDownloadQuotePdf } from '../services/quoteService';
 import { QuoteCard } from '../components/QuoteCard';
 import { QuoteFilters } from '../components/QuoteFilters';
-import { QuoteHistoryFilters } from '../types/quote';
+import { QuoteHistoryFilters, QuoteWithDetails } from '../types/quote';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';

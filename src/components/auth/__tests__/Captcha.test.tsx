@@ -3,7 +3,7 @@
  * Vérifie le fonctionnement des différents types de défis et la gestion d'état
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { Captcha } from '../Captcha'
 

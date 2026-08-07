@@ -15,6 +15,15 @@ export interface WebVitals {
   INP: number; // Interaction to Next Paint
 }
 
+/**
+ * Non-standard Chrome `performance.memory` shape (not part of the DOM lib types).
+ */
+export interface PerformanceMemory {
+  usedJSHeapSize?: number;
+  totalJSHeapSize?: number;
+  jsHeapSizeLimit?: number;
+}
+
 export interface PerformanceMetrics {
   navigation: PerformanceNavigationTiming;
   resources: PerformanceResourceTiming[];
