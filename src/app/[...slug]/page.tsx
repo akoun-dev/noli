@@ -1,23 +1,37 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import dynamic from "next/dynamic";
 import { useRouter, usePathname } from "next/navigation";
 import { useAppStore } from "@/store/app-store";
 import type { AppView } from "@/types";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { LandingPage } from "@/components/landing/landing-page";
-import { OffersPage } from "@/components/offers/offers-page";
 import { ComparisonForm } from "@/components/comparison/comparison-form";
-import { ResultsPage } from "@/components/results/results-page";
-import { AuthPages } from "@/components/auth/auth-pages";
 import { AboutPage } from "@/components/about/about-page";
 import { ContactPage } from "@/components/contact/contact-page";
 import { FAQPage } from "@/components/legal/faq-page";
 import { MentionsLegalesPage } from "@/components/legal/mentions-legales-page";
-import { AdminPage } from "@/components/admin/admin-page";
-import { UserLayout } from "@/components/user/user-layout";
-import { InsurerLayout } from "@/components/insurer/insurer-layout";
+import { AuthPages } from "@/components/auth/auth-pages";
+
+// UI-C06 : code splitting — les vues lourdes (tableaux de bord, résultats,
+// offres) sont chargées à la demande pour réduire le bundle initial.
+const OffersPage = dynamic(() =>
+  import("@/components/offers/offers-page").then((m) => m.OffersPage)
+);
+const ResultsPage = dynamic(() =>
+  import("@/components/results/results-page").then((m) => m.ResultsPage)
+);
+const AdminPage = dynamic(() =>
+  import("@/components/admin/admin-page").then((m) => m.AdminPage)
+);
+const UserLayout = dynamic(() =>
+  import("@/components/user/user-layout").then((m) => m.UserLayout)
+);
+const InsurerLayout = dynamic(() =>
+  import("@/components/insurer/insurer-layout").then((m) => m.InsurerLayout)
+);
 
 // ── URL ↔ View mapping ───────────────────────────────────────────
 const VIEW_TO_PATH: Record<AppView, string> = {
@@ -136,11 +150,7 @@ export default function Home() {
     if (validated.current) return;
     validated.current = true;
     if (!user.isLoggedIn) return;
-    fetch("/api/auth", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "me" }),
-    }).then((res) => {
+    fetch("/api/auth/me").then((res) => {
       if (!res.ok) {
         setUser({ isLoggedIn: false, id: undefined, name: undefined, email: undefined, role: undefined });
       }
@@ -206,7 +216,7 @@ export default function Home() {
   return (
     <div className={fullPage ? "min-h-screen" : "min-h-screen flex flex-col"}>
       {!fullPage && <Header />}
-      <main className={fullPage ? "" : "flex-1"}>
+      <main id="main-content" className={fullPage ? "" : "flex-1"}>
         {renderView()}
       </main>
       {!fullPage && <Footer />}

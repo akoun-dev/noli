@@ -4,6 +4,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ErrorBoundary } from "@/components/error-boundary";
 
 const spaceGrotesk = Space_Grotesk({
   variable: "--font-space-grotesk",
@@ -53,6 +54,13 @@ export default function RootLayout({
       <body
         className={`${spaceGrotesk.variable} ${nunitoSans.variable} ${poppins.variable} antialiased`}
       >
+        {/* UI-H01 : lien skip-nav, invisible sauf au focus clavier (WCAG 2.1 A) */}
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-full focus:bg-primary focus:px-5 focus:py-2.5 focus:text-sm focus:font-semibold focus:text-primary-foreground focus:shadow-lg"
+        >
+          Aller au contenu principal
+        </a>
         <ThemeProvider
           attribute="class"
           defaultTheme="light"
@@ -60,8 +68,11 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <TooltipProvider>
-            {children}
-            <Toaster />
+            {/* UI-H03 : Error Boundary racine — plus d'écran blanc en cas d'erreur */}
+            <ErrorBoundary label="Application">
+              {children}
+              <Toaster />
+            </ErrorBoundary>
           </TooltipProvider>
         </ThemeProvider>
       </body>

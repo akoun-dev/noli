@@ -497,9 +497,9 @@ export function OffersPage() {
             </Select>
           </div>
 
-          {/* Results count */}
+          {/* Results count — UI-C01 : région live pour les lecteurs d'écran */}
           <div className="mt-4 pt-3 border-t border-border/50 flex items-center justify-between">
-            <p className="text-xs text-muted-foreground">
+            <p aria-live="polite" className="text-xs text-muted-foreground">
               {loading ? (
                 <span className="inline-flex items-center gap-1.5">
                   <Loader2 className="h-3 w-3 animate-spin" />
@@ -553,6 +553,8 @@ export function OffersPage() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3 }}
+              aria-live="polite"
+              aria-atomic="true"
               className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
             >
               {offers.map((offer) => (

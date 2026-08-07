@@ -148,12 +148,12 @@ export const useAppStore = create<AppState>()(
         adminTab: state.adminTab,
         userTab: state.userTab,
         insurerTab: state.insurerTab,
-        // Persist form data so it survives refresh
-        personalInfo: state.personalInfo,
-        vehicleInfo: state.vehicleInfo,
-        coverageNeeds: state.coverageNeeds,
-        comparisonStep: state.comparisonStep,
+        // UI-H04 : les données personnelles (personalInfo, vehicleInfo) ne
+        // sont PLUS persistées en localStorage — nom, email et téléphone sont
+        // des données personnelles qui ne doivent pas rester en clair sur le
+        // poste. Le formulaire repart de zéro à chaque chargement.
         // Transient data NOT persisted:
+        // personalInfo, vehicleInfo, coverageNeeds, comparisonStep,
         // comparisonResults, isComparing, sortBy, selectedInsurerFilter,
         // userQuotes, selectedOffer, offersToCompare, comparisonModalOpen
       }),

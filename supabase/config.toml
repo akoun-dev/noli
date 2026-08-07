@@ -6,6 +6,8 @@ enabled = true
 sql_paths = ['./seed.sql']
 
 [functions.send-notification]
-# This function is invoked server-side with the secret key (auth: 'secret').
-# No user JWT is required on the Authorization header.
+# This function is invoked server-side (auth: 'secret') WITHOUT a user JWT,
+# donc verify_jwt = false. Pour éviter toute invocation publique, la fonction
+# vérifie un secret partagé (x-api-key / Authorization) :
+#   supabase secrets set NOLI_FUNCTION_SECRET=...
 verify_jwt = false

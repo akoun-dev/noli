@@ -149,35 +149,54 @@ function priceCoverages(
   return { grossPremium, pricingBreakdown };
 }
 
-function findPricingForFeature(
-  pricingBreakdown: PricingBreakdown[],
-  feature: string
-): PricingBreakdown | undefined {
-  const norm = feature
+function normalizeGuaranteeText(s: string): string {
+  return (s || "")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/&/g, "et")
     .toLowerCase()
     .trim();
-  return pricingBreakdown.find((pb) => {
-    const normName = (pb.guaranteeName || "")
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/&/g, "et")
-      .toLowerCase()
-      .trim();
-    if (normName === norm) return true;
-    const normCode = (pb.guaranteeCode || "")
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/&/g, "et")
-      .toLowerCase()
-      .trim();
-    if (normCode === norm) return true;
-    if (norm.includes(normName) || normName.includes(norm)) return true;
-    const keywords = norm.split(" ").filter((w: string) => w.length > 2);
-    return keywords.length > 0 && keywords.every((kw: string) => normName.includes(kw));
+}
+
+function findPricingForFeature(
+  pricingBreakdown: PricingBreakdown[],
+  feature: string
+): PricingBreakdown | undefined {
+  const norm = normalizeGuaranteeText(feature);
+  if (!norm) return undefined;
+
+  // 1) Correspondance exacte (nom ou code) : prioritaire, elle lève les
+  //    ambiguïtés entre garanties aux libellés proches (ex. les variantes IPT).
+  const exact = pricingBreakdown.find((pb) => {
+    if (normalizeGuaranteeText(pb.guaranteeName) === norm) return true;
+    if (normalizeGuaranteeText(pb.guaranteeCode) === norm) return true;
+    return false;
   });
+  if (exact) return exact;
+
+  // 2) Correspondance partielle : on garde le meilleur candidat (écart de
+  //    longueur minimal), pas le premier trouvé. Un libellé strictement plus
+  //    long que la feature (match par inclusion) est pénalisé : il s'agit d'une
+  //    feature générique qui risquerait de tomber sur une variante spécifique.
+  const keywords = norm.split(" ").filter((w: string) => w.length > 2);
+  let best: PricingBreakdown | undefined;
+  let bestScore = Infinity;
+  for (const pb of pricingBreakdown) {
+    const normName = normalizeGuaranteeText(pb.guaranteeName);
+    if (!normName) continue;
+    const matches =
+      norm.includes(normName) ||
+      normName.includes(norm) ||
+      (keywords.length > 0 && keywords.every((kw: string) => normName.includes(kw)));
+    if (!matches) continue;
+    const penalty = normName.includes(norm) ? 500 : 0;
+    const score = penalty + Math.abs(normName.length - norm.length);
+    if (score < bestScore) {
+      bestScore = score;
+      best = pb;
+    }
+  }
+  return best;
 }
 
 function buildOfferResult(

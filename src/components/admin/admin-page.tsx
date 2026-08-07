@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useAppStore } from "@/store/app-store";
 import {
   LayoutDashboard,
@@ -20,18 +21,19 @@ import {
   type AppShellSidebarItem,
 } from "@/components/shared/app-shell";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
-import { DashboardTab } from "./dashboard-tab";
-import { AssureursTab } from "./assureurs-tab";
-import { InsuranceCategoriesTab } from "./insurance-categories-tab";
-import { InsuranceOffersTab } from "./insurance-offers-tab";
-import { CoverageCategoriesTab } from "./coverage-categories-tab";
-import { CoveragesTab } from "./coverages-tab";
-import { DevisTab } from "./devis-tab";
-import { RappelsTab } from "./rappels-tab";
-import { SettingsTab } from "./settings-tab";
-import { AuditLogsTab } from "./audit-logs-tab";
-import { BackupsTab } from "./backups-tab";
-import { RolesTab } from "./roles-tab";
+// UI-C06 : les onglets admin sont chargés à la demande (code splitting).
+const DashboardTab = dynamic(() => import("./dashboard-tab").then((m) => m.DashboardTab));
+const AssureursTab = dynamic(() => import("./assureurs-tab").then((m) => m.AssureursTab));
+const InsuranceCategoriesTab = dynamic(() => import("./insurance-categories-tab").then((m) => m.InsuranceCategoriesTab));
+const InsuranceOffersTab = dynamic(() => import("./insurance-offers-tab").then((m) => m.InsuranceOffersTab));
+const CoverageCategoriesTab = dynamic(() => import("./coverage-categories-tab").then((m) => m.CoverageCategoriesTab));
+const CoveragesTab = dynamic(() => import("./coverages-tab").then((m) => m.CoveragesTab));
+const DevisTab = dynamic(() => import("./devis-tab").then((m) => m.DevisTab));
+const RappelsTab = dynamic(() => import("./rappels-tab").then((m) => m.RappelsTab));
+const SettingsTab = dynamic(() => import("./settings-tab").then((m) => m.SettingsTab));
+const AuditLogsTab = dynamic(() => import("./audit-logs-tab").then((m) => m.AuditLogsTab));
+const BackupsTab = dynamic(() => import("./backups-tab").then((m) => m.BackupsTab));
+const RolesTab = dynamic(() => import("./roles-tab").then((m) => m.RolesTab));
 
 /* ── Sidebar config ── */
 const sidebarItems: AppShellSidebarItem[] = [

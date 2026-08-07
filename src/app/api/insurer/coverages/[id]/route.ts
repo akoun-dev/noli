@@ -1,6 +1,7 @@
 import { db, mapRow } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { getInsurerAccount, getSessionProfile, requireAuth } from "@/lib/auth-guard";
+import { parseNumberField } from "@/lib/security";
 
 async function resolveInsurerId(): Promise<string | null> {
   const profile = await getSessionProfile();
@@ -107,6 +108,26 @@ export async function PUT(
         { error: "Accès refusé" },
         { status: 403 }
       );
+    }
+
+    // H-04 : validation des champs numériques avant écriture
+    const numericFields: { name: string; value: unknown }[] = [];
+    const collect = (name: string, value: unknown) => {
+      if (value !== undefined && value !== null && value !== "") {
+        numericFields.push({ name, value });
+      }
+    };
+    collect("Taux (ratePercent)", ratePercent);
+    collect("Seuil valeur neuve", newValueThreshold);
+    collect("Taux sous le seuil", rateBelowThreshold);
+    collect("Taux au-dessus du seuil", rateAboveThreshold);
+    collect("Montant fixe", fixedAmount);
+    collect("Montant min", minAmount);
+    collect("Montant max", maxAmount);
+    collect("Capital", capital);
+    for (const { name, value } of numericFields) {
+      const res = parseNumberField(value, { field: name, min: 0, optional: false });
+      if (!res.ok) return NextResponse.json({ error: res.error }, { status: 400 });
     }
 
     // If code is being changed, check uniqueness

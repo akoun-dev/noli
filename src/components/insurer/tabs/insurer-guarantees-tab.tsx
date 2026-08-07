@@ -60,6 +60,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { PaginationControls, usePaginationClamp } from "@/components/shared/pagination-controls";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAppStore } from "@/store/app-store";
 import { useToast } from "@/hooks/use-toast";
@@ -318,6 +319,9 @@ const calcLabel: Record<string, string> = {
   MATRIX_BASED: "Matrice tarifaire",
 };
 
+// Taille de page pour la pagination en mémoire (filtrage client)
+const PAGE_SIZE = 25;
+
 const step2Options: {
   type: CalculationType;
   label: string;
@@ -444,8 +448,9 @@ export function InsurerGuaranteesTab() {
   const [tierceCategories, setTierceCategories] = useState<string[]>(getDefaultVehicleCategories());
   const [newCategoryInput, setNewCategoryInput] = useState("");
 
-  // Search / filter
+  // Search / filter (client-side → pagination en mémoire sur le résultat filtré)
   const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(1);
   const filteredCoverages = coverages.filter((cov) => {
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
@@ -458,6 +463,18 @@ export function InsurerGuaranteesTab() {
       (cov.isActive ? "active" : "inactive").includes(q)
     );
   });
+  const pageCount = Math.max(1, Math.ceil(filteredCoverages.length / PAGE_SIZE));
+  usePaginationClamp(page, setPage, pageCount);
+  const pagedCoverages = filteredCoverages.slice(
+    (page - 1) * PAGE_SIZE,
+    page * PAGE_SIZE
+  );
+
+  // Reset à la page 1 dès que la recherche change
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    setPage(1);
+  };
 
   // Delete dialog
   const [deleteTarget, setDeleteTarget] = useState<Coverage | null>(null);
@@ -1811,12 +1828,12 @@ export function InsurerGuaranteesTab() {
             <Input
               placeholder="Rechercher par nom, code, catégorie, type…"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
               className="pl-9 h-10 text-sm bg-muted/30 border-muted focus-visible:bg-background transition-all"
             />
             {searchQuery && (
               <button
-                onClick={() => setSearchQuery("")}
+                onClick={() => handleSearchChange("")}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
               >
                 <X className="h-4 w-4" />
@@ -1890,14 +1907,14 @@ export function InsurerGuaranteesTab() {
                         <p className="text-sm text-muted-foreground">
                           Aucune garantie ne correspond à &quot;{searchQuery}&quot;
                         </p>
-                        <Button variant="outline" size="sm" onClick={() => setSearchQuery("")}>
+                        <Button variant="outline" size="sm" onClick={() => handleSearchChange("")}>
                           Effacer la recherche
                         </Button>
                       </div>
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredCoverages.map((cov) => (
+                  pagedCoverages.map((cov) => (
                   <TableRow key={cov.id}>
                     <TableCell className="font-medium">{cov.name}</TableCell>
                     <TableCell className="hidden md:table-cell">
@@ -1961,6 +1978,18 @@ export function InsurerGuaranteesTab() {
             </Table>
           )}
         </div>
+
+        {!loading && !error && filteredCoverages.length > 0 && (
+          <div className="px-4 pb-4">
+            <PaginationControls
+              page={page}
+              pageCount={pageCount}
+              total={filteredCoverages.length}
+              onPageChange={setPage}
+              pageSize={PAGE_SIZE}
+            />
+          </div>
+        )}
       </div>
 
       {/* ── Wizard Dialog ── */}

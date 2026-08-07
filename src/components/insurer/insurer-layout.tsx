@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useAppStore } from "@/store/app-store";
 import {
   LayoutDashboard,
@@ -19,16 +20,17 @@ import {
   type AppShellSidebarItem,
 } from "@/components/shared/app-shell";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
-import { InsurerDashboardTab } from "./tabs/insurer-dashboard-tab";
-import { InsurerClientsTab } from "./tabs/insurer-clients-tab";
-import { InsurerContractsTab } from "./tabs/insurer-contracts-tab";
-import { InsurerClaimsTab } from "./tabs/insurer-claims-tab";
-import { InsurerOffersTab } from "./tabs/insurer-offers-tab";
-import { InsurerQuotesTab } from "./tabs/insurer-quotes-tab";
-import { InsurerAnalyticsTab } from "./tabs/insurer-analytics-tab";
-import { InsurerGuaranteesTab } from "./tabs/insurer-guarantees-tab";
-import { InsurerSettingsTab } from "./tabs/insurer-settings-tab";
-import { InsurerCallbacksTab } from "./tabs/insurer-callbacks-tab";
+// UI-C06 : les onglets assureur sont chargés à la demande (code splitting).
+const InsurerDashboardTab = dynamic(() => import("./tabs/insurer-dashboard-tab").then((m) => m.InsurerDashboardTab));
+const InsurerClientsTab = dynamic(() => import("./tabs/insurer-clients-tab").then((m) => m.InsurerClientsTab));
+const InsurerContractsTab = dynamic(() => import("./tabs/insurer-contracts-tab").then((m) => m.InsurerContractsTab));
+const InsurerClaimsTab = dynamic(() => import("./tabs/insurer-claims-tab").then((m) => m.InsurerClaimsTab));
+const InsurerOffersTab = dynamic(() => import("./tabs/insurer-offers-tab").then((m) => m.InsurerOffersTab));
+const InsurerQuotesTab = dynamic(() => import("./tabs/insurer-quotes-tab").then((m) => m.InsurerQuotesTab));
+const InsurerAnalyticsTab = dynamic(() => import("./tabs/insurer-analytics-tab").then((m) => m.InsurerAnalyticsTab));
+const InsurerGuaranteesTab = dynamic(() => import("./tabs/insurer-guarantees-tab").then((m) => m.InsurerGuaranteesTab));
+const InsurerSettingsTab = dynamic(() => import("./tabs/insurer-settings-tab").then((m) => m.InsurerSettingsTab));
+const InsurerCallbacksTab = dynamic(() => import("./tabs/insurer-callbacks-tab").then((m) => m.InsurerCallbacksTab));
 
 /* ── Sidebar config ── */
 const sidebarItems: AppShellSidebarItem[] = [

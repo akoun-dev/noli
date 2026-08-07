@@ -1,10 +1,19 @@
 import { Resend } from "resend";
+import { escapeHtml } from "@/lib/security";
 
 const resendApiKey = process.env.RESEND_API_KEY || "";
 
 const resend = resendApiKey ? new Resend(resendApiKey) : null;
 
 const FROM_EMAIL = process.env.EMAIL_FROM || "NOLI Assurance <devis@noli.ci>";
+
+/**
+ * Assainit une chaîne pour un en-tête d'email (sujet) : supprime les sauts
+ * de ligne (injection d'en-tête) et les caractères de contrôle.
+ */
+function sanitizeSubject(value: string): string {
+  return value.replace(/[\r\n\u0000-\u001f]/g, " ").trim();
+}
 
 export interface QuoteEmailParams {
   to: string;
@@ -18,6 +27,11 @@ export interface QuoteEmailParams {
 
 /**
  * Envoie un email de confirmation de devis au client.
+ *
+ * C-06 : toutes les variables issues de la base ou de l'utilisateur sont
+ * échappées HTML avant interpolation — un assureur nommant son entreprise
+ * avec du HTML malveillant ne peut pas exécuter de script dans le client
+ * email du destinataire.
  */
 export async function sendQuoteConfirmation(params: QuoteEmailParams) {
   if (!resend) {
@@ -29,11 +43,20 @@ export async function sendQuoteConfirmation(params: QuoteEmailParams) {
 
   const formattedPrice = new Intl.NumberFormat("fr-FR").format(estimatedPrice);
 
+  const h = {
+    reference: escapeHtml(reference),
+    insurerName: escapeHtml(insurerName),
+    offerName: escapeHtml(offerName),
+    contractType: escapeHtml(contractType),
+    contactPhone: escapeHtml(contactPhone),
+    formattedPrice: escapeHtml(formattedPrice),
+  };
+
   try {
     const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
       to: [to],
-      subject: `🔷 Votre devis NOLI ${reference} — ${insurerName}`,
+      subject: sanitizeSubject(`🔷 Votre devis NOLI ${reference} — ${insurerName}`),
       html: `
 <!DOCTYPE html>
 <html>
@@ -67,7 +90,7 @@ export async function sendQuoteConfirmation(params: QuoteEmailParams) {
     <div class="body">
       <div class="reference">
         <p style="margin: 0 0 4px; font-size: 13px; color: #64748b;">Référence</p>
-        <span>${reference}</span>
+        <span>${h.reference}</span>
       </div>
 
       <p style="font-size: 15px; color: #1e293b; margin: 0 0 20px;">
@@ -78,26 +101,26 @@ export async function sendQuoteConfirmation(params: QuoteEmailParams) {
 
       <div class="detail-row">
         <span class="detail-label">Assureur</span>
-        <span class="detail-value">${insurerName}</span>
+        <span class="detail-value">${h.insurerName}</span>
       </div>
       <div class="detail-row">
         <span class="detail-label">Formule</span>
-        <span class="detail-value">${offerName}${contractType ? ` — ${contractType}` : ""}</span>
+        <span class="detail-value">${h.offerName}${h.contractType ? ` — ${h.contractType}` : ""}</span>
       </div>
       <div class="detail-row">
         <span class="detail-label">Référence</span>
-        <span class="detail-value">${reference}</span>
+        <span class="detail-value">${h.reference}</span>
       </div>
-      ${contactPhone ? `
+      ${h.contactPhone ? `
       <div class="detail-row">
         <span class="detail-label">Téléphone de contact</span>
-        <span class="detail-value">${contactPhone}</span>
+        <span class="detail-value">${h.contactPhone}</span>
       </div>` : ""}
 
       <div class="price">
         <p style="margin: 0 0 4px; font-size: 13px; color: #64748b;">Estimation mensuelle</p>
-        <div class="amount">${formattedPrice} FCFA</div>
-        <div class="period">Soit ${formattedPrice} FCFA/mois</div>
+        <div class="amount">${h.formattedPrice} FCFA</div>
+        <div class="period">Soit ${h.formattedPrice} FCFA/mois</div>
       </div>
 
       <p style="font-size: 13px; color: #64748b; margin: 16px 0 0;">
@@ -143,11 +166,16 @@ export async function sendCallbackConfirmation(to: string, insurerName: string, 
     return { success: false, error: "Resend non configuré" };
   }
 
+  const h = {
+    insurerName: escapeHtml(insurerName),
+    preferredTime: escapeHtml(preferredTime),
+  };
+
   try {
     const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
       to: [to],
-      subject: `📞 Demande de rappel — ${insurerName}`,
+      subject: sanitizeSubject(`📞 Demande de rappel — ${insurerName}`),
       html: `
 <!DOCTYPE html>
 <html>
@@ -165,14 +193,14 @@ export async function sendCallbackConfirmation(to: string, insurerName: string, 
   <div class="container">
     <div class="header">
       <h1>📞 Demande de rappel</h1>
-      <p>${insurerName}</p>
+      <p>${h.insurerName}</p>
     </div>
     <div class="body">
       <p style="font-size: 15px; color: #1e293b;">
-        Votre demande de rappel pour <strong>${insurerName}</strong> a bien été prise en compte.
+        Votre demande de rappel pour <strong>${h.insurerName}</strong> a bien été prise en compte.
       </p>
       <p style="font-size: 14px; color: #64748b;">
-        Créneau demandé : <strong>${preferredTime}</strong>
+        Créneau demandé : <strong>${h.preferredTime}</strong>
       </p>
       <p style="font-size: 14px; color: #64748b; margin-top: 16px;">
         Un conseiller vous contactera prochainement sur le numéro que vous avez communiqué.

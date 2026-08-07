@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, mapRow } from "@/lib/db";
 import { requireAuth } from "@/lib/auth-guard";
+import { logAudit } from "@/lib/audit";
 
 export async function DELETE(
   _request: NextRequest,
@@ -26,12 +27,11 @@ export async function DELETE(
 
     await db.from("coverage_tariff_rules").delete().eq("id", id);
 
-    await db.from("audit_logs").insert({
+    await logAudit({
       action: "DELETE",
       entity: "CoverageTariffRule",
-      entity_id: id,
-      details: JSON.stringify({ coverageId: rule.coverageId, fuelType: rule.fuelType, minFiscalPower: rule.minFiscalPower, maxFiscalPower: rule.maxFiscalPower }),
-      user_name: "SYSTEM",
+      entityId: id,
+      details: { coverageId: rule.coverageId, fuelType: rule.fuelType, minFiscalPower: rule.minFiscalPower, maxFiscalPower: rule.maxFiscalPower },
     });
 
     return NextResponse.json({ success: true });

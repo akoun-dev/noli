@@ -1,6 +1,28 @@
 import { db, mapRow, mapRows } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { getInsurerAccount, getSessionProfile, requireAuth } from "@/lib/auth-guard";
+import { parseNumberField } from "@/lib/security";
+import {
+  getPagination,
+  hasPaginationParams,
+  paginationHeaders,
+} from "@/lib/pagination";
+
+// H-04 : validation des champs numériques d'assurance (prix, montants, taux)
+function validateNumericFields(
+  fields: { name: string; value: unknown }[]
+): string | null {
+  for (const { name, value } of fields) {
+    if (value === null || value === undefined || value === "") continue;
+    const res = parseNumberField(value, {
+      field: name,
+      min: 0,
+      optional: false,
+    });
+    if (!res.ok) return res.error;
+  }
+  return null;
+}
 
 async function resolveInsurerId(): Promise<string | null> {
   const profile = await getSessionProfile();
@@ -21,20 +43,30 @@ export async function GET(request: NextRequest) {
         { status: 404 }
       );
     }
-    const activeOnly = request.nextUrl.searchParams.get("active");
+    const { searchParams } = request.nextUrl;
+    const activeOnly = searchParams.get("active");
+    const paginate = hasPaginationParams(searchParams);
+    const { page, limit, offset } = getPagination(searchParams);
 
     let query = db
       .from("insurance_offers")
-      .select("*, category:insurance_categories(id, name, icon), insurer:insurers(id, name, code, logoUrl:logo_url)")
+      .select(
+        "*, category:insurance_categories(id, name, icon), insurer:insurers(id, name, code, logoUrl:logo_url)",
+        { count: "exact" }
+      )
       .eq("insurer_id", insurerId)
       .order("created_at", { ascending: false });
 
     if (activeOnly === "true") {
       query = query.eq("is_active", true);
     }
+    if (paginate) {
+      query = query.range(offset, offset + limit - 1);
+    }
 
-    const { data, error } = await query;
+    const { data, error, count } = await query;
     if (error) throw error;
+    const total = count ?? (data || []).length;
     const offers = mapRows(data || []);
 
     // Parse features JSON for each offer
@@ -43,7 +75,9 @@ export async function GET(request: NextRequest) {
       features: JSON.parse(o.features || "[]"),
     }));
 
-    return NextResponse.json({ offers: parsed });
+    return NextResponse.json({ offers: parsed }, {
+      headers: paginationHeaders(total, page, limit),
+    });
   } catch (error) {
     console.error("Erreur insurer/offers GET:", error);
     return NextResponse.json(
@@ -92,6 +126,23 @@ export async function POST(request: NextRequest) {
         { error: "Le nom est requis" },
         { status: 400 }
       );
+    }
+
+    // H-04 : rejette NaN / Infinity / valeurs négatives avant écriture
+    const numericError = validateNumericFields([
+      { name: "Prix minimum", value: priceMin },
+      { name: "Prix maximum", value: priceMax },
+      { name: "Montant couvert", value: coverageAmount },
+      { name: "Franchise", value: deductible },
+      { name: "Puissance fiscale min", value: fiscalPowerMin },
+      { name: "Puissance fiscale max", value: fiscalPowerMax },
+      { name: "Valeur neuve min", value: newValueMin },
+      { name: "Valeur neuve max", value: newValueMax },
+      { name: "Valeur vénale min", value: venalValueMin },
+      { name: "Valeur vénale max", value: venalValueMax },
+    ]);
+    if (numericError) {
+      return NextResponse.json({ error: numericError }, { status: 400 });
     }
 
     const { data, error } = await db

@@ -137,11 +137,7 @@ export function AppShell({
     "";
 
   const handleLogout = async () => {
-    await fetch("/api/auth", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "logout" }),
-    });
+    await fetch("/api/auth/logout", { method: "POST" });
     setUser({
       isLoggedIn: false,
       id: undefined,
@@ -205,7 +201,7 @@ export function AppShell({
       </div>
 
       {/* Main content */}
-      <main className="flex-1 overflow-y-auto">
+      <main id="main-content" className="flex-1 overflow-y-auto">
         {/* Header bar */}
         <div className="sticky top-0 z-30 border-b bg-card">
           <div className="flex items-center justify-between px-4 lg:px-6 py-3 pt-4 lg:pt-3">

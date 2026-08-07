@@ -1,6 +1,15 @@
 import { db, mapRow, mapRows } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { getInsurerAccount, getSessionProfile, requireAuth } from "@/lib/auth-guard";
+import { parseNumberField } from "@/lib/security";
+import {
+  getPagination,
+  hasPaginationParams,
+  paginationHeaders,
+} from "@/lib/pagination";
+
+// Garde anti boucle infinie lors de la génération de code unique (M-02)
+const MAX_CODE_SUFFIX = 1000;
 
 async function resolveInsurerId(): Promise<string | null> {
   const profile = await getSessionProfile();
@@ -9,7 +18,7 @@ async function resolveInsurerId(): Promise<string | null> {
   return account?.insurerId || null;
 }
 
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
     const guard = await requireAuth(["INSURER"]);
     if (guard) return guard;
@@ -22,16 +31,30 @@ export async function GET(_request: NextRequest) {
       );
     }
 
-    const { data, error } = await db
+    const { searchParams } = request.nextUrl;
+    const paginate = hasPaginationParams(searchParams);
+    const { page, limit, offset } = getPagination(searchParams);
+
+    let query = db
       .from("coverages")
-      .select("*, category:coverage_categories(id, name, code)")
+      .select("*, category:coverage_categories(id, name, code)", { count: "exact" })
       .eq("insurer_id", insurerId)
       .order("display_order", { ascending: true })
       .order("name", { ascending: true });
+
+    if (paginate) {
+      query = query.range(offset, offset + limit - 1);
+    }
+
+    const { data, error, count } = await query;
     if (error) throw error;
+    const total = count ?? (data || []).length;
     const coverages = mapRows(data || []);
 
-    return NextResponse.json({ coverages });
+    return NextResponse.json(
+      { coverages },
+      { headers: paginationHeaders(total, page, limit) }
+    );
   } catch (error) {
     console.error("Erreur insurer/coverages GET:", error);
     return NextResponse.json(
@@ -109,6 +132,12 @@ export async function POST(request: NextRequest) {
           .eq("code", unique)
           .maybeSingle();
         if (!existing) break;
+        if (suffix > MAX_CODE_SUFFIX) {
+          return NextResponse.json(
+            { error: "Impossible de générer un code unique, réessayez avec un nom différent" },
+            { status: 409 }
+          );
+        }
         unique = `${genCode}_${suffix++}`;
       }
       genCode = unique;
@@ -125,6 +154,23 @@ export async function POST(request: NextRequest) {
           { status: 409 }
         );
       }
+    }
+
+    // H-04 : validation des champs numériques (taux, montants, capitaux)
+    const numericFields: { name: string; value: unknown }[] = [
+      { name: "Taux (ratePercent)", value: ratePercent },
+      { name: "Seuil valeur neuve", value: newValueThreshold },
+      { name: "Taux sous le seuil", value: rateBelowThreshold },
+      { name: "Taux au-dessus du seuil", value: rateAboveThreshold },
+      { name: "Montant fixe", value: fixedAmount },
+      { name: "Montant min", value: minAmount },
+      { name: "Montant max", value: maxAmount },
+      { name: "Capital", value: capital },
+    ];
+    for (const { name, value } of numericFields) {
+      if (value === null || value === undefined || value === "") continue;
+      const res = parseNumberField(value, { field: name, min: 0, optional: false });
+      if (!res.ok) return NextResponse.json({ error: res.error }, { status: 400 });
     }
 
     const { data, error } = await db

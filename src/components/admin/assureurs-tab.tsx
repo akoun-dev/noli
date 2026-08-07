@@ -23,6 +23,8 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Search, Plus, Eye, Pencil, Trash2, Building2, FileText, Shield, Users, Mail, Phone, Globe } from "lucide-react";
+import { PaginationControls, usePaginationClamp } from "@/components/shared/pagination-controls";
+import { DEFAULT_PAGE_SIZE } from "@/lib/pagination";
 
 interface Insurer {
   id: string;
@@ -57,6 +59,10 @@ export function AssureursTab() {
   const { toast } = useToast();
   const [items, setItems] = useState<Insurer[]>([]);
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageCount, setPageCount] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  usePaginationClamp(page, setPage, pageCount);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Insurer | null>(null);
@@ -71,15 +77,24 @@ export function AssureursTab() {
     try {
       const params = new URLSearchParams();
       if (search) params.set("search", search);
+      params.set("page", String(page));
+      params.set("limit", String(DEFAULT_PAGE_SIZE));
       const res = await fetch(`/api/admin/insurers?${params}`);
       if (!res.ok) throw new Error();
       setItems(await res.json());
+      const total = Number(res.headers.get("X-Total-Count") ?? "0");
+      const pages = Number(
+        res.headers.get("X-Page-Count") ??
+          Math.max(1, Math.ceil(total / DEFAULT_PAGE_SIZE))
+      );
+      setTotalCount(total);
+      setPageCount(pages);
     } catch {
       toast({ title: "Erreur", description: "Impossible de charger les assureurs", variant: "destructive" });
     } finally {
       setLoading(false);
     }
-  }, [search, toast]);
+  }, [search, page, toast]);
 
   useEffect(() => { fetchItems(); }, [fetchItems]);
 
@@ -165,7 +180,7 @@ export function AssureursTab() {
         <div className="flex items-center gap-2">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Rechercher..." value={search} onChange={(e) => { setSearch(e.target.value); setLoading(true); }} className="pl-9 w-56" />
+            <Input placeholder="Rechercher..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); setLoading(true); }} className="pl-9 w-56" />
           </div>
           <Button className="bg-brand text-black hover:bg-brand-hover" onClick={openCreate}>
             <Plus className="h-4 w-4 mr-2" />Ajouter
@@ -252,6 +267,14 @@ export function AssureursTab() {
               </Card>
             ))}
           </div>
+
+          <PaginationControls
+            page={page}
+            pageCount={pageCount}
+            total={totalCount}
+            onPageChange={setPage}
+            pageSize={DEFAULT_PAGE_SIZE}
+          />
         </>
       )}
 

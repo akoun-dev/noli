@@ -56,6 +56,8 @@ import {
 } from "@/components/ui/tooltip";
 import { useAppStore } from "@/store/app-store";
 import { useToast } from "@/hooks/use-toast";
+import { PaginationControls, usePaginationClamp } from "@/components/shared/pagination-controls";
+import { DEFAULT_PAGE_SIZE } from "@/lib/pagination";
 
 /* ── Types ── */
 interface Offer {
@@ -137,6 +139,10 @@ export function InsurerOffersTab() {
   const [offers, setOffers] = useState<Offer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageCount, setPageCount] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  usePaginationClamp(page, setPage, pageCount);
 
   // Dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -172,19 +178,37 @@ export function InsurerOffersTab() {
 
   const fetchOffers = useCallback(async (iid: string) => {
     try {
-      const res = await fetch(`/api/insurer/offers?insurerId=${iid}`);
+      const res = await fetch(
+        `/api/insurer/offers?insurerId=${iid}&page=${page}&limit=${DEFAULT_PAGE_SIZE}`
+      );
       if (!res.ok) throw new Error();
       const data = await res.json();
-      setOffers(data.offers || []);
+      const list = data.offers || [];
+      setOffers(list);
+      const total = Number(
+        res.headers.get("X-Total-Count") ?? list.length
+      );
+      const pages = Number(
+        res.headers.get("X-Page-Count") ??
+          Math.max(1, Math.ceil(total / DEFAULT_PAGE_SIZE))
+      );
+      setTotalCount(total);
+      setPageCount(pages);
+      return list;
     } catch {
       setError("Erreur lors du chargement des offres");
+      return [];
     }
-  }, []);
+  }, [page]);
 
   const refreshData = useCallback(async () => {
     if (!insurerId) return;
-    await fetchOffers(insurerId);
-  }, [insurerId, fetchOffers]);
+    const list = await fetchOffers(insurerId);
+    // Si la page courante est devenue vide après suppression, reculer d'une page
+    if (list.length === 0 && page > 1) {
+      setPage(page - 1);
+    }
+  }, [insurerId, fetchOffers, page]);
 
   /* ── Init ── */
   useEffect(() => {
@@ -194,10 +218,17 @@ export function InsurerOffersTab() {
     }
     (async () => {
       const iid = await fetchInsurer(user.id!);
-      if (iid) await fetchOffers(iid);
-      setLoading(false);
+      if (iid) setInsurerId(iid);
+      else setLoading(false);
     })();
   }, [user.id]);
+
+  /* ── Recharger les offres quand insurerId ou page change ── */
+  useEffect(() => {
+    if (!insurerId) return;
+    setLoading(true);
+    fetchOffers(insurerId);
+  }, [insurerId, fetchOffers]);
 
   /* ── Fetch coverages when insurerId is known (for guarantee selection) ── */
   useEffect(() => {
@@ -535,6 +566,17 @@ export function InsurerOffersTab() {
             </Card>
           ))}
         </div>
+      )}
+
+      {/* Pagination */}
+      {!loading && !error && offers.length > 0 && (
+        <PaginationControls
+          page={page}
+          pageCount={pageCount}
+          total={totalCount}
+          onPageChange={setPage}
+          pageSize={DEFAULT_PAGE_SIZE}
+        />
       )}
 
       {/* ── Create/Edit Dialog ── */}

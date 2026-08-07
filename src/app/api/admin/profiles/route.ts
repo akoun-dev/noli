@@ -1,16 +1,23 @@
 import { db, mapRow, mapRows } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-guard";
+import {
+  getPagination,
+  hasPaginationParams,
+  paginationHeaders,
+} from "@/lib/pagination";
 
 export async function GET(request: NextRequest) {
   const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
   try {
     const { searchParams } = request.nextUrl;
     const search = searchParams.get("search") || "";
+    const paginate = hasPaginationParams(searchParams);
+    const { page, limit, offset } = getPagination(searchParams);
 
     let query = db
       .from("profiles")
-      .select("*")
+      .select("*", { count: "exact" })
       .order("created_at", { ascending: false });
 
     if (search) {
@@ -18,23 +25,29 @@ export async function GET(request: NextRequest) {
         `first_name.ilike.%${search}%,last_name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%`
       );
     }
+    if (paginate) {
+      query = query.range(offset, offset + limit - 1);
+    }
 
-    const { data, error } = await query;
+    const { data, error, count } = await query;
     if (error) throw error;
 
     const profiles = mapRows(data || []);
 
     const profilesWithCount = await Promise.all(
       profiles.map(async (p) => {
-        const { count } = await db
+        const { count: quoteCount } = await db
           .from("quotes")
           .select("id", { count: "exact", head: true })
           .eq("user_id", p.id);
-        return { ...p, _count: { quotes: count ?? 0 } };
+        return { ...p, _count: { quotes: quoteCount ?? 0 } };
       })
     );
 
-    return NextResponse.json(profilesWithCount);
+    const total = count ?? profiles.length;
+    return NextResponse.json(profilesWithCount, {
+      headers: paginationHeaders(total, page, limit),
+    });
   } catch (error) {
     console.error("Erreur profiles GET:", error);
     return NextResponse.json(

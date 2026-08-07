@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth-guard'
 import { db, mapRow } from '@/lib/db'
-import { existsSync, unlinkSync, copyFileSync, readFileSync } from 'fs'
-import { join } from 'path'
+import { promises as fs } from 'fs'
+import { logAudit } from '@/lib/audit'
+import { resolveBackupPath, DB_PATH } from '@/lib/backups'
 
 async function findBackup(id: string) {
-  const { data } = await db.from("backups").select("*").eq("id", id).maybeSingle()
+  const { data } = await db.from("backups").select("id, path, filename").eq("id", id).maybeSingle()
   return mapRow<{ id: string; path: string | null; filename: string }>(data)
 }
 
@@ -25,15 +26,18 @@ export async function GET(
       )
     }
 
-    const backupPath = backup.path || join(/* turbopackIgnore: true */ process.cwd(), 'db', 'backups', backup.filename)
-    if (!existsSync(backupPath)) {
+    // H-07 : le chemin est reconstruit depuis le nom de fichier relatif.
+    const backupPath = resolveBackupPath(backup.filename, backup.path)
+    try {
+      await fs.access(backupPath)
+    } catch {
       return NextResponse.json(
         { error: 'Fichier de sauvegarde introuvable sur le serveur' },
         { status: 404 }
       )
     }
 
-    const content = readFileSync(backupPath)
+    const content = await fs.readFile(backupPath)
     return new NextResponse(content, {
       headers: {
         'Content-Type': 'application/octet-stream',
@@ -66,25 +70,22 @@ export async function DELETE(
       )
     }
 
-    if (backup.path && existsSync(backup.path)) {
-      try {
-        unlinkSync(backup.path)
-      } catch {
-        // Le fichier peut ne plus exister
-      }
+    const backupPath = resolveBackupPath(backup.filename, backup.path)
+    try {
+      await fs.unlink(backupPath)
+    } catch {
+      // Le fichier peut ne plus exister
     }
 
     const { error } = await db.from("backups").delete().eq("id", id)
     if (error) throw error
 
-    const { error: auditError } = await db.from("audit_logs").insert({
+    await logAudit({
       action: 'BACKUP_DELETE',
       entity: 'Backup',
-      entity_id: id,
-      details: JSON.stringify({ filename: backup.filename }),
-      user_name: 'SYSTEM',
+      entityId: id,
+      details: { filename: backup.filename },
     })
-    if (auditError) throw auditError
 
     return NextResponse.json({ success: true })
   } catch (error) {
@@ -123,26 +124,26 @@ export async function POST(
       )
     }
 
-    const backupPath = backup.path || join(/* turbopackIgnore: true */ process.cwd(), 'db', 'backups', backup.filename)
-    const dbPath = join(/* turbopackIgnore: true */ process.cwd(), 'db', 'custom.db')
+    const backupPath = resolveBackupPath(backup.filename, backup.path)
+    const dbPath = DB_PATH
 
-    if (!existsSync(backupPath)) {
+    try {
+      await fs.access(backupPath)
+    } catch {
       return NextResponse.json(
         { error: 'Fichier de sauvegarde introuvable' },
         { status: 404 }
       )
     }
 
-    copyFileSync(backupPath, dbPath)
+    await fs.copyFile(backupPath, dbPath)
 
-    const { error: auditError } = await db.from("audit_logs").insert({
+    await logAudit({
       action: 'BACKUP_RESTORE',
       entity: 'Backup',
-      entity_id: id,
-      details: JSON.stringify({ filename: backup.filename, restoredFrom: backupPath }),
-      user_name: 'SYSTEM',
+      entityId: id,
+      details: { filename: backup.filename },
     })
-    if (auditError) throw auditError
 
     return NextResponse.json({ success: true, message: 'Sauvegarde restaurée avec succès' })
   } catch (error) {

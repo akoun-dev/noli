@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, mapRow, mapRows } from "@/lib/db";
 import { requireAuth } from "@/lib/auth-guard";
+import { logAudit } from "@/lib/audit";
+import { MASKED_SECRET, isMasked } from "@/lib/security";
 
 /* ── Default settings (seeded if missing) ─────────────────────── */
 
@@ -51,6 +53,11 @@ const DEFAULTS: {
   { key: "timezone", value: "Africa/Abidjan", category: "appearance", label: "Fuseau horaire", type: "text" },
 ];
 
+// Clés dont la valeur ne doit JAMAIS être renvoyée en clair à l'API.
+// Le front reçoit un placeholder masqué ; le PUT ignore ce placeholder
+// afin de ne pas écraser le secret existant.
+const SENSITIVE_KEYS = new Set(["smtp_password"]);
+
 async function ensureDefaults() {
   for (const def of DEFAULTS) {
     const { data } = await db.from("system_settings").select("*").eq("key", def.key).maybeSingle();
@@ -60,6 +67,11 @@ async function ensureDefaults() {
       if (error) throw error;
     }
   }
+}
+
+function maskSensitiveValue(key: string, value: string): string {
+  if (SENSITIVE_KEYS.has(key) && value) return MASKED_SECRET;
+  return value;
 }
 
 /* ── GET ──────────────────────────────────────────────────────── */
@@ -80,7 +92,7 @@ export async function GET() {
       if (!grouped[s.category]) grouped[s.category] = [];
       grouped[s.category].push({
         key: s.key,
-        value: s.value,
+        value: maskSensitiveValue(s.key, s.value),
         label: s.label,
         type: s.type,
       });
@@ -105,6 +117,11 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: "Clé et valeur requis" }, { status: 400 });
     }
 
+    // Ne pas écraser un secret avec le placeholder masqué renvoyé par le GET.
+    if (SENSITIVE_KEYS.has(key) && isMasked(value)) {
+      return NextResponse.json({ success: true, unchanged: true });
+    }
+
     const { data: existing } = await db.from("system_settings").select("id").eq("key", key).maybeSingle();
     if (existing) {
       const { error } = await db.from("system_settings").update({ value }).eq("key", key);
@@ -115,18 +132,17 @@ export async function PUT(req: NextRequest) {
         value,
         category: "general",
         label: key,
-        type: "text",
+        type: SENSITIVE_KEYS.has(key) ? "password" : "text",
       });
       if (error) throw error;
     }
 
-    const { error: auditError } = await db.from("audit_logs").insert({
+    // Ne jamais journaliser la valeur d'un secret.
+    await logAudit({
       action: "SETTINGS_CHANGE",
       entity: "Settings",
-      details: JSON.stringify({ key, value }),
-      user_name: "SYSTEM",
+      details: SENSITIVE_KEYS.has(key) ? { key, changed: true } : { key, value },
     });
-    if (auditError) throw auditError;
 
     return NextResponse.json({ success: true });
   } catch (err) {

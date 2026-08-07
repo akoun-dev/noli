@@ -1,6 +1,7 @@
 import { db, mapRow, mapRows } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-guard";
+import { logAudit } from "@/lib/audit";
 
 function parseFeatures(offer: Record<string, unknown>) {
   try {
@@ -116,12 +117,11 @@ export async function POST(request: NextRequest) {
       .single();
     if (error) throw error;
 
-    await db.from("audit_logs").insert({
+    await logAudit({
       action: "CREATE",
       entity: "InsuranceOffer",
-      entity_id: offer.id,
-      details: JSON.stringify({ name: offer.name, contractType: offer.contractType, insurerId }),
-      user_name: "SYSTEM",
+      entityId: offer.id,
+      details: { name: offer.name, contractType: offer.contractType, insurerId },
     });
 
     return NextResponse.json(parseFeatures(mapRow(offer) as unknown as Record<string, unknown>), { status: 201 });

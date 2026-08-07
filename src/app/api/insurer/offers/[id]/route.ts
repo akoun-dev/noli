@@ -1,6 +1,7 @@
 import { db, mapRow } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { getInsurerAccount, getSessionProfile, requireAuth } from "@/lib/auth-guard";
+import { parseNumberField } from "@/lib/security";
 
 async function resolveInsurerId(): Promise<string | null> {
   const profile = await getSessionProfile();
@@ -104,6 +105,24 @@ export async function PUT(
         { error: "Accès refusé" },
         { status: 403 }
       );
+    }
+
+    // H-04 : validation des champs numériques avant écriture
+    const numericFields: { name: string; value: unknown }[] = [];
+    if (priceMin !== undefined) numericFields.push({ name: "Prix minimum", value: priceMin });
+    if (priceMax !== undefined) numericFields.push({ name: "Prix maximum", value: priceMax });
+    if (coverageAmount !== undefined) numericFields.push({ name: "Montant couvert", value: coverageAmount });
+    if (deductible !== undefined) numericFields.push({ name: "Franchise", value: deductible });
+    if (fiscalPowerMin !== undefined) numericFields.push({ name: "Puissance fiscale min", value: fiscalPowerMin });
+    if (fiscalPowerMax !== undefined) numericFields.push({ name: "Puissance fiscale max", value: fiscalPowerMax });
+    if (newValueMin !== undefined) numericFields.push({ name: "Valeur neuve min", value: newValueMin });
+    if (newValueMax !== undefined) numericFields.push({ name: "Valeur neuve max", value: newValueMax });
+    if (venalValueMin !== undefined) numericFields.push({ name: "Valeur vénale min", value: venalValueMin });
+    if (venalValueMax !== undefined) numericFields.push({ name: "Valeur vénale max", value: venalValueMax });
+    for (const { name, value } of numericFields) {
+      if (value === null || value === "") continue;
+      const res = parseNumberField(value, { field: name, min: 0, optional: false });
+      if (!res.ok) return NextResponse.json({ error: res.error }, { status: 400 });
     }
 
     const { data, error } = await db

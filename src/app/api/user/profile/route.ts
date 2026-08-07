@@ -1,6 +1,7 @@
 import { db, mapRow } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionProfile, getSupabaseServerClient } from "@/lib/auth-guard";
+import { validatePasswordPolicy } from "@/lib/password-policy";
 
 type ProfileRow = {
   id: string;
@@ -95,12 +96,18 @@ export async function PUT(request: NextRequest) {
       phone: phone ?? profile.phone,
     };
 
-    if (currentPassword && newPassword) {
-      if (newPassword.length < 6) {
+    // Changement de mot de passe : les deux champs sont requis et la
+    // complexité est validée selon la politique configurée (B-01).
+    if (newPassword) {
+      if (!currentPassword) {
         return NextResponse.json(
-          { error: "Le nouveau mot de passe doit contenir au moins 6 caractères" },
+          { error: "Le mot de passe actuel est requis" },
           { status: 400 }
         );
+      }
+      const policy = await validatePasswordPolicy(newPassword);
+      if (!policy.ok) {
+        return NextResponse.json({ error: policy.message }, { status: 400 });
       }
       const supabase = await getSupabaseServerClient();
       const { error: verifyError } = await supabase.auth.signInWithPassword({
@@ -110,7 +117,7 @@ export async function PUT(request: NextRequest) {
       if (verifyError) {
         return NextResponse.json(
           { error: "Mot de passe actuel incorrect" },
-          { status: 400 }
+          { status: 401 }
         );
       }
       const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });

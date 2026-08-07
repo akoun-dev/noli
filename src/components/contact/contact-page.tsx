@@ -82,17 +82,39 @@ export function ContactPage() {
 
     setSubmitting(true);
 
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    try {
+      // UI-M02 : le formulaire appelle désormais l'API réelle (notification
+      // transmise aux administrateurs) au lieu d'un setTimeout simulé.
+      const res = await fetch("/api/contact/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json();
 
-    setSubmitting(false);
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Erreur lors de l'envoi du message");
+      }
 
-    toast({
-      title: "Message envoyé !",
-      description:
-        "Merci pour votre message. Notre équipe vous répondra dans les plus brefs délais.",
-    });
-
-    setForm({ name: "", email: "", phone: "", subject: "", message: "" });
+      toast({
+        title: "Message envoyé !",
+        description:
+          "Merci pour votre message. Notre équipe vous répondra dans les plus brefs délais.",
+      });
+      setForm({ name: "", email: "", phone: "", subject: "", message: "" });
+    } catch (err) {
+      console.error("[contact] Erreur:", err);
+      toast({
+        title: "Erreur",
+        description:
+          err instanceof Error
+            ? err.message
+            : "Impossible d'envoyer le message. Veuillez réessayer.",
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (

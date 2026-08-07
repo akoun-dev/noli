@@ -71,6 +71,8 @@ export const updateUserSchema = z.object({
   id: z.string().min(1),
   name: z.string().optional(),
   phone: z.string().optional(),
-  role: z.string().optional(),
+  // H-03 : le rôle est restreint aux valeurs connues du RBAC — plus aucune
+  // chaîne arbitraire (SUPERADMIN, ROOT, ...) ne peut être écrite en base.
+  role: z.enum(["ADMIN", "INSURER", "USER"]).optional(),
   isActive: z.boolean().optional(),
 });

@@ -1,8 +1,9 @@
 // Notification sender for Noli.
 //
 // Creates a notification row for a given user. Called by the backend
-// (or another Edge Function) using the secret key — auth mode: 'secret'.
-// verify_jwt is set to false in supabase/config.toml for this function.
+// using a shared secret (Authorization / x-api-key header).
+// verify_jwt is false in supabase/config.toml (no user JWT), donc la
+// fonction se protège via un secret partagé : sans lui, tout appel est rejeté.
 
 import { withSupabase } from 'npm:@supabase/server@^1'
 
@@ -16,6 +17,24 @@ interface NotificationPayload {
 
 const sendNotification = {
   fetch: withSupabase({ auth: 'secret' }, async (req, ctx) => {
+    // A-07 : vérification du secret partagé (défini côté serveur via
+    // `supabase secrets set NOLI_FUNCTION_SECRET=...`).
+    const secret = Deno.env.get('NOLI_FUNCTION_SECRET')
+    if (!secret) {
+      return Response.json(
+        { error: 'Fonction non configurée (NOLI_FUNCTION_SECRET absent)' },
+        { status: 500 },
+      )
+    }
+
+    const provided =
+      req.headers.get('x-api-key') ??
+      req.headers.get('authorization')?.replace(/^Bearer\s+/i, '')
+
+    if (!provided || provided !== secret) {
+      return Response.json({ error: 'Non autorisé' }, { status: 401 })
+    }
+
     const body = (await req.json()) as NotificationPayload
 
     if (!body.user_id || !body.title || !body.message) {

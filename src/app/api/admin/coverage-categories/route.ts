@@ -1,6 +1,7 @@
 import { db, mapRow, mapRows } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-guard";
+import { logAudit } from "@/lib/audit";
 
 export async function GET() {
   const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
@@ -103,12 +104,11 @@ export async function POST(request: NextRequest) {
       .single();
     if (error) throw error;
 
-    await db.from("audit_logs").insert({
+    await logAudit({
       action: "CREATE",
       entity: "CoverageCategory",
-      entity_id: category.id,
-      details: JSON.stringify({ code: category.code, name: category.name }),
-      user_name: "SYSTEM",
+      entityId: category.id,
+      details: { code: category.code, name: category.name },
     });
 
     return NextResponse.json(mapRow(category), { status: 201 });

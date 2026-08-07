@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, mapRow } from "@/lib/db";
 import { requireAuth } from "@/lib/auth-guard";
+import { logAudit } from "@/lib/audit";
 
 /* ── GET : Rôle unique avec permissions ──────────────────────── */
 export async function GET(
@@ -85,14 +86,12 @@ export async function PUT(
       }
     }
 
-    const { error: auditError } = await db.from("audit_logs").insert({
+    await logAudit({
       action: "UPDATE",
       entity: "Role",
-      entity_id: id,
-      details: JSON.stringify({ name, description, permissionCount: permissionIds?.length }),
-      user_name: "SYSTEM",
+      entityId: id,
+      details: { name, description, permissionCount: permissionIds?.length },
     });
-    if (auditError) throw auditError;
 
     return NextResponse.json({ success: true });
   } catch (err) {
@@ -126,14 +125,12 @@ export async function DELETE(
     const { error } = await db.from("roles").delete().eq("id", id);
     if (error) throw error;
 
-    const { error: auditError } = await db.from("audit_logs").insert({
+    await logAudit({
       action: "DELETE",
       entity: "Role",
-      entity_id: id,
-      details: JSON.stringify({ roleName: role.name }),
-      user_name: "SYSTEM",
+      entityId: id,
+      details: { roleName: role.name },
     });
-    if (auditError) throw auditError;
 
     return NextResponse.json({ success: true });
   } catch (err) {

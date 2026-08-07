@@ -29,6 +29,8 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Search, Plus, Pencil, Trash2, ChevronLeft, ChevronRight, Check, Minus, X, DollarSign, Percent, LayoutGrid, CircleDot, Building2 } from "lucide-react";
+import { PaginationControls, usePaginationClamp } from "@/components/shared/pagination-controls";
+import { DEFAULT_PAGE_SIZE } from "@/lib/pagination";
 
 /* ── Types ─────────────────────────────────────────────────── */
 interface InsurerOption { id: string; name: string; code: string; logoUrl: string | null; }
@@ -324,6 +326,10 @@ export function CoveragesTab() {
   const [filterInsurer, setFilterInsurer] = useState("");
   const [filterCategory, setFilterCategory] = useState("");
   const [filterCalcType, setFilterCalcType] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageCount, setPageCount] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  usePaginationClamp(page, setPage, pageCount);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Coverage | null>(null);
@@ -379,15 +385,24 @@ export function CoveragesTab() {
       if (filterInsurer) params.set("insurerId", filterInsurer);
       if (filterCategory) params.set("categoryId", filterCategory);
       if (filterCalcType) params.set("calculationType", filterCalcType);
+      params.set("page", String(page));
+      params.set("limit", String(DEFAULT_PAGE_SIZE));
       const res = await fetch(`/api/admin/coverages?${params}`);
       if (!res.ok) throw new Error();
       setItems(await res.json());
+      const total = Number(res.headers.get("X-Total-Count") ?? "0");
+      const pages = Number(
+        res.headers.get("X-Page-Count") ??
+          Math.max(1, Math.ceil(total / DEFAULT_PAGE_SIZE))
+      );
+      setTotalCount(total);
+      setPageCount(pages);
     } catch {
       toast({ title: "Erreur", description: "Impossible de charger les garanties", variant: "destructive" });
     } finally {
       setLoading(false);
     }
-  }, [search, filterInsurer, filterCategory, filterCalcType, toast]);
+  }, [search, filterInsurer, filterCategory, filterCalcType, page, toast]);
 
   const fetchLookups = useCallback(async () => {
     try {
@@ -1421,23 +1436,23 @@ export function CoveragesTab() {
         <div className="flex items-center gap-2 flex-wrap">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Rechercher..." value={search} onChange={(e) => { setSearch(e.target.value); setLoading(true); }} className="pl-9 w-44" />
+            <Input placeholder="Rechercher..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); setLoading(true); }} className="pl-9 w-44" />
           </div>
-          <Select value={filterInsurer} onValueChange={(v) => { setFilterInsurer(v === "__all__" ? "" : v); setLoading(true); }}>
+          <Select value={filterInsurer} onValueChange={(v) => { setFilterInsurer(v === "__all__" ? "" : v); setPage(1); setLoading(true); }}>
             <SelectTrigger className="w-36"><SelectValue placeholder="Assureur" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="__all__">Tous</SelectItem>
               {insurers.map((i) => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}
             </SelectContent>
           </Select>
-          <Select value={filterCategory} onValueChange={(v) => { setFilterCategory(v === "__all__" ? "" : v); setLoading(true); }}>
+          <Select value={filterCategory} onValueChange={(v) => { setFilterCategory(v === "__all__" ? "" : v); setPage(1); setLoading(true); }}>
             <SelectTrigger className="w-36"><SelectValue placeholder="Catégorie" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="__all__">Toutes</SelectItem>
               {categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
             </SelectContent>
           </Select>
-          <Select value={filterCalcType} onValueChange={(v) => { setFilterCalcType(v === "__all__" ? "" : v); setLoading(true); }}>
+          <Select value={filterCalcType} onValueChange={(v) => { setFilterCalcType(v === "__all__" ? "" : v); setPage(1); setLoading(true); }}>
             <SelectTrigger className="w-36"><SelectValue placeholder="Méthode" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="__all__">Toutes</SelectItem>
@@ -1555,6 +1570,19 @@ export function CoveragesTab() {
             ))}
           </div>
         </>
+      )}
+
+      {!loading && items.length > 0 && (
+        <PaginationControls
+          page={page}
+          pageCount={pageCount}
+          total={totalCount}
+          onPageChange={(p) => {
+            setSelectedId(null); // referme le panneau de règles si on change de page
+            setPage(p);
+          }}
+          pageSize={DEFAULT_PAGE_SIZE}
+        />
       )}
 
       {/* Tariff Rules Panel */}

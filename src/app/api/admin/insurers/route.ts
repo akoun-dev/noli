@@ -1,6 +1,12 @@
 import { db, mapRow, mapRows } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-guard";
+import { logAudit } from "@/lib/audit";
+import {
+  getPagination,
+  hasPaginationParams,
+  paginationHeaders,
+} from "@/lib/pagination";
 
 export async function GET(request: NextRequest) {
   const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
@@ -9,9 +15,12 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search") || "";
     const activeParam = searchParams.get("active");
 
+    const paginate = hasPaginationParams(searchParams);
+    const { page, limit, offset } = getPagination(searchParams);
+
     let query = db
       .from("insurers")
-      .select("*")
+      .select("*", { count: "exact" })
       .order("created_at", { ascending: false });
 
     if (search) {
@@ -20,9 +29,13 @@ export async function GET(request: NextRequest) {
     if (activeParam !== null && activeParam !== "") {
       query = query.eq("is_active", activeParam === "true");
     }
+    if (paginate) {
+      query = query.range(offset, offset + limit - 1);
+    }
 
-    const { data, error } = await query;
+    const { data, error, count } = await query;
     if (error) throw error;
+    const total = count ?? (data || []).length;
     const insurers = mapRows(data || []);
 
     const ids = insurers.map((i) => (i as { id: string }).id);
@@ -65,7 +78,9 @@ export async function GET(request: NextRequest) {
       },
     }));
 
-    return NextResponse.json(result);
+    return NextResponse.json(result, {
+      headers: paginationHeaders(total, page, limit),
+    });
   } catch (error) {
     console.error("Erreur insurers GET:", error);
     return NextResponse.json(
@@ -136,12 +151,11 @@ export async function POST(request: NextRequest) {
       .single();
     if (error) throw error;
 
-    await db.from("audit_logs").insert({
+    await logAudit({
       action: "CREATE",
       entity: "Insurer",
-      entity_id: insurer.id,
-      details: JSON.stringify({ code: insurer.code, name: insurer.name }),
-      user_name: "SYSTEM",
+      entityId: insurer.id,
+      details: { code: insurer.code, name: insurer.name },
     });
 
     return NextResponse.json(mapRow(insurer), { status: 201 });

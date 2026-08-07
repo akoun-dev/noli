@@ -22,6 +22,8 @@ import { SettingsAppearanceTab } from "./settings/settings-appearance-tab";
 import { SettingsUsersTab } from "./settings/settings-users-tab";
 import { SettingsAccountsTab } from "./settings/settings-accounts-tab";
 import { SettingsEditDialog } from "./settings/settings-edit-dialog";
+import { PaginationControls, usePaginationClamp } from "@/components/shared/pagination-controls";
+import { DEFAULT_PAGE_SIZE } from "@/lib/pagination";
 
 export function SettingsTab() {
   const { toast } = useToast();
@@ -34,6 +36,10 @@ export function SettingsTab() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [profilesLoading, setProfilesLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageCount, setPageCount] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  usePaginationClamp(page, setPage, pageCount);
   const [editOpen, setEditOpen] = useState(false);
   const [edit, setEdit] = useState<Profile | null>(null);
   const [saving, setSaving] = useState(false);
@@ -72,14 +78,27 @@ export function SettingsTab() {
 
   const fetchProfiles = useCallback(async () => {
     try {
-      const res = await fetch(
-        `/api/admin/profiles${search ? `?search=${search}` : ""}`
-      );
-      if (res.ok) setProfiles(await res.json());
+      const params = new URLSearchParams();
+      if (search) params.set("search", search);
+      params.set("page", String(page));
+      params.set("limit", String(DEFAULT_PAGE_SIZE));
+      const res = await fetch(`/api/admin/profiles?${params}`);
+      if (res.ok) {
+        setProfiles(await res.json());
+        const total = Number(
+          res.headers.get("X-Total-Count") ?? "0"
+        );
+        const pages = Number(
+          res.headers.get("X-Page-Count") ??
+            Math.max(1, Math.ceil(total / DEFAULT_PAGE_SIZE))
+        );
+        setTotalCount(total);
+        setPageCount(pages);
+      }
     } finally {
       setProfilesLoading(false);
     }
-  }, [search]);
+  }, [search, page]);
 
   const fetchRoles = useCallback(async () => {
     try {
@@ -102,6 +121,7 @@ export function SettingsTab() {
     fetchProfiles();
     fetchRoles();
   }, [fetchSettings, fetchProfiles, fetchRoles]);
+
 
   /* ================================================================ */
   /*  Settings helpers                                                  */
@@ -301,9 +321,19 @@ export function SettingsTab() {
           <SettingsUsersTab
             profiles={profiles}
             search={search}
-            setSearch={setSearch}
+            setSearch={(s) => {
+              setSearch(s);
+              setPage(1);
+            }}
             toggleProfileStatus={toggleProfileStatus}
             openEdit={openEdit}
+          />
+          <PaginationControls
+            page={page}
+            pageCount={pageCount}
+            total={totalCount}
+            onPageChange={setPage}
+            pageSize={DEFAULT_PAGE_SIZE}
           />
         </TabsContent>
 
@@ -338,7 +368,10 @@ export function SettingsTab() {
           <SettingsAccountsTab
             profiles={profiles}
             search={search}
-            setSearch={setSearch}
+            setSearch={(s) => {
+              setSearch(s);
+              setPage(1);
+            }}
             roles={roles}
             expandedRow={expandedRow}
             setExpandedRow={setExpandedRow}

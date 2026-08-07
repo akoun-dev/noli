@@ -1,6 +1,7 @@
 import { db, mapRow } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-guard";
+import { logAudit } from "@/lib/audit";
 
 function parseFeatures(offer: Record<string, unknown>) {
   try {
@@ -121,12 +122,11 @@ export async function PUT(
       .single();
     if (error) throw error;
 
-    await db.from("audit_logs").insert({
+    await logAudit({
       action: "UPDATE",
       entity: "InsuranceOffer",
-      entity_id: id,
-      details: JSON.stringify({ name: offer.name, contractType: offer.contractType }),
-      user_name: "SYSTEM",
+      entityId: id,
+      details: { name: offer.name, contractType: offer.contractType },
     });
 
     return NextResponse.json(parseFeatures(mapRow(offer) as unknown as Record<string, unknown>));
@@ -162,12 +162,11 @@ export async function DELETE(
 
     await db.from("insurance_offers").delete().eq("id", id);
 
-    await db.from("audit_logs").insert({
+    await logAudit({
       action: "DELETE",
       entity: "InsuranceOffer",
-      entity_id: id,
-      details: JSON.stringify({ name: existing.name, contractType: existing.contractType }),
-      user_name: "SYSTEM",
+      entityId: id,
+      details: { name: existing.name, contractType: existing.contractType },
     });
 
     return NextResponse.json({ success: true });

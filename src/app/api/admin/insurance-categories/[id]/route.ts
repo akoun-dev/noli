@@ -1,6 +1,7 @@
 import { db, mapRow } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-guard";
+import { logAudit } from "@/lib/audit";
 
 export async function GET(
   _request: NextRequest,
@@ -82,12 +83,11 @@ export async function PUT(
       .single();
     if (error) throw error;
 
-    await db.from("audit_logs").insert({
+    await logAudit({
       action: "UPDATE",
       entity: "InsuranceCategory",
-      entity_id: id,
-      details: JSON.stringify({ name: category.name }),
-      user_name: "SYSTEM",
+      entityId: id,
+      details: { name: category.name },
     });
 
     return NextResponse.json(mapRow(category));
@@ -123,12 +123,11 @@ export async function DELETE(
 
     await db.from("insurance_categories").delete().eq("id", id);
 
-    await db.from("audit_logs").insert({
+    await logAudit({
       action: "DELETE",
       entity: "InsuranceCategory",
-      entity_id: id,
-      details: JSON.stringify({ name: existing.name }),
-      user_name: "SYSTEM",
+      entityId: id,
+      details: { name: existing.name },
     });
 
     return NextResponse.json({ success: true });

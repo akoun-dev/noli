@@ -2,16 +2,33 @@ import { db, mapRow, mapRows } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { updateUserSchema } from "@/lib/validation";
 import { requireAuth } from "@/lib/auth-guard";
+import { logAudit } from "@/lib/audit";
+import {
+  getPagination,
+  hasPaginationParams,
+  paginationHeaders,
+} from "@/lib/pagination";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
   try {
-    const { data, error } = await db
+    const { searchParams } = request.nextUrl;
+    const paginate = hasPaginationParams(searchParams);
+    const { page, limit, offset } = getPagination(searchParams);
+
+    let query = db
       .from("profiles")
-      .select("*")
+      .select("*", { count: "exact" })
       .order("created_at", { ascending: false });
+
+    if (paginate) {
+      query = query.range(offset, offset + limit - 1);
+    }
+
+    const { data, error, count } = await query;
     if (error) throw error;
 
+    const total = count ?? (data || []).length;
     const profiles = mapRows(data || []);
 
     const users = await Promise.all(
@@ -33,7 +50,9 @@ export async function GET() {
         };
       })
     );
-    return NextResponse.json(users);
+    return NextResponse.json(users, {
+      headers: paginationHeaders(total, page, limit),
+    });
   } catch (error) {
     console.error("Erreur utilisateurs:", error);
     return NextResponse.json(
@@ -86,6 +105,14 @@ export async function PUT(request: NextRequest) {
       .from("quotes")
       .select("id", { count: "exact", head: true })
       .eq("user_id", parsed.data.id);
+
+    // M-03 : toute modification utilisateur (rôle, désactivation...) doit être tracée.
+    await logAudit({
+      action: "UPDATE",
+      entity: "User",
+      entityId: parsed.data.id,
+      details: updateData,
+    });
 
     const user = {
       id: profile?.id,

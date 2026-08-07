@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useSyncExternalStore } from "react";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Menu,
@@ -77,7 +78,14 @@ export function Header() {
           onClick={() => handleNav("landing")}
           className="flex items-center gap-1.5 transition-opacity hover:opacity-80"
         >
-          <img src="/img/noli-vertical.png" alt="NOLI Assurance" className="h-9 w-auto object-contain" />
+          <Image
+            src="/img/noli-vertical.png"
+            alt="NOLI Assurance"
+            width={160}
+            height={36}
+            className="h-9 w-auto object-contain"
+            priority
+          />
         </button>
 
         {/* Desktop Navigation (center) */}
@@ -170,7 +178,7 @@ export function Header() {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={async () => {
-                    await fetch("/api/auth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "logout" }) });
+                    await fetch("/api/auth/logout", { method: "POST" });
                     setUser({ isLoggedIn: false, id: undefined, name: undefined, email: undefined, role: undefined });
                     setView("landing");
                   }}
@@ -216,7 +224,13 @@ export function Header() {
             <SheetContent side="right" className="w-full overflow-y-auto p-0 sm:max-w-sm">
               <SheetHeader className="border-b border-border/40 px-6 py-5">
                 <SheetTitle className="flex items-center gap-1.5 text-left">
-                  <img src="/img/noli-vertical.png" alt="NOLI Assurance" className="h-9 w-auto object-contain" />
+                  <Image
+                    src="/img/noli-vertical.png"
+                    alt="NOLI Assurance"
+                    width={160}
+                    height={36}
+                    className="h-9 w-auto object-contain"
+                  />
                 </SheetTitle>
               </SheetHeader>
 
@@ -307,7 +321,7 @@ export function Header() {
                       variant="ghost"
                       className="w-full text-destructive hover:text-destructive justify-start"
                       onClick={async () => {
-                        await fetch("/api/auth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "logout" }) });
+                        await fetch("/api/auth/logout", { method: "POST" });
                         setUser({ isLoggedIn: false, id: undefined, name: undefined, email: undefined, role: undefined });
                         setView("landing");
                         setMobileOpen(false);

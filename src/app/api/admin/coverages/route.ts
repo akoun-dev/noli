@@ -1,6 +1,16 @@
 import { db, mapRow, mapRows } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-guard";
+import { sanitizePostgrestSearch } from "@/lib/security";
+import { logAudit } from "@/lib/audit";
+import {
+  getPagination,
+  hasPaginationParams,
+  paginationHeaders,
+} from "@/lib/pagination";
+
+// Garde anti boucle infinie lors de la génération de code unique (M-02)
+const MAX_CODE_SUFFIX = 1000;
 
 function parseMetadata(coverage: Record<string, unknown>) {
   try {
@@ -19,10 +29,14 @@ export async function GET(request: NextRequest) {
     const calculationType = searchParams.get("calculationType");
     const search = searchParams.get("search") || "";
 
+    const paginate = hasPaginationParams(searchParams);
+    const { page, limit, offset } = getPagination(searchParams);
+
     let query = db
       .from("coverages")
       .select(
-        "id, code, type, name, description, calculation_type, is_mandatory, is_optional, conditions, is_active, display_order, metadata, variable_source, rate_percent, conditioned_by_new_value, new_value_threshold, rate_below_threshold, rate_above_threshold, fixed_amount, pack_price_reduced, capital, min_amount, max_amount, matrix_dimension, requires_guarantee, created_at, updated_at, category_id, insurer_id, insurer:insurers(id, name, code, logoUrl:logo_url), category:coverage_categories(id, name, code)"
+        "id, code, type, name, description, calculation_type, is_mandatory, is_optional, conditions, is_active, display_order, metadata, variable_source, rate_percent, conditioned_by_new_value, new_value_threshold, rate_below_threshold, rate_above_threshold, fixed_amount, pack_price_reduced, capital, min_amount, max_amount, matrix_dimension, requires_guarantee, created_at, updated_at, category_id, insurer_id, insurer:insurers(id, name, code, logoUrl:logo_url), category:coverage_categories(id, name, code)",
+        { count: "exact" }
       )
       .order("display_order", { ascending: true });
 
@@ -36,11 +50,19 @@ export async function GET(request: NextRequest) {
       query = query.eq("calculation_type", calculationType);
     }
     if (search) {
-      query = query.or(`name.ilike.%${search}%,code.ilike.%${search}%`);
+      // C-03 : échappement des caractères spéciaux PostgREST (% , ( ) *)
+      // pour empêcher toute altération de la sémantique du filtre.
+      const safeSearch = sanitizePostgrestSearch(search);
+      query = query.or(`name.ilike.%${safeSearch}%,code.ilike.%${safeSearch}%`);
     }
 
-    const { data, error } = await query;
+    if (paginate) {
+      query = query.range(offset, offset + limit - 1);
+    }
+
+    const { data, error, count } = await query;
     if (error) throw error;
+    const total = count ?? (data || []).length;
     const coverages = mapRows(data || []);
 
     const ids = coverages.map((c) => (c as { id: string }).id);
@@ -62,7 +84,9 @@ export async function GET(request: NextRequest) {
         _count: { tariffRules: tariffCounts.get(String((c as { id: string }).id)) || 0 },
       } as unknown as Record<string, unknown>)
     );
-    return NextResponse.json(parsed);
+    return NextResponse.json(parsed, {
+      headers: paginationHeaders(total, page, limit),
+    });
   } catch (error) {
     console.error("Erreur coverages GET:", error);
     return NextResponse.json(
@@ -135,7 +159,7 @@ export async function POST(request: NextRequest) {
       const insCode = insurer?.code || "INS";
       const typePrefix = (type || name).toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z0-9]/g, "").substring(0, 10);
       genCode = `${typePrefix}_${insCode}`;
-      // Ensure uniqueness
+      // Ensure uniqueness (avec garde anti boucle infinie, M-02)
       let suffix = 1;
       let unique = genCode;
       while (true) {
@@ -145,6 +169,12 @@ export async function POST(request: NextRequest) {
           .eq("code", unique)
           .maybeSingle();
         if (!dup) break;
+        if (suffix > MAX_CODE_SUFFIX) {
+          return NextResponse.json(
+            { error: "Impossible de générer un code unique, réessayez avec un nom différent" },
+            { status: 409 }
+          );
+        }
         unique = `${genCode}_${suffix++}`;
       }
       genCode = unique;
@@ -196,20 +226,19 @@ export async function POST(request: NextRequest) {
       .single();
     if (error) throw error;
 
-    await db.from("audit_logs").insert({
+    await logAudit({
       action: "CREATE",
       entity: "Coverage",
-      entity_id: coverage.id,
-      details: JSON.stringify({ code: coverage.code, name: coverage.name, calculationType }),
-      user_name: "SYSTEM",
+      entityId: coverage.id,
+      details: { code: coverage.code, name: coverage.name, calculationType },
     });
 
     return NextResponse.json(parseMetadata(mapRow(coverage) as unknown as Record<string, unknown>), { status: 201 });
   } catch (error) {
+    // M-04 : ne jamais renvoyer le message d'erreur brut (structure DB, contraintes...).
     console.error("Erreur coverages POST:", error);
-    const msg = error instanceof Error ? error.message : String(error);
     return NextResponse.json(
-      { error: "Erreur lors de la création de la garantie", details: msg },
+      { error: "Erreur lors de la création de la garantie" },
       { status: 500 }
     );
   }

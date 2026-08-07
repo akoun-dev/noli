@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, mapRow, mapRows } from "@/lib/db";
 import { requireAuth } from "@/lib/auth-guard";
+import { logAudit } from "@/lib/audit";
 
 /* ── Default roles (seeded if missing) ────────────────────────── */
 
@@ -121,14 +122,12 @@ export async function POST(request: NextRequest) {
       if (rpError) throw rpError;
     }
 
-    const { error: auditError } = await db.from("audit_logs").insert({
+    await logAudit({
       action: "CREATE",
       entity: "Role",
-      entity_id: role!.id,
-      details: JSON.stringify({ name: role!.name, permissionCount: permissionIds?.length || 0 }),
-      user_name: "SYSTEM",
+      entityId: role!.id,
+      details: { name: role!.name, permissionCount: permissionIds?.length || 0 },
     });
-    if (auditError) throw auditError;
 
     return NextResponse.json(
       { id: role!.id, name: role!.name, description: role!.description },

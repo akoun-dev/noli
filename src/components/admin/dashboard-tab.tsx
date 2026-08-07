@@ -63,7 +63,7 @@ export function DashboardTab() {
         <CardHeader><CardTitle className="text-lg">Devis récents</CardTitle></CardHeader>
         <CardContent>
           {(!stats.recentQuotes || stats.recentQuotes.length === 0) ? <p className="text-sm text-muted-foreground py-6 text-center">Aucun devis.</p> : (
-            <div className="overflow-x-auto"><Table><TableHeader><TableRow className="bg-muted/50">
+            <div aria-live="polite" className="overflow-x-auto"><Table><TableHeader><TableRow className="bg-muted/50">
               <TableHead>Référence</TableHead><TableHead>Client</TableHead><TableHead>Assureur</TableHead><TableHead>Prix</TableHead><TableHead>Statut</TableHead><TableHead>Date</TableHead>
             </TableRow></TableHeader><TableBody>
               {stats.recentQuotes.map((q) => { const pd = (() => { try { return JSON.parse(q.personalData); } catch { return {}; } })(); const s = statusMap[q.status] || statusMap.DRAFT; return (

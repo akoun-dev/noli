@@ -1,6 +1,7 @@
 import { db, mapRow, mapRows } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-guard";
+import { logAudit } from "@/lib/audit";
 
 function parseMetadata(obj: Record<string, unknown>) {
   try {
@@ -155,20 +156,18 @@ export async function PUT(
       .single();
     if (error) throw error;
 
-    await db.from("audit_logs").insert({
+    await logAudit({
       action: "UPDATE",
       entity: "Coverage",
-      entity_id: id,
-      details: JSON.stringify({ code: coverage.code, name: coverage.name }),
-      user_name: "SYSTEM",
+      entityId: id,
+      details: { code: coverage.code, name: coverage.name },
     });
 
     return NextResponse.json(parseMetadata(mapRow(coverage) as unknown as Record<string, unknown>));
   } catch (error) {
     console.error("Erreur coverage PUT:", error);
-    const msg = error instanceof Error ? error.message : String(error);
     return NextResponse.json(
-      { error: "Erreur lors de la mise à jour de la garantie", details: msg },
+      { error: "Erreur lors de la mise à jour de la garantie" },
       { status: 500 }
     );
   }
@@ -197,12 +196,11 @@ export async function DELETE(
 
     await db.from("coverages").delete().eq("id", id);
 
-    await db.from("audit_logs").insert({
+    await logAudit({
       action: "DELETE",
       entity: "Coverage",
-      entity_id: id,
-      details: JSON.stringify({ code: existing.code, name: existing.name }),
-      user_name: "SYSTEM",
+      entityId: id,
+      details: { code: existing.code, name: existing.name },
     });
 
     return NextResponse.json({ success: true });

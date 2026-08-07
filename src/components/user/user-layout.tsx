@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useAppStore } from "@/store/app-store";
 import {
   LayoutDashboard,
@@ -18,16 +19,17 @@ import {
   type AppShellSidebarItem,
 } from "@/components/shared/app-shell";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
-import { UserDashboardTab } from "./tabs/user-dashboard-tab";
-import { UserQuotesTab } from "./tabs/user-quotes-tab";
-import { UserContractsTab } from "./tabs/user-contracts-tab";
-import { UserDocumentsTab } from "./tabs/user-documents-tab";
-import { UserReviewsTab } from "./tabs/user-reviews-tab";
-import { UserPaymentsTab } from "./tabs/user-payments-tab";
-import { UserHistoryTab } from "./tabs/user-history-tab";
-import { UserNotificationsTab } from "./tabs/user-notifications-tab";
-import { UserProfileTab } from "./tabs/user-profile-tab";
-import { UserSettingsTab } from "./tabs/user-settings-tab";
+// UI-C06 : les onglets utilisateur sont chargés à la demande (code splitting).
+const UserDashboardTab = dynamic(() => import("./tabs/user-dashboard-tab").then((m) => m.UserDashboardTab));
+const UserQuotesTab = dynamic(() => import("./tabs/user-quotes-tab").then((m) => m.UserQuotesTab));
+const UserContractsTab = dynamic(() => import("./tabs/user-contracts-tab").then((m) => m.UserContractsTab));
+const UserDocumentsTab = dynamic(() => import("./tabs/user-documents-tab").then((m) => m.UserDocumentsTab));
+const UserReviewsTab = dynamic(() => import("./tabs/user-reviews-tab").then((m) => m.UserReviewsTab));
+const UserPaymentsTab = dynamic(() => import("./tabs/user-payments-tab").then((m) => m.UserPaymentsTab));
+const UserHistoryTab = dynamic(() => import("./tabs/user-history-tab").then((m) => m.UserHistoryTab));
+const UserNotificationsTab = dynamic(() => import("./tabs/user-notifications-tab").then((m) => m.UserNotificationsTab));
+const UserProfileTab = dynamic(() => import("./tabs/user-profile-tab").then((m) => m.UserProfileTab));
+const UserSettingsTab = dynamic(() => import("./tabs/user-settings-tab").then((m) => m.UserSettingsTab));
 
 /* ── Sidebar config ── */
 const sidebarItems: AppShellSidebarItem[] = [

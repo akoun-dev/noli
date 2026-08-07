@@ -14,6 +14,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { PaginationControls, usePaginationClamp } from "@/components/shared/pagination-controls";
+import { DEFAULT_PAGE_SIZE } from "@/lib/pagination";
 
 const fmtPrice = (n: number) => new Intl.NumberFormat("fr-FR").format(n) + " FCFA";
 const fmtDate = (d: string) => (d ? new Date(d).toLocaleDateString("fr-FR") : "—");
@@ -52,6 +54,10 @@ export function DevisTab() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageCount, setPageCount] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  usePaginationClamp(page, setPage, pageCount);
   const [detailOpen, setDetailOpen] = useState(false);
   const [selected, setSelected] = useState<Quote | null>(null);
   const [detailNotes, setDetailNotes] = useState("");
@@ -63,10 +69,21 @@ export function DevisTab() {
       const params = new URLSearchParams();
       if (search) params.set("search", search);
       if (filterStatus) params.set("status", filterStatus);
+      params.set("page", String(page));
+      params.set("limit", String(DEFAULT_PAGE_SIZE));
       const res = await fetch(`/api/admin/quotes?${params}`);
-      if (res.ok) setQuotes(await res.json());
+      if (res.ok) {
+        setQuotes(await res.json());
+        const total = Number(res.headers.get("X-Total-Count") ?? "0");
+        const pages = Number(
+          res.headers.get("X-Page-Count") ??
+            Math.max(1, Math.ceil(total / DEFAULT_PAGE_SIZE))
+        );
+        setTotalCount(total);
+        setPageCount(pages);
+      }
     } finally { setLoading(false); }
-  }, [search, filterStatus]);
+  }, [search, filterStatus, page]);
 
   useEffect(() => { fetchQuotes(); }, [fetchQuotes]);
 
@@ -142,9 +159,9 @@ export function DevisTab() {
         <div className="flex items-center gap-2 flex-wrap">
           <div className="relative flex-1 sm:w-56">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input placeholder="Référence..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+            <Input placeholder="Référence..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} className="pl-9" />
           </div>
-          <Select value={filterStatus || "all"} onValueChange={(v) => setFilterStatus(v === "all" ? "" : v)}>
+          <Select value={filterStatus || "all"} onValueChange={(v) => { setFilterStatus(v === "all" ? "" : v); setPage(1); }}>
             <SelectTrigger className="w-full sm:w-40">
               <SelectValue placeholder="Statut" />
             </SelectTrigger>
@@ -239,6 +256,14 @@ export function DevisTab() {
           );
         })}
       </div>
+
+      <PaginationControls
+        page={page}
+        pageCount={pageCount}
+        total={totalCount}
+        onPageChange={setPage}
+        pageSize={DEFAULT_PAGE_SIZE}
+      />
 
       {/* Detail Dialog */}
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>

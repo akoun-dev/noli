@@ -1,6 +1,7 @@
 import { db, mapRow, mapRows } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-guard";
+import { logAudit } from "@/lib/audit";
 
 export async function GET(
   _request: NextRequest,
@@ -95,12 +96,11 @@ export async function POST(
       .single();
     if (error) throw error;
 
-    await db.from("audit_logs").insert({
+    await logAudit({
       action: "CREATE",
       entity: "CoverageTariffRule",
-      entity_id: rule.id,
-      details: JSON.stringify({ coverageId: id, fuelType: rule.fuelType, minFiscalPower: rule.minFiscalPower, maxFiscalPower: rule.maxFiscalPower }),
-      user_name: "SYSTEM",
+      entityId: rule.id,
+      details: { coverageId: id, fuelType: rule.fuelType, minFiscalPower: rule.minFiscalPower, maxFiscalPower: rule.maxFiscalPower },
     });
 
     return NextResponse.json(mapRow(rule), { status: 201 });

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, mapRow, mapRows } from "@/lib/db";
 import { requireAuth } from "@/lib/auth-guard";
+import { logAudit } from "@/lib/audit";
 
 /* ── GET : Rôles personnalisés d'un profil ───────────────────── */
 export async function GET(
@@ -71,15 +72,12 @@ export async function PUT(
       if (insError) throw insError;
     }
 
-    const { error: auditError } = await db.from("audit_logs").insert({
+    await logAudit({
       action: "UPDATE",
       entity: "Profile",
-      entity_id: id,
-      details: JSON.stringify({ action: "assign_roles", roleIds }),
-      user_name: "SYSTEM",
-      user_email: profile.email,
+      entityId: id,
+      details: { action: "assign_roles", roleIds },
     });
-    if (auditError) throw auditError;
 
     return NextResponse.json({ success: true });
   } catch (err) {
