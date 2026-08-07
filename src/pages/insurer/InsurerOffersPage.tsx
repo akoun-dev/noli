@@ -63,7 +63,7 @@ export const InsurerOffersPage: React.FC = () => {
     type: (o.contract_type === 'all_risks' ? 'Tous Risques' : o.contract_type === 'third_party_plus' ? 'Tiers +' : 'Tiers') as Offer['type'],
     price: o.price_min || 0,
     coverage: o.description || '',
-    status: o.is_active ? 'active' : 'inactive',
+    status: (o.is_active ? 'active' : 'inactive') as Offer['status'],
     customers: 0,
     conversion: 0,
     lastUpdated: new Date(o.updated_at).toISOString().split('T')[0],
