@@ -33,7 +33,7 @@ describe('useChat', () => {
       content: 'Hello',
       type: 'text',
       read: false,
-      timestamp: new Date().toISOString(),
+      timestamp: new Date(),
     },
     {
       id: '2',
@@ -43,7 +43,7 @@ describe('useChat', () => {
       content: 'Hello! How can I help you?',
       type: 'text',
       read: false,
-      timestamp: new Date().toISOString(),
+      timestamp: new Date(),
     },
   ];
 
@@ -51,12 +51,10 @@ describe('useChat', () => {
     {
       id: 'room-1',
       name: 'General Support',
-      type: 'support',
       participants: [],
-      lastMessage: null,
+      lastMessage: undefined,
       unreadCount: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: new Date(),
     },
   ];
 
@@ -225,7 +223,7 @@ describe('useChat', () => {
         content: 'New message',
         type: 'text',
         read: false,
-        timestamp: new Date().toISOString(),
+        timestamp: new Date(),
       };
 
       // Act
