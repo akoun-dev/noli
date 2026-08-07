@@ -687,9 +687,9 @@ export const useMarkAsRead = () => {
   return useMutation({
     mutationFn: markNotificationAsRead,
     onSuccess: (notification) => {
-      queryClient.invalidateQueries(['notifications', notification.userId])
-      queryClient.invalidateQueries(['unread-notifications', notification.userId])
-      queryClient.invalidateQueries(['notification-stats', notification.userId])
+      queryClient.invalidateQueries({ queryKey: ['notifications', notification.userId] })
+      queryClient.invalidateQueries({ queryKey: ['unread-notifications', notification.userId] })
+      queryClient.invalidateQueries({ queryKey: ['notification-stats', notification.userId] })
     },
     onError: (_error) => {
       toast.error('Erreur lors du marquage de la notification comme lue')
@@ -703,9 +703,9 @@ export const useMarkAllAsRead = () => {
   return useMutation({
     mutationFn: markAllNotificationsAsRead,
     onSuccess: (_, userId) => {
-      queryClient.invalidateQueries(['notifications', userId])
-      queryClient.invalidateQueries(['unread-notifications', userId])
-      queryClient.invalidateQueries(['notification-stats', userId])
+      queryClient.invalidateQueries({ queryKey: ['notifications', userId] })
+      queryClient.invalidateQueries({ queryKey: ['unread-notifications', userId] })
+      queryClient.invalidateQueries({ queryKey: ['notification-stats', userId] })
       toast.success('Toutes les notifications ont été marquées comme lues')
     },
     onError: (_error) => {
@@ -720,8 +720,8 @@ export const useArchiveNotification = () => {
   return useMutation({
     mutationFn: archiveNotification,
     onSuccess: (notification) => {
-      queryClient.invalidateQueries(['notifications', notification.userId])
-      queryClient.invalidateQueries(['unread-notifications', notification.userId])
+      queryClient.invalidateQueries({ queryKey: ['notifications', notification.userId] })
+      queryClient.invalidateQueries({ queryKey: ['unread-notifications', notification.userId] })
       toast.success('Notification archivée avec succès')
     },
     onError: (_error) => {
@@ -739,9 +739,9 @@ export const useDeleteNotification = () => {
       // Find the notification to get userId for cache invalidation
       const notification = mockNotifications.find((n) => n.id === notificationId)
       if (notification) {
-        queryClient.invalidateQueries(['notifications', notification.userId])
-        queryClient.invalidateQueries(['unread-notifications', notification.userId])
-        queryClient.invalidateQueries(['notification-stats', notification.userId])
+        queryClient.invalidateQueries({ queryKey: ['notifications', notification.userId] })
+        queryClient.invalidateQueries({ queryKey: ['unread-notifications', notification.userId] })
+        queryClient.invalidateQueries({ queryKey: ['notification-stats', notification.userId] })
       }
       toast.success('Notification supprimée avec succès')
     },
@@ -771,7 +771,7 @@ export const useUpdateNotificationPreferences = () => {
       preferences: Partial<NotificationPreferences>
     }) => updateNotificationPreferences(userId, preferences),
     onSuccess: (preferences) => {
-      queryClient.invalidateQueries(['notification-preferences', preferences.userId])
+      queryClient.invalidateQueries({ queryKey: ['notification-preferences', preferences.userId] })
       toast.success('Préférences mises à jour avec succès')
     },
     onError: (_error) => {
@@ -795,9 +795,9 @@ export const useRealTimeNotifications = (userId: string) => {
   React.useEffect(() => {
     const unsubscribe = subscribeToNotifications(userId, (notification) => {
       // Update queries when new notification arrives
-      queryClient.invalidateQueries(['notifications', userId])
-      queryClient.invalidateQueries(['unread-notifications', userId])
-      queryClient.invalidateQueries(['notification-stats', userId])
+      queryClient.invalidateQueries({ queryKey: ['notifications', userId] })
+      queryClient.invalidateQueries({ queryKey: ['unread-notifications', userId] })
+      queryClient.invalidateQueries({ queryKey: ['notification-stats', userId] })
 
       // Show toast notification for high priority notifications
       if (notification.priority === 'high' || notification.priority === 'urgent') {

@@ -388,8 +388,8 @@ export const useCreateUser = () => {
     mutationFn: createUser,
     onSuccess: () => {
       toast.success('Utilisateur créé avec succès');
-      queryClient.invalidateQueries(['admin-users']);
-      queryClient.invalidateQueries(['admin-user-stats']);
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-user-stats'] });
     },
     onError: (_error) => {
       toast.error('Erreur lors de la création de l\'utilisateur');
@@ -404,8 +404,8 @@ export const useUpdateUser = () => {
     mutationFn: updateUser,
     onSuccess: () => {
       toast.success('Utilisateur mis à jour avec succès');
-      queryClient.invalidateQueries(['admin-users']);
-      queryClient.invalidateQueries(['admin-user-stats']);
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-user-stats'] });
     },
     onError: (_error) => {
       toast.error('Erreur lors de la mise à jour de l\'utilisateur');
@@ -420,8 +420,8 @@ export const useDeleteUser = () => {
     mutationFn: deleteUser,
     onSuccess: () => {
       toast.success('Utilisateur supprimé avec succès');
-      queryClient.invalidateQueries(['admin-users']);
-      queryClient.invalidateQueries(['admin-user-stats']);
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-user-stats'] });
     },
     onError: (_error) => {
       toast.error('Erreur lors de la suppression de l\'utilisateur');
@@ -442,8 +442,8 @@ export const useBulkUpdateUsers = () => {
       if (data.failed > 0) {
         toast.error(`${data.failed} utilisateurs n'ont pas pu être traités`);
       }
-      queryClient.invalidateQueries(['admin-users']);
-      queryClient.invalidateQueries(['admin-user-stats']);
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-user-stats'] });
     },
     onError: (_error) => {
       toast.error('Erreur lors du traitement groupé des utilisateurs');

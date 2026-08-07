@@ -372,7 +372,7 @@ export const useCreatePaymentMethod = () => {
       createPaymentMethod(userId, methodData),
     onSuccess: () => {
       toast.success('Méthode de paiement ajoutée avec succès');
-      queryClient.invalidateQueries(['payment-methods']);
+      queryClient.invalidateQueries({ queryKey: ['payment-methods'] });
     },
     onError: (_error) => {
       toast.error('Erreur lors de l\'ajout de la méthode de paiement');
@@ -388,7 +388,7 @@ export const useUpdatePaymentMethod = () => {
       updatePaymentMethod(methodId, updates),
     onSuccess: () => {
       toast.success('Méthode de paiement mise à jour avec succès');
-      queryClient.invalidateQueries(['payment-methods']);
+      queryClient.invalidateQueries({ queryKey: ['payment-methods'] });
     },
     onError: (_error) => {
       toast.error('Erreur lors de la mise à jour de la méthode de paiement');
@@ -403,7 +403,7 @@ export const useDeletePaymentMethod = () => {
     mutationFn: deletePaymentMethod,
     onSuccess: () => {
       toast.success('Méthode de paiement supprimée avec succès');
-      queryClient.invalidateQueries(['payment-methods']);
+      queryClient.invalidateQueries({ queryKey: ['payment-methods'] });
     },
     onError: (_error) => {
       toast.error('Erreur lors de la suppression de la méthode de paiement');
@@ -419,7 +419,7 @@ export const useSetDefaultPaymentMethod = () => {
       setDefaultPaymentMethod(userId, methodId),
     onSuccess: () => {
       toast.success('Méthode de paiement définie par défaut avec succès');
-      queryClient.invalidateQueries(['payment-methods']);
+      queryClient.invalidateQueries({ queryKey: ['payment-methods'] });
     },
     onError: (_error) => {
       toast.error('Erreur lors de la définition de la méthode de paiement par défaut');
@@ -447,8 +447,8 @@ export const useProcessPayment = () => {
       } else {
         toast.error('Le paiement a échoué');
       }
-      queryClient.invalidateQueries(['payment-transactions']);
-      queryClient.invalidateQueries(['payment-stats']);
+      queryClient.invalidateQueries({ queryKey: ['payment-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['payment-stats'] });
     },
     onError: (_error) => {
       toast.error('Erreur lors du traitement du paiement');
@@ -477,8 +477,8 @@ export const useRefundTransaction = () => {
     mutationFn: refundTransaction,
     onSuccess: () => {
       toast.success('Remboursement traité avec succès');
-      queryClient.invalidateQueries(['payment-transactions']);
-      queryClient.invalidateQueries(['payment-stats']);
+      queryClient.invalidateQueries({ queryKey: ['payment-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['payment-stats'] });
     },
     onError: (_error) => {
       toast.error('Erreur lors du traitement du remboursement');

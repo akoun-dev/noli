@@ -491,7 +491,7 @@ export const useCreateAuditLog = () => {
   return useMutation({
     mutationFn: createAuditLog,
     onSuccess: () => {
-      queryClient.invalidateQueries(['admin-audit-logs']);
+      queryClient.invalidateQueries({ queryKey: ['admin-audit-logs'] });
     },
     onError: (error) => {
       logger.error('Error creating audit log:', error);

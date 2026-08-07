@@ -381,7 +381,7 @@ export const useUpdateNotificationPreferences = () => {
       updateNotificationPreferences(updates, userId),
     onSuccess: () => {
       toast.success('Préférences de notification mises à jour');
-      queryClient.invalidateQueries(['notification-preferences']);
+      queryClient.invalidateQueries({ queryKey: ['notification-preferences'] });
     },
     onError: (_error) => {
       toast.error('Erreur lors de la mise à jour des préférences');
@@ -395,8 +395,8 @@ export const useMarkNotificationAsRead = () => {
   return useMutation({
     mutationFn: markNotificationAsRead,
     onSuccess: () => {
-      queryClient.invalidateQueries(['notifications']);
-      queryClient.invalidateQueries(['notifications', 'unread']);
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'unread'] });
     },
     onError: (_error) => {
       toast.error('Erreur lors du marquage de la notification');
@@ -411,8 +411,8 @@ export const useMarkAllNotificationsAsRead = () => {
     mutationFn: markAllNotificationsAsRead,
     onSuccess: (count) => {
       toast.success(`${count} notification(s) marquée(s) comme lue(s)`);
-      queryClient.invalidateQueries(['notifications']);
-      queryClient.invalidateQueries(['notifications', 'unread']);
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'unread'] });
     },
     onError: (_error) => {
       toast.error('Erreur lors du marquage des notifications');
@@ -427,8 +427,8 @@ export const useCreateNotification = () => {
     mutationFn: createNotification,
     onSuccess: () => {
       toast.success('Notification créée avec succès');
-      queryClient.invalidateQueries(['notifications']);
-      queryClient.invalidateQueries(['notifications', 'unread']);
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'unread'] });
     },
     onError: (_error) => {
       toast.error('Erreur lors de la création de la notification');
@@ -443,8 +443,8 @@ export const useDeleteNotification = () => {
     mutationFn: deleteNotification,
     onSuccess: () => {
       toast.success('Notification supprimée');
-      queryClient.invalidateQueries(['notifications']);
-      queryClient.invalidateQueries(['notifications', 'unread']);
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'unread'] });
     },
     onError: (_error) => {
       toast.error('Erreur lors de la suppression de la notification');

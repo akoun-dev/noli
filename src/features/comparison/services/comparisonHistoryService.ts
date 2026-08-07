@@ -647,7 +647,7 @@ export const useSaveComparisonHistory = () => {
     mutationFn: saveComparisonHistory,
     onSuccess: () => {
       toast.success('Comparaison sauvegardée avec succès')
-      queryClient.invalidateQueries(['comparison-history'])
+      queryClient.invalidateQueries({ queryKey: ['comparison-history'] })
     },
     onError: (_error) => {
       toast.error('Erreur lors de la sauvegarde de la comparaison')
@@ -668,8 +668,8 @@ export const useUpdateComparisonHistory = () => {
     }) => updateComparisonHistory(historyId, updates),
     onSuccess: () => {
       toast.success('Comparaison mise à jour avec succès')
-      queryClient.invalidateQueries(['comparison-history'])
-      queryClient.invalidateQueries(['comparison-details'])
+      queryClient.invalidateQueries({ queryKey: ['comparison-history'] })
+      queryClient.invalidateQueries({ queryKey: ['comparison-details'] })
     },
     onError: (_error) => {
       toast.error('Erreur lors de la mise à jour de la comparaison')
@@ -684,7 +684,7 @@ export const useDeleteComparisonHistory = () => {
     mutationFn: deleteComparisonHistory,
     onSuccess: () => {
       toast.success('Comparaison supprimée avec succès')
-      queryClient.invalidateQueries(['comparison-history'])
+      queryClient.invalidateQueries({ queryKey: ['comparison-history'] })
     },
     onError: (_error) => {
       toast.error('Erreur lors de la suppression de la comparaison')
@@ -700,8 +700,8 @@ export const useShareComparisonHistory = () => {
     onSuccess: (data) => {
       toast.success('Comparaison partagée avec succès')
       navigator.clipboard.writeText(data.shareUrl)
-      queryClient.invalidateQueries(['comparison-history'])
-      queryClient.invalidateQueries(['comparison-details'])
+      queryClient.invalidateQueries({ queryKey: ['comparison-history'] })
+      queryClient.invalidateQueries({ queryKey: ['comparison-details'] })
     },
     onError: (_error) => {
       toast.error('Erreur lors du partage de la comparaison')
@@ -725,8 +725,8 @@ export const useSaveComparisonOffer = () => {
     mutationFn: saveComparisonOffer,
     onSuccess: () => {
       toast.success('Offre sauvegardée avec succès')
-      queryClient.invalidateQueries(['comparison-details'])
-      queryClient.invalidateQueries(['comparison-history'])
+      queryClient.invalidateQueries({ queryKey: ['comparison-details'] })
+      queryClient.invalidateQueries({ queryKey: ['comparison-history'] })
     },
     onError: (_error) => {
       toast.error("Erreur lors de la sauvegarde de l'offre")
@@ -747,7 +747,7 @@ export const useUpdateSavedOffer = () => {
     }) => updateSavedOffer(offerId, updates),
     onSuccess: () => {
       toast.success('Offre mise à jour avec succès')
-      queryClient.invalidateQueries(['comparison-details'])
+      queryClient.invalidateQueries({ queryKey: ['comparison-details'] })
     },
     onError: (_error) => {
       toast.error("Erreur lors de la mise à jour de l'offre")
@@ -762,7 +762,7 @@ export const useDeleteSavedOffer = () => {
     mutationFn: deleteSavedOffer,
     onSuccess: () => {
       toast.success('Offre supprimée avec succès')
-      queryClient.invalidateQueries(['comparison-details'])
+      queryClient.invalidateQueries({ queryKey: ['comparison-details'] })
     },
     onError: (_error) => {
       toast.error("Erreur lors de la suppression de l'offre")

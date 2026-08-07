@@ -462,8 +462,8 @@ export const useCreateInsurer = () => {
     mutationFn: createInsurer,
     onSuccess: () => {
       toast.success('Assureur créé avec succès');
-      queryClient.invalidateQueries(['admin-insurers']);
-      queryClient.invalidateQueries(['admin-insurer-stats']);
+      queryClient.invalidateQueries({ queryKey: ['admin-insurers'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-insurer-stats'] });
     },
     onError: (_error) => {
       toast.error('Erreur lors de la création de l\'assureur');
@@ -479,8 +479,8 @@ export const useUpdateInsurer = () => {
       updateInsurer(id, data),
     onSuccess: () => {
       toast.success('Assureur mis à jour avec succès');
-      queryClient.invalidateQueries(['admin-insurers']);
-      queryClient.invalidateQueries(['admin-insurer-stats']);
+      queryClient.invalidateQueries({ queryKey: ['admin-insurers'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-insurer-stats'] });
     },
     onError: (_error) => {
       toast.error('Erreur lors de la mise à jour de l\'assureur');
@@ -495,8 +495,8 @@ export const useDeleteInsurer = () => {
     mutationFn: deleteInsurer,
     onSuccess: () => {
       toast.success('Assureur supprimé avec succès');
-      queryClient.invalidateQueries(['admin-insurers']);
-      queryClient.invalidateQueries(['admin-insurer-stats']);
+      queryClient.invalidateQueries({ queryKey: ['admin-insurers'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-insurer-stats'] });
     },
     onError: (_error) => {
       toast.error('Erreur lors de la suppression de l\'assureur');
@@ -512,8 +512,8 @@ export const useUpdateInsurerStatus = () => {
       updateInsurerStatus(id, status),
     onSuccess: () => {
       toast.success('Statut de l\'assureur mis à jour avec succès');
-      queryClient.invalidateQueries(['admin-insurers']);
-      queryClient.invalidateQueries(['admin-insurer-stats']);
+      queryClient.invalidateQueries({ queryKey: ['admin-insurers'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-insurer-stats'] });
     },
     onError: (_error) => {
       toast.error('Erreur lors de la mise à jour du statut');
@@ -528,8 +528,8 @@ export const useApproveInsurer = () => {
     mutationFn: approveInsurer,
     onSuccess: () => {
       toast.success('Assureur approuvé avec succès');
-      queryClient.invalidateQueries(['admin-insurers']);
-      queryClient.invalidateQueries(['admin-insurer-stats']);
+      queryClient.invalidateQueries({ queryKey: ['admin-insurers'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-insurer-stats'] });
     },
     onError: (_error) => {
       toast.error('Erreur lors de l\'approbation de l\'assureur');
