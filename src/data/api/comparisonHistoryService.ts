@@ -103,7 +103,7 @@ function mapDbToComparisonHistory(db: DatabaseComparisonHistory): ComparisonHist
     comparison_data: db.comparison_data as ComparisonHistory['comparison_data'],
     status: db.status,
     comparison_date: db.comparison_date,
-    expires_at: db.expires_at,
+    expires_at: db.expires_at ?? undefined,
     is_shared: db.comparison_data?.isShared || false,
     share_token: db.comparison_data?.shareToken,
     created_at: db.created_at,
@@ -122,7 +122,8 @@ function mapComparisonHistoryToDb(history: Omit<ComparisonHistory, 'id' | 'creat
     },
     status: history.status,
     comparison_date: history.comparison_date,
-    expires_at: history.expires_at,
+    expires_at: history.expires_at ?? null,
+    deleted_at: null,
   };
 }
 
