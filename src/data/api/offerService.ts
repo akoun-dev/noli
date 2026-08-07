@@ -130,8 +130,8 @@ const typeToContract: Record<string, string> = {
 // Helper functions
 function mapDbToOffer(
   db: DBInsuranceOffer,
-  insurer?: DBInsurer,
-  category?: DBInsuranceCategory
+  insurer?: { name: string | null; logo_url: string | null } | null,
+  category?: { name: string | null } | null
 ): Offer {
   return {
     id: db.id,
@@ -741,7 +741,10 @@ const offerService = {
             status: 'DRAFT',
             personal_data: quoteData.personal_data,
             vehicle_data: quoteData.vehicle_data,
+            property_data: {},
             coverage_requirements: quoteData.coverage_requirements,
+            estimated_price: null,
+            valid_until: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
           })
           .select()
           .single();

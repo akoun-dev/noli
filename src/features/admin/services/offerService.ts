@@ -1,5 +1,30 @@
 import { supabase } from '@/lib/supabase';
 import { logger } from '@/lib/logger';
+import { Database } from '@/types/database';
+
+type InsurerRel = {
+  id: string;
+  name: string;
+  description: string | null;
+  logo_url: string | null;
+  rating: number | null;
+  is_active: boolean;
+};
+type CategoryRel = {
+  id: string;
+  name: string;
+  description: string | null;
+  icon: string | null;
+};
+type OfferRow = Database['public']['Tables']['insurance_offers']['Row'] & {
+  insurer?: InsurerRel | InsurerRel[] | null;
+  category?: CategoryRel | CategoryRel[] | null;
+};
+
+function firstJoined<T>(rel: T | T[] | null | undefined): T | undefined {
+  if (!rel) return undefined;
+  return Array.isArray(rel) ? rel[0] : rel;
+}
 
 export interface Offer {
   id: string;
@@ -30,7 +55,7 @@ export interface Offer {
     id: string;
     name: string;
     description?: string;
-    is_active: boolean;
+    icon?: string;
   };
 }
 
@@ -87,6 +112,45 @@ export interface OfferCategory {
   label: string;
 }
 
+function mapOffer(row: OfferRow): Offer {
+  const insurer = firstJoined(row.insurer);
+  const category = firstJoined(row.category);
+  return {
+    id: row.id,
+    insurer_id: row.insurer_id,
+    category_id: row.category_id ?? undefined,
+    name: row.name,
+    description: row.description ?? undefined,
+    price_min: row.price_min ?? undefined,
+    price_max: row.price_max ?? undefined,
+    coverage_amount: row.coverage_amount ?? undefined,
+    deductible: row.deductible,
+    is_active: row.is_active,
+    features: row.features ?? [],
+    contract_type: row.contract_type ?? undefined,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    insurer: insurer
+      ? {
+          id: insurer.id,
+          name: insurer.name,
+          description: insurer.description ?? undefined,
+          logo_url: insurer.logo_url ?? undefined,
+          rating: insurer.rating ?? undefined,
+          is_active: insurer.is_active,
+        }
+      : undefined,
+    category: category
+      ? {
+          id: category.id,
+          name: category.name,
+          description: category.description ?? undefined,
+          icon: category.icon ?? undefined,
+        }
+      : undefined,
+  };
+}
+
 class OfferService {
   async getOffers(): Promise<Offer[]> {
     try {
@@ -95,7 +159,7 @@ class OfferService {
         .select(`
           *,
           insurer:insurers(id, name, description, logo_url, rating, is_active),
-          category:insurance_categories(id, name, description, is_active)
+          category:insurance_categories(id, name, description, icon)
         `)
         .order('updated_at', { ascending: false });
 
@@ -104,7 +168,7 @@ class OfferService {
         throw new Error(`Erreur lors du chargement des offres: ${error.message}`);
       }
 
-      return data || [];
+      return (data || []).map(mapOffer);
     } catch (error) {
       logger.error('Unexpected error in getOffers:', error);
       throw error;
@@ -118,7 +182,7 @@ class OfferService {
         .select(`
           *,
           insurer:insurers(id, name, description, logo_url, rating, is_active),
-          category:insurance_categories(id, name, description, is_active)
+          category:insurance_categories(id, name, description, icon)
         `)
         .eq('id', id)
         .single();
@@ -128,7 +192,7 @@ class OfferService {
         throw new Error(`Erreur lors du chargement de l'offre: ${error.message}`);
       }
 
-      return data;
+      return data ? mapOffer(data) : null;
     } catch (error) {
       logger.error(`Unexpected error in getOfferById(${id}):`, error);
       throw error;
@@ -137,25 +201,27 @@ class OfferService {
 
   async createOffer(data: Partial<Offer>): Promise<Offer> {
     try {
+      const insertPayload: Database['public']['Tables']['insurance_offers']['Insert'] = {
+        insurer_id: data.insurer_id ?? '',
+        category_id: data.category_id ?? '',
+        name: data.name ?? '',
+        description: data.description ?? null,
+        price_min: data.price_min ?? null,
+        price_max: data.price_max ?? null,
+        coverage_amount: data.coverage_amount ?? null,
+        deductible: data.deductible ?? 0,
+        is_active: data.is_active ?? true,
+        features: data.features ?? [],
+        contract_type: data.contract_type ?? null,
+      };
+
       const { data: offer, error } = await supabase
         .from('insurance_offers')
-        .insert({
-          insurer_id: data.insurer_id,
-          category_id: data.category_id,
-          name: data.name,
-          description: data.description,
-          price_min: data.price_min,
-          price_max: data.price_max,
-          coverage_amount: data.coverage_amount,
-          deductible: data.deductible || 0,
-          is_active: data.is_active ?? true,
-          features: data.features || [],
-          contract_type: data.contract_type
-        })
+        .insert(insertPayload)
         .select(`
           *,
           insurer:insurers(id, name, description, logo_url, rating, is_active),
-          category:insurance_categories(id, name, description, is_active)
+          category:insurance_categories(id, name, description, icon)
         `)
         .single();
 
@@ -164,7 +230,7 @@ class OfferService {
         throw new Error(`Erreur lors de la création de l'offre: ${error.message}`);
       }
 
-      return offer;
+      return mapOffer(offer);
     } catch (error) {
       logger.error('Unexpected error in createOffer:', error);
       throw error;
@@ -192,7 +258,7 @@ class OfferService {
         .select(`
           *,
           insurer:insurers(id, name, description, logo_url, rating, is_active),
-          category:insurance_categories(id, name, description, is_active)
+          category:insurance_categories(id, name, description, icon)
         `)
         .single();
 
@@ -201,7 +267,7 @@ class OfferService {
         throw new Error(`Erreur lors de la mise à jour de l'offre: ${error.message}`);
       }
 
-      return offer;
+      return mapOffer(offer);
     } catch (error) {
       logger.error(`Unexpected error in updateOffer(${id}):`, error);
       throw error;
@@ -301,7 +367,12 @@ class OfferService {
         throw new Error(`Erreur lors du chargement des assureurs: ${error.message}`);
       }
 
-      return data || [];
+      return (data || []).map((row) => ({
+        id: row.id,
+        name: row.name,
+        logo: row.logo_url ?? undefined,
+        status: row.is_active ? 'active' : 'inactive',
+      }));
     } catch (error) {
       logger.error('Unexpected error in getInsurers:', error);
       throw error;
@@ -342,7 +413,7 @@ class OfferService {
         .select(`
           *,
           insurer:insurers(id, name, description, logo_url, rating, is_active),
-          category:insurance_categories(id, name, description, is_active)
+          category:insurance_categories(id, name, description, icon)
         `);
 
       // Apply filters
@@ -365,7 +436,7 @@ class OfferService {
         throw new Error(`Erreur lors de la recherche des offres: ${error.message}`);
       }
 
-      return data || [];
+      return (data || []).map(mapOffer);
     } catch (error) {
       logger.error('Unexpected error in searchOffers:', error);
       throw error;
@@ -379,7 +450,7 @@ class OfferService {
         .select(`
           *,
           insurer:insurers(id, name, description, logo_url, rating, is_active),
-          category:insurance_categories(id, name, description, is_active)
+          category:insurance_categories(id, name, description, icon)
         `)
         .eq('is_active', true)
         .order('updated_at', { ascending: false });
@@ -389,7 +460,7 @@ class OfferService {
         throw new Error(`Erreur lors du chargement des offres actives: ${error.message}`);
       }
 
-      return data || [];
+      return (data || []).map(mapOffer);
     } catch (error) {
       logger.error('Unexpected error in getActiveOffers:', error);
       throw error;
@@ -403,7 +474,7 @@ class OfferService {
         .select(`
           *,
           insurer:insurers(id, name, description, logo_url, rating, is_active),
-          category:insurance_categories(id, name, description, is_active)
+          category:insurance_categories(id, name, description, icon)
         `)
         .eq('insurer_id', insurerId)
         .order('updated_at', { ascending: false });
@@ -413,7 +484,7 @@ class OfferService {
         throw new Error(`Erreur lors du chargement des offres de l'assureur: ${error.message}`);
       }
 
-      return data || [];
+      return (data || []).map(mapOffer);
     } catch (error) {
       logger.error(`Unexpected error in getOffersByInsurer(${insurerId}):`, error);
       throw error;
@@ -427,7 +498,7 @@ class OfferService {
         .select(`
           *,
           insurer:insurers(id, name, description, logo_url, rating, is_active),
-          category:insurance_categories(id, name, description, is_active)
+          category:insurance_categories(id, name, description, icon)
         `)
         .eq('category_id', categoryId)
         .order('updated_at', { ascending: false });
@@ -437,7 +508,7 @@ class OfferService {
         throw new Error(`Erreur lors du chargement des offres de la catégorie: ${error.message}`);
       }
 
-      return data || [];
+      return (data || []).map(mapOffer);
     } catch (error) {
       logger.error(`Unexpected error in getOffersByCategory(${categoryId}):`, error);
       throw error;
