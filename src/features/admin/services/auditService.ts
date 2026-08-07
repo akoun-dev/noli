@@ -119,6 +119,22 @@ const mapSeverityToUi = (severity?: string): AuditLog['severity'] => {
   }
 };
 
+// Row shape of the `admin_audit_logs` table (not present in generated DB types).
+interface AdminAuditLogRow {
+  id: string;
+  user_id: string;
+  user_email?: string | null;
+  action: string;
+  resource_type: string;
+  resource_id?: string | null;
+  metadata?: unknown;
+  new_values?: unknown;
+  ip_address?: string | null;
+  user_agent?: string | null;
+  created_at: string;
+  severity?: string;
+}
+
 const mapSeverityToDb = (severity: AuditLog['severity']): 'debug' | 'info' | 'warning' | 'error' | 'critical' => {
   switch (severity) {
     case 'CRITICAL':
@@ -182,16 +198,17 @@ export const fetchAuditLogs = async (filters: AuditLogFilters = {}): Promise<{ l
       return await auditService.getAuditLogsFallback(filters);
     }
 
-    const logs: AuditLog[] = (data || []).map(log => ({
+    const rows = (data ?? []) as unknown as AdminAuditLogRow[];
+    const logs: AuditLog[] = rows.map(log => ({
       id: log.id,
       userId: log.user_id,
-      userEmail: log.user_email,
+      userEmail: log.user_email ?? '',
       action: log.action as AuditAction,
       resource: log.resource_type,
-      resourceId: log.resource_id,
-      details: log.metadata || log.new_values || {},
-      ipAddress: log.ip_address,
-      userAgent: log.user_agent,
+      resourceId: log.resource_id ?? undefined,
+      details: (log.metadata || log.new_values || {}) as Record<string, any>,
+      ipAddress: log.ip_address ?? '',
+      userAgent: log.user_agent ?? '',
       timestamp: new Date(log.created_at),
       severity: mapSeverityToUi(log.severity)
     }));
@@ -230,18 +247,19 @@ export const createAuditLog = async (log: Omit<AuditLog, 'id' | 'timestamp'>): P
       throw error;
     }
 
+    const row = data as unknown as AdminAuditLogRow;
     return {
-      id: data.id,
-      userId: data.user_id,
+      id: row.id,
+      userId: row.user_id,
       userEmail: log.userEmail,
-      action: data.action as AuditAction,
-      resource: data.resource_type,
-      resourceId: data.resource_id,
-      details: data.metadata || {},
-      ipAddress: data.ip_address,
-      userAgent: data.user_agent,
-      timestamp: new Date(data.created_at),
-      severity: mapSeverityToUi(data.severity)
+      action: row.action as AuditAction,
+      resource: row.resource_type,
+      resourceId: row.resource_id ?? undefined,
+      details: (row.metadata || {}) as Record<string, any>,
+      ipAddress: row.ip_address ?? '',
+      userAgent: row.user_agent ?? '',
+      timestamp: new Date(row.created_at),
+      severity: mapSeverityToUi(row.severity)
     };
 
   } catch (error) {
