@@ -102,7 +102,9 @@ export class QuoteService {
         status: 'PENDING',
         personal_data,
         vehicle_data,
+        property_data: {},
         coverage_requirements,
+        estimated_price: null,
         valid_until: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
       })
       .select('*')
@@ -141,7 +143,7 @@ export class QuoteService {
     }
 
     const { data: result, error: fetchErr } = await supabase
-      .from('quotes') // Utiliser quotes à la place
+      .from('quote_offers')
       .select(
         `
         id,
