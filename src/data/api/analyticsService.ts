@@ -561,7 +561,6 @@ const supabaseAnalyticsService = {
     try {
       const date = new Date().toISOString().split('T')[0];
       let csvContent = '';
-      let filename = '';
 
       switch (reportType) {
         case 'users':
@@ -678,7 +677,6 @@ const supabaseAnalyticsService = {
           break;
       }
 
-      filename = `rapport_${reportType}_${date}.csv`;
       return new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
 
     } catch (error) {
