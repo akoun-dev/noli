@@ -142,7 +142,11 @@ export type CalculationMethodType =
   | 'TIERCE_COLLISION_CAP'
   | 'MTPL_TARIFF'
   | 'IC_IPT_FORMULA'
-  | 'IPT_PLACES_FORMULA';
+  | 'IPT_PLACES_FORMULA'
+  | 'RATE_ON_SI'
+  | 'RATE_ON_NEW_VALUE'
+  | 'CONDITIONAL_RATE'
+  | 'TCM_TCL_MATRIX';
 
 export interface Guarantee {
   id: string;
