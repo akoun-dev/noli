@@ -116,6 +116,7 @@ export const CampaignManager: React.FC = () => {
         templateId: 'template-1',
         targetAudience: {
           clientIds: ['client-1', 'client-3'],
+          criteria: {},
         },
         scheduling: {
           sendAt: new Date(Date.now() + 86400000), // Demain

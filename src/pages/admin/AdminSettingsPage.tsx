@@ -111,16 +111,16 @@ const AdminSettingsPage = () => {
       ]);
 
       if (systemResponse.success) {
-        setSystemSettings(systemResponse.data);
+        setSystemSettings(systemResponse.data!);
       }
       if (emailResponse.success) {
-        setEmailSettings(emailResponse.data);
+        setEmailSettings(emailResponse.data!);
       }
       if (notificationResponse.success) {
-        setNotificationSettings(notificationResponse.data);
+        setNotificationSettings(notificationResponse.data!);
       }
       if (uiResponse.success) {
-        setUISettings(uiResponse.data);
+        setUISettings(uiResponse.data!);
       }
     } catch (error) {
       logger.error('Erreur lors du chargement des paramètres:', error);

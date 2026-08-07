@@ -47,7 +47,8 @@ interface SearchResult {
   icon: React.ComponentType<{ className?: string }>;
   shortcut?: string;
   action: () => void;
-  category: 'navigation' | 'actions' | 'help' | 'user';
+  category: 'navigation' | 'actions' | 'help' | 'user' | 'custom';
+  priority?: number;
 }
 
 export function GlobalSearch() {
