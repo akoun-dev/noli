@@ -160,7 +160,6 @@ describe('SecurityManager', () => {
         level: 'high' as const,
         score: 40,
         reasons: ['Multiple failed attempts'],
-        score: 40
       }
 
       const required = securityManager.shouldRequireCaptcha(highRisk)
@@ -172,7 +171,6 @@ describe('SecurityManager', () => {
         level: 'low' as const,
         score: 10,
         reasons: [],
-        score: 10
       }
 
       const required = securityManager.shouldRequireCaptcha(lowRisk)
@@ -184,7 +182,6 @@ describe('SecurityManager', () => {
         level: 'critical' as const,
         score: 60,
         reasons: ['Automated attack detected'],
-        score: 60
       }
 
       const config = securityManager.getCaptchaConfig(criticalRisk)
