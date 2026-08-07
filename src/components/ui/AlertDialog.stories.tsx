@@ -11,7 +11,7 @@ import {
   AlertDialogTrigger,
 } from './alert-dialog';
 import { DialogTitle } from './dialog';
-import { Button } from './button';
+import { Button, buttonVariants } from './button';
 
 const meta: Meta<typeof AlertDialog> = {
   title: 'UI/AlertDialog',
@@ -79,7 +79,7 @@ export const WithCustomContent: Story = {
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Annuler</AlertDialogCancel>
-          <AlertDialogAction variant="destructive">
+          <AlertDialogAction className={buttonVariants({ variant: "destructive" })}>
             Supprimer mon compte
           </AlertDialogAction>
         </AlertDialogFooter>
@@ -201,7 +201,7 @@ export const Accessibility: Story = {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Annuler</AlertDialogCancel>
-              <AlertDialogAction variant="destructive">Confirmer</AlertDialogAction>
+              <AlertDialogAction className={buttonVariants({ variant: "destructive" })}>Confirmer</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>

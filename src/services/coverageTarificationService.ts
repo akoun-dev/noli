@@ -823,6 +823,8 @@ class CoverageTarificationService {
         }
       }
     }
+
+    return []
   }
 
   // Calculate premium for a specific coverage
