@@ -55,6 +55,11 @@ class ApiClient {
     this.setupInterceptors();
   }
 
+  // Public accessor for the underlying axios instance
+  get axiosInstance(): AxiosInstance {
+    return this.instance;
+  }
+
   private setupInterceptors() {
     // Request interceptor
     this.instance.interceptors.request.use(
@@ -251,4 +256,4 @@ class ApiClient {
 export const apiClient = new ApiClient();
 
 // Export the instance for direct use
-export default apiClient.instance;
+export default apiClient.axiosInstance;

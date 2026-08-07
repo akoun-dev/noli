@@ -135,7 +135,7 @@ export const InsurerOffersPage: React.FC = () => {
   const exportOffers = () => {
     const csvContent = [
       ['Nom', 'Type', 'Prix (FCFA)', 'Couverture', 'Statut', 'Clients', 'Conversion', 'Description'],
-      ...offers.map(offer => [
+      ...filteredOffers.map(offer => [
         offer.name,
         offer.type,
         offer.price.toString(),
@@ -236,7 +236,7 @@ export const InsurerOffersPage: React.FC = () => {
               <div>
                 <p className="text-sm font-medium text-gray-600">Clients totaux</p>
                 <p className="text-2xl font-bold">
-                  {offers.reduce((sum, offer) => sum + offer.customers, 0)}
+                  {filteredOffers.reduce((sum, offer) => sum + offer.customers, 0)}
                 </p>
               </div>
               <div className="bg-purple-100 p-2 rounded-lg">
@@ -254,7 +254,7 @@ export const InsurerOffersPage: React.FC = () => {
               <div>
                 <p className="text-sm font-medium text-gray-600">Taux conversion moyen</p>
                 <p className="text-2xl font-bold">
-                  {Math.round(offers.reduce((sum, offer) => sum + offer.conversion, 0) / offers.length)}%
+                  {Math.round(filteredOffers.reduce((sum, offer) => sum + offer.conversion, 0) / filteredOffers.length)}%
                 </p>
               </div>
               <div className="bg-orange-100 p-2 rounded-lg">

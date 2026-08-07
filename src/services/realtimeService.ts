@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react"
 import { logger } from "@/lib/logger"
 export interface QuoteUpdateEvent {
   quoteId: string;
@@ -166,6 +167,11 @@ export class RealTimeService {
         }
       }
     };
+  }
+
+  // Public wrapper to emit an event to subscribers from outside the class
+  emit(event: string, data: any): void {
+    this.broadcast(event, data);
   }
 
   private broadcast(event: string, data: any): void {
@@ -392,7 +398,7 @@ if (process.env.NODE_ENV === 'development') {
     const realtimeService = RealTimeService.getInstance();
     if (realtimeService.getConnectionStatus() === 'connected') {
       // Simulate system notifications
-      realtimeService.broadcast('system_notification', {
+      realtimeService.emit('system_notification', {
         type: 'info',
         message: 'Le système fonctionne normalement',
         timestamp: new Date()
