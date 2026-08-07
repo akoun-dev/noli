@@ -1,5 +1,9 @@
 import { supabase } from '@/lib/supabase'
 import { logger } from '@/lib/logger'
+import { Database, Json } from '@/types/database'
+
+type PolicyRow = Database['public']['Tables']['policies']['Row']
+type PaymentRow = Database['public']['Tables']['payments']['Row']
 
 export interface Policy {
   id: string
@@ -58,6 +62,108 @@ export interface PolicyDocument {
   size: number
 }
 
+function toRecord(value: Json | null | undefined): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value : {}
+}
+
+function mapRowToPolicy(row: PolicyRow): Policy {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    insurerId: row.insurer_id,
+    quoteId: row.quote_id,
+    offerId: row.offer_id,
+    policyNumber: row.policy_number,
+    status: row.status,
+    startDate: row.start_date,
+    endDate: row.end_date,
+    premiumAmount: row.premium_amount,
+    paymentFrequency: row.payment_frequency,
+    coverageDetails: toRecord(row.coverage_details),
+    termsConditions: row.terms_conditions ?? undefined,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }
+}
+
+function mapRowToPayment(row: PaymentRow): Payment {
+  return {
+    id: row.id,
+    policyId: row.policy_id,
+    userId: row.user_id,
+    amount: row.amount,
+    paymentDate: row.payment_date,
+    paymentMethod: row.payment_method,
+    status: row.status,
+    transactionId: row.transaction_id ?? undefined,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }
+}
+
+// Relations telles que renvoyées par les jointures Supabase (objet ou tableau).
+type Rel<T> = T | T[] | null
+type InsurerRel = { id: string; name: string; logo_url: string | null }
+type OfferRel = {
+  id: string
+  name: string
+  description: string | null
+  features: string[] | null
+  contract_type: string | null
+}
+type PolicyPaymentRel = {
+  id: string
+  amount: number
+  payment_date: string
+  payment_method: Payment['paymentMethod']
+  status: Payment['status']
+  transaction_id: string | null
+}
+
+function firstRel<T>(rel: Rel<T> | undefined): T | undefined {
+  if (!rel) return undefined
+  return Array.isArray(rel) ? rel[0] : rel
+}
+
+function mapInsurerRel(rel: Rel<InsurerRel> | undefined): PolicyWithDetails['insurer'] {
+  const insurer = firstRel(rel)
+  return insurer
+    ? { id: insurer.id, name: insurer.name, logo_url: insurer.logo_url ?? undefined }
+    : undefined
+}
+
+function mapOfferRel(rel: Rel<OfferRel> | undefined): PolicyWithDetails['offer'] {
+  const offer = firstRel(rel)
+  return offer
+    ? {
+        id: offer.id,
+        name: offer.name,
+        description: offer.description ?? undefined,
+        features: offer.features ?? undefined,
+        contract_type: offer.contract_type ?? undefined,
+      }
+    : undefined
+}
+
+function mapPolicyPaymentRels(
+  rels: PolicyPaymentRel[] | null | undefined,
+  policyId: string,
+  userId: string
+): Payment[] {
+  return (rels ?? []).map((p) => ({
+    id: p.id,
+    policyId,
+    userId,
+    amount: p.amount,
+    paymentDate: p.payment_date,
+    paymentMethod: p.payment_method,
+    status: p.status,
+    transactionId: p.transaction_id ?? undefined,
+    createdAt: '',
+    updatedAt: '',
+  }))
+}
+
 class PolicyService {
   private readonly tableName = 'policies'
 
@@ -98,7 +204,12 @@ class PolicyService {
 
       if (error) throw error
 
-      return data || []
+      return (data || []).map((row) => ({
+        ...mapRowToPolicy(row),
+        insurer: mapInsurerRel(row.insurers),
+        offer: mapOfferRel(row.insurance_offers),
+        payments: mapPolicyPaymentRels(row.payments, row.id, row.user_id),
+      }))
     } catch (err) {
       logger.error('Error fetching user policies:', err)
       throw err
@@ -141,8 +252,14 @@ class PolicyService {
         .single()
 
       if (error) throw error
+      if (!data) return null
 
-      return data
+      return {
+        ...mapRowToPolicy(data),
+        insurer: mapInsurerRel(data.insurers),
+        offer: mapOfferRel(data.insurance_offers),
+        payments: mapPolicyPaymentRels(data.payments, data.id, data.user_id),
+      }
     } catch (err) {
       logger.error('Error fetching policy by ID:', err)
       throw err
@@ -163,6 +280,15 @@ class PolicyService {
 
       if (quoteError) throw quoteError
 
+      // L'assureur est porté par l'offre, pas par le devis
+      const { data: offer, error: offerError } = await supabase
+        .from('insurance_offers')
+        .select('insurer_id')
+        .eq('id', offerId)
+        .single()
+
+      if (offerError) throw offerError
+
       // Generate policy number
       const policyNumber = `POL-${new Date().getFullYear()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`
 
@@ -171,11 +297,11 @@ class PolicyService {
       const endDate = new Date()
       endDate.setFullYear(endDate.getFullYear() + 1)
 
-      const newPolicy = {
+      const newPolicy: Database['public']['Tables']['policies']['Insert'] = {
         quote_id: quoteId,
         offer_id: offerId,
         user_id: quote.user_id,
-        insurer_id: quote.insurer_id || 'default',
+        insurer_id: offer.insurer_id,
         policy_number: policyNumber,
         status: 'ACTIVE',
         start_date: startDate.toISOString().split('T')[0],
@@ -196,7 +322,7 @@ class PolicyService {
 
       logger.info('Policy created successfully', { policyId: data.id, policyNumber })
 
-      return data
+      return mapRowToPolicy(data)
     } catch (err) {
       logger.error('Error creating policy:', err)
       throw err
@@ -253,7 +379,10 @@ class PolicyService {
 
       if (error) throw error
 
-      return data || []
+      return (data || []).map((row) => ({
+        ...mapRowToPolicy(row),
+        insurer: mapInsurerRel(row.insurers),
+      }))
     } catch (err) {
       logger.error('Error fetching expiring policies:', err)
       throw err
@@ -273,7 +402,7 @@ class PolicyService {
 
       if (error) throw error
 
-      return data || []
+      return (data || []).map(mapRowToPayment)
     } catch (err) {
       logger.error('Error fetching policy payments:', err)
       throw err
@@ -287,13 +416,19 @@ class PolicyService {
     paymentData: Omit<Payment, 'id' | 'createdAt' | 'updatedAt'>
   ): Promise<Payment> {
     try {
+      const insertPayload: Database['public']['Tables']['payments']['Insert'] = {
+        policy_id: paymentData.policyId,
+        user_id: paymentData.userId,
+        amount: paymentData.amount,
+        payment_date: paymentData.paymentDate,
+        payment_method: paymentData.paymentMethod,
+        status: paymentData.status,
+        transaction_id: paymentData.transactionId ?? null,
+      }
+
       const { data, error } = await supabase
         .from('payments')
-        .insert({
-          ...paymentData,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
+        .insert(insertPayload)
         .select()
         .single()
 
@@ -301,7 +436,7 @@ class PolicyService {
 
       logger.info('Payment recorded successfully', { paymentId: data.id })
 
-      return data
+      return mapRowToPayment(data)
     } catch (err) {
       logger.error('Error recording payment:', err)
       throw err

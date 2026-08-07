@@ -44,7 +44,7 @@ export const FocusTrap: React.FC<FocusTrapProps> = ({
             }
           }}
           onPointerDownOutside={onInteractOutside}
-          onFocusOutside={(event) => {
+          onFocusOutside={(event: React.FocusEvent) => {
             // Prevent focus from leaving the trap
             event.preventDefault();
           }}
