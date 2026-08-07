@@ -176,7 +176,7 @@ export const useRealtimeMonitoring = () => {
           .eq('is_active', true),
         supabase
           .from('quotes')
-          .select('status', { count: false })
+          .select('status')
           .then(({ data, error }) => {
             if (error) throw error;
             return {

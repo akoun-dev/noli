@@ -397,7 +397,7 @@ export const PaymentHistory: React.FC<PaymentHistoryProps> = ({ userId }) => {
                   </p>
                 </div>
                 <div className="p-2 bg-blue-100 rounded-lg">
-                  <TrendingUp className="h-6 w-6 text-blue-600" />
+                  <TrendingUp />
                 </div>
               </div>
             </CardContent>

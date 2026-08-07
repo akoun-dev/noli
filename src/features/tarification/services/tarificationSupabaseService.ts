@@ -484,7 +484,7 @@ class TarificationSupabaseService {
       .from('coverage_tariff_rules')
       .select('formula_name')
       .eq('coverage_id', coverageId)
-      .is('formula_name', null, false)
+      .is('formula_name', null)
       .eq('is_active', true)
 
     if (error) throw error

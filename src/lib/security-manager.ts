@@ -377,7 +377,7 @@ class SecurityManager {
   /**
    * Logger une activité suspecte
    */
-  private async logSuspiciousActivity(activity: {
+  async logSuspiciousActivity(activity: {
     email: string
     type: string
     details: any
