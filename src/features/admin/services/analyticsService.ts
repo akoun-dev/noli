@@ -17,6 +17,7 @@ export interface ActivityData {
   newUsers: number;
   newQuotes: number;
   newPolicies: number;
+  newPayments: number;
 }
 
 export interface TopInsurer {
@@ -34,6 +35,8 @@ export interface SystemHealth {
   memoryUsage: number;
   storageUsage: number;
   alerts: string[];
+  activeConnections: number;
+  databaseSize: number;
 }
 
 export interface UserDemographics {
@@ -77,7 +80,9 @@ const fallbackSystemHealth: SystemHealth = {
   responseTime: 180,
   memoryUsage: 42,
   storageUsage: 58,
-  alerts: []
+  alerts: [],
+  activeConnections: 0,
+  databaseSize: 50
 };
 
 const fallbackQuoteAnalytics: QuoteAnalytics = {
@@ -365,7 +370,8 @@ export const fetchSystemHealth = async (): Promise<SystemHealth> => {
     }
 
     const alerts = alertsQuery.data?.map(alert => {
-      const message = alert.metadata?.message || alert.metadata?.details || alert.action;
+      const metadata = (alert.metadata ?? {}) as { message?: string; details?: string };
+      const message = metadata.message || metadata.details || alert.action;
       return `${alert.resource_type || 'system'} - ${message}`;
     }) || [];
 
@@ -471,7 +477,7 @@ export const fetchUserDemographics = async (): Promise<UserDemographics> => {
       .limit(1000);
 
     const deviceCounts = auditLogs?.reduce((acc, log) => {
-      const userAgent = log.metadata?.user_agent || log.user_agent || '';
+      const userAgent = (log.metadata as { user_agent?: string } | null)?.user_agent || log.user_agent || '';
       let device = 'Desktop';
       if (/Mobile|Android|iPhone/i.test(userAgent)) {
         device = 'Mobile';
@@ -550,7 +556,7 @@ export const fetchQuoteAnalytics = async (): Promise<QuoteAnalytics> => {
     const completedQuotes = quotes?.filter((q: any) => String(q.status).toUpperCase() === 'APPROVED').length || 0;
 
     // Calculer le temps de traitement moyen réel (en jours)
-    const processingTimes = quotes?.filter(q => q.updated_at && q.created_at && q.status !== 'pending')
+    const processingTimes = quotes?.filter(q => q.updated_at && q.created_at && q.status !== 'PENDING')
       .map(quote => {
         const created = new Date(quote.created_at);
         const updated = new Date(quote.updated_at);
@@ -606,7 +612,6 @@ export const exportAnalyticsReport = async (
   try {
     // Récupérer les données selon le type de rapport
     let csvContent = '';
-    let filename = '';
 
     const date = new Date().toISOString().split('T')[0];
 
@@ -686,7 +691,6 @@ export const exportAnalyticsReport = async (
         break;
     }
 
-    filename = `rapport_${reportType}_${date}.csv`;
     return new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
 
   } catch (error) {
