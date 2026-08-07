@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { secureAuthService } from '../secure-auth';
 import { supabase } from '@/lib/supabase';
+import { makeUser, makeSession, makeAuthError } from '@/test/mocks/supabaseAuth';
 
 // Mock Supabase
 vi.mock('@/lib/supabase', () => ({
@@ -97,7 +98,7 @@ describe('SecureAuthService', () => {
     it('devrait retourner true si aucun token legacy n\'existe', () => {
       // Arrange
       vi.mocked(supabase.auth.getSession).mockResolvedValue({
-        data: { session: { user: { id: '123' } } },
+        data: { session: makeSession({ user: makeUser({ id: '123' }) }) },
         error: null
       });
 
@@ -114,10 +115,13 @@ describe('SecureAuthService', () => {
       // Arrange
       localStorageMock.setItem('supabase.auth.token', 'legacy-token');
       vi.mocked(supabase.auth.getSession).mockResolvedValue({
-        data: { session: { user: { id: '123' } } },
+        data: { session: makeSession({ user: makeUser({ id: '123' }) }) },
         error: null
       });
-      vi.mocked(supabase.auth.refreshSession).mockResolvedValue({ error: null });
+      vi.mocked(supabase.auth.refreshSession).mockResolvedValue({
+        data: { user: makeUser({ id: '123' }), session: makeSession() },
+        error: null
+      });
 
       // Act
       const result = await secureAuthService.migrateToSecureStorage();
@@ -147,7 +151,7 @@ describe('SecureAuthService', () => {
       // Arrange
       vi.mocked(supabase.auth.getSession).mockResolvedValue({
         data: { session: null },
-        error: new Error('Session error')
+        error: makeAuthError({ message: 'Session error' })
       });
 
       // Act
@@ -160,11 +164,12 @@ describe('SecureAuthService', () => {
     it('devrait retourner false si le rafraîchissement échoue', async () => {
       // Arrange
       vi.mocked(supabase.auth.getSession).mockResolvedValue({
-        data: { session: { user: { id: '123' } } },
+        data: { session: makeSession({ user: makeUser({ id: '123' }) }) },
         error: null
       });
       vi.mocked(supabase.auth.refreshSession).mockResolvedValue({
-        error: new Error('Refresh failed')
+        data: { user: null, session: null },
+        error: makeAuthError({ message: 'Refresh failed' })
       });
 
       // Act

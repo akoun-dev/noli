@@ -330,6 +330,23 @@ class SecurityManager {
   }
 
   /**
+   * Réinitialise l'état en mémoire du gestionnaire de sécurité.
+   *
+   * @param maxAgeMs Ne conserve que les tentatives plus récentes que cette durée
+   *   (en millisecondes). La valeur par défaut `0` purge entièrement les
+   *   tentatives enregistrées et les comptes verrouillés.
+   */
+  cleanup(maxAgeMs = 0): void {
+    if (maxAgeMs <= 0) {
+      this.attempts.clear()
+      this.lockedAccounts.clear()
+      return
+    }
+
+    this.cleanupOldAttempts(Date.now() - maxAgeMs)
+  }
+
+  /**
    * Nettoie les anciennes tentatives
    */
   private cleanupOldAttempts(cutoffTime: number): void {

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { authService } from '../authService'
 import { supabaseHelpers, supabase } from '@/lib/supabase'
+import { makeUser, makeSession, makeAuthError } from '@/test/mocks/supabaseAuth'
 
 // Mock Supabase dependencies
 vi.mock('@/lib/supabase', () => ({
@@ -47,8 +48,8 @@ describe('AuthService', () => {
       }
 
       const mockAuthData = {
-        user: { id: 'user-123' },
-        session: { access_token: 'token-123' },
+        user: makeUser({ id: 'user-123' }),
+        session: makeSession({ access_token: 'token-123' }),
       }
 
       const mockProfile = {
@@ -101,8 +102,8 @@ describe('AuthService', () => {
       }
 
       const mockAuthData = {
-        user: { id: 'user-123' },
-        session: { access_token: 'token-123' },
+        user: makeUser({ id: 'user-123' }),
+        session: makeSession({ access_token: 'token-123' }),
       }
 
       vi.mocked(supabaseHelpers.signIn).mockResolvedValue(mockAuthData)
@@ -140,8 +141,8 @@ describe('AuthService', () => {
       }
 
       const mockAuthData = {
-        user: { id: 'new-user-123' },
-        session: { access_token: 'token-456' },
+        user: makeUser({ id: 'new-user-123' }),
+        session: makeSession({ access_token: 'token-456' }),
       }
 
       vi.mocked(supabaseHelpers.signUp).mockResolvedValue(mockAuthData)
@@ -210,7 +211,10 @@ describe('AuthService', () => {
   describe('loginWithOAuth', () => {
     it('should initiate OAuth login with Google', async () => {
       // Arrange
-      vi.mocked(supabaseHelpers.signInWithOAuth).mockResolvedValue(undefined)
+      vi.mocked(supabaseHelpers.signInWithOAuth).mockResolvedValue({
+        provider: 'google',
+        url: 'https://oauth.example.com/authorize',
+      })
 
       // Act
       await authService.loginWithOAuth('google')
@@ -233,7 +237,8 @@ describe('AuthService', () => {
     it('should return true when user has valid session', async () => {
       // Arrange
       vi.mocked(supabase.auth.getSession).mockResolvedValue({
-        data: { session: { user: { id: 'user-123' } } },
+        data: { session: makeSession({ user: makeUser({ id: 'user-123' }) }) },
+        error: null,
       })
 
       // Act
@@ -247,6 +252,7 @@ describe('AuthService', () => {
       // Arrange
       vi.mocked(supabase.auth.getSession).mockResolvedValue({
         data: { session: null },
+        error: null,
       })
 
       // Act
@@ -272,7 +278,8 @@ describe('AuthService', () => {
     it('should successfully logout and log the action', async () => {
       // Arrange
       vi.mocked(supabase.auth.getUser).mockResolvedValue({
-        data: { user: { id: 'user-123' } },
+        data: { user: makeUser({ id: 'user-123' }) },
+        error: null,
       })
       vi.mocked(supabaseHelpers.signOut).mockResolvedValue(undefined)
       vi.mocked(supabaseHelpers.logAction).mockResolvedValue(undefined)
@@ -289,6 +296,7 @@ describe('AuthService', () => {
       // Arrange
       vi.mocked(supabase.auth.getUser).mockResolvedValue({
         data: { user: null },
+        error: makeAuthError({ message: 'No user', status: 401 }),
       })
       vi.mocked(supabaseHelpers.signOut).mockResolvedValue(undefined)
 
@@ -304,7 +312,7 @@ describe('AuthService', () => {
   describe('getCurrentUser', () => {
     it('should return current user when authenticated', async () => {
       // Arrange
-      const mockAuthUser = { id: 'user-123' }
+      const mockAuthUser = makeUser({ id: 'user-123' })
       const mockProfile = {
         id: 'user-123',
         email: 'test@example.com',
@@ -320,6 +328,7 @@ describe('AuthService', () => {
 
       vi.mocked(supabase.auth.getUser).mockResolvedValue({
         data: { user: mockAuthUser },
+        error: null,
       })
       vi.mocked(supabaseHelpers.getProfile).mockResolvedValue(mockProfile)
 
@@ -345,6 +354,7 @@ describe('AuthService', () => {
       // Arrange
       vi.mocked(supabase.auth.getUser).mockResolvedValue({
         data: { user: null },
+        error: makeAuthError({ message: 'No user', status: 401 }),
       })
 
       // Act
@@ -356,9 +366,10 @@ describe('AuthService', () => {
 
     it('should return null when profile not found', async () => {
       // Arrange
-      const mockAuthUser = { id: 'user-123' }
+      const mockAuthUser = makeUser({ id: 'user-123' })
       vi.mocked(supabase.auth.getUser).mockResolvedValue({
         data: { user: mockAuthUser },
+        error: null,
       })
       vi.mocked(supabaseHelpers.getProfile).mockResolvedValue(null)
 
@@ -384,14 +395,36 @@ describe('AuthService', () => {
   describe('getUserPermissions', () => {
     it('should return user permissions', async () => {
       // Arrange
-      const mockPermissions = ['read:quotes', 'write:quotes', 'read:policies']
-      vi.mocked(supabaseHelpers.getUserPermissions).mockResolvedValue(mockPermissions)
+      const mockPermissionRecords = [
+        {
+          permission_name: 'read:quotes',
+          resource_type: 'quotes',
+          can_read: true,
+          can_write: false,
+          can_delete: false,
+        },
+        {
+          permission_name: 'write:quotes',
+          resource_type: 'quotes',
+          can_read: true,
+          can_write: true,
+          can_delete: false,
+        },
+        {
+          permission_name: 'read:policies',
+          resource_type: 'policies',
+          can_read: true,
+          can_write: false,
+          can_delete: false,
+        },
+      ]
+      vi.mocked(supabaseHelpers.getUserPermissions).mockResolvedValue(mockPermissionRecords)
 
       // Act
       const result = await authService.getUserPermissions()
 
       // Assert
-      expect(result).toEqual(mockPermissions)
+      expect(result).toEqual(['read:quotes', 'write:quotes', 'read:policies'])
     })
 
     it('should return empty array when permission check fails', async () => {
