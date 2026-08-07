@@ -32,10 +32,10 @@ export const AdminDashboardPage: React.FC = () => {
 
   const { data: stats, isLoading: statsLoading, refetch: refetchStats } = usePlatformStats();
   useActivityData(timeRange);
-  const { data: topInsurers, isLoading: insurersLoading } = useTopInsurers();
+  useTopInsurers();
   const { data: systemHealth, isLoading: healthLoading } = useSystemHealth();
-  const { data: demographics, isLoading: demographicsLoading } = useUserDemographics();
-  const { data: quoteAnalytics, isLoading: quotesLoading } = useQuoteAnalytics();
+  useUserDemographics();
+  useQuoteAnalytics();
   const { data: pendingApprovals, isLoading: approvalsLoading } = usePendingApprovals();
 
   // Récupérer les activités en temps réel
@@ -441,7 +441,7 @@ export const AdminDashboardPage: React.FC = () => {
                     <div key={index} className="text-center p-4 border rounded-lg">
                       <stat.icon className={`h-8 w-8 mx-auto mb-2 ${stat.color}`} />
                       <p className="text-2xl font-bold text-foreground">{stat.value}</p>
-                      <p className="text-sm text-muted-foreground">{stat.label}</p>
+                      <p className="text-sm text-muted-foreground">{stat.title}</p>
                       <p className="text-xs text-green-600 dark:text-green-400">{stat.change}</p>
                     </div>
                   ))}

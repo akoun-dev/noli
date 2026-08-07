@@ -244,7 +244,14 @@ interface PaymentMethodFormProps {
 }
 
 const PaymentMethodForm: React.FC<PaymentMethodFormProps> = ({ method, onSubmit, onCancel, isLoading }) => {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    type: PaymentMethod['type'];
+    provider: string;
+    last4: string;
+    expiryMonth: string | number;
+    expiryYear: string | number;
+    isDefault: boolean;
+  }>({
     type: method?.type || 'mobile_money',
     provider: method?.provider || 'mtn',
     last4: method?.last4 || '',
@@ -263,8 +270,8 @@ const PaymentMethodForm: React.FC<PaymentMethodFormProps> = ({ method, onSubmit,
 
     if (formData.type === 'credit_card') {
       submitData.last4 = formData.last4;
-      submitData.expiryMonth = parseInt(formData.expiryMonth);
-      submitData.expiryYear = parseInt(formData.expiryYear);
+      submitData.expiryMonth = parseInt(String(formData.expiryMonth));
+      submitData.expiryYear = parseInt(String(formData.expiryYear));
     } else {
       submitData.last4 = formData.last4;
     }

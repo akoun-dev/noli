@@ -71,11 +71,15 @@ export const AdminDevisPage = lazy(() => import('@/pages/admin/AdminDevisPage'))
 export const AdminTarificationPage = lazy(() => import('@/pages/admin/AdminTarificationPage'))
 
 // Composants admin complexes - Très basse priorité
-export const AuditLogsPage = lazy(() => import('@/features/admin/components/AuditLogsPage'))
-export const RoleManagementPage = lazy(
-  () => import('@/features/admin/components/RoleManagementPage')
+export const AuditLogsPage = lazy(() =>
+  import('@/features/admin/components/AuditLogsPage').then(m => ({ default: m.AuditLogsPage }))
 )
-export const BackupRestorePage = lazy(() => import('@/features/admin/components/BackupRestorePage'))
+export const RoleManagementPage = lazy(() =>
+  import('@/features/admin/components/RoleManagementPage').then(m => ({ default: m.RoleManagementPage }))
+)
+export const BackupRestorePage = lazy(() =>
+  import('@/features/admin/components/BackupRestorePage').then(m => ({ default: m.BackupRestorePage }))
+)
 
 // Page 404 - Priorité haute
 export const NotFound = lazy(() => import('@/pages/NotFound'))

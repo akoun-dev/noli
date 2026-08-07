@@ -24,19 +24,6 @@ import { supabase } from '@/lib/supabase'
 import { logger } from '@/lib/logger'
 import { toast } from 'sonner'
 
-interface Quote {
-  id: string
-  insurerName: string
-  offerName: string
-  status: string
-  price: {
-    monthly: number
-    annual: number
-  }
-  createdAt: Date
-  validUntil: Date
-}
-
 export const PaymentsPage: React.FC = () => {
   const { user } = useAuth()
   const [activeTab, setActiveTab] = useState('methods')
@@ -265,6 +252,7 @@ export const PaymentsPage: React.FC = () => {
                           €{(quote.price.annual / 12).toLocaleString()}/mois
                         </p>
                         <PaymentProcessor
+                          userId={user.id}
                           amount={quote.price.annual}
                           currency='EUR'
                           description={`Paiement police assurance: ${quote.offerName}`}
@@ -283,7 +271,7 @@ export const PaymentsPage: React.FC = () => {
 
         {/* Payment Methods Tab */}
         <TabsContent value='methods' className='space-y-6'>
-          <PaymentMethodsManager />
+          <PaymentMethodsManager userId={user.id} />
         </TabsContent>
 
         {/* Payment History Tab */}

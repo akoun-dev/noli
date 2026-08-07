@@ -8,10 +8,10 @@ import {
   BreadcrumbSeparator,
   BreadcrumbEllipsis,
 } from '@/components/ui/breadcrumb';
-import { useBreadcrumb, useBusinessBreadcrumb, type BreadcrumbItem } from '@/hooks/useBreadcrumb';
+import { useBreadcrumb, useBusinessBreadcrumb, type BreadcrumbItem as BreadcrumbItemType } from '@/hooks/useBreadcrumb';
 
 interface BreadcrumbRendererProps {
-  items?: BreadcrumbItem[];
+  items?: BreadcrumbItemType[];
   businessType?: 'comparison' | 'user' | 'admin' | 'insurer';
   maxItems?: number;
   showHome?: boolean;
@@ -25,7 +25,7 @@ export function BreadcrumbRenderer({
   showHome = true,
   className,
 }: BreadcrumbRendererProps) {
-  const { items } = useBusinessBreadcrumb(businessType!) as { items: (BreadcrumbItem & { isEllipsis?: boolean })[] };
+  const { items } = useBusinessBreadcrumb(businessType!) as { items: (BreadcrumbItemType & { isEllipsis?: boolean })[] };
 
   const { items: defaultItems } = useBreadcrumb({
     items: customItems,
@@ -33,7 +33,8 @@ export function BreadcrumbRenderer({
     showHome,
   });
 
-  const finalItems = (customItems?.length ?? 0) > 0 ? defaultItems : items;
+  const finalItems: (BreadcrumbItemType & { isEllipsis?: boolean })[] =
+    (customItems?.length ?? 0) > 0 ? defaultItems : items;
 
   if (!finalItems || finalItems.length === 0) {
     return null;
