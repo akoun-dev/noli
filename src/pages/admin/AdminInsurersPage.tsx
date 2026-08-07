@@ -111,7 +111,7 @@ const AdminInsurersPage = () => {
   };
 
   const handleExport = () => {
-    exportInsurers.mutate();
+    exportInsurers.mutate('csv');
   };
 
   const handleSearch = () => {

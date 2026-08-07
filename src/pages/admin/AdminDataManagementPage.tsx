@@ -81,7 +81,7 @@ export const AdminDataManagementPage: React.FC = () => {
         setUpdateHistory(historyResponse.data || []);
       }
       if (metricsResponse.success) {
-        setQualityMetrics(metricsResponse.data);
+        setQualityMetrics(metricsResponse.data ?? null);
       }
     } catch (error) {
       logger.error('Erreur lors du chargement des données:', error);

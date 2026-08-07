@@ -251,6 +251,7 @@ class ChatService {
       senderRole: 'USER',
       content: `Fichier partagé: ${file.name}`,
       type: 'file',
+      read: false,
       metadata: {
         fileName: file.name,
         fileSize: file.size,
@@ -268,6 +269,7 @@ class ChatService {
       senderRole: 'USER',
       content: `Localisation partagée: ${location.address}`,
       type: 'location',
+      read: false,
       metadata: { location },
     };
 

@@ -78,7 +78,6 @@ export const useClientCommunication = (insurerId: string) => {
         direction: 'outgoing',
         content,
         subject,
-        status: 'sent',
         priority: 'medium',
       });
 
@@ -130,7 +129,6 @@ export const useClientCommunication = (insurerId: string) => {
           direction: 'outgoing',
           content,
           subject,
-          status: 'sent',
           priority: 'medium',
         },
         scheduledFor

@@ -389,7 +389,7 @@ export const AdminUsersPage: React.FC = () => {
                             <DialogHeader>
                               <DialogTitle>Modifier l'utilisateur</DialogTitle>
                             </DialogHeader>
-                            <UserForm user={selectedUser} />
+                            <UserForm user={selectedUser ?? undefined} />
                           </DialogContent>
                         </Dialog>
                         <Button

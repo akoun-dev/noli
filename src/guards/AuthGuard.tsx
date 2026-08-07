@@ -6,6 +6,7 @@ interface AuthGuardProps {
   requiredRole?: 'USER' | 'INSURER' | 'ADMIN';
   requiredPermission?: string;
   redirectTo?: string;
+  children?: React.ReactNode;
 }
 
 export const AuthGuard: React.FC<AuthGuardProps> = ({

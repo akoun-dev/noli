@@ -455,11 +455,11 @@ export class InsurerAnalyticsService {
 
       return {
         period: format(date, 'dd MMM', { locale: fr }),
-        rate: type === 'conversion' ? Math.random() * 0.3 + 0.1 : undefined,
-        revenue: type === 'revenue' ? Math.floor(Math.random() * 1000000) + 500000 : undefined,
-        quotes: type === 'conversion' ? Math.floor(Math.random() * 50) + 10 : undefined,
-        converted: type === 'conversion' ? Math.floor(Math.random() * 15) + 2 : undefined,
-        policies: type === 'revenue' ? Math.floor(Math.random() * 20) + 5 : undefined,
+        rate: type === 'conversion' ? Math.random() * 0.3 + 0.1 : 0,
+        revenue: type === 'revenue' ? Math.floor(Math.random() * 1000000) + 500000 : 0,
+        quotes: type === 'conversion' ? Math.floor(Math.random() * 50) + 10 : 0,
+        converted: type === 'conversion' ? Math.floor(Math.random() * 15) + 2 : 0,
+        policies: type === 'revenue' ? Math.floor(Math.random() * 20) + 5 : 0,
       };
     });
   }

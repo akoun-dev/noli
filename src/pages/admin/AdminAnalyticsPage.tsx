@@ -63,10 +63,10 @@ export const AdminAnalyticsPage: React.FC = () => {
   // React Query hooks
   const { data: platformStats } = usePlatformStats();
   useActivityData(timeRange as '7d' | '30d' | '90d');
-  const { data: topInsurers, isLoading: insurersLoading } = useTopInsurers();
+  useTopInsurers();
   const { data: systemHealth } = useSystemHealth();
-  const { data: demographics, isLoading: demographicsLoading } = useUserDemographics();
-  const { data: quoteAnalytics, isLoading: quotesLoading } = useQuoteAnalytics();
+  useUserDemographics();
+  useQuoteAnalytics();
   const exportReport = useExportAnalyticsReport();
 
   // KPI data based on real analytics
