@@ -38,6 +38,7 @@ export interface RealtimeNotification {
   actionUrl?: string;
   autoDismiss?: boolean;
   timestamp: string;
+  read?: boolean;
 }
 
 const REALTIME_RLS_CODES = new Set(['42P17', '42501', 'PGRST301', 'PGRST302', 'PGRST401']);

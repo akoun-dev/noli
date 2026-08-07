@@ -108,7 +108,7 @@ export const fetchUsers = async (filters?: UserFilters): Promise<User[]> => {
     }
 
     if (filters?.role && filters.role !== 'all') {
-      query = query.eq('role', filters.role);
+      query = query.eq('role', filters.role as 'USER' | 'INSURER' | 'ADMIN');
     }
 
     const { data: profiles, error } = await query;

@@ -470,7 +470,7 @@ export function AuditLogsPage() {
                           <span className="text-sm font-medium text-muted-foreground">
                             #{index + 1}
                           </span>
-                          <span>{actionLabels[item.action] || item.action}</span>
+                          <span>{actionLabels[item.action as AuditAction] || item.action}</span>
                         </div>
                         <Badge variant="secondary">{item.count}</Badge>
                       </div>

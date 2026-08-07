@@ -296,7 +296,11 @@ const QuoteOptionsModal = ({ open, onOpenChange, offer }: QuoteOptionsModalProps
                 quoteData={{
                   id: `quote-${offer.id}-${Date.now()}`,
                   createdAt: new Date(),
-                  customerInfo: mockQuoteRequest.customerInfo,
+                  customerInfo: {
+                    ...mockQuoteRequest.customerInfo,
+                    birthDate: new Date(mockQuoteRequest.customerInfo.birthDate),
+                    licenseDate: new Date(mockQuoteRequest.customerInfo.licenseDate),
+                  },
                   vehicleInfo: mockQuoteRequest.vehicleInfo,
                   insuranceInfo: {
                     insurer: offer.insurer,

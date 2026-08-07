@@ -53,11 +53,11 @@ function getFeatureFlag<K extends keyof FeatureFlags>(key: K): FeatureFlags[K] {
   // Conversion string vers le type approprié
   switch (typeof DEFAULT_FEATURES[key]) {
     case 'boolean':
-      return envValue === 'true' as FeatureFlags[K];
+      return (envValue === 'true') as unknown as FeatureFlags[K];
     case 'string':
       return envValue as FeatureFlags[K];
     case 'number':
-      return Number(envValue) as FeatureFlags[K];
+      return Number(envValue) as unknown as FeatureFlags[K];
     default:
       return envValue as FeatureFlags[K];
   }

@@ -62,7 +62,7 @@ const ForgotPasswordPage = () => {
       toast({
         title: "Email envoyé",
         description: "Un email de réinitialisation a été envoyé à votre adresse email",
-        variant: "success",
+        variant: "default",
       });
     } catch (error) {
       toast({

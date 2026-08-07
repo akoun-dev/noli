@@ -233,7 +233,7 @@ export function ErrorSuggestions({
   className
 }: ErrorSuggestionProps) {
   const message = errorMessages[type];
-  const suggestions = customActions || message.suggestions;
+  const suggestions: ErrorSuggestion[] = customActions || message.suggestions;
 
   return (
     <div className={cn('space-y-3', className)}>
