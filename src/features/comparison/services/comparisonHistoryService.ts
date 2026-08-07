@@ -3,6 +3,19 @@ import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { logger } from '@/lib/logger'
 
+// Shapes of the JSON columns read off the `quotes` table.
+interface QuoteVehicleData {
+  make?: string
+  model?: string
+  year?: number
+  vehicle_type?: string
+  value?: number
+}
+
+interface QuoteCoverageRequirements {
+  coverage_type?: string
+}
+
 // Types
 export interface ComparisonHistory {
   id: string
@@ -222,6 +235,7 @@ export const fetchComparisonHistory = async (
       .select(
         `
         id,
+        user_id,
         created_at,
         updated_at,
         personal_data,
@@ -242,8 +256,8 @@ export const fetchComparisonHistory = async (
 
     // Transform quotes to comparison history format
     let comparisons: ComparisonHistory[] = (quotes || []).map((quote, _index) => {
-      const vehicleData = quote.vehicle_data || {}
-      const coverageData = quote.coverage_requirements || {}
+      const vehicleData = (quote.vehicle_data ?? {}) as QuoteVehicleData
+      const coverageData = (quote.coverage_requirements ?? {}) as QuoteCoverageRequirements
 
       return {
         id: quote.id,
@@ -542,7 +556,7 @@ export const fetchComparisonStats = async (userId: string): Promise<ComparisonSt
 
     // Extract coverage types
     const coverageTypes =
-      quotes?.map((q) => q.coverage_requirements?.coverage_type).filter(Boolean) || []
+      quotes?.map((q) => (q.coverage_requirements as QuoteCoverageRequirements | null)?.coverage_type).filter(Boolean) as string[] || []
     const coverageTypeCount = coverageTypes.reduce(
       (acc, type) => {
         acc[type] = (acc[type] || 0) + 1
