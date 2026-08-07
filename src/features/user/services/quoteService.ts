@@ -5,6 +5,35 @@ import { PDFService } from '../../../services/pdfService'
 import { NotificationService } from '../../../services/notificationService'
 import { supabase } from '@/lib/supabase'
 
+// Shapes of the JSON columns stored on the `quotes` table.
+interface QuotePersonalData {
+  full_name?: string
+  email?: string
+  phone?: string
+  address?: string
+  birth_date?: string
+  license_number?: string
+  license_date?: string
+}
+
+interface QuoteVehicleData {
+  brand?: string
+  model?: string
+  year?: number
+  registration?: string
+  vehicle_type?: string
+  fuel_type?: string
+  value?: number
+}
+
+interface QuoteCoverageRequirements {
+  coverage_type?: string
+  usage?: string
+  annual_km?: number
+  parking_type?: string
+  history_claims?: string
+}
+
 // API functions
 export const fetchUserQuotes = async (
   filters?: QuoteHistoryFilters
@@ -219,12 +248,11 @@ export const downloadQuotePdf = async (quoteId: string): Promise<void> => {
     .single()
   if (error || !data) throw error || new Error('Devis non trouvé')
 
-  const vehicle = data.quote?.vehicle_data || {}
-  const personal = data.quote?.personal_data || {}
-  const needs = data.quote?.coverage_requirements || {}
+  const vehicle = (data.quote?.vehicle_data ?? {}) as QuoteVehicleData
+  const personal = (data.quote?.personal_data ?? {}) as QuotePersonalData
+  const needs = (data.quote?.coverage_requirements ?? {}) as QuoteCoverageRequirements
 
-  const pdf = new PDFService()
-  const blob = await pdf.generateQuotePDF({
+  const blob = await PDFService.generateQuotePDF({
     id: data.id,
     createdAt: new Date(data.created_at),
     customerInfo: {
@@ -291,7 +319,7 @@ export const sendQuoteNotifications = async (
     .single()
   if (error || !data) throw error || new Error('Devis non trouvé')
 
-  const personal = data.quote?.personal_data || {}
+  const personal = (data.quote?.personal_data ?? {}) as QuotePersonalData
 
   await NotificationService.sendNotification(
     channels,
@@ -334,7 +362,7 @@ export const updateQuoteStatus = async (
       )
       .eq('id', quoteId)
       .single()
-    const personal = data?.quote?.personal_data || {}
+    const personal = (data?.quote?.personal_data ?? {}) as QuotePersonalData
     await NotificationService.sendNotification(
       ['email', 'whatsapp'],
       { email: personal.email || '', phone: personal.phone || '' },
