@@ -302,6 +302,7 @@ export interface GuaranteeFormData {
   fixedAmount?: number;
   franchiseOptions?: number[];
   parameters?: GuaranteeParameters;
+  isActive?: boolean;
 }
 
 export interface PackageFormData {
@@ -313,6 +314,7 @@ export interface PackageFormData {
   conditions?: string;
   vehicleTypeRestrictions?: string[];
   isPopular?: boolean;
+  isActive?: boolean;
 }
 
 export interface TarifRCFormData {

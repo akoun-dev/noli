@@ -977,6 +977,7 @@ class GuaranteeService {
     const newPackage: InsurancePackage = {
       ...data,
       id: Math.random().toString(36).substr(2, 9),
+      guarantees: data.guaranteeIds,
       totalPrice: data.basePrice,
       isActive: true,
       createdAt: new Date(),
