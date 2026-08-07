@@ -683,7 +683,7 @@ const NotificationPreferencesForm: React.FC<NotificationPreferencesFormProps> = 
                         className="h-3 w-3"
                       />
                       <span className="text-xs text-gray-600">
-                        {channel === 'inApp' ? 'App' : channel}
+                        {channel === 'in_app' ? 'App' : channel}
                       </span>
                     </label>
                   ))}
