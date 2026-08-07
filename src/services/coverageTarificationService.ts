@@ -941,7 +941,20 @@ class CoverageTarificationService {
         .order('premium_amount', { ascending: false });
 
       if (error) throw error;
-      return data || [];
+      return (data || []).map((row) => ({
+        id: row.id,
+        quote_id: row.quote_id,
+        coverage_id: row.coverage_id,
+        tariff_rule_id: row.tariff_rule_id ?? undefined,
+        calculation_parameters:
+          row.calculation_parameters &&
+          typeof row.calculation_parameters === 'object' &&
+          !Array.isArray(row.calculation_parameters)
+            ? (row.calculation_parameters as Record<string, unknown>)
+            : {},
+        premium_amount: row.premium_amount,
+        is_included: row.is_included,
+      }));
     } catch (error) {
       console.error('Error fetching quote coverage premiums:', error);
       throw error;
@@ -1018,7 +1031,17 @@ class CoverageTarificationService {
         .single();
 
       if (error && error.code !== 'PGRST116') throw error;
-      return data;
+      if (!data) return null;
+      return {
+        id: data.id,
+        type: data.type as CoverageType,
+        name: data.name,
+        description: data.description ?? '',
+        calculation_type: data.calculation_type as CalculationType,
+        is_mandatory: data.is_mandatory,
+        is_active: data.is_active,
+        display_order: data.display_order,
+      };
     } catch (error) {
       console.error('Error fetching coverage:', error);
       throw error;
