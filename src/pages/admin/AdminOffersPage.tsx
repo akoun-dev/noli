@@ -660,7 +660,7 @@ export const AdminOffersPage: React.FC = () => {
                       return (
                         <div key={analytics.offerId} className="p-4 border rounded-lg">
                           <div className="flex items-center justify-between mb-3">
-                            <h4 className="font-medium">{offer?.title}</h4>
+                            <h4 className="font-medium">{offer?.name}</h4>
                             <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400">
                               {analytics.period}
                             </Badge>
@@ -727,7 +727,7 @@ export const AdminOffersPage: React.FC = () => {
                 ) : (
                   <div className="space-y-4">
                     {offers
-                      .filter(o => o.status === 'active')
+                      .filter(o => o.is_active)
                       .sort((a, b) => b.conversionRate - a.conversionRate)
                       .slice(0, 5)
                       .map((offer, index) => (
@@ -766,7 +766,7 @@ export const AdminOffersPage: React.FC = () => {
             <DialogTitle>Confirmer la suppression</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <p>Êtes-vous sûr de vouloir supprimer l'offre "{selectedOffer?.title}"?</p>
+            <p>Êtes-vous sûr de vouloir supprimer l'offre "{selectedOffer?.name}"?</p>
             <p className="text-sm text-red-600">Cette action est irréversible et supprimera toutes les données associées.</p>
             <div className="flex justify-end space-x-2">
               <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
@@ -795,7 +795,7 @@ export const AdminOffersPage: React.FC = () => {
             <DialogTitle>Dupliquer l'offre</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <p>Voulez-vous créer une copie de l'offre "{selectedOffer?.title}"?</p>
+            <p>Voulez-vous créer une copie de l'offre "{selectedOffer?.name}"?</p>
             <p className="text-sm text-muted-foreground">Une nouvelle offre sera créée avec les mêmes caractéristiques mais avec le statut "brouillon".</p>
             <div className="flex justify-end space-x-2">
               <Button variant="outline" onClick={() => setShowDuplicateDialog(false)}>
