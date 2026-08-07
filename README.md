@@ -34,16 +34,16 @@ Les migrations SQL (schéma + policies RLS) se trouvent dans
 
 | Commande | Description |
 |----------|-------------|
-| `bun dev` | Lance le serveur de développement |
-| `bun run build` | Build de production |
-| `bun run test` | Exécute les tests unitaires |
-| `bun run test:coverage` | Exécute les tests avec rapport de couverture |
-| `bun run test:coverage:badge` | Génère le rapport de couverture + le badge SVG |
-| `bun run lint` | Vérification ESLint |
+| `npm dev` | Lance le serveur de développement |
+| `npm run build` | Build de production |
+| `npm run test` | Exécute les tests unitaires |
+| `npm run test:coverage` | Exécute les tests avec rapport de couverture |
+| `npm run test:coverage:badge` | Génère le rapport de couverture + le badge SVG |
+| `npm run lint` | Vérification ESLint |
 
 ## Structure du projet
 
-```
+```ini
 src/
 ├── app/          # Routes Next.js (App Router) + API
 ├── components/   # Composants React (admin, insurer, user, shared, ui)
@@ -57,13 +57,13 @@ src/
 
 ```bash
 # Exécuter tous les tests
-bun run test
+npm run test
 
 # Avec rapport de couverture
-bun run test:coverage
+npm run test:coverage
 
 # Avec badge de couverture
-bun run test:coverage:badge
+npm run test:coverage:badge
 ```
 
 Le badge de couverture est généré localement dans `public/badges/coverage.svg` et mis à jour via la commande `test:coverage:badge`.
