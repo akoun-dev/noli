@@ -13,7 +13,7 @@ export const formatCurrency = (amount: number, currency: string = 'XOF'): string
 export const formatDate = (date: Date | string, format: 'short' | 'long' | 'time' = 'short'): string => {
   const dateObj = typeof date === 'string' ? new Date(date) : date;
 
-  const options: Intl.DateTimeFormatOptions = {
+  const options: Record<'short' | 'long' | 'time', Intl.DateTimeFormatOptions> = {
     short: {
       year: 'numeric',
       month: 'short',

@@ -19,7 +19,7 @@ const commonPasswords = [
 ]
 
 // Password validation function
-const validatePasswordStrength = (password: string) => {
+export const validatePasswordStrength = (password: string) => {
   const errors: string[] = []
   let score = 0
 

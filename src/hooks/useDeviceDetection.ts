@@ -67,7 +67,7 @@ const getDeviceInfo = (): DeviceInfo => {
       width: screenWidth,
       height: screenHeight
     },
-    pixelRatio,
+    pixelRatio: typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1,
     touchSupport,
     maxTouchPoints
   };

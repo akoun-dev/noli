@@ -184,7 +184,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           // Essayer de restaurer depuis le cache si disponible
           try {
             const cachedUser = localStorage.getItem('noli_user')
-            const cachedPermissions = localStorage.getItem('noli_permissions')
 
             if (cachedUser) {
               const userData = JSON.parse(cachedUser)
@@ -204,14 +203,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                   avatar: '',
                   createdAt: new Date(),
                   updatedAt: new Date(),
-                }
-
-                let permissions: string[] = []
-                if (cachedPermissions) {
-                  const permData = JSON.parse(cachedPermissions)
-                  if (now - permData.timestamp < 5 * 60 * 1000) {
-                    permissions = permData.permissions
-                  }
                 }
 
                 logger.auth('Restoring user from cache (preview only, not authenticated):', user.email)
