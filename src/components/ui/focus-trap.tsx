@@ -13,7 +13,6 @@ export const FocusTrap: React.FC<FocusTrapProps> = ({
   children,
   enabled = true,
   onEscapeKeyDown,
-  onInteractOutside,
 }) => {
   if (!enabled) {
     return <>{children}</>;
@@ -40,13 +39,8 @@ export const FocusTrap: React.FC<FocusTrapProps> = ({
         <div
           onKeyDown={(event) => {
             if (event.key === 'Escape') {
-              onEscapeKeyDown?.(event);
+              onEscapeKeyDown?.(event.nativeEvent);
             }
-          }}
-          onPointerDownOutside={onInteractOutside}
-          onFocusOutside={(event: React.FocusEvent) => {
-            // Prevent focus from leaving the trap
-            event.preventDefault();
           }}
         >
           {children}

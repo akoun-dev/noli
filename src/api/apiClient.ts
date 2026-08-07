@@ -86,10 +86,7 @@ class ApiClient {
 
     // Response interceptor
     this.instance.interceptors.response.use(
-      (response: AxiosResponse) => {
-        // Transform successful responses
-        return this.transformResponse(response);
-      },
+      (response: AxiosResponse) => response,
       (error: AxiosError) => {
         // Handle errors
         return this.handleError(error);
@@ -198,23 +195,23 @@ class ApiClient {
 
   // Generic HTTP methods
   async get<T = any>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
-    return this.instance.get(url, config);
+    return this.transformResponse(await this.instance.get<T>(url, config));
   }
 
   async post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
-    return this.instance.post(url, data, config);
+    return this.transformResponse(await this.instance.post<T>(url, data, config));
   }
 
   async put<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
-    return this.instance.put(url, data, config);
+    return this.transformResponse(await this.instance.put<T>(url, data, config));
   }
 
   async patch<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
-    return this.instance.patch(url, data, config);
+    return this.transformResponse(await this.instance.patch<T>(url, data, config));
   }
 
   async delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
-    return this.instance.delete(url, config);
+    return this.transformResponse(await this.instance.delete<T>(url, config));
   }
 
   // File upload
@@ -228,12 +225,14 @@ class ApiClient {
       });
     }
 
-    return this.instance.post(url, formData, {
-      ...config,
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    return this.transformResponse(
+      await this.instance.post<T>(url, formData, {
+        ...config,
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      })
+    );
   }
 
   // Paginated requests
