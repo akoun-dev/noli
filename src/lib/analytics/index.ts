@@ -47,7 +47,6 @@ class AnalyticsManager {
   private static instance: AnalyticsManager;
   private providers: AnalyticsProvider[] = [];
   private userId: string | null = null;
-  private userProperties: UserProperties | null = null;
   private isInitialized = false;
   private isEnabled = import.meta.env.PROD || import.meta.env.VITE_ENABLE_ANALYTICS === 'true';
 
@@ -249,7 +248,6 @@ class AnalyticsManager {
     if (!this.isEnabled || !this.isInitialized) return;
 
     this.userId = user.userId;
-    this.userProperties = user;
 
     this.providers.forEach(provider => {
       try {
@@ -304,7 +302,6 @@ class AnalyticsManager {
     if (!this.isEnabled || !this.isInitialized) return;
 
     this.userId = null;
-    this.userProperties = null;
 
     this.providers.forEach(provider => {
       try {
@@ -442,7 +439,7 @@ declare global {
       getInstance: () => {
         init: (apiKey: string) => void;
         logEvent: (eventType: string, eventProperties?: any) => void;
-        setUserId: (userId: string) => void;
+        setUserId: (userId: string | null) => void;
         setUserProperties: (properties: any) => void;
       };
     };
@@ -467,4 +464,4 @@ export const analytics = AnalyticsManager.getInstance();
 
 // Export des types et classes
 export { AnalyticsManager };
-export type { AnalyticsEvent, UserProperties, FunnelStep, AnalyticsProvider };
+export type { AnalyticsProvider };
