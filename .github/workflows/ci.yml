@@ -40,8 +40,8 @@ jobs:
       - name: Lint (eslint)
         run: npx eslint .
 
-      - name: Tests (vitest)
-        run: npx vitest run
+      - name: Tests + couverture (vitest)
+        run: npx vitest run --coverage
 
       - name: Build (next build)
         run: npx next build
