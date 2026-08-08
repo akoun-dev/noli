@@ -2,6 +2,7 @@ import { db, mapRow, mapRows } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-guard";
 import { logAudit } from "@/lib/audit";
+import { createCoverageCategorySchema } from "@/lib/validation";
 
 export async function GET(request: NextRequest) {
   const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
@@ -46,15 +47,20 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
   try {
-    const body = await request.json();
-    const { code, name, description, displayOrder, isActive } = body;
-
-    if (!name) {
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: "Requête invalide" }, { status: 400 });
+    }
+    const parsed = createCoverageCategorySchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "Le nom est requis" },
+        { error: parsed.error.issues[0]?.message ?? "Requête invalide" },
         { status: 400 }
       );
     }
+    const { code, name, description, displayOrder, isActive } = parsed.data;
 
     // Auto-generate code from name (uppercase, spaces to underscores)
     let genCode = code;

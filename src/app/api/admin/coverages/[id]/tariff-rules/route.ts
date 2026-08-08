@@ -2,6 +2,7 @@ import { db, mapRow, mapRows } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-guard";
 import { logAudit } from "@/lib/audit";
+import { createTariffRuleSchema } from "@/lib/validation";
 
 export async function GET(
   _request: NextRequest,
@@ -47,7 +48,19 @@ export async function POST(
   try {
     const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
     const { id } = await params;
-    const body = await request.json();
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: "Requête invalide" }, { status: 400 });
+    }
+    const parsed = createTariffRuleSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message ?? "Requête invalide" },
+        { status: 400 }
+      );
+    }
     const {
       vehicleCategory,
       minFiscalPower,
@@ -61,7 +74,7 @@ export async function POST(
       minAmount,
       maxAmount,
       conditions,
-    } = body;
+    } = parsed.data;
 
     const { data: coverage } = await db
       .from("coverages")
