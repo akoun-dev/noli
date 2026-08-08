@@ -222,7 +222,7 @@ const offerService = {
     // Public, session-less listing via REST wrapper
     let query = (supabaseREST as any)
       .from('insurance_offers')
-      .select(`*,insurers!inner(name, logo_url, rating),insurance_categories!inner(name, icon)`) as any
+      .select(`*,insurers!inner(name, logo_url, rating),insurance_categories!inner(name, icon)`)
 
     query = query.eq('is_active', true).order('updated_at', { ascending: false })
 
@@ -267,7 +267,7 @@ const offerService = {
   async getPublicOfferById(id: string): Promise<Offer | null> {
     const res = await (supabaseREST as any)
       .from('insurance_offers')
-      .select(`*,insurers!inner(name, logo_url, rating),insurance_categories!inner(name, icon)`) as any
+      .select(`*,insurers!inner(name, logo_url, rating),insurance_categories!inner(name, icon)`)
     const out = await res.eq('id', id).eq('is_active', true).limit(1).execute()
     if (out.error) return null
     const row = (out.data || [])[0]
