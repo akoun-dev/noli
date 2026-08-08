@@ -1,146 +1,130 @@
 # Déploiement NOLI
 
-## Prérequis
+Guide de déploiement production. Stack : **Next.js 16 (build `standalone`) · Supabase (Postgres + Auth) · Caddy + PM2**.
 
-- Node.js >= 18
-- npm
-- SQLite (intégré, aucune installation requise)
-- (Optionnel) PM2 global : `npm install -g pm2`
+> L'ancienne stack **Prisma / SQLite / NextAuth n'est plus utilisée**. La base est **Postgres (Supabase Cloud)**, l'authentification via **Supabase Auth**. Package manager de référence : **bun** (`bun.lock`).
 
 ---
 
-## 1. Build
+## 1. Prérequis
+
+- **Node.js >= 18** + **bun**
+- **Supabase CLI** (`npx supabase`) — projet lié : `lqjdmugtrhwtkofkcmlw`
+- **PM2** : `npm install -g pm2`
+- **Caddy** (reverse-proxy, **seul** point d'entrée public)
+
+---
+
+## 2. Variables d'environnement (`.env`)
+
+Copier `.env.example` et renseigner (Dashboard Supabase → Project Settings → API) :
+
+| Variable | Rôle |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | URL du projet Supabase |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Clé anon (client, soumise à la RLS) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Clé service_role (**serveur uniquement**, contourne la RLS — ne JAMAIS exposer côté client) |
+| `NEXT_PUBLIC_SITE_URL` | URL publique de l'app (emails de réinitialisation) |
+| `RESEND_API_KEY` | Emails transactionnels (Resend) |
+
+> Le serveur **standalone Next.js ne charge pas `.env` automatiquement**. `ecosystem.config.js` l'injecte via `loadEnvFile(".env")` au démarrage PM2.
+
+---
+
+## 3. Base de données (Postgres / Supabase)
+
+**Pas de Prisma, pas de SQLite.** Schéma + RLS dans `supabase/migrations/`.
 
 ```bash
-npm run build
+npx supabase link --project-ref lqjdmugtrhwtkofkcmlw
+npx supabase migration list   # migrations appliquées vs en attente
+npx supabase db push          # appliquer les nouvelles migrations
 ```
 
-Cette commande :
-- Compile l'application Next.js en standalone dans `.next/standalone/`
-- Copie les fichiers statiques et le dossier `public/` dans `.next/standalone/`
+Edge Function (notifications) :
 
-> **Important** : Le build standalone inclut le path complet (`Documents/noli/server.js`). Vérifier le chemin avec :
-> ```bash
-> find .next/standalone -name "server.js" -type f
-> ```
+```bash
+npx supabase functions deploy send-notification
+npx supabase secrets set NOLI_FUNCTION_SECRET=...   # secret partagé (anti-invocation publique)
+```
 
 ---
 
-## 2. Démarrer l'application
+## 4. Build
 
-### Avec PM2 (recommandé)
+Avant un déploiement : `npx tsc --noEmit && bun run test`.
 
 ```bash
-# Copier les assets
+bun install
+bun run build                 # output: "standalone" → .next/standalone/server.js
 cp -r .next/static .next/standalone/.next/
 cp -r public .next/standalone/
+```
 
-# Démarrer
+---
+
+## 5. Démarrage (PM2)
+
+```bash
 pm2 start ecosystem.config.js
-
-# Sauvegarder la liste PM2 (redémarrage auto après reboot)
 pm2 save
 pm2 startup
 ```
 
-### Sans PM2
+L'app écoute sur **:8080** (`PORT: process.env.PORT || 8080`).
+
+> **Mono-instance obligatoire** (`instances: 1`, `exec_mode: "fork"`). Raison : le **rate limiting est en mémoire** (`src/lib/rate-limit.ts`). Avant tout scale-out, migrer vers Redis/Upstash (`UPSTASH_REDIS_REST_URL`), sinon la limite effective = limite × nb d'instances.
+
+Sans PM2 :
 
 ```bash
-PORT=8080 NODE_ENV=production \
-  DATABASE_URL="file:./prisma/dev.db" \
-  node .next/standalone/Documents/noli/server.js
+bun run start   # NODE_ENV=production, lance .next/standalone/server.js
 ```
 
 ---
 
-## 3. Port
+## 6. Reverse-proxy (Caddy)
 
-Le port par défaut est **8080** (configuré dans `ecosystem.config.js`).
-
-Si le port est déjà utilisé (ex. Apache), éditer `ecosystem.config.js` :
-
-```js
-env: {
-  PORT: 3000,      // changer ici
-  // ...
-}
-```
-
-Ou en variable d'environnement :
+Le `Caddyfile` expose **:81** et proxie vers `localhost:8080`. Caddy **écrase** `X-Forwarded-For` (`{remote_host}`) → l'IP client est fiable **tant que Caddy est le seul point d'entrée**.
 
 ```bash
-PORT=3000 pm2 start ecosystem.config.js
+caddy start --config Caddyfile   # ou : caddy reload --config Caddyfile
 ```
 
----
-
-## 4. Base de données
-
-La base SQLite est dans `prisma/dev.db`.
-
-- **SQLite ne supporte pas les accès concurrents en écriture** → 1 instance PM2 seulement (`instances: 1`, `exec_mode: "fork"`)
-- Pour la réinitialiser : supprimer `prisma/dev.db` et relancer `npm run seed`
+> ⚠️ Le port **8080 ne doit pas être exposé publiquement** : un accès direct à l'app contournerait Caddy et rendrait l'IP (donc le rate-limit) falsifiable. Pare-feu : seul `:81` est public.
 
 ---
 
-## 5. Variables d'environnement
-
-| Variable | Valeur par défaut | Description |
-|---|---|---|
-| `PORT` | `8080` | Port d'écoute |
-| `NODE_ENV` | `production` | Mode production |
-| `DATABASE_URL` | `file:./prisma/dev.db` | Chemin de la base SQLite |
-| `NEXTAUTH_SECRET` | (dans .env.local) | Secret NextAuth |
-| `NEXTAUTH_URL` | (dans .env.local) | URL publique de l'app |
-
-> Ne pas oublier de copier `.env.local` si le dossier `.next/standalone` est déployé ailleurs.
-
----
-
-## 6. Commandes utiles
-
-```bash
-# Statut PM2
-pm2 status
-
-# Logs
-pm2 logs noli
-
-# Redémarrer
-pm2 restart noli
-
-# Arrêter
-pm2 stop noli
-
-# Supprimer du PM2
-pm2 delete noli
-```
-
----
-
-## 7. Mise à jour (nouveau build)
+## 7. Mise à jour
 
 ```bash
 git pull
-npm install
-npm run build
-cp -r .next/static .next/standalone/.next/
-cp -r public .next/standalone/
-pm2 restart noli
+bun install
+bun run build
+cp -r .next/static .next/standalone/.next/ && cp -r public .next/standalone/
+npx supabase db push          # si de nouvelles migrations
+pm2 reload ecosystem.config.js
+caddy reload --config Caddyfile
 ```
 
 ---
 
-## 8. Architecture
+## 8. Commandes utiles
 
+```bash
+pm2 status                              # état
+pm2 logs noli                           # logs
+pm2 reload ecosystem.config.js          # redémarrage sans coupure
+npx supabase migration list             # état des migrations
+npx supabase db query --linked          # requête SQL read-only sur la base liée
 ```
-.next/standalone/
-├── Documents/noli/
-│   ├── server.js          ← point d'entrée du serveur
-│   ├── .next/             ← build statique
-│   ├── public/            ← assets (logos uploadés)
-│   ├── prisma/            ← base de données + schéma
-│   └── .env.local         ← variables d'environnement
-├── logs/                  ← logs PM2
-└── ecosystem.config.js    ← config PM2
+
+---
+
+## 9. Vérifications post-déploiement
+
+```bash
+curl -I http://localhost:8080   # app répond (200/3xx)
+curl -I http://localhost:81     # via Caddy (pas de 502)
+ss -lntp | grep -E ':8080|:81'  # noli sur :8080, caddy sur :81
 ```
