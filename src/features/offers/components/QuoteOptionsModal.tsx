@@ -12,7 +12,9 @@ interface QuoteOptionsModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   offer: {
-    id: number;
+    // Accepte l'identifiant d'offre du service (UUID string) comme un id
+    // numérique historique : l'id n'est utilisé que dans des clés/chaînes.
+    id: number | string;
     insurer: string;
     logo: string;
     monthlyPrice: number;

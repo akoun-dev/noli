@@ -25,7 +25,7 @@ import {
 } from 'recharts'
 import { cn } from '@/lib/utils'
 
-interface EnhancedOffer {
+export interface EnhancedOffer {
   id: number | string
   insurer: string
   logo?: string

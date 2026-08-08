@@ -27,6 +27,9 @@ export interface Offer {
   contract_type: string | null
   logo_url?: string
   insurer_name?: string
+  // Note de l'assureur, jointe depuis la table insurers (colonne rating).
+  // Optionnelle : absente si la requête ne sélectionne pas la relation rating.
+  insurer_rating?: number
   category_name?: string
   created_at: string
   updated_at: string
@@ -130,7 +133,7 @@ const typeToContract: Record<string, string> = {
 // Helper functions
 function mapDbToOffer(
   db: DBInsuranceOffer,
-  insurer?: { name: string | null; logo_url: string | null } | null,
+  insurer?: { name: string | null; logo_url: string | null; rating?: number | null } | null,
   category?: { name: string | null } | null
 ): Offer {
   return {
@@ -148,6 +151,7 @@ function mapDbToOffer(
     contract_type: db.contract_type,
     logo_url: insurer?.logo_url || undefined,
     insurer_name: insurer?.name || undefined,
+    insurer_rating: insurer?.rating ?? undefined,
     category_name: category?.name || undefined,
     created_at: db.created_at,
     updated_at: db.updated_at,
@@ -218,7 +222,7 @@ const offerService = {
     // Public, session-less listing via REST wrapper
     let query = (supabaseREST as any)
       .from('insurance_offers')
-      .select(`*,insurers!inner(name, logo_url),insurance_categories!inner(name, icon)`) as any
+      .select(`*,insurers!inner(name, logo_url, rating),insurance_categories!inner(name, icon)`) as any
 
     query = query.eq('is_active', true).order('updated_at', { ascending: false })
 
@@ -263,7 +267,7 @@ const offerService = {
   async getPublicOfferById(id: string): Promise<Offer | null> {
     const res = await (supabaseREST as any)
       .from('insurance_offers')
-      .select(`*,insurers!inner(name, logo_url),insurance_categories!inner(name, icon)`) as any
+      .select(`*,insurers!inner(name, logo_url, rating),insurance_categories!inner(name, icon)`) as any
     const out = await res.eq('id', id).eq('is_active', true).limit(1).execute()
     if (out.error) return null
     const row = (out.data || [])[0]
@@ -280,7 +284,7 @@ const offerService = {
       .select(
         `
         *,
-        insurers!inner(name, logo_url),
+        insurers!inner(name, logo_url, rating),
         insurance_categories!inner(name, icon)
       `
       )
@@ -303,7 +307,7 @@ const offerService = {
       .select(
         `
         *,
-        insurers!inner(name, logo_url),
+        insurers!inner(name, logo_url, rating),
         insurance_categories!inner(name, icon)
       `
       )
@@ -356,7 +360,7 @@ const offerService = {
       .select(
         `
         *,
-        insurers!inner(name, logo_url),
+        insurers!inner(name, logo_url, rating),
         insurance_categories!inner(name, icon)
       `
       )
@@ -407,7 +411,7 @@ const offerService = {
       .select(
         `
         *,
-        insurers!inner(name, logo_url),
+        insurers!inner(name, logo_url, rating),
         insurance_categories!inner(name, icon)
       `
       )
@@ -430,7 +434,7 @@ const offerService = {
       .select(
         `
         *,
-        insurers!inner(name, logo_url),
+        insurers!inner(name, logo_url, rating),
         insurance_categories!inner(name, icon)
       `
       )
@@ -472,7 +476,7 @@ const offerService = {
       .select(
         `
         *,
-        insurers!inner(name, logo_url),
+        insurers!inner(name, logo_url, rating),
         insurance_categories!inner(name, icon)
       `
       )
@@ -499,7 +503,7 @@ const offerService = {
       .select(
         `
         *,
-        insurers!inner(name, logo_url),
+        insurers!inner(name, logo_url, rating),
         insurance_categories!inner(name, icon)
       `
       )

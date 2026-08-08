@@ -32,8 +32,8 @@ import {
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
-import OfferCompareModal from '@/features/offers/components/OfferCompareModal'
-import EnhancedCompareModal from '@/features/offers/components/EnhancedCompareModal'
+import OfferCompareModal, { type SimpleOffer } from '@/features/offers/components/OfferCompareModal'
+import EnhancedCompareModal, { type EnhancedOffer } from '@/features/offers/components/EnhancedCompareModal'
 import QuoteOptionsModal from '@/features/offers/components/QuoteOptionsModal'
 import SaveSearchModal from '@/features/offers/components/SaveSearchModal'
 import LiveChat from '@/features/offers/components/LiveChat'
@@ -41,6 +41,58 @@ import { ThemeToggle } from '@/components/ui/theme-toggle'
 import offerService from '@/data/api/offerService'
 import { Offer } from '@/data/api/offerService'
 import { logger } from '@/lib/logger'
+
+// price_min est exprimé en tarif annuel (cf. filtre monthlyPrice = price_min/12).
+const toMonthly = (annual: number) => Math.round(annual / 12)
+
+// Adaptateurs : le service renvoie des `Offer`, chaque modale attend une forme
+// dédiée. On dérive les champs quand un mapping évident existe (nom assureur,
+// prix, franchise, note) et on retombe sur des valeurs neutres pour les champs
+// réellement absents du modèle de données.
+const toSimpleOffer = (o: Offer): SimpleOffer => ({
+  id: o.id,
+  insurer_name: o.insurer_name,
+  logo_url: o.logo_url,
+  price_min: o.price_min ?? undefined,
+  deductible: o.deductible,
+  franchise: o.deductible.toString(),
+  contract_type: o.contract_type ?? undefined,
+  coverageType: o.contract_type ?? undefined,
+  features: o.features ?? undefined,
+})
+
+const toEnhancedOffer = (o: Offer): EnhancedOffer => {
+  const annualPrice = o.price_min ?? 0
+  const features = o.features ?? []
+  return {
+    id: o.id,
+    insurer: o.insurer_name ?? '',
+    logo: o.logo_url,
+    monthlyPrice: toMonthly(annualPrice),
+    annualPrice,
+    franchise: o.deductible,
+    franchiseText: `${o.deductible.toLocaleString('fr-FR')} FCFA`,
+    coverageType: o.contract_type ?? '',
+    // TODO(product): coverageLevel et reviews ne font pas partie du modèle Offer.
+    coverageLevel: 0,
+    rating: o.insurer_rating ?? 0,
+    reviews: 0,
+    features,
+    specificGuarantees: features.reduce<Record<string, boolean>>((acc, f) => {
+      acc[f] = true
+      return acc
+    }, {}),
+  }
+}
+
+const toQuoteOptionOffer = (o: Offer) => ({
+  id: o.id,
+  insurer: o.insurer_name ?? '',
+  logo: o.logo_url ?? '',
+  monthlyPrice: toMonthly(o.price_min ?? 0),
+  annualPrice: o.price_min ?? 0,
+  coverageType: o.contract_type ?? '',
+})
 
 const Results = () => {
   const [sortBy, setSortBy] = useState('price-asc')
@@ -719,10 +771,7 @@ const Results = () => {
         <OfferCompareModal
           open={openCompare}
           onOpenChange={setOpenCompare}
-          offers={selectedOffers.map((o) => ({
-            ...o,
-            franchise: o.deductible.toString(),
-          }))}
+          offers={selectedOffers.map(toSimpleOffer)}
         />
       )}
 
@@ -731,7 +780,7 @@ const Results = () => {
         <EnhancedCompareModal
           open={openCompare}
           onOpenChange={setOpenCompare}
-          offers={selectedOffers}
+          offers={selectedOffers.map(toEnhancedOffer)}
         />
       )}
 
@@ -740,7 +789,7 @@ const Results = () => {
         <QuoteOptionsModal
           open={quoteModalOpen}
           onOpenChange={setQuoteModalOpen}
-          offer={selectedOfferForQuote}
+          offer={toQuoteOptionOffer(selectedOfferForQuote)}
         />
       )}
 
