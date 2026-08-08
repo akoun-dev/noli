@@ -105,3 +105,57 @@ filtre d'audit incomplet).
 
 ## Vérification post-correctifs (2e passe)
 `tsc` **0** · `eslint` **0** · `vitest` **98/98** · `next build` **OK**.
+
+---
+
+# 3e passe (re-recette) — régression, logique métier, zones non couvertes
+
+Angle différent des 2 premières passes : (a) **régression** des 16 correctifs,
+(b) **justesse des calculs** de tarification, (c) **auth / routage / formatage**.
+
+## Régression des 16 correctifs
+**Aucune régression.** Les 16 correctifs sont vérifiés corrects et complets
+(tsc 0, 98/98 tests). Rien de cassé, changements additifs/correctifs.
+
+## Nouveaux bugs corrigés (3e passe)
+
+| # | Grav. | Bug | Correctif |
+|---|---|---|---|
+| 17 | 🔴 Haute | **Liens directs / favoris / liens partagés cassés** : ouvrir une URL de sous-page (`/faq`, `/espace-client`…) dans un navigateur neuf renvoyait sur l'accueil (la vue persistée écrasait l'URL au montage). | Au 1er rendu, l'URL prime sur la vue persistée (drapeau `didInitialSync`). |
+| 18 | 🔴 Haute | **Session expirée / non connecté sur écran protégé** : l'utilisateur restait bloqué sur un chrome privé vide (erreurs 401), sans redirection. | Garde ajoutée : écran protégé + `!isLoggedIn` → retour à l'accueil. |
+| 19 | 🟠 Moy | Header **« Mon profil »** : un ADMIN atterrissait sur l'accueil (impasse). | Branche ADMIN ajoutée (→ espace admin), bureau + mobile. |
+
+*(Les bugs 18 couvre aussi le cas « accès non connecté à une vue protégée ».)*
+
+## ⚠️ À décider par le métier — calcul du prix (NON corrigé volontairement)
+
+Ces points touchent le **calcul du prix affiché** : les corriger changerait le prix
+de **toutes** les offres. **Décision métier requise** — je ne modifie rien sans
+validation (des tests verrouillent le comportement actuel).
+
+1. **Prix total basé sur le texte marketing (`features`), pas sur les garanties
+   réelles.** `compare-service.ts` calcule une somme « propre » (`grossPremium` =
+   garanties matchées + obligatoires) mais **ne l'utilise pas** : le prix affiché
+   (`annualPrice`) additionne les garanties dont le **nom apparaît dans `features`**.
+   Conséquences possibles : (a) **double comptage** si deux libellés pointent vers la
+   même garantie ; (b) **garantie obligatoire non citée = exclue du prix**.
+   *Recommandation : baser le prix sur `grossPremium`, ou dédupliquer + inclure
+   systématiquement les garanties obligatoires. À valider (impacte tous les devis).*
+2. **`monthlyPrice` = prime ÷ `contractDuration`**, pas ÷ 12 → le « mensuel » est en
+   fait « montant par échéance ». Nom/logique à clarifier.
+3. **Remise fiscale 5 % + frais** (`calculateNetPremium`) **calculés mais jamais
+   appliqués** au prix présenté. Voulu ou oubli ?
+4. **Valeur du véhicule absente → taux majoré appliqué** (au lieu de « non
+   applicable »). À confirmer.
+
+## Autres points à confirmer (mineurs, non corrigés)
+- Dates malformées éventuelles affichées « Invalid Date » (plusieurs helpers sans
+  garde `isNaN`) — dégradé, non bloquant, dépend de la validité des dates de l'API.
+- `UserPaymentsTab` entièrement statique (aucun fetch) — placeholder ou
+  fonctionnalité paiements non implémentée ?
+
+## Vérification post-correctifs (3e passe)
+`tsc` **0** · `eslint` **0** · `vitest` **98/98** · `next build` **OK**.
+
+> ⚠️ Les correctifs 17-18 touchent le **routage/session** : à **confirmer en
+> recette live** (liens directs, expiration de session, navigation retour).
