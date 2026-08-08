@@ -1,3 +1,4 @@
+import Papa from 'papaparse';
 import { supabase } from '@/lib/supabase';
 import { logger } from '@/lib/logger';
 import { Database } from '@/types/database';
@@ -41,6 +42,11 @@ export interface Offer {
   contract_type?: string;
   created_at: string;
   updated_at: string;
+  // TODO(product): validUntil et conversionRate ne font pas partie du modèle de
+  // données des offres. Champs optionnels côté vue uniquement (jamais peuplés
+  // par le service tant qu'une source de données dédiée n'existe pas).
+  validUntil?: string;
+  conversionRate?: number;
   // Joined insurer info
   insurer?: {
     id: string;
@@ -513,6 +519,124 @@ class OfferService {
       logger.error(`Unexpected error in getOffersByCategory(${categoryId}):`, error);
       throw error;
     }
+  }
+
+  // Analytics calculées à partir des offres réellement présentes en base.
+  // Il n'existe pas (encore) de source de données de tracking (vues, clics,
+  // conversions, revenus) : ces métriques sont donc à 0. On ne fabrique aucune
+  // valeur et on n'appelle aucun RPC inexistant.
+  // TODO(product): brancher une vraie source d'analytics (table de tracking /
+  // RPC) pour renseigner views/clicks/conversions/revenue.
+  async getAllOffersAnalytics(): Promise<OfferAnalytics[]> {
+    const offers = await this.getOffers();
+    const period = new Date().toISOString().slice(0, 7); // AAAA-MM
+    return offers.map((offer) => ({
+      offerId: offer.id,
+      period,
+      views: 0,
+      clicks: 0,
+      conversions: 0,
+      revenue: 0,
+      ctr: 0,
+      conversionRate: 0,
+      averagePosition: 0,
+    }));
+  }
+
+  // Exporte les offres au format CSV à partir de la liste réellement chargée.
+  async exportOffers(_format: 'csv' = 'csv'): Promise<Blob> {
+    const offers = await this.getOffers();
+    const rows = offers.map((offer) => ({
+      id: offer.id,
+      name: offer.name,
+      description: offer.description ?? '',
+      insurer_id: offer.insurer_id,
+      insurer_name: offer.insurer?.name ?? '',
+      category_id: offer.category_id ?? '',
+      category_name: offer.category?.name ?? '',
+      contract_type: offer.contract_type ?? '',
+      price_min: offer.price_min ?? '',
+      price_max: offer.price_max ?? '',
+      coverage_amount: offer.coverage_amount ?? '',
+      deductible: offer.deductible,
+      is_active: offer.is_active,
+      features: (offer.features ?? []).join('|'),
+      created_at: offer.created_at,
+      updated_at: offer.updated_at,
+    }));
+    const csv = Papa.unparse(rows);
+    return new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  }
+
+  // Importe des offres depuis un CSV. Chaque ligne valide est créée via la
+  // logique existante (createOffer). Retourne le nombre de succès et la liste
+  // des erreurs (une par ligne en échec).
+  async importOffers(file: File): Promise<{ success: number; errors: string[] }> {
+    const text = await file.text();
+    const parsed = Papa.parse<Record<string, string>>(text, {
+      header: true,
+      skipEmptyLines: true,
+    });
+
+    const errors: string[] = [];
+    if (parsed.errors.length > 0) {
+      parsed.errors.forEach((e) => {
+        errors.push(`Ligne ${typeof e.row === 'number' ? e.row + 2 : '?'}: ${e.message}`);
+      });
+    }
+
+    const rows = parsed.data ?? [];
+    let success = 0;
+
+    for (let index = 0; index < rows.length; index++) {
+      const row = rows[index];
+      const rowNum = index + 2; // +1 en-tête, +1 pour un index humain (base 1)
+
+      if (!row.name || !row.name.trim()) {
+        errors.push(`Ligne ${rowNum}: Le nom de l'offre est requis`);
+        continue;
+      }
+      if (!row.insurer_id || !row.insurer_id.trim()) {
+        errors.push(`Ligne ${rowNum}: insurer_id est requis`);
+        continue;
+      }
+
+      const priceMin = row.price_min ? Number(row.price_min) : undefined;
+      const priceMax = row.price_max ? Number(row.price_max) : undefined;
+      const coverageAmount = row.coverage_amount ? Number(row.coverage_amount) : undefined;
+      const deductible = row.deductible ? Number(row.deductible) : 0;
+
+      if (row.price_min && Number.isNaN(priceMin)) {
+        errors.push(`Ligne ${rowNum}: price_min doit être un nombre`);
+        continue;
+      }
+      if (row.price_max && Number.isNaN(priceMax)) {
+        errors.push(`Ligne ${rowNum}: price_max doit être un nombre`);
+        continue;
+      }
+
+      try {
+        await this.createOffer({
+          insurer_id: row.insurer_id.trim(),
+          category_id: row.category_id?.trim() || undefined,
+          name: row.name.trim(),
+          description: row.description?.trim() || undefined,
+          price_min: priceMin,
+          price_max: priceMax,
+          coverage_amount: coverageAmount,
+          deductible: Number.isNaN(deductible) ? 0 : deductible,
+          is_active: row.is_active ? row.is_active.toLowerCase() === 'true' : true,
+          features: row.features ? row.features.split('|').map((f) => f.trim()).filter(Boolean) : [],
+          contract_type: row.contract_type?.trim() || undefined,
+        });
+        success++;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Erreur inconnue';
+        errors.push(`Ligne ${rowNum}: ${message}`);
+      }
+    }
+
+    return { success, errors };
   }
 }
 

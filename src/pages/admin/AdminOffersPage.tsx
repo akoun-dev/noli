@@ -728,7 +728,7 @@ export const AdminOffersPage: React.FC = () => {
                   <div className="space-y-4">
                     {offers
                       .filter(o => o.is_active)
-                      .sort((a, b) => b.conversionRate - a.conversionRate)
+                      .sort((a, b) => (b.conversionRate ?? 0) - (a.conversionRate ?? 0))
                       .slice(0, 5)
                       .map((offer, index) => (
                         <div key={offer.id} className="flex items-center justify-between p-3 border rounded-lg">
