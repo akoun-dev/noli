@@ -19,3 +19,15 @@ export function formatFCFA(amount: number | null | undefined): string {
   if (amount == null) return "—";
   return new Intl.NumberFormat("fr-FR").format(amount) + " FCFA";
 }
+
+/**
+ * Parse un montant FCFA saisi sous forme de texte (ex: "18 000 000", "5,500").
+ * Supprime les espaces et les virgules ; renvoie 0 si la valeur est vide/invalide.
+ * À utiliser partout à la place de `Number(value)` sur newValue/currentValue,
+ * sinon "18 000 000" → NaN.
+ */
+export function parseFCFA(raw: unknown): number {
+  if (raw == null || raw === "") return 0;
+  const n = parseFloat(String(raw).replace(/[\s,]/g, ""));
+  return Number.isFinite(n) ? n : 0;
+}

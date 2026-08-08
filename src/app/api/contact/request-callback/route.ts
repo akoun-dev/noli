@@ -1,9 +1,16 @@
 import { db, mapRows } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { sendCallbackConfirmation } from "@/lib/email";
+import { getClientIp, checkCallbackLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { emailSchema } from "@/lib/validation";
 
 export async function POST(request: NextRequest) {
   try {
+    // Route publique notifiant assureurs + admins et envoyant un email :
+    // rate limit par IP pour bloquer spam / email bombing / inondation de notifs.
+    const limited = rateLimitResponse(checkCallbackLimit(getClientIp(request)));
+    if (limited) return limited;
+
     const body = await request.json();
     const {
       phone,

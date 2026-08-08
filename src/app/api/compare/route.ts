@@ -2,9 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { compareRequestSchema } from "@/lib/validation";
 import { runComparison } from "@/lib/compare-service";
 import { getSessionProfile } from "@/lib/auth-guard";
+import { getClientIp, checkPublicCompareLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
   try {
+    // Calcul tarifaire coûteux : rate limit par IP (anti-DoS).
+    const limited = rateLimitResponse(checkPublicCompareLimit(getClientIp(request)));
+    if (limited) return limited;
+
     const body = await request.json();
 
     const parsed = compareRequestSchema.safeParse(body);

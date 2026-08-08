@@ -52,8 +52,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate unique filename
-    const ext = file.name.split(".").pop() || "png";
+    // Generate unique filename — l'extension est déduite du type MIME validé,
+    // JAMAIS du nom de fichier client (falsifiable : un .html servi en
+    // text/html => XSS stockée dans le back-office admin).
+    const extByType: Record<string, string> = {
+      "image/png": "png",
+      "image/jpeg": "jpg",
+      "image/webp": "webp",
+    };
+    const ext = extByType[file.type] || "png";
     const filename = `${randomUUID()}.${ext}`;
     const uploadsDir = path.join(process.cwd(), "public", "uploads", "logos");
 

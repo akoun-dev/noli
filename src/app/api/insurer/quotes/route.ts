@@ -1,6 +1,7 @@
 import { db, mapRows } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { getInsurerAccount, getSessionProfile, requireAuth } from "@/lib/auth-guard";
+import { sanitizePostgrestSearch } from "@/lib/security";
 
 function parseJsonField<T>(value: string, fallback: T): T {
   try {
@@ -46,8 +47,9 @@ export async function GET(request: NextRequest) {
     }
 
     if (search) {
+      const s = sanitizePostgrestSearch(search);
       query = query.or(
-        `reference.ilike.%${search}%,user.first_name.ilike.%${search}%,user.last_name.ilike.%${search}%`
+        `reference.ilike.%${s}%,user.first_name.ilike.%${s}%,user.last_name.ilike.%${s}%`
       );
     }
 

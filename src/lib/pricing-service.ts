@@ -706,7 +706,7 @@ function calculateTierceAmount(
         : 0;
     }
 
-    const rate = findTierceRate(catTariffs, vnClass, franchise, vehicleCategory);
+    const rate = findTierceRate(catTariffs, vnClass, franchise, vehicleCategory, nv);
 
     if (rate != null) {
       const grossPremium = nv * (rate / 100);
@@ -814,7 +814,8 @@ function findTierceRate(
   catTariffs: MatrixCategoryTariff[],
   vnClass: string,
   franchise: number,
-  vehicleCategory: string
+  vehicleCategory: string,
+  nv: number
 ): number | null {
   // 1) Match exact par catégorie + classe VN + franchise
   let match = catTariffs.find((t) => {
@@ -834,12 +835,19 @@ function findTierceRate(
   });
   if (match?.prime != null) return match.prime;
 
-  // 3) Match par valeur (valueMin/valueMax) + catégorie
+  // 3) Match par valeur (valueMin/valueMax) + catégorie — uniquement si des
+  //    bornes sont définies sur l'entrée. Sans cette garde, on renvoyait la
+  //    première entrée de la catégorie, qui peut correspondre à une autre
+  //    classe de VN (taux classe F appliqué à un véhicule classe A).
   match = catTariffs.find((t) => {
+    if (t.valueMin == null && t.valueMax == null) return false;
     const tVC = (t as any).vehicleCategory as string | undefined;
     const catMatch = !tVC || tVC === vehicleCategory;
-    // Note: vnClass bounds are in VN_RANGE_BOUNDS
-    return catMatch;
+    return (
+      catMatch &&
+      nv >= (t.valueMin ?? -Infinity) &&
+      nv <= (t.valueMax ?? Infinity)
+    );
   });
   if (match?.prime != null) return match.prime;
 

@@ -43,8 +43,11 @@ values
    '{"role":"INSURER","firstName":"Assureur","lastName":"SAHAM"}', now(), now())
 on conflict (id) do nothing;
 
--- Profils publics (le trigger on_auth_user_created les crée déjà ; cet insert
--- sert de filet de sécurité si le trigger est désactivé).
+-- Profils publics. Le trigger on_auth_user_created les crée déjà, MAIS en
+-- forçant role='USER' (correctif de sécurité : le rôle ne vient jamais du
+-- client). Cet insert restore explicitement le rôle attendu pour les comptes
+-- de test (ADMIN/USER/INSURER). Il s'exécute en contexte privilégié (seed),
+-- donc le trigger protect_profile_sensitive_fields (uid NULL) le laisse passer.
 insert into public.profiles (id, email, role, first_name, last_name, is_active)
 select id, email,
   raw_user_meta_data ->> 'role',
@@ -53,7 +56,11 @@ select id, email,
   true
 from auth.users
 where email in ('admin@noli.ci', 'user@test.ci', 'assureur@saham.ci')
-on conflict (id) do nothing;
+on conflict (id) do update
+  set role = EXCLUDED.role,
+      first_name = EXCLUDED.first_name,
+      last_name = EXCLUDED.last_name,
+      is_active = EXCLUDED.is_active;
 
 -- Liaison du compte assureur avec la compagnie SAHAM.
 insert into public.insurer_accounts (profile_id, insurer_id)

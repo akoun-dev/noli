@@ -1,9 +1,8 @@
 import { db, mapRows } from "@/lib/db";
 import type { PersonalInfo, VehicleInfo, CoverageNeeds, InsurerOffer, PricingBreakdown } from "@/types";
-import { createNotification } from "@/lib/notifications";
+import { createNotification, type CreateNotificationParams } from "@/lib/notifications";
 import {
   calculateGuaranteePremium,
-  calculateNetPremium,
   scoreOffer,
   isVehicleEligible,
   type VehiclePricingData,
@@ -407,12 +406,14 @@ async function saveQuote(
       estimated_price: topOffer ? topOffer.monthlyPrice : 0,
     });
 
-    createNotification({
-      userId,
-      type: "SUCCESS",
-      title: "Devis envoyé",
-      message: `Votre devis ${ref} a été envoyé avec succès. ${results.length} offre(s) trouvée(s).`,
-    });
+    const notifications: CreateNotificationParams[] = [
+      {
+        userId,
+        type: "SUCCESS",
+        title: "Devis envoyé",
+        message: `Votre devis ${ref} a été envoyé avec succès. ${results.length} offre(s) trouvée(s).`,
+      },
+    ];
 
     const { data: activeInsurers } = await db
       .from("insurers")
@@ -424,13 +425,18 @@ async function saveQuote(
       .select("profileId:profile_id")
       .in("insurer_id", activeIds);
     for (const ip of insurerProfiles || []) {
-      createNotification({
+      notifications.push({
         userId: ip.profileId,
         type: "INFO",
         title: "Nouveau devis reçu",
         message: `Un nouveau devis (${ref}) a été soumis et attend votre traitement.`,
       });
     }
+
+    // createNotification throw en cas d'erreur DB : on await explicitement
+    // (allSettled) pour éviter une promesse rejetée non gérée, et ne pas faire
+    // échouer toute la sauvegarde du devis pour une notification.
+    await Promise.allSettled(notifications.map((n) => createNotification(n)));
   } catch (err) {
     console.error("Save quote error:", err);
   }

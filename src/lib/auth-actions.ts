@@ -82,11 +82,12 @@ export async function registerAction(request: NextRequest) {
     });
 
     if (signUpError) {
-      const message = signUpError.message?.toLowerCase().includes("registered")
-        ? "Cet email est déjà utilisé"
-        : signUpError.message;
-      const status = signUpError.message?.toLowerCase().includes("registered") ? 409 : 400;
-      return NextResponse.json({ error: message }, { status });
+      // Message générique : ne pas révéler si l'email existe déjà (anti-
+      // énumération de comptes), aligné sur le comportement de /login et /forgot.
+      return NextResponse.json(
+        { error: "Inscription impossible. Vérifiez vos informations ou connectez-vous." },
+        { status: 400 }
+      );
     }
 
     const userId = authData.user?.id;

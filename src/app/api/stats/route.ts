@@ -1,8 +1,13 @@
 import { db } from "@/lib/db";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { getClientIp, checkPublicReadLimit, rateLimitResponse } from "@/lib/rate-limit";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    // Endpoint public : rate limit par IP (anti-énumération du nombre d'utilisateurs).
+    const limited = rateLimitResponse(checkPublicReadLimit(getClientIp(request), "stats"));
+    if (limited) return limited;
+
     const [{ count: insurers }, { count: offers }, { count: profiles }] = await Promise.all([
       db.from("insurers").select("id", { count: "exact", head: true }),
       db.from("insurance_offers").select("id", { count: "exact", head: true }),

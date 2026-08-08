@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db, mapRows } from '@/lib/db'
 import { requireAuth } from '@/lib/auth-guard'
+import { sanitizePostgrestSearch } from '@/lib/security'
 
 export async function GET(request: NextRequest) {
   const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
@@ -27,8 +28,9 @@ export async function GET(request: NextRequest) {
         q = q.lte("created_at", end.toISOString())
       }
       if (search) {
+        const s = sanitizePostgrestSearch(search)
         q = q.or(
-          `user_name.ilike.%${search}%,user_email.ilike.%${search}%,action.ilike.%${search}%,entity.ilike.%${search}%,details.ilike.%${search}%`
+          `user_name.ilike.%${s}%,user_email.ilike.%${s}%,action.ilike.%${s}%,entity.ilike.%${s}%,details.ilike.%${s}%`
         )
       }
       return q

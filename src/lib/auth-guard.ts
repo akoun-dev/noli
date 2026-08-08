@@ -73,7 +73,12 @@ export async function getSessionProfile(): Promise<SessionProfile | null> {
     .eq('id', user.id)
     .maybeSingle();
 
-  return mapRow<SessionProfile>(data);
+  const profile = mapRow<SessionProfile>(data);
+  // Compte désactivé par un admin → traité comme non authentifié. Sans ce
+  // contrôle, un utilisateur désactivé gardait l'accès API jusqu'à l'expiration
+  // de son JWT (le check is_active n'était fait qu'au moment du login).
+  if (profile && !profile.isActive) return null;
+  return profile;
 }
 
 export async function requireAuth(allowedRoles?: AllowedRole[]) {

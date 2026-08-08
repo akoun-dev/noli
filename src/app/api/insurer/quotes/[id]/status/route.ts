@@ -74,15 +74,14 @@ export async function PUT(
     const updated = mapRow(data);
 
     // ── Contrat : naît automatiquement à l'approbation du devis ──
-    if (status === "APPROVED") {
+    if (status === "APPROVED" && quote.userId) {
       const { data: existingContract } = await db
         .from("contracts")
         .select("id")
         .eq("quote_id", id)
         .maybeSingle();
 
-      // Un contrat ne peut être créé que pour un devis lié à un compte client.
-      if (quote.userId && !existingContract) {
+      if (!existingContract) {
         const contractRef = `NOLI-CON-${Date.now().toString(36).toUpperCase()}${Math.random()
           .toString(36)
           .slice(2, 6)
@@ -103,7 +102,18 @@ export async function PUT(
           premium: quote.finalPrice ?? quote.estimatedPrice ?? null,
         });
         if (contractError) {
+          // Rollback : le contrat n'a pas pu être créé → on restaure le devis
+          // dans son état précédent plutôt que d'annoncer un contrat fantôme
+          // (le devis serait resté APPROVED avec une notification trompeuse).
+          await db
+            .from("quotes")
+            .update({ status: quote.status, final_price: quote.finalPrice })
+            .eq("id", id);
           console.error("Erreur création contrat:", contractError);
+          return NextResponse.json(
+            { error: "Le contrat n'a pas pu être créé. Le devis a été restauré, veuillez réessayer." },
+            { status: 500 }
+          );
         }
       }
     }

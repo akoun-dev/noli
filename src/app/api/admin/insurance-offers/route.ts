@@ -2,6 +2,7 @@ import { db, mapRow, mapRows } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-guard";
 import { logAudit } from "@/lib/audit";
+import { sanitizePostgrestSearch } from "@/lib/security";
 
 function parseFeatures(offer: Record<string, unknown>) {
   try {
@@ -33,7 +34,7 @@ export async function GET(request: NextRequest) {
       query = query.eq("contract_type", contractType);
     }
     if (search) {
-      query = query.ilike("name", `%${search}%`);
+      query = query.ilike("name", `%${sanitizePostgrestSearch(search)}%`);
     }
 
     const { data, error } = await query;

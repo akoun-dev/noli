@@ -5,6 +5,7 @@
 
 import { jsPDF } from "jspdf";
 import type { PersonalInfo, VehicleInfo, InsurerOffer } from "@/types";
+import { parseFCFA } from "@/lib/utils";
 
 /** Format a number in FCFA */
 function fmt(amount: number | null | undefined, suffix = " FCFA"): string {
@@ -129,7 +130,7 @@ export function downloadQuotePDF(
     y + 14
   );
   doc.text(`Email : ${personalInfo.email}`, margin + 4, y + 20);
-  doc.text(`T\u00e9l\u00e9phone : +225 ${personalInfo.phone}`, margin + 4, y + 26);
+  doc.text(`T\u00e9l\u00e9phone : +225 ${String(personalInfo.phone || "").replace(/^\+225\s*/, "")}`, margin + 4, y + 26);
   y += 42;
 
   // ── Vehicle Info ──
@@ -149,8 +150,8 @@ export function downloadQuotePDF(
     `Mise en circulation : ${vehicleInfo.year}`,
   ];
   const vLines2 = [
-    `Valeur neuve : ${fmt(Number(vehicleInfo.newValue))}`,
-    `Valeur actuelle : ${fmt(Number(vehicleInfo.currentValue))}`,
+    `Valeur neuve : ${fmt(parseFCFA(vehicleInfo.newValue))}`,
+    `Valeur actuelle : ${fmt(parseFCFA(vehicleInfo.currentValue))}`,
     `Usage : ${USAGE_LABELS[vehicleInfo.usage] || vehicleInfo.usage}`,
     `Dur\u00e9e : ${contractDuration} mois`,
   ];

@@ -3,7 +3,7 @@
 import React, { memo, useMemo } from "react";
 import { Car, Check, Shield, X } from "lucide-react";
 import { useAppStore } from "@/store/app-store";
-import { formatFCFA } from "@/lib/utils";
+import { formatFCFA, parseFCFA } from "@/lib/utils";
 import { resolveCoverageName } from "@/lib/constants";
 import {
   Dialog,
@@ -217,7 +217,7 @@ function ComparisonModalComponent({ offers, open, onClose }: ComparisonModalProp
                   Valeur neuve :
                 </span>
                 <span className="font-semibold text-foreground">
-                  {formatFCFA(Number(vehicleInfo.newValue))}
+                  {formatFCFA(parseFCFA(vehicleInfo.newValue))}
                 </span>
               </div>
             )}
@@ -228,7 +228,7 @@ function ComparisonModalComponent({ offers, open, onClose }: ComparisonModalProp
                 </span>
                 <span className="font-semibold text-foreground">
                   {formatFCFA(
-                    Number(vehicleInfo.currentValue)
+                    parseFCFA(vehicleInfo.currentValue)
                   )}
                 </span>
               </div>

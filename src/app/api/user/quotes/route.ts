@@ -2,6 +2,9 @@ import { db, mapRow, mapRows } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { sendQuoteConfirmation } from "@/lib/email";
 import { getSessionProfile } from "@/lib/auth-guard";
+import { sanitizePostgrestSearch } from "@/lib/security";
+import { getClientIp, checkQuoteCreateLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { emailSchema } from "@/lib/validation";
 
 function parseJsonField<T>(value: string, fallback: T): T {
   try {
@@ -32,6 +35,10 @@ type QuoteRow = {
 
 export async function POST(request: NextRequest) {
   try {
+    // Création de devis publique (écriture BDD + envoi email) : rate limit par IP.
+    const limited = rateLimitResponse(checkQuoteCreateLimit(getClientIp(request)));
+    if (limited) return limited;
+
     const body = await request.json();
     const { personalInfo, vehicleInfo, coverageNeeds, offer } = body;
 
@@ -40,6 +47,13 @@ export async function POST(request: NextRequest) {
         { error: "Données incomplètes pour créer le devis" },
         { status: 400 }
       );
+    }
+
+    // Valider l'email avant tout envoi : empêche le relayage de spam / email
+    // bombing vers des adresses arbitraires via le champ personalInfo.email.
+    const emailCheck = emailSchema.safeParse(personalInfo.email);
+    if (!emailCheck.success) {
+      return NextResponse.json({ error: "Adresse email invalide" }, { status: 400 });
     }
 
     // Générer une référence unique
@@ -166,8 +180,9 @@ export async function GET(request: NextRequest) {
     }
 
     if (search) {
-      quotesQuery = quotesQuery.or(`reference.ilike.%${search}%,offer.name.ilike.%${search}%`);
-      countQuery = countQuery.or(`reference.ilike.%${search}%,offer.name.ilike.%${search}%`);
+      const s = sanitizePostgrestSearch(search);
+      quotesQuery = quotesQuery.or(`reference.ilike.%${s}%,offer.name.ilike.%${s}%`);
+      countQuery = countQuery.or(`reference.ilike.%${s}%,offer.name.ilike.%${s}%`);
     }
 
     const [{ data, error }, { count }] = await Promise.all([quotesQuery, countQuery]);

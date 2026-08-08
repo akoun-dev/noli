@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { PaginationControls, usePaginationClamp } from "@/components/shared/pagination-controls";
 import { DEFAULT_PAGE_SIZE } from "@/lib/pagination";
+import { parseFCFA } from "@/lib/utils";
 
 const fmtPrice = (n: number) => new Intl.NumberFormat("fr-FR").format(n) + " FCFA";
 const fmtDate = (d: string) => (d ? new Date(d).toLocaleDateString("fr-FR") : "—");
@@ -337,7 +338,7 @@ export function DevisTab() {
                     <div><span className="text-muted-foreground text-xs">Type carburant</span><p className="font-medium">{(vehicle.fuelType as string) || "—"}</p></div>
                     <div><span className="text-muted-foreground text-xs">Puissance fiscale</span><p className="font-medium">{(vehicle.fiscalPower as string) || "—"}</p></div>
                     <div><span className="text-muted-foreground text-xs">Places</span><p className="font-medium">{(vehicle.seats as string) || "—"}</p></div>
-                    <div><span className="text-muted-foreground text-xs">Valeur neuve</span><p className="font-mono">{vehicle.newValue ? fmtPrice(Number(vehicle.newValue)) : "—"}</p></div>
+                    <div><span className="text-muted-foreground text-xs">Valeur neuve</span><p className="font-mono">{vehicle.newValue ? fmtPrice(parseFCFA(vehicle.newValue)) : "—"}</p></div>
                   </div>
                 </div>
 

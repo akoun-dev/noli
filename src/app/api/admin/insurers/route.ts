@@ -2,6 +2,7 @@ import { db, mapRow, mapRows } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-guard";
 import { logAudit } from "@/lib/audit";
+import { sanitizePostgrestSearch } from "@/lib/security";
 import {
   getPagination,
   hasPaginationParams,
@@ -24,7 +25,8 @@ export async function GET(request: NextRequest) {
       .order("created_at", { ascending: false });
 
     if (search) {
-      query = query.or(`name.ilike.%${search}%,code.ilike.%${search}%`);
+      const s = sanitizePostgrestSearch(search);
+      query = query.or(`name.ilike.%${s}%,code.ilike.%${s}%`);
     }
     if (activeParam !== null && activeParam !== "") {
       query = query.eq("is_active", activeParam === "true");

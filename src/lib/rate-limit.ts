@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 
 /**
  * Rate limiting en mémoire (fenêtre glissante), par IP + action.
@@ -118,4 +119,56 @@ export function checkRegisterRateLimit(ip: string): RateLimitResult {
 
 export function checkForgotRateLimit(ip: string, email: string): RateLimitResult {
   return checkRateLimit(ip, `forgot:${email}`, FORGOT_LIMIT);
+}
+
+/* ── Politiques dédiées aux endpoints publics (sans auth) ──────────────── */
+
+// Comparaison tarifaire : calcul lourd (lecture de toutes les règles tarifaires).
+const PUBLIC_COMPARE_LIMIT: RateLimitOptions = {
+  maxAttempts: 20, // comparaisons / minute
+  windowMs: 60_000,
+  lockoutMs: 5 * 60_000,
+};
+
+// Création de devis public : écriture BDD + envoi d'email (anti-spam / anti-DoS).
+const QUOTE_CREATE_LIMIT: RateLimitOptions = {
+  maxAttempts: 10, // devis / 10 min
+  windowMs: 10 * 60_000,
+  lockoutMs: 60 * 60_000,
+};
+
+// Demande de rappel : notifie assureurs + admins + envoie un email.
+const CALLBACK_LIMIT: RateLimitOptions = {
+  maxAttempts: 5, // demandes / 10 min
+  windowMs: 10 * 60_000,
+  lockoutMs: 60 * 60_000,
+};
+
+// Lecture publique (stats, offres...) : anti-énumération / anti-DoS générique.
+const PUBLIC_READ_LIMIT: RateLimitOptions = {
+  maxAttempts: 60, // requêtes / minute
+  windowMs: 60_000,
+  lockoutMs: 5 * 60_000,
+};
+
+export function checkPublicCompareLimit(ip: string): RateLimitResult {
+  return checkRateLimit(ip, "compare", PUBLIC_COMPARE_LIMIT);
+}
+export function checkQuoteCreateLimit(ip: string): RateLimitResult {
+  return checkRateLimit(ip, "quote-create", QUOTE_CREATE_LIMIT);
+}
+export function checkCallbackLimit(ip: string): RateLimitResult {
+  return checkRateLimit(ip, "callback", CALLBACK_LIMIT);
+}
+export function checkPublicReadLimit(ip: string, action = "public-read"): RateLimitResult {
+  return checkRateLimit(ip, action, PUBLIC_READ_LIMIT);
+}
+
+/** Construit la réponse 429 standard à partir d'un résultat de rate limit. */
+export function rateLimitResponse(result: RateLimitResult) {
+  if (result.ok) return null;
+  return NextResponse.json(
+    { error: "Trop de requêtes. Réessayez plus tard." },
+    { status: 429, headers: { "Retry-After": String(result.retryAfterSec) } }
+  );
 }
