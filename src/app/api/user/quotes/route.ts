@@ -1,10 +1,12 @@
 import { db, mapRow, mapRows } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { sendQuoteConfirmation, isEmailConfigured } from "@/lib/email";
+import { generateQuotePDFBuffer } from "@/lib/generate-pdf";
 import { getSessionProfile } from "@/lib/auth-guard";
 import { sanitizePostgrestSearch } from "@/lib/security";
 import { getClientIp, checkQuoteCreateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import { emailSchema } from "@/lib/validation";
+import type { InsurerOffer } from "@/types";
 
 function parseJsonField<T>(value: string, fallback: T): T {
   try {
@@ -93,16 +95,51 @@ export async function POST(request: NextRequest) {
     if (error) throw error;
     const quote = mapRow<{ id: string; status: string; estimatedPrice: number; createdAt: string }>(data)!;
 
-    // Envoi d'email (non bloquant) — SMTP principal, Resend en fallback
+    // Envoi d'email (non bloquant) — SMTP principal, Resend en fallback.
+    // Le devis est généré en PDF côté serveur et joint à l'email.
     if (isEmailConfigured()) {
+      const monthlyPrice = Math.round(offer.monthlyPrice || offer.annualPrice / 12 || 0);
+      const quoteOffer: InsurerOffer = {
+        id: offer.insurerId || ref,
+        insurerId: offer.insurerId || "",
+        insurerName: offer.insurerName,
+        insurerLogo: null,
+        insurerRating: 0,
+        name: offer.name || offer.coverageType || "Offre",
+        coverageType: offer.coverageType || "basic",
+        description: offer.description || null,
+        monthlyPrice,
+        annualPrice: Math.round(offer.annualPrice || monthlyPrice * 12),
+        contractDuration: coverageNeeds?.contractDuration || offer.contractDuration || 12,
+        deductible: offer.deductible || 0,
+        maxCoverage: offer.maxCoverage || 0,
+        features: offer.features || [],
+        conditions: offer.conditions || null,
+        guaranteeDescriptions: offer.guaranteeDescriptions || undefined,
+        matchedGuarantees: offer.matchedGuarantees || undefined,
+      };
+
       sendQuoteConfirmation({
         to: personalInfo.email,
         reference: ref,
         insurerName: offer.insurerName,
         offerName: offer.name || offer.coverageType,
-        estimatedPrice: Math.round(offer.monthlyPrice || offer.annualPrice / 12 || 0),
+        estimatedPrice: monthlyPrice,
         contactPhone: personalInfo.phone,
         contractType: offer.coverageType,
+        pdf: {
+          filename: `NOLI-Devis-${ref}.pdf`,
+          content: Buffer.from(
+            generateQuotePDFBuffer(
+              personalInfo,
+              vehicleInfo || {},
+              coverageNeeds?.contractType || "basic",
+              [quoteOffer],
+              coverageNeeds?.contractDuration || 12,
+              ref
+            )
+          ),
+        },
       }).catch(err => console.error("[email] Erreur asynchrone:", err));
     }
 

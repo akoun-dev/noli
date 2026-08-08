@@ -49,17 +49,23 @@ function sanitizeSubject(value: string): string {
   return value.replace(/[\r\n\u0000-\u001f]/g, " ").trim();
 }
 
+interface EmailAttachment {
+  filename: string;
+  content: Buffer;
+}
+
 interface SendMailInput {
   to: string;
   subject: string;
   html: string;
+  attachments?: EmailAttachment[];
 }
 
 /**
  * Routeur d'envoi : SMTP (principal) puis Resend (fallback).
  * Aucun provider configuré → no-op (retourne success: false sans lever).
  */
-async function sendMail({ to, subject, html }: SendMailInput) {
+async function sendMail({ to, subject, html, attachments }: SendMailInput) {
   if (!smtpTransporter && !resend) {
     console.warn("[email] Aucun provider configuré (SMTP ni Resend)");
     return { success: false, error: "Email non configuré" };
@@ -75,6 +81,7 @@ async function sendMail({ to, subject, html }: SendMailInput) {
         to,
         subject: safeSubject,
         html,
+        attachments,
       });
       console.log("[email] Email envoyé (SMTP) →", to, "| id:", info.messageId);
       return { success: true, data: { messageId: info.messageId } };
@@ -91,6 +98,7 @@ async function sendMail({ to, subject, html }: SendMailInput) {
       to: [to],
       subject: safeSubject,
       html,
+      attachments,
     });
     if (error) {
       console.error("[email] Erreur Resend:", error);
@@ -112,6 +120,8 @@ export interface QuoteEmailParams {
   estimatedPrice: number;
   contactPhone?: string;
   contractType?: string;
+  /** PDF du devis en pièce jointe (côté serveur). */
+  pdf?: { filename: string; content: Buffer };
 }
 
 /**
@@ -123,7 +133,7 @@ export interface QuoteEmailParams {
  * email du destinataire.
  */
 export async function sendQuoteConfirmation(params: QuoteEmailParams) {
-  const { to, reference, insurerName, offerName, estimatedPrice, contactPhone, contractType } = params;
+  const { to, reference, insurerName, offerName, estimatedPrice, contactPhone, contractType, pdf } = params;
 
   const formattedPrice = new Intl.NumberFormat("fr-FR").format(estimatedPrice);
 
@@ -138,47 +148,47 @@ export async function sendQuoteConfirmation(params: QuoteEmailParams) {
 
   return sendMail({
     to,
-    subject: `🔷 Votre devis NOLI ${reference} — ${insurerName}`,
+    subject: `Votre devis NOLI ${reference} — ${insurerName}`,
     html: `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <style>
-    body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; background: #f4f6f9; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; background: #E8F4F0; }
     .container { max-width: 600px; margin: 0 auto; padding: 24px; }
-    .header { background: linear-gradient(135deg, #2563eb, #1e40af); color: white; padding: 32px; border-radius: 12px 12px 0 0; text-align: center; }
+    .header { background: #1B464D; color: #DEEF4A; padding: 32px; border-radius: 12px 12px 0 0; text-align: center; }
     .header h1 { margin: 0; font-size: 22px; }
     .header p { margin: 8px 0 0; opacity: 0.9; font-size: 14px; }
-    .body { background: white; padding: 32px; border-radius: 0 0 12px 12px; }
-    .reference { background: #f0f4ff; border: 1px solid #dbeafe; border-radius: 8px; padding: 16px; text-align: center; margin-bottom: 24px; }
-    .reference span { font-size: 20px; font-weight: bold; color: #2563eb; letter-spacing: 1px; }
-    .detail-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0; font-size: 14px; }
-    .detail-label { color: #64748b; }
-    .detail-value { font-weight: 600; color: #1e293b; }
-    .price { text-align: center; padding: 20px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; margin: 20px 0; }
-    .price .amount { font-size: 28px; font-weight: bold; color: #16a34a; }
-    .price .period { font-size: 13px; color: #64748b; }
-    .footer { text-align: center; padding: 24px; font-size: 12px; color: #94a3b8; }
-    .btn { display: inline-block; background: #2563eb; color: white; text-decoration: none; padding: 12px 32px; border-radius: 8px; font-weight: 600; margin-top: 16px; }
+    .body { background: #FFFFFF; padding: 32px; border-radius: 0 0 12px 12px; }
+    .reference { background: #E8F4F0; border: 1px solid #A0B6AC; border-radius: 8px; padding: 16px; text-align: center; margin-bottom: 24px; }
+    .reference span { font-size: 20px; font-weight: bold; color: #1B464D; letter-spacing: 1px; }
+    .detail-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #E8F4F0; font-size: 14px; }
+    .detail-label { color: #36636D; }
+    .detail-value { font-weight: 600; color: #171717; }
+    .price { text-align: center; padding: 20px; background: #f4f9e8; border: 1px solid #B9E54D; border-radius: 8px; margin: 20px 0; }
+    .price .amount { font-size: 28px; font-weight: bold; color: #1B464D; }
+    .price .period { font-size: 13px; color: #36636D; }
+    .footer { text-align: center; padding: 24px; font-size: 12px; color: #36636D; }
+    .btn { display: inline-block; background: #B9E54D; color: #171717; text-decoration: none; padding: 12px 32px; border-radius: 8px; font-weight: 600; margin-top: 16px; }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <h1>🔷 NOLI Assurance</h1>
+      <h1>NOLI Assurance</h1>
       <p>Votre devis personnalisé</p>
     </div>
     <div class="body">
       <div class="reference">
-        <p style="margin: 0 0 4px; font-size: 13px; color: #64748b;">Référence</p>
+        <p style="margin: 0 0 4px; font-size: 13px; color: #36636D;">Référence</p>
         <span>${h.reference}</span>
       </div>
 
-      <p style="font-size: 15px; color: #1e293b; margin: 0 0 20px;">
+      <p style="font-size: 15px; color: #171717; margin: 0 0 20px;">
         Bonjour,<br><br>
         Merci d'avoir utilisé NOLI pour comparer les offres d'assurance.
-        Voici un récapitulatif de votre demande de devis :
+        Voici un récapitulatif de votre demande de devis${pdf ? " et votre devis en pièce jointe" : ""} :
       </p>
 
       <div class="detail-row">
@@ -200,18 +210,18 @@ export async function sendQuoteConfirmation(params: QuoteEmailParams) {
       </div>` : ""}
 
       <div class="price">
-        <p style="margin: 0 0 4px; font-size: 13px; color: #64748b;">Estimation mensuelle</p>
+        <p style="margin: 0 0 4px; font-size: 13px; color: #36636D;">Estimation mensuelle</p>
         <div class="amount">${h.formattedPrice} FCFA</div>
         <div class="period">Soit ${h.formattedPrice} FCFA/mois</div>
       </div>
 
-      <p style="font-size: 13px; color: #64748b; margin: 16px 0 0;">
+      <p style="font-size: 13px; color: #36636D; margin: 16px 0 0;">
         Un conseiller NOLI vous contactera dans les plus brefs délais
         pour finaliser votre souscription.
       </p>
 
       <div style="text-align: center; margin-top: 24px;">
-        <p style="font-size: 12px; color: #94a3b8;">
+        <p style="font-size: 12px; color: #36636D;">
           Cet email est un accusé de réception automatique.<br>
           Merci de ne pas y répondre.
         </p>
@@ -224,6 +234,9 @@ export async function sendQuoteConfirmation(params: QuoteEmailParams) {
   </div>
 </body>
 </html>`,
+    attachments: pdf
+      ? [{ filename: pdf.filename, content: pdf.content }]
+      : undefined,
   });
 }
 
@@ -238,34 +251,34 @@ export async function sendCallbackConfirmation(to: string, insurerName: string, 
 
   return sendMail({
     to,
-    subject: `📞 Demande de rappel — ${insurerName}`,
+    subject: `Demande de rappel — ${insurerName}`,
     html: `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <style>
-    body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; background: #f4f6f9; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; background: #E8F4F0; }
     .container { max-width: 600px; margin: 0 auto; padding: 24px; }
-    .header { background: linear-gradient(135deg, #2563eb, #1e40af); color: white; padding: 32px; border-radius: 12px 12px 0 0; text-align: center; }
-    .body { background: white; padding: 32px; border-radius: 0 0 12px 12px; }
-    .footer { text-align: center; padding: 24px; font-size: 12px; color: #94a3b8; }
+    .header { background: #1B464D; color: #DEEF4A; padding: 32px; border-radius: 12px 12px 0 0; text-align: center; }
+    .body { background: #FFFFFF; padding: 32px; border-radius: 0 0 12px 12px; }
+    .footer { text-align: center; padding: 24px; font-size: 12px; color: #36636D; }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <h1>📞 Demande de rappel</h1>
+      <h1>Demande de rappel</h1>
       <p>${h.insurerName}</p>
     </div>
     <div class="body">
-      <p style="font-size: 15px; color: #1e293b;">
+      <p style="font-size: 15px; color: #171717;">
         Votre demande de rappel pour <strong>${h.insurerName}</strong> a bien été prise en compte.
       </p>
-      <p style="font-size: 14px; color: #64748b;">
-        Créneau demandé : <strong>${h.preferredTime}</strong>
+      <p style="font-size: 14px; color: #36636D;">
+        Créneau demandé : <strong style="color:#1B464D;">${h.preferredTime}</strong>
       </p>
-      <p style="font-size: 14px; color: #64748b; margin-top: 16px;">
+      <p style="font-size: 14px; color: #36636D; margin-top: 16px;">
         Un conseiller vous contactera prochainement sur le numéro que vous avez communiqué.
       </p>
     </div>
