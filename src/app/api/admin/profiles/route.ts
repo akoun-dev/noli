@@ -2,6 +2,7 @@ import { db, mapRow, mapRows } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-guard";
 import { sanitizePostgrestSearch } from "@/lib/security";
+import { updateProfileSchema } from "@/lib/validation";
 import {
   getPagination,
   hasPaginationParams,
@@ -62,15 +63,20 @@ export async function GET(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
   try {
-    const body = await request.json();
-    const { id, firstName, lastName, phone, role, isActive } = body;
-
-    if (!id) {
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: "Requête invalide" }, { status: 400 });
+    }
+    const parsed = updateProfileSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "L'identifiant du profil est requis" },
+        { error: parsed.error.issues[0]?.message ?? "Requête invalide" },
         { status: 400 }
       );
     }
+    const { id, firstName, lastName, phone, role, isActive } = parsed.data;
 
     const { data: existingData } = await db
       .from("profiles")
@@ -81,14 +87,6 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json(
         { error: "Profil introuvable" },
         { status: 404 }
-      );
-    }
-
-    const validRoles = ["USER", "INSURER", "ADMIN"];
-    if (role && !validRoles.includes(role)) {
-      return NextResponse.json(
-        { error: "Rôle invalide. Valeurs autorisées : USER, INSURER, ADMIN" },
-        { status: 400 }
       );
     }
 
