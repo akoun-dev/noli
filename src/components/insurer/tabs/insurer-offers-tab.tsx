@@ -201,6 +201,10 @@ export function InsurerOffersTab() {
     } catch {
       setError("Erreur lors du chargement des offres");
       return [];
+    } finally {
+      // Sans ceci, le chemin succès ne quittait jamais l'état de chargement
+      // → l'onglet « Mes Offres » restait bloqué sur le squelette.
+      setLoading(false);
     }
   }, [page]);
 

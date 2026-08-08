@@ -67,3 +67,41 @@ données ou d'une intention produit à confirmer :
 
 `tsc --noEmit` : **0 erreur** · `eslint` : **0** · `vitest` : **98/98** ·
 `next build` : **OK**. Aucun changement de comportement hors des bugs traités.
+
+---
+
+# 2e passe (re-recette) — vérification des correctifs + nouveaux bugs
+
+Après application des 11 correctifs ci-dessus, une **2e recette** a (a) vérifié
+chaque correctif et (b) cherché ce qui restait sous un autre angle (cycle de
+chargement, rafraîchissement après action, états d'erreur, validations).
+
+## Vérification des 11 correctifs
+Tous **confirmés corrects**. Deux compléments détectés et traités (voir ci-dessous :
+filtre d'audit incomplet).
+
+## Nouveaux bugs corrigés (2e passe)
+
+| # | Grav. | Bug | Correctif |
+|---|---|---|---|
+| 12 | 🔴 **Haute** | **Onglet « Mes Offres » (assureur) bloqué sur le squelette** : `fetchOffers` ne remettait jamais `loading` à `false` sur le chemin succès. **Bug pré-existant dans `2.0.0`.** | `finally { setLoading(false) }` ajouté. |
+| 13 | 🟠 Moy | Filtre **« Entité »** des journaux d'audit **incomplet** : 5 entités non filtrables (garanties, catégories, règles tarifaires, rôles/profil). | 5 `SelectItem` ajoutés (Coverage, CoverageCategory, InsuranceCategory, CoverageTariffRule, Profile). |
+| 14 | 🟠 Moy | **« Mes Devis » masquait les pannes** : erreur réseau/500 avalée → affichait « Aucun devis » même quand l'utilisateur en a. | État d'erreur + bouton « Réessayer » ajoutés. |
+| 15 | 🟡 Bas | Filtre **« Action »** des journaux : 3 options mortes (LOGIN/LOGOUT/EXPORT jamais écrites) + 3 manquantes (REGISTER, BACKUP_DELETE, BACKUP_RESTORE). | Menu réaligné sur les actions réellement journalisées. |
+| 16 | 🟡 Bas | Offres : bornes **min > max** acceptées (prix, puissance, valeurs). | Contrôle `min ≤ max` ajouté (POST + PUT). |
+
+## Points laissés à décision produit / recette live (non corrigés)
+
+- **CTA « Demander un devis » du catalogue** : `selectedOffer` est défini mais
+  **jamais consommé** → l'utilisateur atterrit sur un formulaire vierge, l'offre
+  choisie est perdue. *Bug ou simple point d'entrée ? À trancher côté produit.*
+- **« Contrats actifs » (tableau de bord user)** compte les devis `APPROVED` et non
+  les contrats `ACTIVE` de `/api/user/contracts` → un contrat expiré reste compté.
+  *À confirmer (intention).*
+- **KPI « Notifications »** du tableau de bord user codé à `0` (placeholder).
+- **Garantie « montant fixe » à 0** acceptée (montant non validé à l'étape 3).
+- **Devis assureur** : `limit=100` sans pagination → au-delà de 100 devis, les
+  suivants ne s'affichent pas (à traiter selon la volumétrie réelle).
+
+## Vérification post-correctifs (2e passe)
+`tsc` **0** · `eslint` **0** · `vitest` **98/98** · `next build` **OK**.
