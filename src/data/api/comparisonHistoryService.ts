@@ -95,6 +95,30 @@ export interface ComparisonStats {
   favoriteCoverageTypes: { type: string; count: number }[];
 }
 
+// Le vocabulaire de filtre exposé ('active' | 'archived' | 'deleted') diffère
+// de l'enum de statut réellement stocké en base
+// ('in_progress' | 'completed' | 'saved' | 'archived'). On garde le vocabulaire
+// externe (d'autres services/tests en dépendent) et on le mappe au niveau de la
+// requête. 'deleted' n'a pas d'équivalent en base : la suppression est un
+// soft-delete via la colonne deleted_at (déjà exclue par .is('deleted_at',
+// null)), on ne pose donc aucun filtre de statut dans ce cas.
+type DbComparisonStatus = DatabaseComparisonHistory['status'];
+
+function mapFilterStatusToDb(
+  status: NonNullable<ComparisonHistoryFilters['status']>
+): DbComparisonStatus[] {
+  switch (status) {
+    case 'archived':
+      return ['archived'];
+    case 'active':
+      // "active" = toutes les comparaisons non archivées (et non supprimées)
+      return ['in_progress', 'completed', 'saved'];
+    case 'deleted':
+    default:
+      return [];
+  }
+}
+
 // Helper functions pour convertir les types
 function mapDbToComparisonHistory(db: DatabaseComparisonHistory): ComparisonHistory {
   return {
@@ -151,7 +175,14 @@ const supabaseComparisonHistoryService = {
     }
 
     if (filters?.status) {
-      query = query.eq('status', filters.status);
+      // Mappe le vocabulaire de filtre externe vers l'enum de statut en base.
+      const dbStatuses = mapFilterStatusToDb(filters.status);
+      if (dbStatuses.length === 1) {
+        query = query.eq('status', dbStatuses[0]);
+      } else if (dbStatuses.length > 1) {
+        query = query.in('status', dbStatuses);
+      }
+      // dbStatuses vide ('deleted') : aucun filtre de statut ajouté (voir note).
     }
 
     if (filters?.limit) {

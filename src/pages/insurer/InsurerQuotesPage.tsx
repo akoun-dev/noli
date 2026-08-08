@@ -33,18 +33,21 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { quoteService } from '@/data/api/quoteService'
+import { quoteService, type QuoteResponse } from '@/data/api/quoteService'
 import { toast } from 'sonner'
 
 interface Quote {
   id: string
-  customer: {
+  // Le service (getAllQuotes -> QuoteResponse) n'expose pas les données
+  // client/véhicule ni la priorité. Ces champs sont donc optionnels et rendus
+  // avec des valeurs de repli sûres pour ne pas planter l'affichage.
+  customer?: {
     name: string
     email: string
     phone: string
     avatar?: string
   }
-  vehicle: {
+  vehicle?: {
     make: string
     model: string
     year: number
@@ -55,10 +58,25 @@ interface Quote {
   status: 'pending' | 'approved' | 'rejected' | 'expired'
   submittedAt: string
   expiresAt: string
-  priority: 'low' | 'medium' | 'high'
+  priority?: 'low' | 'medium' | 'high'
   lastContact?: string
   notes?: string
 }
+
+// Adapte une QuoteResponse du service vers la forme locale de la page. Les
+// données client/véhicule et la priorité ne font pas partie de QuoteResponse,
+// on ne les fabrique pas : elles restent absentes et sont affichées via des
+// valeurs de repli.
+// TODO(product): exposer les données client (personal_data), véhicule
+// (vehicle_data) et la priorité côté service si un affichage complet est requis.
+const mapQuoteResponseToQuote = (qr: QuoteResponse): Quote => ({
+  id: qr.id,
+  offer: qr.offerName,
+  amount: qr.price.annual,
+  status: qr.status,
+  submittedAt: qr.createdAt.toISOString(),
+  expiresAt: qr.validUntil.toISOString(),
+})
 
 export const InsurerQuotesPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('')
@@ -72,7 +90,7 @@ export const InsurerQuotesPage: React.FC = () => {
       try {
         setIsLoading(true)
         const quotesData = await quoteService.getAllQuotes()
-        setQuotes(quotesData)
+        setQuotes(quotesData.map(mapQuoteResponseToQuote))
       } catch (error) {
         console.error('Error loading quotes:', error)
         toast.error('Erreur lors du chargement des devis')
@@ -86,10 +104,10 @@ export const InsurerQuotesPage: React.FC = () => {
 
   const filteredQuotes = quotes.filter((quote) => {
     const matchesSearch =
-      quote.customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      quote.vehicle.make.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      quote.vehicle.model.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      quote.vehicle.licensePlate.toLowerCase().includes(searchTerm.toLowerCase())
+      (quote.customer?.name ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (quote.vehicle?.make ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (quote.vehicle?.model ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (quote.vehicle?.licensePlate ?? '').toLowerCase().includes(searchTerm.toLowerCase())
 
     const matchesStatus = statusFilter === 'all' || quote.status === statusFilter
     const matchesPriority = priorityFilter === 'all' || quote.priority === priorityFilter
@@ -192,14 +210,16 @@ export const InsurerQuotesPage: React.FC = () => {
           'Date expiration',
         ],
         ...filteredQuotes.map((quote) => [
-          quote.customer.name,
-          quote.customer.email,
-          quote.customer.phone,
-          `${quote.vehicle.make} ${quote.vehicle.model} (${quote.vehicle.year})`,
+          quote.customer?.name ?? '',
+          quote.customer?.email ?? '',
+          quote.customer?.phone ?? '',
+          `${quote.vehicle?.make ?? ''} ${quote.vehicle?.model ?? ''}${
+            quote.vehicle ? ` (${quote.vehicle.year})` : ''
+          }`,
           quote.offer,
           quote.amount.toString(),
           quote.status,
-          quote.priority,
+          quote.priority ?? '',
           new Date(quote.submittedAt).toLocaleDateString('fr-FR'),
           new Date(quote.expiresAt).toLocaleDateString('fr-FR'),
         ]),
@@ -401,26 +421,28 @@ export const InsurerQuotesPage: React.FC = () => {
                     <div className='flex items-center gap-3'>
                       <Avatar className='h-8 w-8'>
                         <AvatarFallback>
-                          {quote.customer.name
+                          {(quote.customer?.name ?? '')
                             .split(' ')
                             .map((n) => n[0])
                             .join('')}
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <div className='font-medium'>{quote.customer.name}</div>
-                        <div className='text-sm text-gray-500'>{quote.customer.email}</div>
-                        <div className='text-xs text-gray-400'>{quote.customer.phone}</div>
+                        <div className='font-medium'>{quote.customer?.name ?? '—'}</div>
+                        <div className='text-sm text-gray-500'>{quote.customer?.email ?? '—'}</div>
+                        <div className='text-xs text-gray-400'>{quote.customer?.phone ?? '—'}</div>
                       </div>
                     </div>
                   </TableCell>
                   <TableCell>
                     <div>
                       <div className='font-medium'>
-                        {quote.vehicle.make} {quote.vehicle.model}
+                        {quote.vehicle ? `${quote.vehicle.make} ${quote.vehicle.model}` : '—'}
                       </div>
                       <div className='text-sm text-gray-500'>
-                        {quote.vehicle.year} - {quote.vehicle.licensePlate}
+                        {quote.vehicle
+                          ? `${quote.vehicle.year} - ${quote.vehicle.licensePlate}`
+                          : '—'}
                       </div>
                     </div>
                   </TableCell>
@@ -429,7 +451,7 @@ export const InsurerQuotesPage: React.FC = () => {
                     {quote.amount.toLocaleString('fr-FR')} FCFA
                   </TableCell>
                   <TableCell>{getStatusBadge(quote.status)}</TableCell>
-                  <TableCell>{getPriorityBadge(quote.priority)}</TableCell>
+                  <TableCell>{getPriorityBadge(quote.priority ?? '')}</TableCell>
                   <TableCell>
                     <div className='flex items-center gap-1'>
                       <Calendar className='h-3 w-3 text-gray-400' />

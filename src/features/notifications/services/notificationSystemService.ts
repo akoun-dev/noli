@@ -274,13 +274,27 @@ export const updateNotificationPreferences = async (
       throw new Error('Utilisateur non authentifié');
     }
 
+    // MERGE (et non remplacement) : on lit les préférences existantes, on
+    // applique le patch partiel (camelCase -> snake_case) par-dessus, puis on
+    // upsert une ligne complète. Cela évite d'écraser les préférences non
+    // fournies dans `updates` avec des valeurs par défaut.
+    const existing = await fetchNotificationPreferences(targetUserId);
+
+    const merged: Database['public']['Tables']['notification_preferences']['Insert'] = {
+      user_id: targetUserId,
+      email_enabled: updates.emailEnabled ?? existing?.emailEnabled ?? true,
+      push_enabled: updates.pushEnabled ?? existing?.pushEnabled ?? true,
+      sms_enabled: updates.smsEnabled ?? existing?.smsEnabled ?? false,
+      whatsapp_enabled: updates.whatsappEnabled ?? existing?.whatsappEnabled ?? false,
+      categories: (updates.categories ?? existing?.categories ?? {}) as Json,
+      quiet_hours_start: updates.quietHoursStart ?? existing?.quietHoursStart ?? '22:00',
+      quiet_hours_end: updates.quietHoursEnd ?? existing?.quietHoursEnd ?? '07:00',
+      timezone: updates.timezone ?? existing?.timezone ?? 'Africa/Abidjan',
+    };
+
     const { data, error } = await supabase
       .from('notification_preferences')
-      .upsert({
-        user_id: targetUserId,
-        ...updates,
-        updated_at: new Date().toISOString()
-      })
+      .upsert(merged)
       .select()
       .single();
 

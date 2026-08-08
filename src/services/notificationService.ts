@@ -1,4 +1,7 @@
 import { logger } from "@/lib/logger"
+import { supabase } from "@/lib/supabase"
+import { createNotification } from "@/features/notifications/services/notificationSystemService"
+
 export interface EmailTemplate {
   to: string;
   subject: string;
@@ -394,6 +397,72 @@ NOLI Assurance
 
     logger.info(`📊 Bulk notification results: ${success} sent, ${failed} failed`);
     return { success, failed };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Notifications in-app liées aux devis (catégorie 'quote')
+  //
+  // Choix du destinataire : le destinataire est toujours le propriétaire du
+  // devis, résolu depuis quote_offers -> quotes.user_id. Les appelants passent
+  // un identifiant de quote_offer. Si le propriétaire est introuvable (devis
+  // supprimé, données incohérentes...), on retourne silencieusement sans lever
+  // d'erreur : ces notifications sont "best-effort" et ne doivent jamais faire
+  // échouer l'action métier (génération/approbation/expiration de devis).
+  // ---------------------------------------------------------------------------
+  private static async resolveQuoteOwnerId(quoteOfferId: string): Promise<string | null> {
+    const { data: offer, error } = await supabase
+      .from('quote_offers')
+      .select('quote_id')
+      .eq('id', quoteOfferId)
+      .single();
+    if (error || !offer) return null;
+
+    const { data: quote } = await supabase
+      .from('quotes')
+      .select('user_id')
+      .eq('id', offer.quote_id)
+      .single();
+    return quote?.user_id ?? null;
+  }
+
+  static async notifyQuoteGenerated(
+    quoteOfferId: string,
+    insurerName: string,
+    price: number
+  ): Promise<void> {
+    const userId = await this.resolveQuoteOwnerId(quoteOfferId);
+    if (!userId) return;
+    await createNotification({
+      userId,
+      title: 'Votre devis est prêt',
+      message: `Votre devis avec ${insurerName} a été généré pour un montant de ${price.toLocaleString()} FCFA.`,
+      type: 'success',
+      category: 'quote',
+    });
+  }
+
+  static async notifyQuoteApproved(quoteOfferId: string, insurerName: string): Promise<void> {
+    const userId = await this.resolveQuoteOwnerId(quoteOfferId);
+    if (!userId) return;
+    await createNotification({
+      userId,
+      title: 'Devis approuvé',
+      message: `Votre devis avec ${insurerName} a été approuvé.`,
+      type: 'success',
+      category: 'quote',
+    });
+  }
+
+  static async notifyQuoteExpiring(quoteOfferId: string, daysUntilExpiry: number): Promise<void> {
+    const userId = await this.resolveQuoteOwnerId(quoteOfferId);
+    if (!userId) return;
+    await createNotification({
+      userId,
+      title: 'Votre devis expire bientôt',
+      message: `Votre devis expire dans ${daysUntilExpiry} jour(s). Pensez à le finaliser.`,
+      type: 'warning',
+      category: 'quote',
+    });
   }
 }
 
