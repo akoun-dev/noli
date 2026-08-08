@@ -170,6 +170,7 @@ export function Header() {
                 <DropdownMenuItem onClick={() => {
                   const role = useAppStore.getState().user.role;
                   if (role === "INSURER") { useAppStore.getState().setView("insurer-dashboard"); useAppStore.getState().setInsurerTab("settings"); }
+                  else if (role === "ADMIN") { useAppStore.getState().setView("admin"); }
                   else { useAppStore.getState().setView("user-dashboard"); useAppStore.getState().setUserTab("profile"); }
                 }}>
                   <User className="h-4 w-4" />
@@ -310,6 +311,7 @@ export function Header() {
                       onClick={() => {
                         const role = useAppStore.getState().user.role;
                         if (role === "INSURER") { useAppStore.getState().setView("insurer-dashboard"); useAppStore.getState().setInsurerTab("settings"); }
+                        else if (role === "ADMIN") { useAppStore.getState().setView("admin"); }
                         else { useAppStore.getState().setView("user-dashboard"); useAppStore.getState().setUserTab("profile"); }
                         setMobileOpen(false);
                       }}

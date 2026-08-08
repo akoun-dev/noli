@@ -115,6 +115,7 @@ export default function Home() {
   const setUser = useAppStore((s) => s.setUser);
   const validated = useRef(false);
   const syncing = useRef(false); // prevent infinite loop
+  const didInitialSync = useRef(false); // au 1er rendu, l'URL prime sur la vue persistée
 
   // ── Détection des chemins inconnus → 404 (dérivé pendant le rendu) ──
   const notFound =
@@ -123,6 +124,15 @@ export default function Home() {
   // ── Sync view → URL (when user navigates via app) ──
   useEffect(() => {
     if (syncing.current) return;
+    // Au tout premier passage : si l'URL ouverte pointe déjà vers une vue valide
+    // différente de la vue (persistée), c'est un accès direct / lien profond /
+    // favori → on laisse la synchro URL→vue primer et on NE pousse PAS la vue
+    // persistée par-dessus (sinon /faq, /espace-client… renvoient sur l'accueil).
+    if (!didInitialSync.current) {
+      didInitialSync.current = true;
+      const urlView = PATH_TO_VIEW[pathname];
+      if (urlView && urlView !== currentView) return;
+    }
     const targetPath = VIEW_TO_PATH[currentView];
     if (targetPath && targetPath !== pathname) {
       syncing.current = true;
@@ -158,6 +168,14 @@ export default function Home() {
   }, [user.isLoggedIn, setUser]);
 
   useEffect(() => {
+    const protectedViews = ["admin", "user-dashboard", "insurer-dashboard"];
+    // Écran protégé actif sans session (jamais connecté, ou session expirée /
+    // invalidée par /api/auth/me) → retour à l'accueil au lieu d'un chrome privé
+    // vide avec des erreurs 401.
+    if (protectedViews.includes(currentView) && !user.isLoggedIn) {
+      setView("landing");
+      return;
+    }
     if (currentView === "admin" && user.isLoggedIn && user.role !== "ADMIN") {
       setView("landing");
     }

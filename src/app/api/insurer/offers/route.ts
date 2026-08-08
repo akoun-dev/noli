@@ -145,6 +145,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: numericError }, { status: 400 });
     }
 
+    // Cohérence des bornes : une valeur minimale ne doit pas dépasser la maximale.
+    const rangePairs: [string, unknown, unknown][] = [
+      ["Le prix minimum", priceMin, priceMax],
+      ["La puissance fiscale minimale", fiscalPowerMin, fiscalPowerMax],
+      ["La valeur neuve minimale", newValueMin, newValueMax],
+      ["La valeur vénale minimale", venalValueMin, venalValueMax],
+    ];
+    for (const [label, min, max] of rangePairs) {
+      if (min != null && min !== "" && max != null && max !== "" && Number(min) > Number(max)) {
+        return NextResponse.json(
+          { error: `${label} ne peut pas dépasser la valeur maximale.` },
+          { status: 400 }
+        );
+      }
+    }
+
     const { data, error } = await db
       .from("insurance_offers")
       .insert({

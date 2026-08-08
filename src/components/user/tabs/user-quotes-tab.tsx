@@ -71,19 +71,21 @@ export function UserQuotesTab() {
   const { user } = useAppStore();
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [activeFilter, setActiveFilter] = useState("all");
 
   const fetchQuotes = useCallback(async () => {
     if (!user.id) return;
     setLoading(true);
+    setError(false);
     try {
       const res = await fetch(`/api/quotes`);
-      if (res.ok) {
-        const data = await res.json();
-        setQuotes(Array.isArray(data) ? data : data.quotes ?? []);
-      }
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setQuotes(Array.isArray(data) ? data : data.quotes ?? []);
     } catch {
-      /* silent */
+      // Ne pas masquer une panne derrière « Aucun devis » : on signale l'erreur.
+      setError(true);
     } finally {
       setLoading(false);
     }
@@ -148,6 +150,22 @@ export function UserQuotesTab() {
           {Array.from({ length: 3 }).map((_, i) => (
             <Skeleton key={i} className="h-28 w-full rounded-xl" />
           ))}
+        </div>
+      ) : error ? (
+        /* Error state — ne pas confondre panne et absence de devis */
+        <div className="text-center py-16">
+          <div className="rounded-full bg-muted p-4 mx-auto w-fit mb-4">
+            <FileText className="h-10 w-10 text-muted-foreground" />
+          </div>
+          <h3 className="text-lg font-semibold mb-2">
+            Impossible de charger vos devis
+          </h3>
+          <p className="text-sm text-muted-foreground max-w-md mx-auto mb-4">
+            Une erreur s&apos;est produite. Vérifiez votre connexion et réessayez.
+          </p>
+          <Button variant="outline" onClick={fetchQuotes}>
+            Réessayer
+          </Button>
         </div>
       ) : filtered.length === 0 ? (
         /* Empty state */

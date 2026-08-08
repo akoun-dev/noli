@@ -282,15 +282,15 @@ export function AuditLogsTab() {
           <SelectValue placeholder="Action" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">Tous</SelectItem>
-          <SelectItem value="LOGIN">Connexion</SelectItem>
-          <SelectItem value="LOGOUT">Déconnexion</SelectItem>
+          <SelectItem value="all">Toutes</SelectItem>
           <SelectItem value="CREATE">Création</SelectItem>
           <SelectItem value="UPDATE">Modification</SelectItem>
           <SelectItem value="DELETE">Suppression</SelectItem>
-          <SelectItem value="EXPORT">Export</SelectItem>
+          <SelectItem value="REGISTER">Inscription</SelectItem>
           <SelectItem value="SETTINGS_CHANGE">Paramètres</SelectItem>
-          <SelectItem value="BACKUP_CREATE">Sauvegarde</SelectItem>
+          <SelectItem value="BACKUP_CREATE">Sauvegarde créée</SelectItem>
+          <SelectItem value="BACKUP_DELETE">Sauvegarde supprimée</SelectItem>
+          <SelectItem value="BACKUP_RESTORE">Sauvegarde restaurée</SelectItem>
         </SelectContent>
       </Select>
       <Select value={entityFilter} onValueChange={(v) => { setEntityFilter(v); setPage(1); }}>
@@ -298,14 +298,19 @@ export function AuditLogsTab() {
           <SelectValue placeholder="Entité" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">Tous</SelectItem>
+          <SelectItem value="all">Toutes</SelectItem>
           <SelectItem value="User">Utilisateur</SelectItem>
+          <SelectItem value="Profile">Profil (rôle)</SelectItem>
           <SelectItem value="Insurer">Assureur</SelectItem>
           <SelectItem value="InsuranceOffer">Offre</SelectItem>
+          <SelectItem value="InsuranceCategory">Catégorie produit</SelectItem>
+          <SelectItem value="Coverage">Garantie</SelectItem>
+          <SelectItem value="CoverageCategory">Catégorie de garantie</SelectItem>
+          <SelectItem value="CoverageTariffRule">Règle tarifaire</SelectItem>
           <SelectItem value="Quote">Devis</SelectItem>
+          <SelectItem value="Role">Rôle</SelectItem>
           <SelectItem value="Settings">Paramètres</SelectItem>
           <SelectItem value="Backup">Sauvegarde</SelectItem>
-          <SelectItem value="Role">Rôle</SelectItem>
         </SelectContent>
       </Select>
       <Input
