@@ -59,31 +59,38 @@ majeure identifiée. Le commit « durcissement sécurité » antérieur (marqueu
 
 ---
 
-## 4. Correctif appliqué
+## 4. Correctifs appliqués
 
 - **Lint (`ecosystem.config.js`)** : ce fichier de configuration **PM2** doit être
   en CommonJS (`require`/`module.exports`) — PM2 le charge ainsi. Les 2 erreurs
   `no-require-imports` étaient donc des faux positifs sur un fichier de
   déploiement. Il a été ajouté aux `ignores` d'ESLint (comme les autres fichiers
   de config déjà exclus). `npm run lint` passe désormais au vert.
+- **`insurer/me` (GET) — code mort retiré** : la variable `isAdmin` et le paramètre
+  `?userId` étaient inatteignables (la route bloque déjà tout rôle ≠ `INSURER`
+  juste au-dessus). La route interroge désormais directement `sessionProfile.id`.
+  **Comportement identique** — un assureur ne pouvait de toute façon consulter que
+  son propre compte — mais code plus clair et anti-IDOR explicite.
 
 ---
 
-## 5. Observations mineures (non bloquantes, pour décision produit)
+## 5. Observations examinées
 
-1. **`insurer/me` (GET)** — code mort : `const isAdmin = role === "ADMIN"` est
-   calculé alors que la ligne suivante bloque tout rôle ≠ `INSURER`. La branche
-   `!isAdmin` est donc inatteignable. *Décider :* soit un `ADMIN` doit pouvoir
-   consulter le profil d'un assureur via `?userId=` (alors autoriser `ADMIN` dans
-   le garde), soit retirer ce code mort.
-2. **`admin/callbacks` (GET)** — filtre les rappels par `user_id = profil admin
-   courant`. Pour un panneau d'administration censé voir *tous* les rappels, c'est
-   probablement un filtre trop restrictif (fonctionnel, pas sécurité).
-3. **`seed` en production** — bien qu'`ADMIN`-only et idempotent, un endpoint de
-   seed exposé en prod reste un point d'attention. *Optionnel :* le doubler d'un
-   garde `NODE_ENV !== "production"`.
+1. **`admin/callbacks` (GET) — VÉRIFIÉ CORRECT (fausse alerte initiale).** Le filtre
+   `user_id = admin courant` est en réalité **le bon comportement** : à chaque
+   demande de rappel, une notification `CALLBACK` distincte est insérée **pour
+   chaque admin** (`contact/request-callback`). Chaque admin voit donc l'intégralité
+   des rappels via ses propres copies. Retirer le filtre introduirait des doublons
+   et exposerait les copies d'autres comptes. **Aucune modification.**
+2. **`seed` en production — laissé tel quel (décision motivée).** L'endpoint est
+   déjà `ADMIN`-only et **idempotent** (upserts, garde sur données existantes,
+   non destructif). Ajouter un blocage `NODE_ENV !== "production"` casserait un
+   *bootstrap* légitime des données en prod par un admin (usage plausible sur ce
+   déploiement PM2 mono-instance). Le risque résiduel est faible et couvert par le
+   garde de rôle ; on **ne bloque donc pas** la prod pour ne pas retirer une
+   fonctionnalité d'administration voulue.
 
-Aucune de ces observations n'est une vulnérabilité exploitable.
+Aucune vulnérabilité exploitable identifiée.
 
 ---
 
