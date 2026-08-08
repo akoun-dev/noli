@@ -847,6 +847,14 @@ function findTierceRate(
 }
 
 // ── 2. calculateNetPremium ───────────────────────────────────
+//
+// ⚠️ DÉCISION P2 (métier) : RÈGLE NON VALIDÉE — NE PAS BRANCHER SUR LE PRIX CLIENT.
+// Cette fonction applique une remise fiscale (5 %) et des frais (2 500 FCFA) à la
+// prime brute. Ces valeurs ne sont, à ce jour, confirmées par aucune source métier
+// (assiette, taux, caractère obligatoire non vérifiés). Le prix affiché reste donc
+// le prix BRUT (grossPremium). À confirmer explicitement par Hervé/Akoun avant tout
+// usage ; à supprimer lors du nettoyage si aucune source fiable ne la valide.
+// Voir docs/EXEMPLE_CALCUL_PRIX.md.
 
 export function calculateNetPremium(
   grossPremium: number,

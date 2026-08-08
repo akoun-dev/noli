@@ -265,7 +265,8 @@ describe("runComparison", () => {
       contractDuration: 6,
     });
     expect(results[0].contractDuration).toBe(6);
-    expect(results[0].monthlyPrice).toBe(Math.round(68000 / 6));
+    // P1 : le prix mensuel est toujours annuel ÷ 12, indépendant de la durée choisie.
+    expect(results[0].monthlyPrice).toBe(Math.round(68000 / 12));
     expect(results[0].annualPrice).toBe(68000);
   });
 

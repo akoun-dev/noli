@@ -243,7 +243,11 @@ function buildOfferResult(
     // Option A : le prix repose sur grossPremium (garanties retenues + obligatoires),
     // et non sur le rapprochement du texte marketing `features` — ce qui évite le
     // double comptage et l'oubli des garanties obligatoires. Voir docs/EXEMPLE_CALCUL_PRIX.md.
-    monthlyPrice: Math.round(grossPremium / contractDuration),
+    //
+    // Décision P1 : le prix mensuel est TOUJOURS le prix annuel ÷ 12 (cohérent avec
+    // l'affichage « X/mois · Soit Y/an »). La durée du contrat ne modifie pas le prix
+    // mensuel affiché ; un éventuel « montant par échéance » serait un autre concept.
+    monthlyPrice: Math.round(grossPremium / 12),
     annualPrice: Math.round(grossPremium),
     contractDuration,
     deductible: offer.deductible || 0,

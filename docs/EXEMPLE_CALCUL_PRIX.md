@@ -129,3 +129,23 @@ retenues + obligatoires) au lieu de `computedPremium` (rapprochement du texte
 
 *Non traité (décisions distinctes, toujours ouvertes) : `monthlyPrice` = prime ÷ durée
 plutôt que ÷ 12 ; remise fiscale 5 % / frais jamais appliqués. À arbitrer séparément.*
+
+---
+
+## ✅ Décisions P1 & P2 (validées par le métier — Somet, avec Hervé & Akoun)
+
+**P1 — prix mensuel = prix annuel ÷ 12** (implémenté).
+`monthlyPrice: Math.round(grossPremium / 12)` (avant : ÷ `contractDuration`).
+Motif : l'UI affiche « X/mois · Soit Y/an » ; les deux doivent partager la même
+base (X × 12 = Y). La durée du contrat ne modifie plus le prix mensuel affiché.
+Un futur « montant par échéance » selon la durée serait un concept/libellé distinct.
+Test `respecte la durée de contrat choisie` ajusté (÷ 12).
+
+**P2 — prime nette NON appliquée** (prix brut conservé).
+`calculateNetPremium` (remise 5 % + frais 2 500 FCFA) est traitée comme **règle
+métier non validée** : origine, assiette, taux et caractère obligatoire non
+confirmés. Elle **n'est pas branchée** sur le prix client (marquée en commentaire
+d'avertissement dans `pricing-service.ts`). À confirmer explicitement par le métier ;
+à supprimer lors du nettoyage si aucune source fiable ne la valide.
+
+Vérifié après P1/P2 : `tsc` 0, `eslint` 0, **99 tests**, `next build` OK.
