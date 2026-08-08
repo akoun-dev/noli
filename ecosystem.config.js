@@ -52,6 +52,8 @@ module.exports = {
 
       env: {
         NODE_ENV: "production",
+        // 8080 = port écouté par l'app ET attendu par Caddy (reverse_proxy localhost:8080).
+        // Les deux doivent coïncider, sinon 502 au proxy (audit déploiement O-5).
         PORT: process.env.PORT || 8080,
       },
 
