@@ -1,5 +1,7 @@
 import type { NextConfig } from "next";
 
+const isDev = process.env.NODE_ENV === "development";
+
 const securityHeaders = [
   // Empêche l'embarquement de l'app dans une iframe tierce (clickjacking).
   { key: "X-Frame-Options", value: "DENY" },
@@ -20,11 +22,13 @@ const securityHeaders = [
   // Content-Security-Policy : restreint les sources de scripts/styles/images.
   // 'unsafe-inline' reste requis pour les scripts/styles injectés par Next.js
   // tant qu'on n'a pas de CSP à nonce (à durcir plus tard via middleware).
+  // 'unsafe-eval' n'est ajouté qu'en développement : le runtime React/Turbopack
+  // utilise eval() pour le fast refresh ; jamais en production.
   {
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline'",
+      `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: https:",
       "font-src 'self' data:",
