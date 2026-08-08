@@ -1,11 +1,45 @@
+import nodemailer from "nodemailer";
 import { Resend } from "resend";
 import { escapeHtml } from "@/lib/security";
 
+// ── Provider SMTP (principal) ──────────────────────────────────────────────
+// Gmail impose que l'adresse « From » soit celle du compte authentifié
+// (SMTP_USER). Un « mot de passe d'application » (16 caractères) est requis :
+// https://myaccount.google.com/apppasswords
+const smtpHost = process.env.SMTP_HOST || "smtp.gmail.com";
+const smtpPort = Number(process.env.SMTP_PORT) || 465;
+const smtpSecure = (process.env.SMTP_SECURE ?? "true") !== "false"; // 465=SSL, 587=STARTTLS
+const smtpUser = process.env.SMTP_USER || "";
+const smtpPass = process.env.SMTP_PASS || "";
+const smtpConfigured = Boolean(smtpUser && smtpPass);
+
+const smtpTransporter = smtpConfigured
+  ? nodemailer.createTransport({
+      host: smtpHost,
+      port: smtpPort,
+      secure: smtpSecure,
+      auth: { user: smtpUser, pass: smtpPass },
+    })
+  : null;
+
+// ── Provider Resend (fallback) ─────────────────────────────────────────────
+// Utilisé uniquement si SMTP n'est pas configuré.
 const resendApiKey = process.env.RESEND_API_KEY || "";
+const resend = !smtpConfigured && resendApiKey ? new Resend(resendApiKey) : null;
 
-const resend = resendApiKey ? new Resend(resendApiKey) : null;
+// ── Expéditeur ─────────────────────────────────────────────────────────────
+const FROM_EMAIL =
+  process.env.SMTP_FROM ||
+  process.env.EMAIL_FROM ||
+  (smtpUser ? `NOLI Assurance <${smtpUser}>` : "NOLI Assurance <devis@noli.ci>");
 
-const FROM_EMAIL = process.env.EMAIL_FROM || "NOLI Assurance <devis@noli.ci>";
+/**
+ * Indique si au moins un provider d'envoi (SMTP ou Resend) est configuré.
+ * À utiliser en amont des routes API pour décider d'envoyer ou non.
+ */
+export function isEmailConfigured(): boolean {
+  return smtpConfigured || Boolean(resendApiKey);
+}
 
 /**
  * Assainit une chaîne pour un en-tête d'email (sujet) : supprime les sauts
@@ -13,6 +47,61 @@ const FROM_EMAIL = process.env.EMAIL_FROM || "NOLI Assurance <devis@noli.ci>";
  */
 function sanitizeSubject(value: string): string {
   return value.replace(/[\r\n\u0000-\u001f]/g, " ").trim();
+}
+
+interface SendMailInput {
+  to: string;
+  subject: string;
+  html: string;
+}
+
+/**
+ * Routeur d'envoi : SMTP (principal) puis Resend (fallback).
+ * Aucun provider configuré → no-op (retourne success: false sans lever).
+ */
+async function sendMail({ to, subject, html }: SendMailInput) {
+  if (!smtpTransporter && !resend) {
+    console.warn("[email] Aucun provider configuré (SMTP ni Resend)");
+    return { success: false, error: "Email non configuré" };
+  }
+
+  const safeSubject = sanitizeSubject(subject);
+
+  // ── SMTP (principal) ───────────────────────────────────────────────────
+  if (smtpTransporter) {
+    try {
+      const info = await smtpTransporter.sendMail({
+        from: FROM_EMAIL,
+        to,
+        subject: safeSubject,
+        html,
+      });
+      console.log("[email] Email envoyé (SMTP) →", to, "| id:", info.messageId);
+      return { success: true, data: { messageId: info.messageId } };
+    } catch (err) {
+      console.error("[email] Erreur SMTP:", err);
+      return { success: false, error: err };
+    }
+  }
+
+  // ── Resend (fallback) ──────────────────────────────────────────────────
+  try {
+    const { data, error } = await resend!.emails.send({
+      from: FROM_EMAIL,
+      to: [to],
+      subject: safeSubject,
+      html,
+    });
+    if (error) {
+      console.error("[email] Erreur Resend:", error);
+      return { success: false, error };
+    }
+    console.log("[email] Email envoyé (Resend) →", to);
+    return { success: true, data };
+  } catch (err) {
+    console.error("[email] Exception Resend:", err);
+    return { success: false, error: err };
+  }
 }
 
 export interface QuoteEmailParams {
@@ -34,11 +123,6 @@ export interface QuoteEmailParams {
  * email du destinataire.
  */
 export async function sendQuoteConfirmation(params: QuoteEmailParams) {
-  if (!resend) {
-    console.warn("[email] Resend non configuré — clé API manquante");
-    return { success: false, error: "Resend non configuré" };
-  }
-
   const { to, reference, insurerName, offerName, estimatedPrice, contactPhone, contractType } = params;
 
   const formattedPrice = new Intl.NumberFormat("fr-FR").format(estimatedPrice);
@@ -52,12 +136,10 @@ export async function sendQuoteConfirmation(params: QuoteEmailParams) {
     formattedPrice: escapeHtml(formattedPrice),
   };
 
-  try {
-    const { data, error } = await resend.emails.send({
-      from: FROM_EMAIL,
-      to: [to],
-      subject: sanitizeSubject(`🔷 Votre devis NOLI ${reference} — ${insurerName}`),
-      html: `
+  return sendMail({
+    to,
+    subject: `🔷 Votre devis NOLI ${reference} — ${insurerName}`,
+    html: `
 <!DOCTYPE html>
 <html>
 <head>
@@ -142,41 +224,22 @@ export async function sendQuoteConfirmation(params: QuoteEmailParams) {
   </div>
 </body>
 </html>`,
-    });
-
-    if (error) {
-      console.error("[email] Erreur Resend:", error);
-      return { success: false, error };
-    }
-
-    console.log("[email] Email envoyé avec succès →", to, "| ref:", reference);
-    return { success: true, data };
-  } catch (err) {
-    console.error("[email] Exception:", err);
-    return { success: false, error: err };
-  }
+  });
 }
 
 /**
  * Envoie un email de notification de demande de rappel au client.
  */
 export async function sendCallbackConfirmation(to: string, insurerName: string, preferredTime: string) {
-  if (!resend) {
-    console.warn("[email] Resend non configuré — clé API manquante");
-    return { success: false, error: "Resend non configuré" };
-  }
-
   const h = {
     insurerName: escapeHtml(insurerName),
     preferredTime: escapeHtml(preferredTime),
   };
 
-  try {
-    const { data, error } = await resend.emails.send({
-      from: FROM_EMAIL,
-      to: [to],
-      subject: sanitizeSubject(`📞 Demande de rappel — ${insurerName}`),
-      html: `
+  return sendMail({
+    to,
+    subject: `📞 Demande de rappel — ${insurerName}`,
+    html: `
 <!DOCTYPE html>
 <html>
 <head>
@@ -212,17 +275,5 @@ export async function sendCallbackConfirmation(to: string, insurerName: string, 
   </div>
 </body>
 </html>`,
-    });
-
-    if (error) {
-      console.error("[email] Erreur envoi confirmation rappel:", error);
-      return { success: false, error };
-    }
-
-    console.log("[email] Confirmation rappel envoyée →", to);
-    return { success: true, data };
-  } catch (err) {
-    console.error("[email] Exception rappel:", err);
-    return { success: false, error: err };
-  }
+  });
 }

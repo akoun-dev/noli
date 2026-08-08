@@ -1,6 +1,6 @@
 import { db, mapRow, mapRows } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
-import { sendQuoteConfirmation } from "@/lib/email";
+import { sendQuoteConfirmation, isEmailConfigured } from "@/lib/email";
 import { getSessionProfile } from "@/lib/auth-guard";
 import { sanitizePostgrestSearch } from "@/lib/security";
 import { getClientIp, checkQuoteCreateLimit, rateLimitResponse } from "@/lib/rate-limit";
@@ -93,8 +93,8 @@ export async function POST(request: NextRequest) {
     if (error) throw error;
     const quote = mapRow<{ id: string; status: string; estimatedPrice: number; createdAt: string }>(data)!;
 
-    // Envoi d'email (non bloquant)
-    if (process.env.RESEND_API_KEY) {
+    // Envoi d'email (non bloquant) — SMTP principal, Resend en fallback
+    if (isEmailConfigured()) {
       sendQuoteConfirmation({
         to: personalInfo.email,
         reference: ref,

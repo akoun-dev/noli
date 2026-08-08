@@ -1,6 +1,6 @@
 import { db, mapRows } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
-import { sendCallbackConfirmation } from "@/lib/email";
+import { sendCallbackConfirmation, isEmailConfigured } from "@/lib/email";
 import { getClientIp, checkCallbackLimit, rateLimitResponse } from "@/lib/rate-limit";
 import { emailSchema } from "@/lib/validation";
 
@@ -27,8 +27,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Envoi d'email de confirmation au client (si email fourni)
-    if (personalInfo?.email && process.env.RESEND_API_KEY) {
+    // Envoi d'email de confirmation au client (si email fourni) — SMTP principal, Resend en fallback
+    if (personalInfo?.email && isEmailConfigured()) {
       sendCallbackConfirmation(
         personalInfo.email,
         insurerName,
