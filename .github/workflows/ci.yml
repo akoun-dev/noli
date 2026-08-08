@@ -1,0 +1,47 @@
+name: CI
+
+# Contrôle qualité bloquant (P0.1 du plan d'industrialisation).
+# S'exécute sur chaque Pull Request et sur les pushs vers 2.0.0.
+# Configurer 2.0.0 en « branche protégée » exigeant ce job pour bloquer le merge si rouge.
+
+on:
+  pull_request:
+  push:
+    branches: [2.0.0]
+
+# Annule les exécutions redondantes sur une même réf (économie de runners).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: TypeScript · Lint · Tests · Build
+    runs-on: ubuntu-latest
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+      CI: "true"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: TypeScript (tsc --noEmit)
+        run: npx tsc --noEmit
+
+      - name: Lint (eslint)
+        run: npx eslint .
+
+      - name: Tests (vitest)
+        run: npx vitest run
+
+      - name: Build (next build)
+        run: npx next build
