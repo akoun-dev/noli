@@ -269,6 +269,41 @@ describe("runComparison", () => {
     expect(results[0].annualPrice).toBe(68000);
   });
 
+  it("Option A : le prix (grossPremium) inclut les obligatoires et ne double-compte pas", async () => {
+    // Offre avec un libellé « Assistance » en DOUBLE dans features, et une garantie
+    // obligatoire « Vol » ABSENTE de features.
+    mockDbData.insurance_offers = [
+      { ...offerEligible, id: "offer-A", features: '["Assistance 24/7", "Assistance"]' },
+    ];
+    mockDbData.coverages = [
+      {
+        id: "cov-ass", insurerId: "ins-1", name: "Assistance 24/7", code: "ASSISTANCE",
+        type: "ASSISTANCE", calculationType: "FIXED_AMOUNT",
+        metadata: JSON.stringify({ method: "FIXED_AMOUNT", fixedAmount: 5000 }),
+        isMandatory: false, isActive: true, capital: null, maxAmount: null,
+        description: "Assistance 24/7",
+        category: { id: "cat-a", name: "Assistance", code: "ASSISTANCE" },
+      },
+      {
+        id: "cov-vol", insurerId: "ins-1", name: "Vol", code: "VOL",
+        type: "VOL", calculationType: "FIXED_AMOUNT",
+        metadata: JSON.stringify({ method: "FIXED_AMOUNT", fixedAmount: 10000 }),
+        isMandatory: true, isActive: true, capital: null, maxAmount: null,
+        description: "Vol",
+        category: { id: "cat-v", name: "Vol", code: "VOL" },
+      },
+    ];
+
+    const { results } = await runComparison(personal, vehicle, needs);
+    const top = results.find((r) => r.id === "offer-A")!;
+
+    // grossPremium = 5000 (Assistance retenue, comptée UNE fois malgré le doublon)
+    //              + 10000 (Vol OBLIGATOIRE, pourtant absent de features) = 15000.
+    // L'ancien calcul par features aurait donné 5000 (Vol oublié) ou 10000 (Assistance doublée).
+    expect(top.annualPrice).toBe(15000);
+    expect(top.monthlyPrice).toBe(Math.round(15000 / 12));
+  });
+
   it("sauvegarde le devis et notifie quand userId est fourni", async () => {
     await runComparison(personal, vehicle, needs, "user-1");
 

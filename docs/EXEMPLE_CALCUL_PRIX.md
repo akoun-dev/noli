@@ -111,3 +111,21 @@ Simple, robuste, indépendant des libellés marketing. C'est la correction la pl
 Dans les deux cas, il faudra **mettre à jour le test** `compare-service.test.ts` en
 conséquence — d'où la nécessité d'une **décision métier explicite** avant tout
 changement, puisque le prix montré aux clients en dépend.
+
+---
+
+## ✅ Décision retenue : Option A (implémentée)
+
+`annualPrice` / `monthlyPrice` reposent désormais sur **`grossPremium`** (garanties
+retenues + obligatoires) au lieu de `computedPremium` (rapprochement du texte
+`features`). Fichier `src/lib/compare-service.ts`, fonction `buildOfferResult`.
+
+- Boucle `computedPremium` (rapprochement par libellé) **retirée**.
+- Un test verrouille le nouveau comportement (`compare-service.test.ts` — « Option A :
+  le prix (grossPremium) inclut les obligatoires et ne double-compte pas ») :
+  garantie obligatoire absente de `features` bien **incluse**, libellé dupliqué
+  compté **une seule fois**.
+- Vérifié : `tsc` 0, `eslint` 0, **99 tests** (dont le nouveau), `next build` OK.
+
+*Non traité (décisions distinctes, toujours ouvertes) : `monthlyPrice` = prime ÷ durée
+plutôt que ÷ 12 ; remise fiscale 5 % / frais jamais appliqués. À arbitrer séparément.*
