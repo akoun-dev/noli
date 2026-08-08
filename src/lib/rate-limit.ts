@@ -121,6 +121,16 @@ export function checkForgotRateLimit(ip: string, email: string): RateLimitResult
   return checkRateLimit(ip, `forgot:${email}`, FORGOT_LIMIT);
 }
 
+const RESET_PASSWORD_LIMIT: RateLimitOptions = {
+  maxAttempts: 5, // soumissions de nouveau mot de passe / 10 min
+  windowMs: 10 * 60_000,
+  lockoutMs: 60 * 60_000,
+};
+
+export function checkResetPasswordLimit(ip: string): RateLimitResult {
+  return checkRateLimit(ip, "reset-password", RESET_PASSWORD_LIMIT);
+}
+
 /* ── Politiques dédiées aux endpoints publics (sans auth) ──────────────── */
 
 // Comparaison tarifaire : calcul lourd (lecture de toutes les règles tarifaires).

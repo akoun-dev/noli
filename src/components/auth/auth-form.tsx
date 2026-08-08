@@ -801,6 +801,22 @@ export function RegisterForm({ mode }: { mode: AuthFormMode }) {
 
 /* ── Forgot Password Form ── */
 
+interface RecoveryTokens {
+  accessToken: string;
+  refreshToken: string;
+}
+
+/** Extrait les tokens de récupération du hash d'URL (#access_token=...&type=recovery). */
+function parseRecoveryTokens(hash: string): RecoveryTokens | null {
+  if (!hash || hash.length < 2) return null;
+  const params = new URLSearchParams(hash.slice(1));
+  if (params.get("type") !== "recovery") return null;
+  const accessToken = params.get("access_token");
+  const refreshToken = params.get("refresh_token");
+  if (!accessToken || !refreshToken) return null;
+  return { accessToken, refreshToken };
+}
+
 export function ForgotPasswordForm({ mode }: { mode: AuthFormMode }) {
   const { setView, setAuthModal } = useAppStore();
   const { toast } = useToast();
@@ -809,6 +825,21 @@ export function ForgotPasswordForm({ mode }: { mode: AuthFormMode }) {
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
+
+  // Étape 2 : lien de réinitialisation (type=recovery dans le hash d'URL).
+  const [recovery, setRecovery] = useState<RecoveryTokens | null>(null);
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [resetDone, setResetDone] = useState(false);
+
+  useEffect(() => {
+    const tokens = parseRecoveryTokens(window.location.hash);
+    if (tokens) {
+      setRecovery(tokens);
+      // Nettoyer le hash pour ne pas exposer les tokens dans l'historique.
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+  }, []);
 
   const backToLogin = () => (mode === "modal" ? setAuthModal("login") : setView("login"));
 
@@ -851,6 +882,135 @@ export function ForgotPasswordForm({ mode }: { mode: AuthFormMode }) {
     }
   };
 
+  const handleReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!recovery) return;
+    if (password.length < 8) {
+      setError("Le mot de passe doit contenir au moins 8 caractères");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError("Les mots de passe ne correspondent pas");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const res = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          accessToken: recovery.accessToken,
+          refreshToken: recovery.refreshToken,
+          password,
+        }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Une erreur est survenue");
+        return;
+      }
+
+      setResetDone(true);
+      toast({
+        title: "Mot de passe réinitialisé",
+        description: "Connectez-vous avec votre nouveau mot de passe.",
+      });
+    } catch {
+      setError("Une erreur est survenue. Veuillez réessayer.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ── Étape 2 : succès ──
+  if (recovery && resetDone) {
+    return (
+      <div className="space-y-4 text-center py-4">
+        <h3 className="font-semibold text-lg">Mot de passe réinitialisé</h3>
+        <p className="text-sm text-muted-foreground">
+          Votre mot de passe a bien été mis à jour. Vous pouvez vous connecter.
+        </p>
+        <Button variant="outline" className="mt-2" onClick={backToLogin}>
+          <ArrowRight className="size-4 rotate-180" />
+          Retour à la connexion
+        </Button>
+      </div>
+    );
+  }
+
+  // ── Étape 2 : choix du nouveau mot de passe ──
+  if (recovery) {
+    return (
+      <form onSubmit={handleReset} className="space-y-4">
+        <p className="text-sm text-muted-foreground">
+          Choisissez un nouveau mot de passe pour votre compte.
+        </p>
+
+        <div className="space-y-2">
+          <Label htmlFor="reset-password">Nouveau mot de passe</Label>
+          <Input
+            id="reset-password"
+            type="password"
+            placeholder="Au moins 8 caractères"
+            value={password}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              if (error) setError("");
+            }}
+            aria-invalid={!!error}
+            className={`w-full ${error ? "border-destructive" : ""}`}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="reset-confirm">Confirmer le mot de passe</Label>
+          <Input
+            id="reset-confirm"
+            type="password"
+            placeholder="Re-saisissez votre mot de passe"
+            value={confirmPassword}
+            onChange={(e) => {
+              setConfirmPassword(e.target.value);
+              if (error) setError("");
+            }}
+            aria-invalid={!!error}
+            className={`w-full ${error ? "border-destructive" : ""}`}
+          />
+        </div>
+
+        {error && <p className="text-xs text-destructive">{error}</p>}
+
+        <Button
+          type="submit"
+          className="w-full bg-primary text-primary-foreground hover:bg-primary/90 rounded-full"
+          disabled={loading}
+        >
+          {loading ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            "Réinitialiser le mot de passe"
+          )}
+        </Button>
+
+        <p className="text-center">
+          <button
+            type="button"
+            onClick={backToLogin}
+            className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+          >
+            <ArrowLeft className="size-3.5" />
+            Retour à la connexion
+          </button>
+        </p>
+      </form>
+    );
+  }
+
+  // ── Étape 1 : demande d'envoi du lien ──
   if (sent) {
     return (
       <div className="space-y-4 text-center py-4">

@@ -6,6 +6,7 @@ import {
   checkLoginRateLimit,
   checkRegisterRateLimit,
   checkForgotRateLimit,
+  checkResetPasswordLimit,
   getClientIp,
 } from "@/lib/rate-limit";
 import { validatePasswordPolicy } from "@/lib/password-policy";
@@ -239,13 +240,77 @@ export async function forgotAction(request: NextRequest) {
 
     const supabase = await getSupabaseServerClient();
     await supabase.auth.resetPasswordForEmail(parsed.data.trim(), {
-      redirectTo: `${SITE_URL()}/forgot`,
+      redirectTo: `${SITE_URL()}/mot-de-passe-oublie`,
     });
 
     // Réponse identique qu'il existe un compte ou non (pas d'énumération).
     return NextResponse.json({
       message: "Si un compte existe avec cet email, un lien de réinitialisation a été envoyé.",
     });
+  } catch (error) {
+    console.error("Auth error:", error);
+    return NextResponse.json({ error: "Erreur d'authentification" }, { status: 500 });
+  }
+}
+
+/* ── Réinitialisation du mot de passe (étape 2, via le lien email) ── */
+
+/**
+ * Échange le token de récupération contenu dans le lien de l'email
+ * (type=recovery) et fixe le nouveau mot de passe.
+ *
+ * Le token est extrait du hash d'URL par le client puis transmis ici.
+ * On établit la session via setSession (le compte n'a pas encore de
+ * session active) avant d'appeler updateUser. La session de récupération
+ * est ensuite fermée pour forcer une connexion explicite.
+ */
+export async function resetPasswordAction(request: NextRequest) {
+  const ip = getClientIp(request);
+
+  try {
+    const body = await request.json();
+    const { accessToken, refreshToken, password } = body;
+
+    if (!accessToken || !refreshToken || typeof accessToken !== "string" || typeof refreshToken !== "string") {
+      return NextResponse.json(
+        { error: "Lien de réinitialisation invalide ou expiré. Refaites une demande." },
+        { status: 400 }
+      );
+    }
+
+    const limit = checkResetPasswordLimit(ip);
+    if (!limit.ok) return rateLimitedResponse(limit);
+
+    const policy = await validatePasswordPolicy(password);
+    if (!policy.ok) {
+      return NextResponse.json({ error: policy.message }, { status: 400 });
+    }
+
+    const supabase = await getSupabaseServerClient();
+
+    const { error: sessionError } = await supabase.auth.setSession({
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    });
+    if (sessionError) {
+      return NextResponse.json(
+        { error: "Lien de réinitialisation invalide ou expiré. Refaites une demande." },
+        { status: 400 }
+      );
+    }
+
+    const { error: updateError } = await supabase.auth.updateUser({ password });
+    if (updateError) {
+      return NextResponse.json({ error: "La réinitialisation a échoué. Réessayez." }, { status: 400 });
+    }
+
+    // Ferme la session de récupération : l'utilisateur se reconnectera
+    // explicitement avec son nouveau mot de passe.
+    await supabase.auth.signOut();
+
+    logAudit({ action: "PASSWORD_RESET", entity: "User" });
+
+    return NextResponse.json({ message: "Votre mot de passe a été réinitialisé." });
   } catch (error) {
     console.error("Auth error:", error);
     return NextResponse.json({ error: "Erreur d'authentification" }, { status: 500 });
