@@ -66,7 +66,7 @@ export function DashboardTab() {
             <div aria-live="polite" className="overflow-x-auto"><Table><TableHeader><TableRow className="bg-muted/50">
               <TableHead>Référence</TableHead><TableHead>Client</TableHead><TableHead>Assureur</TableHead><TableHead>Prix</TableHead><TableHead>Statut</TableHead><TableHead>Date</TableHead>
             </TableRow></TableHeader><TableBody>
-              {stats.recentQuotes.map((q) => { const pd = (() => { try { return JSON.parse(q.personalData); } catch { return {}; } })(); const s = statusMap[q.status] || statusMap.DRAFT; return (
+              {stats.recentQuotes.map((q) => { const pd = (() => { const raw = q.personalData; if (raw && typeof raw === "object") return raw as Record<string, unknown>; try { return JSON.parse(raw); } catch { return {}; } })(); const s = statusMap[q.status] || statusMap.DRAFT; return (
                 <TableRow key={q.id}><TableCell className="font-mono text-xs">{q.reference}</TableCell><TableCell>{(pd.lastName || pd.firstName || "—")}</TableCell><TableCell className="text-sm">{q.offer?.insurer?.name || "—"}</TableCell><TableCell className="text-sm font-mono">{q.estimatedPrice ? new Intl.NumberFormat("fr-FR").format(q.estimatedPrice) + " FCFA" : "—"}</TableCell><TableCell><Badge variant={s.variant}>{s.label}</Badge></TableCell><TableCell className="text-muted-foreground text-sm">{fmtDate(q.createdAt)}</TableCell></TableRow>
               ); })}
             </TableBody></Table></div>

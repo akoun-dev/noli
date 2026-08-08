@@ -162,6 +162,9 @@ export function InsurerOffersTab() {
   const [formCoverages, setFormCoverages] = useState<CoverageMini[]>([]);
   const [formCoveragesLoading, setFormCoveragesLoading] = useState(false);
 
+  /* Catégories d'assurance (pour le sélecteur de catégorie du formulaire d'offre) */
+  const [insuranceCategories, setInsuranceCategories] = useState<{ id: string; name: string }[]>([]);
+
   /* ── Fetch helpers ── */
   const fetchInsurer = useCallback(async (userId: string) => {
     try {
@@ -229,6 +232,20 @@ export function InsurerOffersTab() {
     setLoading(true);
     fetchOffers(insurerId);
   }, [insurerId, fetchOffers]);
+
+  /* ── Charger les catégories d'assurance (pour le sélecteur du formulaire) ── */
+  useEffect(() => {
+    fetch("/api/insurer/insurance-categories")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setInsuranceCategories(
+            data.map((c: { id: string; name: string }) => ({ id: c.id, name: c.name }))
+          );
+        }
+      })
+      .catch(() => setInsuranceCategories([]));
+  }, []);
 
   /* ── Fetch coverages when insurerId is known (for guarantee selection) ── */
   useEffect(() => {
@@ -608,7 +625,27 @@ export function InsurerOffersTab() {
               />
             </div>
 
-
+            {/* Catégorie d'assurance */}
+            <div className="space-y-2">
+              <Label>Catégorie d'assurance</Label>
+              <Select
+                value={form.categoryId || undefined}
+                onValueChange={(v) =>
+                  setForm((f) => ({ ...f, categoryId: v }))
+                }
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Sélectionner une catégorie" />
+                </SelectTrigger>
+                <SelectContent>
+                  {insuranceCategories.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
             {/* Contract Type */}
             <div className="space-y-2">

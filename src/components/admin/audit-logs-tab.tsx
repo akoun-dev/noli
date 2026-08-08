@@ -299,13 +299,13 @@ export function AuditLogsTab() {
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">Tous</SelectItem>
-          <SelectItem value="Utilisateur">Utilisateur</SelectItem>
-          <SelectItem value="Assureur">Assureur</SelectItem>
-          <SelectItem value="Offre">Offre</SelectItem>
-          <SelectItem value="Devis">Devis</SelectItem>
-          <SelectItem value="Paramètres">Paramètres</SelectItem>
-          <SelectItem value="Sauvegarde">Sauvegarde</SelectItem>
-          <SelectItem value="Rôle">Rôle</SelectItem>
+          <SelectItem value="User">Utilisateur</SelectItem>
+          <SelectItem value="Insurer">Assureur</SelectItem>
+          <SelectItem value="InsuranceOffer">Offre</SelectItem>
+          <SelectItem value="Quote">Devis</SelectItem>
+          <SelectItem value="Settings">Paramètres</SelectItem>
+          <SelectItem value="Backup">Sauvegarde</SelectItem>
+          <SelectItem value="Role">Rôle</SelectItem>
         </SelectContent>
       </Select>
       <Input

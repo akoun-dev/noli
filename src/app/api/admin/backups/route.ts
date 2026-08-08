@@ -36,7 +36,22 @@ export async function GET() {
       return rest
     })
 
-    return NextResponse.json({ backups })
+    // Planification enregistrée (pour réhydrater l'UI au chargement).
+    let schedule: unknown = null
+    const { data: scheduleSetting } = await db
+      .from("system_settings")
+      .select("value")
+      .eq("key", "backup_schedule")
+      .maybeSingle()
+    if (scheduleSetting?.value) {
+      try {
+        schedule = JSON.parse(scheduleSetting.value)
+      } catch {
+        schedule = null
+      }
+    }
+
+    return NextResponse.json({ backups, schedule })
   } catch (error) {
     console.error('Erreur lors de la récupération des sauvegardes:', error)
     return NextResponse.json(

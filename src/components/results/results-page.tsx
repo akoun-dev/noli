@@ -37,16 +37,17 @@ export function ResultsPage() {
   const { toast } = useToast()
 
   /* ── derived data ── */
+  const [priceMode, setPriceMode] = useState<"annual" | "monthly">("annual")
   const effectiveBudgetMax = useMemo(() => {
     if (comparisonResults.length === 0) return BUDGET_MAX
     const maxPrice = Math.max(
-      ...comparisonResults.map(o => o.annualPrice || 0)
+      ...comparisonResults.map(o => (priceMode === "monthly" ? o.monthlyPrice : o.annualPrice) || 0)
     )
     return Math.max(
       BUDGET_MAX,
       Math.ceil(maxPrice / BUDGET_STEP) * BUDGET_STEP
     )
-  }, [comparisonResults])
+  }, [comparisonResults, priceMode])
 
   /* ── local filter state ── */
   const [uncheckedInsurers, setUncheckedInsurers] = useState<Set<string>>(
@@ -58,7 +59,6 @@ export function ResultsPage() {
   // critère de classement, pas un filtre strict).
   const [coverageFilter, setCoverageFilter] = useState<string>("all")
   const [budgetMax, setBudgetMax] = useState<number>(effectiveBudgetMax)
-  const [priceMode, setPriceMode] = useState<"annual" | "monthly">("annual")
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
   const [callbackModalOpen, setCallbackModalOpen] = useState(false)
   const [selectedCallOffer, setSelectedCallOffer] = useState<InsurerOffer | null>(null)
@@ -445,6 +445,7 @@ export function ResultsPage() {
               budgetMax={budgetMax}
               setBudgetMax={setBudgetMax}
               effectiveBudgetMax={effectiveBudgetMax}
+              priceMode={priceMode}
               onReset={resetFilters}
               totalOffers={comparisonResults.length}
             />
@@ -467,6 +468,7 @@ export function ResultsPage() {
                 budgetMax={budgetMax}
                 setBudgetMax={setBudgetMax}
                 effectiveBudgetMax={effectiveBudgetMax}
+                priceMode={priceMode}
                 onReset={resetFilters}
                 totalOffers={comparisonResults.length}
               />

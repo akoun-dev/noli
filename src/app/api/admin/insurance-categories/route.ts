@@ -3,13 +3,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-guard";
 import { logAudit } from "@/lib/audit";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
   try {
-    const { data, error } = await db
+    const search = request.nextUrl.searchParams.get("search")?.trim() || "";
+    let query = db
       .from("insurance_categories")
-      .select("*")
-      .order("created_at", { ascending: false });
+      .select("*");
+    if (search) query = query.ilike("name", `%${search}%`);
+    const { data, error } = await query.order("created_at", { ascending: false });
     if (error) throw error;
     const categories = mapRows(data || []);
 

@@ -179,7 +179,9 @@ export async function POST(request: NextRequest) {
         insurer_id: insurerId,
         category_id: categoryId || null,
         code: genCode,
-        type: genCode,
+        // Respecte la valeur envoyée par le front (nom de la catégorie d'assurance),
+        // cohérent avec le PUT ; retombe sur le code auto-généré si absent.
+        type: type || genCode,
         name,
         description: description || null,
         calculation_type: calculationType || "FIXED_AMOUNT",

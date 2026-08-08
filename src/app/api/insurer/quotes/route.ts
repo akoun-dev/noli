@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
     let query = db
       .from("quotes")
       .select(
-        "*, user:profiles(firstName:first_name, lastName:last_name, email), offer:insurance_offers(name), category:insurance_categories(name)",
+        "*, user:profiles(firstName:first_name, lastName:last_name, email), offer:insurance_offers!inner(name), category:insurance_categories(name)",
         { count: "exact" }
       )
       .eq("offer.insurer_id", account.insurerId)

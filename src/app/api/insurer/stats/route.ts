@@ -47,23 +47,23 @@ export async function GET(request: NextRequest) {
         if (error) throw error;
         return count || 0;
       }),
-      db.from("quotes").select("id, offer:insurance_offers(id)", { count: "exact", head: true }).eq("offer.insurer_id", insurerId).then(({ count, error }) => {
+      db.from("quotes").select("id, offer:insurance_offers!inner(id)", { count: "exact", head: true }).eq("offer.insurer_id", insurerId).then(({ count, error }) => {
         if (error) throw error;
         return count || 0;
       }),
-      db.from("quotes").select("id, offer:insurance_offers(id)", { count: "exact", head: true }).eq("offer.insurer_id", insurerId).eq("status", "PENDING").then(({ count, error }) => {
+      db.from("quotes").select("id, offer:insurance_offers!inner(id)", { count: "exact", head: true }).eq("offer.insurer_id", insurerId).eq("status", "PENDING").then(({ count, error }) => {
         if (error) throw error;
         return count || 0;
       }),
-      db.from("quotes").select("id, offer:insurance_offers(id)", { count: "exact", head: true }).eq("offer.insurer_id", insurerId).eq("status", "APPROVED").then(({ count, error }) => {
+      db.from("quotes").select("id, offer:insurance_offers!inner(id)", { count: "exact", head: true }).eq("offer.insurer_id", insurerId).eq("status", "APPROVED").then(({ count, error }) => {
         if (error) throw error;
         return count || 0;
       }),
-      db.from("quotes").select("id, offer:insurance_offers(id)", { count: "exact", head: true }).eq("offer.insurer_id", insurerId).eq("status", "REJECTED").then(({ count, error }) => {
+      db.from("quotes").select("id, offer:insurance_offers!inner(id)", { count: "exact", head: true }).eq("offer.insurer_id", insurerId).eq("status", "REJECTED").then(({ count, error }) => {
         if (error) throw error;
         return count || 0;
       }),
-      db.from("quotes").select("id, offer:insurance_offers(id)", { count: "exact", head: true }).eq("offer.insurer_id", insurerId).eq("status", "DRAFT").then(({ count, error }) => {
+      db.from("quotes").select("id, offer:insurance_offers!inner(id)", { count: "exact", head: true }).eq("offer.insurer_id", insurerId).eq("status", "DRAFT").then(({ count, error }) => {
         if (error) throw error;
         return count || 0;
       }),
@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
         return count || 0;
       }),
       db.from("quotes")
-        .select("id, reference, status, estimated_price, final_price, created_at, vehicle_data, offer:insurance_offers(id), user:profiles(first_name, last_name)")
+        .select("id, reference, status, estimated_price, final_price, created_at, vehicle_data, offer:insurance_offers!inner(id), user:profiles(first_name, last_name)")
         .eq("offer.insurer_id", insurerId)
         .order("created_at", { ascending: false })
         .limit(5)
