@@ -25,7 +25,7 @@ En l'état, **ne comptez pas dessus.** La vraie sauvegarde est décrite ci-desso
 1. **Backups managés Supabase** — automatiques selon le plan (quotidiens + PITR sur
    les plans supérieurs). À **activer/vérifier** dans le dashboard Supabase
    (Project → Database → Backups). C'est la première ligne.
-2. **`pg_dump` planifié sur le VPS** (`scripts/backup-db.sh`) — copie indépendante,
+2. **`pg_dump` planifié sur le VPS** (`ops/backup-db.sh`) — copie indépendante,
    hors Supabase, que vous contrôlez et pouvez restaurer ailleurs. Deuxième ligne.
 
 ## 2. Mise en place du dump planifié
@@ -36,10 +36,10 @@ Postgres (Supabase → Project Settings → Database → Connection string / URI
 ```bash
 # Test manuel
 SUPABASE_DB_URL="postgres://USER:PWD@HOST:5432/postgres" \
-  ./scripts/backup-db.sh /var/backups/noli 14
+  ./ops/backup-db.sh /var/backups/noli 14
 
 # Cron quotidien à 02:00 (crontab -e), secret hors du crontab :
-0 2 * * * SUPABASE_DB_URL="$(cat /etc/noli/db_url)" /chemin/vers/scripts/backup-db.sh /var/backups/noli 14 >> /var/log/noli-backup.log 2>&1
+0 2 * * * SUPABASE_DB_URL="$(cat /etc/noli/db_url)" /chemin/vers/ops/backup-db.sh /var/backups/noli 14 >> /var/log/noli-backup.log 2>&1
 ```
 
 - Format `-Fc` (custom) → restauration **sélective** possible via `pg_restore`.
