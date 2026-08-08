@@ -8,29 +8,35 @@ const mockNotification = {
   onclick: null as (() => void) | null,
 }
 
-// Create a mock Notification constructor
+// Create a mock Notification constructor (callable, so `new Notification()` works)
 const MockNotificationConstructor = vi.fn().mockImplementation((title, options) => ({
   ...mockNotification,
   title,
   ...options,
 }))
 
-// Create a mock object for static properties
-const MockNotification = {
-  ...MockNotificationConstructor,
+// Expose the constructor as the Notification mock and attach its static
+// members (requestPermission / permission) directly onto the callable so that
+// both `new Notification()` and `Notification.permission` behave like the DOM.
+const MockNotification: typeof MockNotificationConstructor & {
+  requestPermission: ReturnType<typeof vi.fn>
+  permission: 'default' | 'granted' | 'denied'
+} = Object.assign(MockNotificationConstructor, {
   requestPermission: vi.fn(),
   permission: 'default' as 'default' | 'granted' | 'denied',
-}
+})
 
-// Set up the Notification mock with proper static properties
+// Set up the static permission property as configurable so tests can redefine it.
 Object.defineProperty(MockNotification, 'permission', {
   value: 'default',
   writable: true,
+  configurable: true,
 })
 
 Object.defineProperty(window, 'Notification', {
   value: MockNotification,
   writable: true,
+  configurable: true,
 })
 
 // Mock navigator.serviceWorker
@@ -88,14 +94,32 @@ describe('useNotifications', () => {
     vi.clearAllMocks()
     localStorageMock.clear()
 
+    // Ensure the Notification mock is (re)installed on window before every test.
+    // Some tests intentionally remove it to simulate an unsupported environment;
+    // restoring it here guarantees a clean starting point and prevents one test's
+    // teardown from cascading failures into the next.
+    Object.defineProperty(window, 'Notification', {
+      value: MockNotification,
+      writable: true,
+      configurable: true,
+    })
+
     // Reset Notification permission
     Object.defineProperty(MockNotification, 'permission', {
       value: 'default',
       writable: true,
+      configurable: true,
     })
 
-    // Reset window.Notification mock
+    // Reset window.Notification mock. `afterEach(vi.restoreAllMocks())` strips the
+    // constructor's implementation, so re-install it here to keep `new Notification()`
+    // returning a usable instance in every test.
     MockNotificationConstructor.mockClear()
+    MockNotificationConstructor.mockImplementation((title, options) => ({
+      ...mockNotification,
+      title,
+      ...options,
+    }))
     MockNotification.requestPermission.mockClear()
   })
 
@@ -127,10 +151,9 @@ describe('useNotifications', () => {
     it('should detect when notifications are not supported', () => {
       // Arrange
       const originalNotification = window.Notification
-      Object.defineProperty(window, 'Notification', {
-        value: undefined,
-        writable: true,
-      })
+      // Simulate an environment without the Notification API: the property must
+      // be absent so `'Notification' in window` is false.
+      delete (window as { Notification?: unknown }).Notification
 
       // Act
       const { result } = renderHook(() => useNotifications())
@@ -241,10 +264,8 @@ describe('useNotifications', () => {
     it('should return false when notifications are not supported', async () => {
       // Arrange
       const originalNotification = window.Notification
-      Object.defineProperty(window, 'Notification', {
-        value: undefined,
-        writable: true,
-      })
+      // Simulate an environment without the Notification API.
+      delete (window as { Notification?: unknown }).Notification
 
       const { result } = renderHook(() => useNotifications())
 
