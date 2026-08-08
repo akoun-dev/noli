@@ -2,27 +2,22 @@ import { db, mapRow } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionProfile } from "@/lib/auth-guard";
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const sessionProfile = await getSessionProfile();
     if (!sessionProfile) {
       return NextResponse.json({ error: "Authentification requise" }, { status: 401 });
     }
-    const isAdmin = sessionProfile.role === "ADMIN";
     if (sessionProfile.role !== "INSURER") {
       return NextResponse.json({ error: "Accès réservé aux assureurs" }, { status: 403 });
     }
 
-    const userId = request.nextUrl.searchParams.get("userId");
-    const profileId = userId || sessionProfile.id;
-    if (profileId !== sessionProfile.id && !isAdmin) {
-      return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
-    }
-
+    // L'identité vient TOUJOURS de la session : un assureur ne peut consulter
+    // que son propre compte (pas de paramètre ?userId côté client).
     const { data } = await db
       .from("insurer_accounts")
       .select("insurer:insurers(*)")
-      .eq("profile_id", profileId)
+      .eq("profile_id", sessionProfile.id)
       .maybeSingle();
     const account = mapRow(data);
 
