@@ -18,6 +18,7 @@ import { ArrowRight, ArrowLeft, AlertTriangle, Shield, MessageCircle, Download, 
 import { cn } from '@/lib/utils'
 import { useNavigate } from 'react-router-dom'
 import SimplifiedCoverageSelector from '@/components/coverage/SimplifiedCoverageSelector'
+import type { QuoteData } from '@/features/quotes/services/pdfService'
 import {
   coverageTarificationService,
   type VehicleData,
@@ -75,17 +76,62 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
   const handleDownloadPDF = async () => {
     setIsGeneratingQuote(true)
     try {
-      // TODO: Implémenter la génération PDF avec pdfService
       const { pdfService } = await import('@/features/quotes/services/pdfService')
 
-      const quoteData = {
+      // Construction d'un QuoteData complet à partir des données réellement
+      // disponibles dans le formulaire de comparaison. Les champs absents du
+      // modèle (adresse, dates de naissance/permis, immatriculation, marque,
+      // modèle, assureur, franchise, kilométrage, etc.) sont remplis avec des
+      // valeurs de repli sûres.
+      // TODO(product): enrichir le formulaire (ou une requête dédiée) si le PDF
+      // doit afficher les informations conducteur/véhicule/assureur complètes.
+      const fullName = `${formData.personalInfo?.firstName ?? ''} ${
+        formData.personalInfo?.lastName ?? ''
+      }`.trim()
+      const currentValueNumber = Number(formData.vehicleInfo?.currentValue)
+      const selectedCoverageIds = Object.entries(selectedCoverages)
+        .filter(([, isSelected]) => isSelected)
+        .map(([coverageId]) => coverageId)
+
+      const quoteData: QuoteData = {
         id: tempQuoteId || `temp_${Date.now()}`,
-        vehicleInfo: formData.vehicleInfo,
-        coverages: selectedCoverages,
-        premiumBreakdown,
-        totalPremium: adjustedPremium,
-        contractDuration,
-        createdAt: new Date()
+        createdAt: new Date(),
+        customerInfo: {
+          fullName,
+          email: formData.personalInfo?.email ?? user?.email ?? '',
+          phone: formData.personalInfo?.phone ?? '',
+          address: '',
+          birthDate: new Date(),
+          licenseNumber: '',
+          licenseDate: new Date(),
+        },
+        vehicleInfo: {
+          brand: vehicleBrand,
+          model: vehicleModel,
+          year: typeof vehicleYear === 'number' ? vehicleYear : 0,
+          registrationNumber: '',
+          vehicleType: formData.vehicleInfo?.vehicleUsage ?? '',
+          fuelType: formData.vehicleInfo?.fuel ?? '',
+          value: Number.isFinite(currentValueNumber) ? currentValueNumber : 0,
+        },
+        insuranceInfo: {
+          insurer: 'NOLI Assurance',
+          offerName: formData.insuranceNeeds?.coverageType ?? '',
+          coverageType: formData.insuranceNeeds?.coverageType ?? '',
+          price: {
+            monthly: monthlyPremium,
+            annual: adjustedPremium,
+          },
+          franchise: 0,
+          features: selectedCoverageIds,
+          guarantees: selectedCoverages,
+        },
+        personalInfo: {
+          usage: formData.vehicleInfo?.vehicleUsage ?? '',
+          annualKilometers: 0,
+          parkingType: '',
+          historyClaims: '',
+        },
       }
 
       await pdfService.generateQuotePDF(quoteData)
@@ -100,7 +146,7 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
   // Fonction pour partager par WhatsApp
   const handleShareWhatsApp = () => {
     const message = `🚗 *Devis NOLI Assurance*\n\n` +
-      `*Véhicule*: ${formData.vehicleInfo?.brand || ''} ${formData.vehicleInfo?.model || ''} (${formData.vehicleInfo?.year || ''})\n` +
+      `*Véhicule*: ${vehicleBrand} ${vehicleModel} (${vehicleYear})\n` +
       `*Total*: ${adjustedPremium.toLocaleString('fr-FR')} FCFA\n` +
       `*Mensuel*: ${monthlyPremium.toLocaleString('fr-FR')} FCFA\n` +
       `*Garanties*: ${Object.entries(selectedCoverages).filter(([_, isSelected]) => isSelected).length} sélectionnée(s)\n\n` +
@@ -118,7 +164,7 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
     const body = encodeURIComponent(
       `Bonjour,\n\n` +
       `Je souhaite recevoir un devis pour l'assurance de mon véhicule :\n\n` +
-      `Véhicule: ${formData.vehicleInfo?.brand || ''} ${formData.vehicleInfo?.model || ''} (${formData.vehicleInfo?.year || ''})\n` +
+      `Véhicule: ${vehicleBrand} ${vehicleModel} (${vehicleYear})\n` +
       `Total: ${adjustedPremium.toLocaleString('fr-FR')} FCFA\n` +
       `Mensuel: ${monthlyPremium.toLocaleString('fr-FR')} FCFA\n` +
       `Garanties: ${Object.entries(selectedCoverages).filter(([_, isSelected]) => isSelected).length} sélectionnée(s)\n\n` +
@@ -170,6 +216,17 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
   const monthlyPremium = durationConfig.months > 0
     ? Math.round((adjustedPremium || 0) / durationConfig.months)
     : adjustedPremium
+
+  // Le modèle VehicleInfo (Step2) ne contient pas brand/model/year. L'année est
+  // dérivée de la date de mise en circulation (champ équivalent existant) ; la
+  // marque et le modèle n'ont pas d'équivalent et restent vides (repli sûr).
+  // TODO(product): ajouter brand/model (et éventuellement year) au modèle
+  // VehicleInfo si l'affichage de la marque/modèle du véhicule est requis.
+  const vehicleBrand = ''
+  const vehicleModel = ''
+  const vehicleYear = formData.vehicleInfo?.circulationDate
+    ? new Date(formData.vehicleInfo.circulationDate).getFullYear()
+    : ''
 
   const findCoverageDetails = (coverageId: string) => {
     // D'abord essayer dans availableCoverages
@@ -630,7 +687,7 @@ const Step3Needs: React.FC<Step3NeedsProps> = ({ onBack }: Step3NeedsProps) => {
              <div className="space-y-2">
                <h4 className="text-sm font-semibold text-gray-700">Véhicule assuré</h4>
                <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded">
-                 {formData.vehicleInfo?.brand || ''} {formData.vehicleInfo?.model || ''} ({formData.vehicleInfo?.year || ''})
+                 {vehicleBrand} {vehicleModel} ({vehicleYear})
                </div>
              </div>
 
