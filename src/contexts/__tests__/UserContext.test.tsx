@@ -1,6 +1,8 @@
 import { render, renderHook, act, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import React, { ReactNode } from 'react'
+import { MemoryRouter } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { UserProvider, useUser } from '../UserContext'
 import { AuthProvider } from '../AuthContext'
 import { User } from '@/types'
@@ -22,16 +24,31 @@ const mockUser: User = {
 }
 
 // Test wrapper components
+// A fresh QueryClient per wrapper instance keeps tests isolated. Retries are
+// disabled so failed queries surface immediately instead of hanging.
+const makeQueryClient = () =>
+  new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  })
+
 const AuthenticatedWrapper: React.FC<{ children: ReactNode }> = ({ children }) => (
-  <AuthProvider>
-    <UserProvider>{children}</UserProvider>
-  </AuthProvider>
+  <MemoryRouter>
+    <QueryClientProvider client={makeQueryClient()}>
+      <AuthProvider>
+        <UserProvider>{children}</UserProvider>
+      </AuthProvider>
+    </QueryClientProvider>
+  </MemoryRouter>
 )
 
 const UnauthenticatedWrapper: React.FC<{ children: ReactNode }> = ({ children }) => (
-  <AuthProvider>
-    <UserProvider>{children}</UserProvider>
-  </AuthProvider>
+  <MemoryRouter>
+    <QueryClientProvider client={makeQueryClient()}>
+      <AuthProvider>
+        <UserProvider>{children}</UserProvider>
+      </AuthProvider>
+    </QueryClientProvider>
+  </MemoryRouter>
 )
 
 // Mock useAuth to control authentication state
@@ -469,7 +486,23 @@ describe('UserContext', () => {
     })
 
     it('should provide context to children', async () => {
-      // Arrange
+      // Arrange - an authenticated user so the provider fetches a profile.
+      mockUseAuth.mockReturnValue({
+        user: mockUser,
+        isAuthenticated: true,
+        isLoading: false,
+        permissions: ['read:quotes'],
+        login: vi.fn(),
+        register: vi.fn(),
+        logout: vi.fn(),
+        updateUser: vi.fn(),
+        refreshToken: vi.fn(),
+        hasPermission: vi.fn(),
+        forgotPassword: vi.fn(),
+        resetPassword: vi.fn(),
+        loginWithOAuth: vi.fn(),
+      })
+
       const TestComponent = () => {
         const user = useUser()
         return <div>{user.profile ? 'Profile Loaded' : 'No Profile'}</div>
@@ -497,9 +530,13 @@ describe('UserContext', () => {
         setAuthState = setIsAuthenticated
 
         return (
-          <AuthProvider>
-            <UserProvider>{children}</UserProvider>
-          </AuthProvider>
+          <MemoryRouter>
+            <QueryClientProvider client={makeQueryClient()}>
+              <AuthProvider>
+                <UserProvider>{children}</UserProvider>
+              </AuthProvider>
+            </QueryClientProvider>
+          </MemoryRouter>
         )
       }
 
