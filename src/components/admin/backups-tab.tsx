@@ -83,6 +83,10 @@ export function BackupsTab() {
       if (res.ok) {
         const data = await res.json();
         setBackups(data.backups || []);
+        // Réhydrate la planification enregistrée (sinon config en écriture seule).
+        if (data.schedule && typeof data.schedule === "object") {
+          setSchedule((s) => ({ ...s, ...data.schedule }));
+        }
       }
     } catch {
       // silent

@@ -57,9 +57,11 @@ export function InsurerSettingsTab() {
           );
         }
         if (profileData.email) setProfileEmail(profileData.email);
-        if (profileData.phone) setCompanyPhone(profileData.phone);
         if (insurerData.name) setCompanyName(insurerData.name);
         if (insurerData.contactEmail) setCompanyEmail(insurerData.contactEmail);
+        // Le téléphone du bloc « entreprise » provient de l'assureur (insurers.phone),
+        // pas du profil utilisateur — c'est bien insurers.phone qui est enregistré au PUT.
+        if (insurerData.phone) setCompanyPhone(insurerData.phone);
         if (insurerData.logoUrl) setLogoUrl(insurerData.logoUrl);
       })
       .finally(() => setLoading(false));

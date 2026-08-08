@@ -18,6 +18,7 @@ export interface FiltersSidebarProps {
   budgetMax: number;
   setBudgetMax: (v: number) => void;
   effectiveBudgetMax: number;
+  priceMode: "annual" | "monthly";
   onReset: () => void;
   totalOffers: number;
 }
@@ -31,6 +32,7 @@ function FiltersSidebarComponent({
   budgetMax,
   setBudgetMax,
   effectiveBudgetMax,
+  priceMode,
   onReset,
   totalOffers,
   onToggleAllInsurers,
@@ -127,10 +129,10 @@ function FiltersSidebarComponent({
 
       <Separator />
 
-      {/* Budget mensuel */}
+      {/* Budget (selon le mode de prix affiché) */}
       <div>
         <h3 className="text-sm font-semibold mb-3 text-foreground">
-          Budget mensuel
+          {priceMode === "monthly" ? "Budget mensuel" : "Budget annuel"}
         </h3>
         <div className="space-y-3">
           <div className="flex items-center justify-between text-xs text-muted-foreground">

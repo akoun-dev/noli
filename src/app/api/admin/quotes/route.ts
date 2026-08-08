@@ -22,6 +22,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = request.nextUrl;
     const status = searchParams.get("status");
+    const offerId = searchParams.get("offerId");
     const search = searchParams.get("search") || "";
     const paginate = hasPaginationParams(searchParams);
     const { page, limit, offset } = getPagination(searchParams);
@@ -37,6 +38,12 @@ export async function GET(request: NextRequest) {
 
     if (status) {
       query = query.eq("status", status);
+    }
+
+    // Filtre par offre (utilisé notamment par le détail d'une offre côté admin
+    // pour compter/lister uniquement les devis liés à cette offre).
+    if (offerId) {
+      query = query.eq("offer_id", offerId);
     }
 
     // Recherche poussée en SQL : PostgREST ne permet pas de filtrer sur une

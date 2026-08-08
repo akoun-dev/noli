@@ -22,6 +22,8 @@ export const vehicleInfoSchema = z.object({
   newValue: z.string().min(1, "Requis"),
   currentValue: z.string().min(1, "Requis"),
   usage: z.string().min(1, "Requis"),
+  // Conservée pour ne pas être retirée par Zod (le devis auto-enregistré en a besoin).
+  effectiveDate: z.string().optional(),
 });
 
 export const coverageNeedsSchema = z.object({
