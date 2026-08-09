@@ -29,6 +29,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { USAGE_OPTIONS } from "@/lib/constants";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
+import { fetchWithTimeout, networkErrorMessage } from "@/lib/fetch-with-timeout";
 
 // ─── Contract type configuration ───────────────────────────────────
 const CONTRACT_TYPES: {
@@ -104,6 +105,57 @@ const TRUST_INDICATORS = [
   { icon: Check, text: "Sans engagement" },
 ];
 
+// ─── LOT F : mise au focus du premier champ en erreur ──────────────
+// La clé de validation ne correspond pas toujours à l'id DOM du champ
+// (ex. « year » → input #circulationDate). Cette table fait le pont.
+const FIELD_DOM_ID: Record<string, string> = {
+  lastName: "lastName",
+  firstName: "firstName",
+  email: "email",
+  phone: "phone",
+  fuelType: "fuelType",
+  fiscalPower: "fiscalPower",
+  seats: "seats",
+  year: "circulationDate",
+  newValue: "newValue",
+  currentValue: "currentValue",
+  usage: "usage",
+  effectiveDate: "effectiveDate",
+  contractType: "contractType-group",
+};
+
+// Ordre visuel des champs par étape, pour cibler le PREMIER champ en erreur.
+const STEP_FIELD_ORDER: Record<number, string[]> = {
+  1: ["lastName", "firstName", "email", "phone"],
+  2: ["fuelType", "fiscalPower", "seats", "year", "newValue", "currentValue", "usage", "effectiveDate"],
+  3: ["contractType"],
+};
+
+function focusFirstError(step: number, errs: Record<string, string>) {
+  const order = STEP_FIELD_ORDER[step] || [];
+  const firstKey = order.find((k) => errs[k]);
+  if (!firstKey) return;
+  const domId = FIELD_DOM_ID[firstKey] || firstKey;
+  // rAF : laisser React committer l'étape/les bordures d'erreur avant de
+  // faire défiler et focus (le champ était masqué sous le header sticky).
+  requestAnimationFrame(() => {
+    const el = document.getElementById(domId);
+    if (!el) return;
+    el.scrollIntoView({ block: "center", behavior: "smooth" });
+    (el as HTMLElement).focus({ preventScroll: true });
+  });
+}
+
+// Sépare un montant en milliers par des espaces insécables fins visuels
+// (espaces ordinaires) : « 15000000 » → « 15 000 000 ». La valeur stockée
+// reste en chiffres bruts ; le serveur (parseFCFA) tolère de toute façon les
+// espaces.
+function formatThousands(raw: string): string {
+  const digits = raw.replace(/\D/g, "");
+  if (!digits) return "";
+  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+}
+
 // ─── Types ────────────────────────────────────────────────────────
 export function ComparisonForm() {
   const {
@@ -115,6 +167,8 @@ export function ComparisonForm() {
     isComparing, user,
   } = useAppStore();
   const [errors, setErrors] = useState<Record<string, string>>({});
+  // LOT E : erreur réseau persistante (inline) à la soumission de la comparaison.
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const goNext = useCallback(() => {
     if (comparisonStep < 3) {
@@ -129,52 +183,62 @@ export function ComparisonForm() {
     setErrors({});
   }, [comparisonStep, setComparisonStep, setView]);
 
-  // ─── Validation ─────────────────────────────────────────────────
-  const validateStep1 = (): boolean => {
+  // ─── Validation (renvoie la table d'erreurs ; vide = valide) ─────
+  const validateStep1 = (): Record<string, string> => {
     const e: Record<string, string> = {};
-    if (!personalInfo.lastName.trim()) e.lastName = "Le nom est requis";
-    if (!personalInfo.firstName.trim()) e.firstName = "Le prénom est requis";
-    if (!personalInfo.email.trim()) e.email = "L'email est requis";
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(personalInfo.email))
-      e.email = "Email invalide";
-    if (!personalInfo.phone.trim()) e.phone = "Le téléphone est requis";
+    if (!personalInfo.lastName.trim()) e.lastName = "Veuillez saisir votre nom";
+    if (!personalInfo.firstName.trim()) e.firstName = "Veuillez saisir votre prénom";
+    if (!personalInfo.email.trim()) e.email = "Veuillez saisir votre email";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(personalInfo.email.trim()))
+      e.email = "Adresse email invalide (ex. nom@domaine.com)";
+    // Téléphone ivoirien : normaliser (+225 / espaces retirés), exiger 10 chiffres.
+    const phoneDigits = personalInfo.phone.replace(/\D/g, "").replace(/^225/, "");
+    if (!personalInfo.phone.trim()) e.phone = "Veuillez saisir votre numéro de téléphone";
+    else if (phoneDigits.length !== 10)
+      e.phone = "Numéro ivoirien attendu : 10 chiffres (ex. 07 XX XX XX XX)";
+    else if (phoneDigits !== personalInfo.phone) {
+      // Normalise l'affichage sur les 10 chiffres locaux.
+      setPersonalInfo({ phone: phoneDigits });
+    }
     setErrors(e);
-    return Object.keys(e).length === 0;
+    return e;
   };
 
-  const validateStep2 = (): boolean => {
+  const validateStep2 = (): Record<string, string> => {
     const e: Record<string, string> = {};
-    if (!vehicleInfo.fuelType) e.fuelType = "Requis";
-    if (!vehicleInfo.fiscalPower) e.fiscalPower = "Requis";
-    if (!vehicleInfo.seats) e.seats = "Requis";
-    if (!vehicleInfo.year) e.year = "Requis";
-    if (!vehicleInfo.newValue.trim()) e.newValue = "Requis";
-    if (!vehicleInfo.currentValue.trim()) e.currentValue = "Requis";
-    if (!vehicleInfo.usage) e.usage = "Requis";
-    if (!vehicleInfo.effectiveDate?.trim()) e.effectiveDate = "Requis";
+    if (!vehicleInfo.fuelType) e.fuelType = "Sélectionnez le carburant";
+    if (!vehicleInfo.fiscalPower) e.fiscalPower = "Sélectionnez la puissance fiscale";
+    if (!vehicleInfo.seats) e.seats = "Sélectionnez le nombre de places";
+    if (!vehicleInfo.year) e.year = "Indiquez l'année de mise en circulation";
+    if (!vehicleInfo.newValue.trim()) e.newValue = "Indiquez la valeur neuve (en FCFA)";
+    if (!vehicleInfo.currentValue.trim()) e.currentValue = "Indiquez la valeur actuelle (en FCFA)";
+    if (!vehicleInfo.usage) e.usage = "Sélectionnez l'usage du véhicule";
+    if (!vehicleInfo.effectiveDate?.trim()) e.effectiveDate = "Choisissez la date d'effet souhaitée";
     setErrors(e);
-    return Object.keys(e).length === 0;
+    return e;
   };
 
-  const validateStep3 = (): boolean => {
+  const validateStep3 = (): Record<string, string> => {
     const e: Record<string, string> = {};
     if (!coverageNeeds.contractType)
       e.contractType = "Sélectionnez un type de contrat";
     setErrors(e);
-    return Object.keys(e).length === 0;
+    return e;
   };
 
   // ─── Submit ─────────────────────────────────────────────────────
   const handleSubmit = async () => {
-    const step1Ok = validateStep1();
-    const step2Ok = step1Ok && validateStep2();
-    const step3Ok = step2Ok && validateStep3();
-    if (!step1Ok) { setComparisonStep(1); return; }
-    if (!step2Ok) { setComparisonStep(2); return; }
-    if (!step3Ok) { setComparisonStep(3); return; }
+    const e1 = validateStep1();
+    if (Object.keys(e1).length) { setComparisonStep(1); focusFirstError(1, e1); return; }
+    const e2 = validateStep2();
+    if (Object.keys(e2).length) { setComparisonStep(2); focusFirstError(2, e2); return; }
+    const e3 = validateStep3();
+    if (Object.keys(e3).length) { setComparisonStep(3); focusFirstError(3, e3); return; }
+    setSubmitError(null);
     setIsComparing(true);
     try {
-      const res = await fetch("/api/compare", {
+      // LOT E : timeout 12 s + erreur inline persistante si le backend ne répond pas.
+      const res = await fetchWithTimeout("/api/compare", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -185,13 +249,15 @@ export function ComparisonForm() {
       if (!res.ok) {
         const errBody = await res.text();
         console.error("[compare-form] Error body:", errBody);
-        throw new Error("Erreur lors de la comparaison");
+        throw new Error("La comparaison a échoué côté serveur. Réessayez.");
       }
       const data = await res.json();
       setComparisonResults(data.results ?? []);
       setView("results");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Veuillez réessayer.");
+      const msg = networkErrorMessage(err);
+      setSubmitError(msg);
+      toast.error(msg);
     } finally {
       setIsComparing(false);
     }
@@ -292,8 +358,14 @@ export function ComparisonForm() {
           {comparisonStep < 3 ? (
             <Button
               onClick={() => {
-                if (comparisonStep === 1 && !validateStep1()) return;
-                if (comparisonStep === 2 && !validateStep2()) return;
+                if (comparisonStep === 1) {
+                  const e = validateStep1();
+                  if (Object.keys(e).length) { focusFirstError(1, e); return; }
+                }
+                if (comparisonStep === 2) {
+                  const e = validateStep2();
+                  if (Object.keys(e).length) { focusFirstError(2, e); return; }
+                }
                 goNext();
               }}
               className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full px-4 sm:px-6"
@@ -317,6 +389,25 @@ export function ComparisonForm() {
             </Button>
           )}
         </div>
+
+        {/* LOT E : erreur réseau persistante (inline) + bouton Réessayer */}
+        {submitError && (
+          <div
+            role="alert"
+            className="mt-4 rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-center"
+          >
+            <p className="text-sm font-medium text-destructive">{submitError}</p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-2 rounded-full"
+              onClick={handleSubmit}
+              disabled={isComparing}
+            >
+              Réessayer
+            </Button>
+          </div>
+        )}
 
         {/* Trust indicators */}
         <div className="flex flex-wrap items-center justify-center gap-4 pt-2 text-xs text-muted-foreground">
@@ -470,7 +561,7 @@ function Step2({
           value={vehicleInfo.fuelType}
           onValueChange={(v) => setVehicleInfo({ fuelType: v })}
         >
-          <SelectTrigger className={`w-full ${errors.fuelType ? "border-destructive" : ""}`}>
+          <SelectTrigger id="fuelType" aria-invalid={!!errors.fuelType} className={`w-full ${errors.fuelType ? "border-destructive" : ""}`}>
             <SelectValue placeholder="Sélectionnez le type de carburant" />
           </SelectTrigger>
           <SelectContent>
@@ -491,7 +582,7 @@ function Step2({
           value={vehicleInfo.fiscalPower}
           onValueChange={(v) => setVehicleInfo({ fiscalPower: v })}
         >
-          <SelectTrigger className={`w-full ${errors.fiscalPower ? "border-destructive" : ""}`}>
+          <SelectTrigger id="fiscalPower" aria-invalid={!!errors.fiscalPower} className={`w-full ${errors.fiscalPower ? "border-destructive" : ""}`}>
             <SelectValue placeholder="Sélectionnez la puissance fiscale" />
           </SelectTrigger>
           <SelectContent>
@@ -512,7 +603,7 @@ function Step2({
           value={vehicleInfo.seats}
           onValueChange={(v) => setVehicleInfo({ seats: v })}
         >
-          <SelectTrigger className={`w-full ${errors.seats ? "border-destructive" : ""}`}>
+          <SelectTrigger id="seats" aria-invalid={!!errors.seats} className={`w-full ${errors.seats ? "border-destructive" : ""}`}>
             <SelectValue placeholder="Sélectionnez le nombre de places" />
           </SelectTrigger>
           <SelectContent>
@@ -548,10 +639,11 @@ function Step2({
           <div className="relative">
             <Input
               id="newValue"
-              type="number"
+              type="text"
+              inputMode="numeric"
               placeholder="15 000 000"
-              value={vehicleInfo.newValue}
-              onChange={(e) => setVehicleInfo({ newValue: e.target.value })}
+              value={formatThousands(vehicleInfo.newValue)}
+              onChange={(e) => setVehicleInfo({ newValue: e.target.value.replace(/\D/g, "") })}
               aria-invalid={!!errors.newValue}
               className="w-full pr-16"
             />
@@ -567,10 +659,11 @@ function Step2({
           <div className="relative">
             <Input
               id="currentValue"
-              type="number"
+              type="text"
+              inputMode="numeric"
               placeholder="10 000 000"
-              value={vehicleInfo.currentValue}
-              onChange={(e) => setVehicleInfo({ currentValue: e.target.value })}
+              value={formatThousands(vehicleInfo.currentValue)}
+              onChange={(e) => setVehicleInfo({ currentValue: e.target.value.replace(/\D/g, "") })}
               aria-invalid={!!errors.currentValue}
               className="w-full pr-16"
             />
@@ -589,7 +682,7 @@ function Step2({
           value={vehicleInfo.usage}
           onValueChange={(v) => setVehicleInfo({ usage: v })}
         >
-          <SelectTrigger className={`w-full ${errors.usage ? "border-destructive" : ""}`}>
+          <SelectTrigger id="usage" aria-invalid={!!errors.usage} className={`w-full ${errors.usage ? "border-destructive" : ""}`}>
             <SelectValue placeholder="Sélectionnez l'usage du véhicule" />
           </SelectTrigger>
           <SelectContent>
@@ -633,11 +726,19 @@ function Step2({
           value={vehicleInfo.effectiveDate || ""}
           onChange={(e) => setVehicleInfo({ effectiveDate: e.target.value })}
           min={new Date().toISOString().slice(0, 10)}
+          aria-invalid={!!errors.effectiveDate}
+          aria-describedby={
+            errors.effectiveDate ? "effectiveDate-error" : "effectiveDate-help"
+          }
         />
-        <p className="text-xs text-muted-foreground">
+        <p id="effectiveDate-help" className="text-xs text-muted-foreground">
           À partir de cette date, votre couverture sera effective
         </p>
-        <FieldError field="effectiveDate" />
+        {errors.effectiveDate && (
+          <p id="effectiveDate-error" className="mt-1 text-xs text-destructive">
+            {errors.effectiveDate}
+          </p>
+        )}
       </div>
     </div>
   );
@@ -665,7 +766,13 @@ function Step3({
       </div>
 
       {error && (
-        <p className="text-sm text-destructive">{error}</p>
+        <p
+          id="contractType-group"
+          tabIndex={-1}
+          className="text-sm text-destructive outline-none"
+        >
+          {error}
+        </p>
       )}
 
       <div className="grid grid-cols-1 gap-4">
