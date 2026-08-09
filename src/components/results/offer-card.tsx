@@ -114,7 +114,7 @@ function OfferCardComponent({
                     key={idx}
                     className="flex items-start gap-2 text-sm"
                   >
-                    <CheckCircle2 className="size-4 text-green-600 mt-0.5 shrink-0" />
+                    <CheckCircle2 className="size-4 text-success mt-0.5 shrink-0" />
                     <span className="text-foreground/90 flex-1 min-w-0">
                       {feature}
                     </span>
@@ -122,7 +122,7 @@ function OfferCardComponent({
                       <span
                         className={`text-xs font-semibold shrink-0 tabular-nums mt-0.5 ${
                           pricing.amount === 0
-                            ? "text-green-600"
+                            ? "text-success"
                             : "text-foreground"
                         }`}
                       >
@@ -353,7 +353,7 @@ function OfferCardComponent({
                         key={idx}
                         className="flex items-start gap-2 text-sm"
                       >
-                        <CheckCircle2 className="size-4 text-green-600 mt-0.5 shrink-0" />
+                        <CheckCircle2 className="size-4 text-success mt-0.5 shrink-0" />
                         <span className="text-foreground/90 flex-1 min-w-0">
                           {resolvedName}
                         </span>
@@ -361,7 +361,7 @@ function OfferCardComponent({
                           <span
                             className={`text-xs font-semibold shrink-0 tabular-nums mt-0.5 ${
                               pricing.amount === 0
-                                ? "text-green-600"
+                                ? "text-success"
                                 : "text-foreground"
                             }`}
                           >

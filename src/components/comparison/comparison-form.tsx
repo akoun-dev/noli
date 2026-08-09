@@ -225,7 +225,7 @@ export function ComparisonForm() {
                     ? "text-primary"
                     : step.id < comparisonStep
                     ? "text-muted-foreground hover:text-foreground cursor-pointer"
-                    : "text-muted-foreground/50"
+                    : "text-muted-foreground"
                 }`}
               >
                 <span
@@ -234,7 +234,7 @@ export function ComparisonForm() {
                       ? "bg-primary text-primary-foreground"
                       : step.id === comparisonStep
                       ? "bg-primary/10 text-primary border-2 border-primary"
-                      : "bg-muted text-muted-foreground"
+                      : "bg-muted text-foreground"
                   }`}
                 >
                   {step.id < comparisonStep ? (
