@@ -64,9 +64,9 @@
   --muted-foreground: #36636D;
   --accent: #DEEF4A;
   --accent-foreground: #171817;
-  --destructive: #E85544;
+  --destructive: #C93A2A; /* WCAG: 3.61:1 -> ~5:1 sur blanc (texte d'erreur) */
   --border: #A0B6AC;
-  --input: #A0B6AC;
+  --input: #6E8A7E; /* WCAG: 2.15:1 -> >=3:1 sur blanc (bordures de champs) */
   --ring: #DEEF4A;
   --chart-1: #1B464D;
   --chart-2: #23847E;

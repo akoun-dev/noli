@@ -287,7 +287,7 @@ export function LandingPage() {
             <h2 className="font-[family-name:var(--font-space-grotesk)] text-3xl sm:text-4xl font-bold text-primary-foreground">
               Pourquoi choisir NOLI ?
             </h2>
-            <p className="mt-3 text-primary-foreground/60 max-w-xl mx-auto">
+            <p className="mt-3 text-primary-foreground/80 max-w-xl mx-auto">
               Une plateforme pensée pour les Ivoiriens, avec des avantages concrets.
             </p>
           </div>
@@ -307,7 +307,7 @@ export function LandingPage() {
                   <h3 className="text-lg font-semibold text-primary-foreground mb-2">
                     {adv.title}
                   </h3>
-                  <p className="text-sm text-primary-foreground/60 leading-relaxed">
+                  <p className="text-sm text-primary-foreground/80 leading-relaxed">
                     {adv.desc}
                   </p>
                 </div>
