@@ -1,13 +1,22 @@
 "use client"
 
 import { useMemo, useState, useCallback, useEffect } from "react"
-import { ArrowLeft, Filter, ChevronDown, SearchX, RotateCcw } from "lucide-react"
+import { ArrowLeft, Filter, ChevronDown, SearchX, RotateCcw, Check, Copy, UserPlus } from "lucide-react"
 import { useAppStore } from "@/store/app-store"
 import type { InsurerOffer } from "@/types"
 import { MAX_COMPARE, BUDGET_MAX, BUDGET_STEP } from "@/lib/constants"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
+import { fetchWithTimeout, networkErrorMessage } from "@/lib/fetch-with-timeout"
+import { formatFCFA } from "@/lib/utils"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog"
 import { OfferCard } from "./offer-card"
 import { FiltersSidebar } from "./filters-sidebar"
 import { ComparisonBar } from "./comparison-bar"
@@ -33,8 +42,30 @@ export function ResultsPage() {
     setOffersToCompare,
     comparisonModalOpen,
     setComparisonModalOpen,
+    user,
   } = useAppStore()
   const { toast } = useToast()
+
+  /* ── LOT D : panneau de confirmation de devis (remplace le toast éphémère) ── */
+  type ConfirmedQuote = {
+    reference: string
+    estimatedPrice: number | null
+    insurerName: string
+    offerName: string | null
+    email: string
+  }
+  const [confirmedQuote, setConfirmedQuote] = useState<ConfirmedQuote | null>(null)
+  const [refCopied, setRefCopied] = useState(false)
+
+  const copyReference = useCallback(async (reference: string) => {
+    try {
+      await navigator.clipboard.writeText(reference)
+      setRefCopied(true)
+      setTimeout(() => setRefCopied(false), 2000)
+    } catch {
+      /* presse-papiers indisponible : l'utilisateur peut copier manuellement */
+    }
+  }, [])
 
   /* ── derived data ── */
   const [priceMode, setPriceMode] = useState<"annual" | "monthly">("annual")
@@ -194,7 +225,8 @@ export function ResultsPage() {
   const handleRequestQuote = async (offer: InsurerOffer) => {
     setQuoteLoading(offer.id)
     try {
-      const res = await fetch("/api/user/quotes", {
+      // LOT E : timeout 12 s pour éviter une attente muette si le backend ne répond pas.
+      const res = await fetchWithTimeout("/api/user/quotes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -242,18 +274,19 @@ export function ResultsPage() {
       }
       setUserQuotes([quote, ...userQuotes])
 
-      toast({
-        title: "✅ Devis enregistré",
-        description: `Votre devis ${data.quote.reference} a été créé. Un email de confirmation vous sera envoyé.`,
+      // LOT D : confirmation persistante à l'écran (plus un simple toast).
+      setConfirmedQuote({
+        reference: data.quote.reference,
+        estimatedPrice: data.quote.estimatedPrice ?? null,
+        insurerName: offer.insurerName,
+        offerName: offer.name,
+        email: personalInfo.email,
       })
     } catch (err) {
       console.error("[quote] Erreur:", err)
       toast({
         title: "Erreur",
-        description:
-          err instanceof Error
-            ? err.message
-            : "Impossible de créer le devis. Veuillez réessayer.",
+        description: networkErrorMessage(err),
         variant: "destructive",
       })
     } finally {
@@ -529,6 +562,106 @@ export function ResultsPage() {
 
           {/* Callback modal */}
           {callbackModal}
+
+          {/* ── LOT D : confirmation de devis persistante ── */}
+          <Dialog
+            open={!!confirmedQuote}
+            onOpenChange={(open) => { if (!open) setConfirmedQuote(null) }}
+          >
+            <DialogContent className="sm:max-w-md">
+              {confirmedQuote && (
+                <>
+                  <DialogHeader>
+                    <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                      <Check className="h-6 w-6 text-primary" />
+                    </div>
+                    <DialogTitle className="text-center">Devis enregistré</DialogTitle>
+                    <DialogDescription className="text-center">
+                      Conservez votre référence. Un email de confirmation vous sera envoyé.
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  {/* Référence copiable */}
+                  <div className="rounded-lg border border-border bg-muted/30 p-3">
+                    <p className="text-xs text-muted-foreground mb-1">Votre référence</p>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-mono text-base font-bold text-foreground truncate">
+                        {confirmedQuote.reference}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="shrink-0 rounded-full"
+                        onClick={() => copyReference(confirmedQuote.reference)}
+                        aria-label="Copier la référence du devis"
+                      >
+                        {refCopied ? (
+                          <>
+                            <Check className="h-3.5 w-3.5 mr-1" />
+                            Copié
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-3.5 w-3.5 mr-1" />
+                            Copier
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Récapitulatif */}
+                  <dl className="space-y-1.5 text-sm">
+                    <div className="flex items-center justify-between gap-3">
+                      <dt className="text-muted-foreground">Assureur</dt>
+                      <dd className="font-medium text-foreground text-right">{confirmedQuote.insurerName}</dd>
+                    </div>
+                    {confirmedQuote.offerName && (
+                      <div className="flex items-center justify-between gap-3">
+                        <dt className="text-muted-foreground">Formule</dt>
+                        <dd className="font-medium text-foreground text-right">{confirmedQuote.offerName}</dd>
+                      </div>
+                    )}
+                    {confirmedQuote.estimatedPrice != null && (
+                      <div className="flex items-center justify-between gap-3">
+                        <dt className="text-muted-foreground">Estimation mensuelle</dt>
+                        <dd className="font-semibold text-primary text-right">
+                          {formatFCFA(confirmedQuote.estimatedPrice)}
+                        </dd>
+                      </div>
+                    )}
+                  </dl>
+
+                  {/* CTA selon l'état de connexion */}
+                  <div className="flex flex-col gap-2 pt-1">
+                    {user.isLoggedIn ? (
+                      <Button
+                        className="w-full rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
+                        onClick={() => { setConfirmedQuote(null); setView("user-dashboard") }}
+                      >
+                        Voir mes devis
+                      </Button>
+                    ) : (
+                      <Button
+                        className="w-full rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
+                        onClick={() => { setConfirmedQuote(null); setView("register") }}
+                      >
+                        <UserPlus className="h-4 w-4 mr-1.5" />
+                        Créer mon compte pour suivre ce devis
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      className="w-full rounded-full"
+                      onClick={() => setConfirmedQuote(null)}
+                    >
+                      Continuer à comparer
+                    </Button>
+                  </div>
+                </>
+              )}
+            </DialogContent>
+          </Dialog>
         </section>
       </div>
     </div>

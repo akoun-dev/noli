@@ -22,6 +22,19 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import { fetchWithTimeout, networkErrorMessage } from "@/lib/fetch-with-timeout";
+
+/* ── Réconciliation des devis anonymes après authentification (LOT D) ── */
+// Rattache au compte fraîchement authentifié les devis créés en anonyme avec
+// la même adresse email. Non bloquant : une erreur ne doit pas empêcher la
+// connexion/inscription d'aboutir.
+async function reconcileAnonymousQuotes() {
+  try {
+    await fetchWithTimeout("/api/user/quotes/reconcile", { method: "POST" });
+  } catch (err) {
+    console.error("[auth] Réconciliation des devis anonymes impossible:", err);
+  }
+}
 
 /* ── Type partagé : contexte d'affichage ─────────────────────────── */
 
@@ -105,6 +118,8 @@ export function LoginForm({ mode }: { mode: AuthFormMode }) {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  // LOT E : erreur de connexion persistante (inline) + bouton « Réessayer ».
+  const [formError, setFormError] = useState<string | null>(null);
 
   const validate = () => {
     const e: { email?: string; password?: string } = {};
@@ -117,13 +132,14 @@ export function LoginForm({ mode }: { mode: AuthFormMode }) {
     return Object.keys(e).length === 0;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validate()) return;
+  const doLogin = async () => {
+    setFormError(null);
     setLoading(true);
 
     try {
-      const res = await fetch("/api/auth/login", {
+      // LOT E : timeout 12 s pour éviter une soumission « muette » si le
+      // backend ne répond pas.
+      const res = await fetchWithTimeout("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -131,11 +147,9 @@ export function LoginForm({ mode }: { mode: AuthFormMode }) {
       const data = await res.json();
 
       if (!res.ok) {
-        toast({
-          title: "Erreur",
-          description: data.error || "Identifiants incorrects",
-          variant: "destructive",
-        });
+        const msg = data.error || "Identifiants incorrects";
+        setFormError(msg);
+        toast({ title: "Erreur", description: msg, variant: "destructive" });
         return;
       }
 
@@ -147,21 +161,28 @@ export function LoginForm({ mode }: { mode: AuthFormMode }) {
         isLoggedIn: true,
       });
 
+      // LOT D : rattacher les devis anonymes du même email avant la redirection.
+      await reconcileAnonymousQuotes();
+
       toast({
         title: "Connexion réussie",
         description: `Bonjour, ${data.user.name} !`,
       });
 
       redirect(data.user.role);
-    } catch {
-      toast({
-        title: "Erreur",
-        description: "Une erreur est survenue. Veuillez réessayer.",
-        variant: "destructive",
-      });
+    } catch (err) {
+      const msg = networkErrorMessage(err);
+      setFormError(msg);
+      toast({ title: "Erreur", description: msg, variant: "destructive" });
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validate()) return;
+    void doLogin();
   };
 
   const switchTo = (view: "forgot" | "register") => {
@@ -181,6 +202,7 @@ export function LoginForm({ mode }: { mode: AuthFormMode }) {
           onChange={(e) => {
             setEmail(e.target.value);
             if (errors.email) setErrors((p) => ({ ...p, email: undefined }));
+            if (formError) setFormError(null);
           }}
           aria-invalid={!!errors.email}
           className={`w-full ${errors.email ? "border-destructive" : ""}`}
@@ -201,6 +223,7 @@ export function LoginForm({ mode }: { mode: AuthFormMode }) {
             onChange={(e) => {
               setPassword(e.target.value);
               if (errors.password) setErrors((p) => ({ ...p, password: undefined }));
+              if (formError) setFormError(null);
             }}
             aria-invalid={!!errors.password}
             className={`w-full pr-10 ${errors.password ? "border-destructive" : ""}`}
@@ -229,6 +252,24 @@ export function LoginForm({ mode }: { mode: AuthFormMode }) {
           Mot de passe oublié ?
         </button>
       </div>
+
+      {/* LOT E : erreur persistante annoncée aux lecteurs d'écran + Réessayer */}
+      {formError && (
+        <div
+          role="alert"
+          className="rounded-lg border border-destructive/40 bg-destructive/5 p-3"
+        >
+          <p className="text-sm font-medium text-destructive">{formError}</p>
+          <button
+            type="button"
+            onClick={() => void doLogin()}
+            disabled={loading}
+            className="mt-1.5 text-sm font-medium text-primary hover:underline disabled:opacity-50"
+          >
+            Réessayer
+          </button>
+        </div>
+      )}
 
       <Button
         type="submit"
@@ -276,7 +317,11 @@ export function RegisterForm({ mode }: { mode: AuthFormMode }) {
 
   // Step 2: Identity
   const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
+  // LOT D : email pré-rempli depuis le funnel (devis anonyme → « Créer mon
+  // compte pour suivre ce devis »).
+  const [email, setEmail] = useState(
+    () => useAppStore.getState().personalInfo.email || ""
+  );
   const [phone, setPhone] = useState("");
 
   // Step 3: Company (INSURER only)
@@ -355,7 +400,7 @@ export function RegisterForm({ mode }: { mode: AuthFormMode }) {
         payload.companyWebsite = companyWebsite || undefined;
       }
 
-      const res = await fetch("/api/auth/register", {
+      const res = await fetchWithTimeout("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -379,6 +424,9 @@ export function RegisterForm({ mode }: { mode: AuthFormMode }) {
         isLoggedIn: true,
       });
 
+      // LOT D : rattacher les devis anonymes créés avec le même email.
+      await reconcileAnonymousQuotes();
+
       toast({
         title: "Compte créé",
         description:
@@ -388,10 +436,10 @@ export function RegisterForm({ mode }: { mode: AuthFormMode }) {
       });
 
       redirect(data.user.role);
-    } catch {
+    } catch (err) {
       toast({
         title: "Erreur",
-        description: "Une erreur est survenue. Veuillez réessayer.",
+        description: networkErrorMessage(err),
         variant: "destructive",
       });
     } finally {
