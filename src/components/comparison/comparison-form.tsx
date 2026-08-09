@@ -99,8 +99,8 @@ const CONTRACT_DURATION_OPTIONS = [
 ];
 
 const TRUST_INDICATORS = [
-  { icon: Shield, text: "Paiement sécurisé" },
-  { icon: ShieldCheck, text: "Modification possible" },
+  { icon: Shield, text: "Données protégées" },
+  { icon: ShieldCheck, text: "Devis gratuit" },
   { icon: Check, text: "Sans engagement" },
 ];
 
