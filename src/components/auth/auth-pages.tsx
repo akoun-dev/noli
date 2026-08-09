@@ -43,6 +43,16 @@ export function AuthPages() {
       {/* Auth content area */}
       <div className="flex-1 flex items-center justify-center px-4 py-12 md:py-20">
         <div className="w-full max-w-md">
+          {currentView === "login" && (
+            <div className="mb-6 text-center">
+              <h1 className="font-[family-name:var(--font-space-grotesk)] text-2xl font-bold text-foreground">
+                Connexion à votre espace NOLI
+              </h1>
+              <p className="mt-1.5 text-sm text-muted-foreground">
+                Accédez à vos devis, comparaisons et informations de compte.
+              </p>
+            </div>
+          )}
           {currentView === "login" && <LoginForm mode="page" />}
           {currentView === "register" && <RegisterForm mode="page" />}
           {currentView === "forgot" && <ForgotPasswordForm mode="page" />}

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useSyncExternalStore } from "react";
 import Image from "next/image";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   Menu,
   Moon,
@@ -236,27 +236,23 @@ export function Header() {
               </SheetHeader>
 
               <nav className="flex flex-col gap-1 p-4">
-                <AnimatePresence>
-                  {navItems.map((item, i) => {
-                    const active = isActive(item.action);
-                    return (
-                      <motion.button
-                        key={item.label}
-                        initial={{ x: 20, opacity: 0 }}
-                        animate={{ x: 0, opacity: 1 }}
-                        transition={{ delay: i * 0.08, duration: 0.25 }}
-                        onClick={() => handleNav(item.action)}
-                        className={`flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium uppercase tracking-wide transition-colors ${
-                          active
-                            ? "bg-primary/10 text-primary"
-                            : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                        }`}
-                      >
-                        {item.label}
-                      </motion.button>
-                    );
-                  })}
-                </AnimatePresence>
+                {navItems.map((item, i) => {
+                  const active = isActive(item.action);
+                  return (
+                    <button
+                      key={item.label}
+                      onClick={() => handleNav(item.action)}
+                      style={{ animationDelay: `${i * 0.08}s` }}
+                      className={`animate-fade-in flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium uppercase tracking-wide transition-colors ${
+                        active
+                          ? "bg-primary/10 text-primary"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  );
+                })}
               </nav>
 
               {/* Theme toggle in mobile */}

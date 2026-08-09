@@ -337,7 +337,7 @@ export function ResultsPage() {
 
   /* ── main render ── */
   return (
-    <div className="h-[calc(100vh-4rem)] flex flex-col">
+    <div className="flex flex-col">
       {/* ── Comparison Bar (sticky) ── */}
       {offersToCompare.length > 0 && (
         <ComparisonBar
@@ -348,8 +348,8 @@ export function ResultsPage() {
         />
       )}
 
-      {/* ── Scrolling content below ── */}
-      <div className="flex-1 overflow-y-auto">
+      {/* ── Content — défilement géré par la page (un seul axe de scroll) ── */}
+      <div>
         <section className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
           {/* ── Top Bar ── */}
           <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
@@ -474,10 +474,11 @@ export function ResultsPage() {
               />
             </div>
 
-            {/* Main Content — UI-C01 : région live pour les mises à jour de résultats */}
-            <main
-              aria-live="polite"
-              aria-atomic="true"
+            {/* Main Content — le compteur (h1 aria-live ci-dessus) annonce les
+                mises à jour ; la liste elle-même n'est pas une région live pour
+                éviter de re-annoncer tout le DOM à chaque filtre. */}
+            <section
+              aria-label="Offres d'assurance"
               className="flex-1 min-w-0 space-y-4"
             >
               {filteredAndSorted.length > 0 ? (
@@ -516,7 +517,7 @@ export function ResultsPage() {
                   </Button>
                 </div>
               )}
-            </main>
+            </section>
           </div>
 
           {/* Comparison modal */}
