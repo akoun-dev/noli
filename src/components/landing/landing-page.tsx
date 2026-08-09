@@ -11,7 +11,6 @@ import {
   ClipboardList,
   BarChart3,
   CheckCircle2,
-  Quote,
   Eye,
   Users,
 } from "lucide-react";
@@ -91,8 +90,8 @@ const steps = [
   {
     num: "03",
     icon: CheckCircle2,
-    title: "Choisissez et souscrivez",
-    desc: "Sélectionnez l'offre qui vous convient et souscrivez en quelques clics. C'est tout !",
+    title: "Obtenez votre devis",
+    desc: "Comparez et obtenez votre devis en quelques clics — un conseiller NOLI vous accompagne pour finaliser votre contrat.",
   },
 ];
 
@@ -118,50 +117,6 @@ const advantages = [
     desc: "Jusqu'à 40% d'économies en moyenne grâce à notre algorithme de comparaison intelligent.",
   },
 ];
-
-const testimonials = [
-  {
-    name: "Aminata K.",
-    role: "Propriétaire de Toyota Corolla",
-    text: "J'ai trouvé une assurance tous risques 35% moins chère que mon ancien contrat. NOLI m'a fait gagner du temps et de l'argent !",
-    rating: 5,
-  },
-  {
-    name: "Kouamé Y.",
-    role: "Chauffeur de taxi",
-    text: "En tant que taxi, je cherchais une couverture adaptée à mon activité. NOLI m'a permis de comparer et de trouver la bonne formule rapidement.",
-    rating: 5,
-  },
-  {
-    name: "Fatoumata D.",
-    role: "Fonctionnaire, propriétaire d'un SUV",
-    text: "Interface très simple, je recommande ! J'ai pu souscrire mon assurance auto en moins de 10 minutes depuis mon téléphone.",
-    rating: 4,
-  },
-];
-
-function StarRating({ rating }: { rating: number }) {
-  return (
-    <div className="flex items-center gap-0.5">
-      {Array.from({ length: 5 }).map((_, i) => (
-        <svg
-          key={i}
-          className={`size-4 ${
-            i < Math.floor(rating)
-              ? "text-accent"
-              : i < rating
-                ? "text-accent/50"
-                : "text-muted/30"
-          }`}
-          fill="currentColor"
-          viewBox="0 0 20 20"
-        >
-          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-        </svg>
-      ))}
-    </div>
-  );
-}
 
 export function LandingPage() {
   const setView = useAppStore((s) => s.setView);
@@ -286,7 +241,7 @@ export function LandingPage() {
               3 étapes simples
             </h2>
             <p className="mt-3 text-muted-foreground max-w-xl mx-auto">
-              Comparez et souscrivez votre assurance en quelques minutes, sans quitter votre canapé.
+              Comparez les offres et obtenez votre devis en quelques minutes, sans quitter votre canapé.
             </p>
           </div>
 
@@ -362,47 +317,6 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* ════════════ TÉMOIGNAGES ════════════ */}
-      <section className="bg-[#E8F4F0] dark:bg-[#121e19] py-16 md:py-24">
-        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-14 animate-fade-in-up">
-            <span className="mb-4 inline-block rounded-full bg-primary/10 px-4 py-1.5 text-xs font-semibold tracking-wider text-primary uppercase">
-              Témoignages
-            </span>
-            <h2 className="font-[family-name:var(--font-space-grotesk)] text-3xl sm:text-4xl font-bold text-foreground">
-              Ce que disent nos utilisateurs
-            </h2>
-          </div>
-
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {testimonials.map((t, idx) => (
-              <div
-                key={t.name}
-                className="bg-card rounded-xl p-6 card-shadow flex flex-col gap-4 animate-fade-in-up"
-                style={{ animationDelay: `${(idx + 1) * 100}ms` }}
-              >
-                <Quote className="size-8 text-primary/20 shrink-0" />
-                <p className="text-sm text-muted-foreground leading-relaxed flex-1">
-                  &ldquo;{t.text}&rdquo;
-                </p>
-                <div className="flex items-center gap-3 pt-2">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-bold">
-                    {t.name.charAt(0)}
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">{t.name}</p>
-                    <p className="text-xs text-muted-foreground">{t.role}</p>
-                  </div>
-                  <div className="ml-auto">
-                    <StarRating rating={t.rating} />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* ════════════ FINAL CTA ════════════ */}
       <section className="bg-background py-16 md:py-24">
         <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 text-center">
@@ -421,8 +335,8 @@ export function LandingPage() {
               Prêt à économiser sur votre assurance ?
             </h2>
             <p className="text-muted-foreground max-w-lg mx-auto mb-8">
-              Rejoignez des milliers d&apos;Ivoiriens qui comparent et souscrivent
-              leur assurance en toute confiance avec NOLI.
+              Comparez les offres des assureurs partenaires de NOLI et obtenez
+              votre devis en toute confiance, en quelques minutes.
             </p>
             <Button
               size="lg"
