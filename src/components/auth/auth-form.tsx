@@ -174,6 +174,16 @@ export function LoginForm({ mode }: { mode: AuthFormMode }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {mode === "page" && (
+        <div className="mb-2 text-center">
+          <h1 className="text-2xl font-bold text-foreground">
+            Connexion à votre espace NOLI
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Accédez à vos devis et à votre profil.
+          </p>
+        </div>
+      )}
       <div className="space-y-2">
         <Label htmlFor="login-email">Email</Label>
         <Input

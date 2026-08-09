@@ -242,8 +242,10 @@ export function Header() {
                     return (
                       <motion.button
                         key={item.label}
-                        initial={{ x: 20, opacity: 0 }}
-                        animate={{ x: 0, opacity: 1 }}
+                        // Items TOUJOURS visibles (opacité à 1) : l'animation n'est
+                        // qu'un enhancement (glissement), pas un prérequis d'affichage.
+                        initial={{ x: 20 }}
+                        animate={{ x: 0 }}
                         transition={{ delay: i * 0.08, duration: 0.25 }}
                         onClick={() => handleNav(item.action)}
                         className={`flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium uppercase tracking-wide transition-colors ${

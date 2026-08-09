@@ -466,12 +466,10 @@ export function ResultsPage() {
               />
             </div>
 
-            {/* Main Content — UI-C01 : région live pour les mises à jour de résultats */}
-            <main
-              aria-live="polite"
-              aria-atomic="true"
-              className="flex-1 min-w-0 space-y-4"
-            >
+            {/* Liste des offres — <section> (pas <main>, déjà présent dans le
+                layout) ; l'annonce live est portée par le compteur (h1) ci-dessus,
+                pas par la liste entière (évite de tout re-annoncer à chaque filtre). */}
+            <section className="flex-1 min-w-0 space-y-4">
               {filteredAndSorted.length > 0 ? (
                 filteredAndSorted.map(offer => (
                   <OfferCard
@@ -508,7 +506,7 @@ export function ResultsPage() {
                   </Button>
                 </div>
               )}
-            </main>
+            </section>
           </div>
 
           {/* Comparison modal */}
