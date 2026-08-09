@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   User,
   Car,
@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { USAGE_OPTIONS } from "@/lib/constants";
+import { fetchWithTimeout, isTimeoutError } from "@/lib/fetch-with-timeout";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 
@@ -116,6 +117,18 @@ export function ComparisonForm() {
   } = useAppStore();
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // LOT F : quand une validation d'étape échoue, amener la 1re erreur à l'écran
+  // (sinon elle reste masquée sous le header sticky) et la focaliser pour les
+  // lecteurs d'écran. Cible le premier champ marqué aria-invalid dans le DOM.
+  useEffect(() => {
+    if (Object.keys(errors).length === 0) return;
+    const el = document.querySelector<HTMLElement>('[aria-invalid="true"]');
+    if (el) {
+      el.scrollIntoView({ block: "center", behavior: "smooth" });
+      el.focus({ preventScroll: true });
+    }
+  }, [errors]);
+
   const goNext = useCallback(() => {
     if (comparisonStep < 3) {
       setComparisonStep(comparisonStep + 1);
@@ -138,6 +151,11 @@ export function ComparisonForm() {
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(personalInfo.email))
       e.email = "Email invalide";
     if (!personalInfo.phone.trim()) e.phone = "Le téléphone est requis";
+    else {
+      const digits = personalInfo.phone.replace(/\D/g, "").replace(/^225/, "");
+      if (digits.length !== 10)
+        e.phone = "Numéro ivoirien attendu : 10 chiffres (ex. 07 XX XX XX XX)";
+    }
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -174,7 +192,7 @@ export function ComparisonForm() {
     if (!step3Ok) { setComparisonStep(3); return; }
     setIsComparing(true);
     try {
-      const res = await fetch("/api/compare", {
+      const res = await fetchWithTimeout("/api/compare", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -191,7 +209,11 @@ export function ComparisonForm() {
       setComparisonResults(data.results ?? []);
       setView("results");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Veuillez réessayer.");
+      toast.error(
+        isTimeoutError(err)
+          ? "Le serveur met trop de temps à répondre. Vérifiez votre connexion et réessayez."
+          : err instanceof Error ? err.message : "Veuillez réessayer."
+      );
     } finally {
       setIsComparing(false);
     }
@@ -629,6 +651,7 @@ function Step2({
         <Input
           id="effectiveDate"
           type="date"
+          aria-invalid={!!errors.effectiveDate}
           className={`w-full ${errors.effectiveDate ? "border-destructive" : ""}`}
           value={vehicleInfo.effectiveDate || ""}
           onChange={(e) => setVehicleInfo({ effectiveDate: e.target.value })}
