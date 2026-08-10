@@ -22,6 +22,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import { fetchWithTimeout, isTimeoutError } from "@/lib/fetch-with-timeout";
 
 /* ── Type partagé : contexte d'affichage ─────────────────────────── */
 
@@ -123,7 +124,7 @@ export function LoginForm({ mode }: { mode: AuthFormMode }) {
     setLoading(true);
 
     try {
-      const res = await fetch("/api/auth/login", {
+      const res = await fetchWithTimeout("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -153,10 +154,12 @@ export function LoginForm({ mode }: { mode: AuthFormMode }) {
       });
 
       redirect(data.user.role);
-    } catch {
+    } catch (err) {
       toast({
         title: "Erreur",
-        description: "Une erreur est survenue. Veuillez réessayer.",
+        description: isTimeoutError(err)
+          ? "Le serveur met trop de temps à répondre. Vérifiez votre connexion et réessayez."
+          : "Une erreur est survenue. Veuillez réessayer.",
         variant: "destructive",
       });
     } finally {
@@ -171,6 +174,16 @@ export function LoginForm({ mode }: { mode: AuthFormMode }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {mode === "page" && (
+        <div className="mb-2 text-center">
+          <h1 className="text-2xl font-bold text-foreground">
+            Connexion à votre espace NOLI
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Accédez à vos devis et à votre profil.
+          </p>
+        </div>
+      )}
       <div className="space-y-2">
         <Label htmlFor="login-email">Email</Label>
         <Input
@@ -355,7 +368,7 @@ export function RegisterForm({ mode }: { mode: AuthFormMode }) {
         payload.companyWebsite = companyWebsite || undefined;
       }
 
-      const res = await fetch("/api/auth/register", {
+      const res = await fetchWithTimeout("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -388,10 +401,12 @@ export function RegisterForm({ mode }: { mode: AuthFormMode }) {
       });
 
       redirect(data.user.role);
-    } catch {
+    } catch (err) {
       toast({
         title: "Erreur",
-        description: "Une erreur est survenue. Veuillez réessayer.",
+        description: isTimeoutError(err)
+          ? "Le serveur met trop de temps à répondre. Vérifiez votre connexion et réessayez."
+          : "Une erreur est survenue. Veuillez réessayer.",
         variant: "destructive",
       });
     } finally {
@@ -858,7 +873,7 @@ export function ForgotPasswordForm({ mode }: { mode: AuthFormMode }) {
     setError("");
 
     try {
-      const res = await fetch("/api/auth/forgot", {
+      const res = await fetchWithTimeout("/api/auth/forgot", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
@@ -875,8 +890,12 @@ export function ForgotPasswordForm({ mode }: { mode: AuthFormMode }) {
         title: "Email envoyé",
         description: "Vérifiez votre boîte de réception.",
       });
-    } catch {
-      setError("Une erreur est survenue. Veuillez réessayer.");
+    } catch (err) {
+      setError(
+        isTimeoutError(err)
+          ? "Le serveur met trop de temps à répondre. Vérifiez votre connexion et réessayez."
+          : "Une erreur est survenue. Veuillez réessayer."
+      );
     } finally {
       setLoading(false);
     }

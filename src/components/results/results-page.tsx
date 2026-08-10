@@ -1,11 +1,18 @@
 "use client"
 
 import { useMemo, useState, useCallback, useEffect } from "react"
-import { ArrowLeft, Filter, ChevronDown, SearchX, RotateCcw } from "lucide-react"
+import { ArrowLeft, Filter, ChevronDown, SearchX, RotateCcw, Copy, Check, CheckCircle2 } from "lucide-react"
 import { useAppStore } from "@/store/app-store"
 import type { InsurerOffer } from "@/types"
 import { MAX_COMPARE, BUDGET_MAX, BUDGET_STEP } from "@/lib/constants"
 import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 import { OfferCard } from "./offer-card"
@@ -33,8 +40,18 @@ export function ResultsPage() {
     setOffersToCompare,
     comparisonModalOpen,
     setComparisonModalOpen,
+    user,
+    setUserTab,
   } = useAppStore()
   const { toast } = useToast()
+
+  // D (Part 2) : confirmation de devis persistante (remplace le toast éphémère).
+  const [confirmedQuote, setConfirmedQuote] = useState<{
+    reference: string
+    offerName: string
+    insurerName: string
+  } | null>(null)
+  const [copied, setCopied] = useState(false)
 
   /* ── derived data ── */
   const [priceMode, setPriceMode] = useState<"annual" | "monthly">("annual")
@@ -242,9 +259,12 @@ export function ResultsPage() {
       }
       setUserQuotes([quote, ...userQuotes])
 
-      toast({
-        title: "✅ Devis enregistré",
-        description: `Votre devis ${data.quote.reference} a été créé. Un email de confirmation vous sera envoyé.`,
+      // Confirmation persistante (référence copiable + CTA), au lieu d'un toast.
+      setCopied(false)
+      setConfirmedQuote({
+        reference: data.quote.reference,
+        offerName: offer.name,
+        insurerName: offer.insurerName,
       })
     } catch (err) {
       console.error("[quote] Erreur:", err)
@@ -474,12 +494,10 @@ export function ResultsPage() {
               />
             </div>
 
-            {/* Main Content — UI-C01 : région live pour les mises à jour de résultats */}
-            <main
-              aria-live="polite"
-              aria-atomic="true"
-              className="flex-1 min-w-0 space-y-4"
-            >
+            {/* Liste des offres — <section> (pas <main>, déjà présent dans le
+                layout) ; l'annonce live est portée par le compteur (h1) ci-dessus,
+                pas par la liste entière (évite de tout re-annoncer à chaque filtre). */}
+            <section className="flex-1 min-w-0 space-y-4">
               {filteredAndSorted.length > 0 ? (
                 filteredAndSorted.map(offer => (
                   <OfferCard
@@ -516,7 +534,7 @@ export function ResultsPage() {
                   </Button>
                 </div>
               )}
-            </main>
+            </section>
           </div>
 
           {/* Comparison modal */}
@@ -528,6 +546,67 @@ export function ResultsPage() {
 
           {/* Callback modal */}
           {callbackModal}
+
+          {/* D (Part 2) : confirmation de devis persistante */}
+          <Dialog
+            open={!!confirmedQuote}
+            onOpenChange={(open) => { if (!open) setConfirmedQuote(null) }}
+          >
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
+                  <CheckCircle2 className="size-6 text-green-700" />
+                </div>
+                <DialogTitle className="text-center">Devis enregistré</DialogTitle>
+                <DialogDescription className="text-center">
+                  {confirmedQuote?.offerName} — {confirmedQuote?.insurerName}
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="rounded-lg border bg-muted/40 p-3">
+                <p className="text-xs text-muted-foreground mb-1">Votre référence</p>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-mono font-semibold text-foreground">
+                    {confirmedQuote?.reference}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      if (!confirmedQuote) return
+                      navigator.clipboard?.writeText(confirmedQuote.reference)
+                      setCopied(true)
+                    }}
+                    aria-label="Copier la référence"
+                  >
+                    {copied ? <Check className="size-4 text-green-700" /> : <Copy className="size-4" />}
+                    <span className="ml-1 text-xs">{copied ? "Copié" : "Copier"}</span>
+                  </Button>
+                </div>
+              </div>
+
+              {user?.isLoggedIn ? (
+                <Button
+                  className="w-full"
+                  onClick={() => { setConfirmedQuote(null); setUserTab("quotes"); setView("user-dashboard") }}
+                >
+                  Voir dans « Mes Devis »
+                </Button>
+              ) : (
+                <div className="space-y-2">
+                  <Button
+                    className="w-full"
+                    onClick={() => { setConfirmedQuote(null); setView("register") }}
+                  >
+                    Créer mon compte pour suivre ce devis
+                  </Button>
+                  <p className="text-center text-xs text-muted-foreground">
+                    Un email de confirmation vous sera envoyé.
+                  </p>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
         </section>
       </div>
     </div>

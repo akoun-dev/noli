@@ -2,7 +2,6 @@
 
 import { memo, useState } from "react";
 import {
-  Heart,
   Shield,
   CheckCircle2,
   Info,
@@ -57,14 +56,6 @@ function OfferCardComponent({
   return (
     <div className="space-y-0 animate-fade-in-up">
       <div className="bg-white dark:bg-card rounded-xl border border-border/70 shadow-md hover:shadow-xl transition-all duration-300 overflow-visible relative hover:-translate-y-0.5">
-        {/* Heart icon top-right */}
-        <button
-          className="absolute top-3 right-3 z-10 text-muted-foreground/50 hover:text-red-500 transition-colors"
-          aria-label="Ajouter aux favoris"
-        >
-          <Heart className="size-5" />
-        </button>
-
         <div className="flex flex-col lg:flex-row lg:items-stretch">
           {/* ── Left section: Insurer info ── */}
           <div className="flex flex-row lg:flex-col items-center lg:items-start gap-3 lg:gap-4 p-4 lg:p-5 lg:w-56 shrink-0 border-b lg:border-b-0 lg:border-r border-border/40">
@@ -97,7 +88,7 @@ function OfferCardComponent({
           {/* ── Center section: Guarantees ── */}
           <div className="flex-1 p-4 lg:p-5 min-w-0">
             <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2 mt-1">
-              Garanties inclues
+              Garanties incluses
             </h4>
             <Separator className="mb-3" />
             <ul className="space-y-1.5">
@@ -123,7 +114,7 @@ function OfferCardComponent({
                     key={idx}
                     className="flex items-start gap-2 text-sm"
                   >
-                    <CheckCircle2 className="size-4 text-green-600 mt-0.5 shrink-0" />
+                    <CheckCircle2 className="size-4 text-green-700 mt-0.5 shrink-0" />
                     <span className="text-foreground/90 flex-1 min-w-0">
                       {feature}
                     </span>
@@ -131,7 +122,7 @@ function OfferCardComponent({
                       <span
                         className={`text-xs font-semibold shrink-0 tabular-nums mt-0.5 ${
                           pricing.amount === 0
-                            ? "text-green-600"
+                            ? "text-green-700"
                             : "text-foreground"
                         }`}
                       >
@@ -362,7 +353,7 @@ function OfferCardComponent({
                         key={idx}
                         className="flex items-start gap-2 text-sm"
                       >
-                        <CheckCircle2 className="size-4 text-green-600 mt-0.5 shrink-0" />
+                        <CheckCircle2 className="size-4 text-green-700 mt-0.5 shrink-0" />
                         <span className="text-foreground/90 flex-1 min-w-0">
                           {resolvedName}
                         </span>
@@ -370,7 +361,7 @@ function OfferCardComponent({
                           <span
                             className={`text-xs font-semibold shrink-0 tabular-nums mt-0.5 ${
                               pricing.amount === 0
-                                ? "text-green-600"
+                                ? "text-green-700"
                                 : "text-foreground"
                             }`}
                           >

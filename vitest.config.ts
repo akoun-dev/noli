@@ -22,6 +22,22 @@ export default defineConfig({
         "src/test-setup.ts",
         "**/*.d.ts",
       ],
+      // Seuils appliqués quand la couverture est activée (CI : `vitest run --coverage`).
+      thresholds: {
+        // Plancher global anti-régression. L'UI n'est pas encore couverte ;
+        // à REMONTER au fur et à mesure que les tests s'étoffent.
+        statements: 5,
+        branches: 5,
+        functions: 3,
+        lines: 5,
+        // Exigence réelle sur la logique métier (src/lib). À ratcheter vers le haut.
+        "src/lib/**": {
+          statements: 38,
+          branches: 40,
+          functions: 45,
+          lines: 38,
+        },
+      },
     },
   },
   resolve: {

@@ -26,6 +26,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { fetchWithTimeout, isTimeoutError } from "@/lib/fetch-with-timeout";
 
 /* ─── Types ────────────────────────────────────────────────────── */
 
@@ -303,13 +304,15 @@ export function OffersPage() {
         params.set("contractType", contractTypeFilter);
       if (sortBy) params.set("sortBy", sortBy);
 
-      const res = await fetch(`/api/offers?${params.toString()}`);
+      const res = await fetchWithTimeout(`/api/offers?${params.toString()}`);
       if (!res.ok) throw new Error("Erreur serveur");
       const json: OffersResponse = await res.json();
       setData(json);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Erreur lors du chargement"
+        isTimeoutError(err)
+          ? "Le serveur met trop de temps à répondre. Vérifiez votre connexion et réessayez."
+          : err instanceof Error ? err.message : "Erreur lors du chargement"
       );
     } finally {
       setLoading(false);

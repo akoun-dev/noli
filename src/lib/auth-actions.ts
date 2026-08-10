@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { reconcileAnonymousQuotes } from "@/lib/quotes-reconcile";
 import { registerSchema, loginSchema, emailSchema } from "@/lib/validation";
 import { getSessionProfile, getSupabaseServerClient } from "@/lib/auth-guard";
 import {
@@ -125,6 +126,9 @@ export async function registerAction(request: NextRequest) {
       details: { email: parsed.data.email.trim(), role: selectedRole },
     });
 
+    // D : rattache les devis anonymes créés avec cet email (best-effort).
+    await reconcileAnonymousQuotes(userId, parsed.data.email.trim());
+
     return NextResponse.json({
       user: {
         id: userId,
@@ -193,6 +197,9 @@ export async function loginAction(request: NextRequest) {
       await supabase.auth.signOut();
       return NextResponse.json({ error: "Compte désactivé. Contactez le support." }, { status: 403 });
     }
+
+    // D : rattache les devis anonymes créés avec cet email (best-effort).
+    await reconcileAnonymousQuotes(authData.user.id, normalizedEmail);
 
     return NextResponse.json({
       user: {
