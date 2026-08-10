@@ -104,8 +104,12 @@ export function UserQuotesTab() {
     <div className="space-y-6">
       {/* Header */}
       <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
+        // Contenu TOUJOURS visible (opacité 1 par défaut) : l'animation n'est
+        // qu'un glissement d'entrée, pas un prérequis d'affichage. Sinon, si
+        // l'animation ne se déclenche pas, le bloc reste à opacity:0 (présent
+        // dans le DOM mais invisible).
+        initial={{ y: 10 }}
+        animate={{ y: 0 }}
         transition={{ duration: 0.4 }}
       >
         <h2 className="text-xl font-bold">Mes Devis</h2>
@@ -170,8 +174,8 @@ export function UserQuotesTab() {
       ) : filtered.length === 0 ? (
         /* Empty state */
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ y: 10 }}
+          animate={{ y: 0 }}
           transition={{ duration: 0.4 }}
           className="text-center py-16"
         >
@@ -196,8 +200,10 @@ export function UserQuotesTab() {
             return (
               <motion.div
                 key={q.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
+                // Carte TOUJOURS visible : le devis ne doit jamais rester
+                // invisible (opacity:0) si l'animation d'entrée ne se joue pas.
+                initial={{ y: 10 }}
+                animate={{ y: 0 }}
                 transition={{ duration: 0.3, delay: i * 0.03 }}
               >
                 <Card className="rounded-xl border bg-card hover:shadow-md transition-shadow">

@@ -104,7 +104,7 @@ export function UserDocumentsTab() {
   return (
     <div className="space-y-6">
       <motion.div
-        initial={{ opacity: 0, y: 10 }}
+        initial={{ y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
       >
@@ -116,7 +116,7 @@ export function UserDocumentsTab() {
 
       {/* Attestations de vos contrats actifs */}
       <motion.div
-        initial={{ opacity: 0, y: 10 }}
+        initial={{ y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.1 }}
       >
@@ -187,7 +187,7 @@ export function UserDocumentsTab() {
 
       {/* Types de documents disponibles */}
       <motion.div
-        initial={{ opacity: 0, y: 10 }}
+        initial={{ y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.2 }}
       >
