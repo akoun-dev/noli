@@ -571,7 +571,7 @@ function Step2({
             <Input
               id="newValue"
               type="number"
-              placeholder="15 000 000"
+              placeholder="Ex : 15 000 000"
               value={vehicleInfo.newValue}
               onChange={(e) => setVehicleInfo({ newValue: e.target.value })}
               aria-invalid={!!errors.newValue}
@@ -590,7 +590,7 @@ function Step2({
             <Input
               id="currentValue"
               type="number"
-              placeholder="10 000 000"
+              placeholder="Ex : 10 000 000"
               value={vehicleInfo.currentValue}
               onChange={(e) => setVehicleInfo({ currentValue: e.target.value })}
               aria-invalid={!!errors.currentValue}

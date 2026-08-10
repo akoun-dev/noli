@@ -143,7 +143,11 @@ export const useAppStore = create<AppState>()(
       partialize: (state) => ({
         // Persist auth
         user: state.user,
-        currentView: state.currentView,
+        // NOTE (QA 2026-08-10) : currentView n'est PLUS persistée. L'URL est la
+        // seule source de vérité de la navigation (l'effet URL→vue la restaure
+        // au chargement). La persister provoquait des redirections incohérentes :
+        // après réhydratation, la vue mémorisée d'une session précédente écrasait
+        // l'URL ouverte (ex. « / » renvoyait sur « /comparer » ou « /admin »).
         // Persist tabs
         adminTab: state.adminTab,
         userTab: state.userTab,
