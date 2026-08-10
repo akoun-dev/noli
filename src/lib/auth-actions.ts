@@ -33,6 +33,34 @@ function rateLimitedResponse(result: { ok: false; retryAfterSec: number }): Next
   );
 }
 
+/**
+ * Étape « best-effort » bornée dans le temps. Les étapes post-inscription
+ * (confirmation email, filet profil, session immédiate, rattachement des devis)
+ * ne doivent JAMAIS bloquer la réponse : si un appel réseau (Supabase) traîne
+ * au-delà de `ms`, on l'abandonne et on continue. Sans cette borne, un appel
+ * lent faisait dépasser le délai nginx (60 s) → 502 Bad Gateway à l'inscription.
+ */
+async function bestEffort<T>(
+  label: string,
+  run: () => PromiseLike<T>,
+  ms = 8000
+): Promise<T | null> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      run(),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`timeout ${ms}ms`)), ms);
+      }),
+    ]);
+  } catch (err) {
+    console.warn(`[auth] ${label} ignoré:`, err instanceof Error ? err.message : err);
+    return null;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 /* ── Inscription ────────────────────────────────────────────────── */
 
 export async function registerAction(request: NextRequest) {
@@ -70,18 +98,32 @@ export async function registerAction(request: NextRequest) {
 
     // Création du compte Supabase Auth (le profil est créé par le trigger
     // on_auth_user_created à partir de user_metadata).
-    const { data: authData, error: signUpError } = await supabase.auth.signUp({
-      email: parsed.data.email.trim(),
-      password: parsed.data.password,
-      options: {
-        data: {
-          role: selectedRole,
-          firstName,
-          lastName,
-          phone: parsed.data.phone || null,
-        },
-      },
-    });
+    const signUpResult = await bestEffort(
+      "Création du compte (signUp)",
+      () =>
+        supabase.auth.signUp({
+          email: parsed.data.email.trim(),
+          password: parsed.data.password,
+          options: {
+            data: {
+              role: selectedRole,
+              firstName,
+              lastName,
+              phone: parsed.data.phone || null,
+            },
+          },
+        }),
+      20000
+    );
+    if (!signUpResult) {
+      // signUp a dépassé le délai (service Auth momentanément lent) : on renvoie
+      // une erreur propre au lieu de laisser la requête pendre (→ 502 nginx).
+      return NextResponse.json(
+        { error: "Le service d'inscription est momentanément indisponible. Réessayez dans un instant." },
+        { status: 503 }
+      );
+    }
+    const { data: authData, error: signUpError } = signUpResult;
 
     if (signUpError) {
       // Message générique : ne pas révéler si l'email existe déjà (anti-
@@ -99,20 +141,16 @@ export async function registerAction(request: NextRequest) {
 
     // Choix produit conservé : confirmation email automatique + connexion
     // immédiate pour tous les rôles (y compris USER).
-    const { error: confirmError } = await db.auth.admin.updateUserById(userId, {
-      email_confirm: true,
-    });
-    if (confirmError) {
-      console.warn("[auth] Confirmation email auto impossible:", confirmError.message);
-    }
+    await bestEffort("Confirmation email auto", () =>
+      db.auth.admin.updateUserById(userId, { email_confirm: true })
+    );
 
     // Filet de sécurité : le profil est normalement créé par le trigger
     // on_auth_user_created. Si ce trigger est absent ou échoue côté base, on
     // crée le profil ici via la service_role (idempotent). Sans profil, la
     // connexion serait ensuite refusée (« Aucun profil associé à ce compte »).
-    const { error: profileEnsureError } = await db
-      .from("profiles")
-      .upsert(
+    await bestEffort("Filet de création de profil", () =>
+      db.from("profiles").upsert(
         {
           id: userId,
           email: parsed.data.email.trim().toLowerCase(),
@@ -121,19 +159,16 @@ export async function registerAction(request: NextRequest) {
           phone: parsed.data.phone || null,
         },
         { onConflict: "id", ignoreDuplicates: true }
-      );
-    if (profileEnsureError) {
-      console.warn("[auth] Filet de création de profil impossible:", profileEnsureError.message);
-    }
+      )
+    );
 
     // Établit la session (cookie httpOnly) : connexion immédiate après l'inscription.
-    const { error: signInAfterSignUpError } = await supabase.auth.signInWithPassword({
-      email: parsed.data.email.trim(),
-      password: parsed.data.password,
-    });
-    if (signInAfterSignUpError) {
-      console.warn("[auth] Session immédiate impossible:", signInAfterSignUpError.message);
-    }
+    await bestEffort("Session immédiate", () =>
+      supabase.auth.signInWithPassword({
+        email: parsed.data.email.trim(),
+        password: parsed.data.password,
+      })
+    );
 
     // NOTE (C-02) : plus de création automatique de compagnie / insurer_accounts
     // à l'inscription. Un assureur doit être activé et lié à une compagnie par
@@ -146,8 +181,10 @@ export async function registerAction(request: NextRequest) {
       details: { email: parsed.data.email.trim(), role: selectedRole },
     });
 
-    // D : rattache les devis anonymes créés avec cet email (best-effort).
-    await reconcileAnonymousQuotes(userId, parsed.data.email.trim());
+    // D : rattache les devis anonymes créés avec cet email (best-effort, borné).
+    await bestEffort("Rattachement des devis anonymes", () =>
+      reconcileAnonymousQuotes(userId, parsed.data.email.trim())
+    );
 
     return NextResponse.json({
       user: {
@@ -218,8 +255,10 @@ export async function loginAction(request: NextRequest) {
       return NextResponse.json({ error: "Compte désactivé. Contactez le support." }, { status: 403 });
     }
 
-    // D : rattache les devis anonymes créés avec cet email (best-effort).
-    await reconcileAnonymousQuotes(authData.user.id, normalizedEmail);
+    // D : rattache les devis anonymes créés avec cet email (best-effort, borné).
+    await bestEffort("Rattachement des devis anonymes", () =>
+      reconcileAnonymousQuotes(authData.user.id, normalizedEmail)
+    );
 
     return NextResponse.json({
       user: {
