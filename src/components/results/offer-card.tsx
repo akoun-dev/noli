@@ -115,22 +115,24 @@ function OfferCardComponent({
                     className="flex items-start gap-2 text-sm"
                   >
                     <CheckCircle2 className="size-4 text-green-700 mt-0.5 shrink-0" />
-                    <span className="text-foreground/90 flex-1 min-w-0">
-                      {feature}
-                    </span>
-                    {pricing && (
-                      <span
-                        className={`text-xs font-semibold shrink-0 tabular-nums mt-0.5 ${
-                          pricing.amount === 0
-                            ? "text-green-700"
-                            : "text-foreground"
-                        }`}
-                      >
-                        {pricing.amount === 0
-                          ? "Inclus"
-                          : `${formatFCFA(pricing.amount)}/an`}
+                    <div className="flex-1 min-w-0 flex flex-wrap items-start gap-x-2 gap-y-0.5">
+                      <span className="text-foreground/90 min-w-0 break-words">
+                        {feature}
                       </span>
-                    )}
+                      {pricing && (
+                        <span
+                          className={`text-xs font-semibold shrink-0 tabular-nums whitespace-nowrap ml-auto ${
+                            pricing.amount === 0
+                              ? "text-green-700"
+                              : "text-foreground"
+                          }`}
+                        >
+                          {pricing.amount === 0
+                            ? "Inclus"
+                            : `${formatFCFA(pricing.amount)}/an`}
+                        </span>
+                      )}
+                    </div>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <button
@@ -354,22 +356,24 @@ function OfferCardComponent({
                         className="flex items-start gap-2 text-sm"
                       >
                         <CheckCircle2 className="size-4 text-green-700 mt-0.5 shrink-0" />
-                        <span className="text-foreground/90 flex-1 min-w-0">
-                          {resolvedName}
-                        </span>
-                        {pricing && (
-                          <span
-                            className={`text-xs font-semibold shrink-0 tabular-nums mt-0.5 ${
-                              pricing.amount === 0
-                                ? "text-green-700"
-                                : "text-foreground"
-                            }`}
-                          >
-                            {pricing.amount === 0
-                              ? "Inclus"
-                              : `${formatFCFA(pricing.amount)}/an`}
+                        <div className="flex-1 min-w-0 flex flex-wrap items-start gap-x-2 gap-y-0.5">
+                          <span className="text-foreground/90 min-w-0 break-words">
+                            {resolvedName}
                           </span>
-                        )}
+                          {pricing && (
+                            <span
+                              className={`text-xs font-semibold shrink-0 tabular-nums whitespace-nowrap ml-auto ${
+                                pricing.amount === 0
+                                  ? "text-green-700"
+                                  : "text-foreground"
+                              }`}
+                            >
+                              {pricing.amount === 0
+                                ? "Inclus"
+                                : `${formatFCFA(pricing.amount)}/an`}
+                            </span>
+                          )}
+                        </div>
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <button

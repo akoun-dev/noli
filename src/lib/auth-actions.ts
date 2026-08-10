@@ -106,6 +106,26 @@ export async function registerAction(request: NextRequest) {
       console.warn("[auth] Confirmation email auto impossible:", confirmError.message);
     }
 
+    // Filet de sécurité : le profil est normalement créé par le trigger
+    // on_auth_user_created. Si ce trigger est absent ou échoue côté base, on
+    // crée le profil ici via la service_role (idempotent). Sans profil, la
+    // connexion serait ensuite refusée (« Aucun profil associé à ce compte »).
+    const { error: profileEnsureError } = await db
+      .from("profiles")
+      .upsert(
+        {
+          id: userId,
+          email: parsed.data.email.trim().toLowerCase(),
+          first_name: firstName,
+          last_name: lastName,
+          phone: parsed.data.phone || null,
+        },
+        { onConflict: "id", ignoreDuplicates: true }
+      );
+    if (profileEnsureError) {
+      console.warn("[auth] Filet de création de profil impossible:", profileEnsureError.message);
+    }
+
     // Établit la session (cookie httpOnly) : connexion immédiate après l'inscription.
     const { error: signInAfterSignUpError } = await supabase.auth.signInWithPassword({
       email: parsed.data.email.trim(),
