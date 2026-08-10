@@ -21,6 +21,34 @@ import { logAudit } from "@/lib/audit";
 
 const SITE_URL = () => process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
+/**
+ * Traduit l'erreur de `supabase.auth.signUp` en message français exploitable.
+ * Les cas reconnus (email existant, mot de passe faible, inscriptions désactivées,
+ * rate limit email) sont distingués ; tout le reste retombe sur le message
+ * générique (aucune énumération côté login/forgot n'est affectée).
+ */
+export function signUpErrorMessage(err: { code?: string; message?: string }): string {
+  const code = (err.code || "").toLowerCase();
+  const message = (err.message || "").toLowerCase();
+
+  if (code.includes("already_exists") || message.includes("already registered") || message.includes("already been registered")) {
+    return "Un compte existe déjà avec cette adresse email. Connectez-vous ou réinitialisez votre mot de passe.";
+  }
+  if (code.includes("weak_password") || message.includes("password should") || message.includes("at least")) {
+    return "Le mot de passe ne respecte pas les exigences de sécurité. Utilisez au moins 8 caractères, une majuscule et un chiffre.";
+  }
+  if (code.includes("over_email_send_rate_limit") || code.includes("rate_limit") || message.includes("rate limit") || message.includes("too fast")) {
+    return "Trop de demandes d'inscription pour cet email. Attendez quelques minutes avant de réessayer.";
+  }
+  if (code.includes("signup_disabled") || message.includes("signup") || message.includes("not allowed")) {
+    return "L'inscription est momentanément indisponible. Réessayez plus tard ou contactez le support.";
+  }
+  if (code.includes("provider_disabled") || message.includes("disabled")) {
+    return "L'inscription par email est momentanément indisponible. Réessayez plus tard.";
+  }
+  return "Inscription impossible. Vérifiez vos informations ou connectez-vous.";
+}
+
 function rateLimitedResponse(result: { ok: false; retryAfterSec: number }): NextResponse {
   return NextResponse.json(
     {
@@ -126,10 +154,16 @@ export async function registerAction(request: NextRequest) {
     const { data: authData, error: signUpError } = signUpResult;
 
     if (signUpError) {
-      // Message générique : ne pas révéler si l'email existe déjà (anti-
-      // énumération de comptes), aligné sur le comportement de /login et /forgot.
+      // Le détail est journalisé côté serveur ; le message renvoyé est traduit
+      // pour les cas connus (email existant, mot de passe faible…) sans
+      // impacter l'anti-énumération des flux login/forgot.
+      console.error("[auth] Erreur signUp:", {
+        code: signUpError.code,
+        status: signUpError.status,
+        message: signUpError.message,
+      });
       return NextResponse.json(
-        { error: "Inscription impossible. Vérifiez vos informations ou connectez-vous." },
+        { error: signUpErrorMessage(signUpError) },
         { status: 400 }
       );
     }
