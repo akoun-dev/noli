@@ -114,7 +114,7 @@ export function UserContractsTab() {
   return (
     <div className="space-y-6">
       <motion.div
-        initial={{ opacity: 0, y: 10 }}
+        initial={{ y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
       >
@@ -146,7 +146,7 @@ export function UserContractsTab() {
             return (
               <motion.div
                 key={contract.id}
-                initial={{ opacity: 0, y: 12 }}
+                initial={{ y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: i * 0.05 }}
               >
@@ -209,7 +209,7 @@ export function UserContractsTab() {
       {/* Empty state */}
       {!loading && !error && contracts.length === 0 && (
         <motion.div
-          initial={{ opacity: 0 }}
+          initial={{}}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.4, delay: 0.1 }}
           className="rounded-xl border border-dashed bg-card/40 p-10 text-center"
@@ -239,7 +239,7 @@ export function UserContractsTab() {
       {/* Étapes explicatives (affichées quand aucun contrat) */}
       {!loading && contracts.length === 0 && (
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.2 }}
         >

@@ -152,7 +152,7 @@ export function InsurerAnalyticsTab() {
           return (
             <motion.div
               key={m.label}
-              initial={{ opacity: 0, y: 16 }}
+              initial={{ y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: i * 0.05 }}
               className="rounded-xl border bg-card p-6"
@@ -174,7 +174,7 @@ export function InsurerAnalyticsTab() {
 
       {/* Status distribution */}
       <motion.div
-        initial={{ opacity: 0, y: 16 }}
+        initial={{ y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: 0.15 }}
         className="rounded-xl border bg-card p-6"
@@ -215,7 +215,7 @@ export function InsurerAnalyticsTab() {
 
       {/* Recent quotes */}
       <motion.div
-        initial={{ opacity: 0, y: 16 }}
+        initial={{ y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: 0.25 }}
         className="rounded-xl border bg-card p-6"
