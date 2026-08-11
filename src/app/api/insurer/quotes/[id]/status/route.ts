@@ -118,22 +118,27 @@ export async function PUT(
       }
     }
 
-    // Notify the quote owner
+    // Notify the quote owner (best-effort : ne doit ni bloquer ni faire échouer
+    // la mise à jour de statut ; createNotification peut lever en cas d'erreur DB).
     if (quote.userId) {
-      if (status === "APPROVED") {
-        createNotification({
-          userId: quote.userId,
-          type: "SUCCESS",
-          title: "Devis approuvé",
-          message: `Votre devis ${quote.reference} a été approuvé. Votre contrat est en cours d'activation.`,
-        });
-      } else if (status === "REJECTED") {
-        createNotification({
-          userId: quote.userId,
-          type: "WARNING",
-          title: "Devis rejeté",
-          message: `Votre devis ${quote.reference} a été rejeté par l'assureur.`,
-        });
+      try {
+        if (status === "APPROVED") {
+          await createNotification({
+            userId: quote.userId,
+            type: "SUCCESS",
+            title: "Devis approuvé",
+            message: `Votre devis ${quote.reference} a été approuvé. Votre contrat est en cours d'activation.`,
+          });
+        } else if (status === "REJECTED") {
+          await createNotification({
+            userId: quote.userId,
+            type: "WARNING",
+            title: "Devis rejeté",
+            message: `Votre devis ${quote.reference} a été rejeté par l'assureur.`,
+          });
+        }
+      } catch (notifyError) {
+        console.error("[notify] Notification de statut non envoyée:", notifyError);
       }
     }
 
