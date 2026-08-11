@@ -220,12 +220,16 @@ export async function registerAction(request: NextRequest) {
       reconcileAnonymousQuotes(userId, parsed.data.email.trim())
     );
 
+    // Le rôle réel en base est TOUJOURS "USER" (le trigger handle_new_user force
+    // ce rôle ; un assureur doit ensuite être activé par un admin). On renvoie
+    // donc "USER" et non le rôle demandé, sinon la session cliente et la
+    // redirection seraient incohérentes (accès à un espace non encore autorisé).
     return NextResponse.json({
       user: {
         id: userId,
         email: parsed.data.email.trim(),
         name: [firstName, lastName].filter(Boolean).join(" "),
-        role: selectedRole,
+        role: "USER",
       },
     });
   } catch (error) {

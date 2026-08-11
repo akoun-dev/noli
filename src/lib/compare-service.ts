@@ -116,7 +116,11 @@ function priceCoverages(
 
     try {
       const result = calculateGuaranteePremium(coverage, pricingVehicle);
-      if (isCountable) grossPremium += result.amount;
+      // Garde anti-NaN : une formule mal renseignée en base (ni baseRate ni prime)
+      // pourrait produire un montant NaN qui contaminerait tout le prix (affiché
+      // vide). On neutralise à 0 dans ce cas.
+      const safeAmount = Number.isFinite(result.amount) ? result.amount : 0;
+      if (isCountable) grossPremium += safeAmount;
       const meta = (() => { try { return JSON.parse(coverage.metadata || "{}"); } catch { return {}; } })();
       const coverageCapital = coverage.capital || meta.capital || meta.maxAmount || coverage.maxAmount || null;
       pricingBreakdown.push({
@@ -124,7 +128,7 @@ function priceCoverages(
         guaranteeCode: coverage.code,
         categoryCode: catCode,
         categoryName: catName,
-        amount: result.amount,
+        amount: safeAmount,
         coverageCapital: coverageCapital || undefined,
         method: result.method,
         breakdown: result.breakdown,

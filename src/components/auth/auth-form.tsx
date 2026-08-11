@@ -627,6 +627,7 @@ export function RegisterForm({ mode }: { mode: AuthFormMode }) {
           <Input
             id="reg-password"
             type={showPassword ? "text" : "password"}
+            autoComplete="new-password"
             placeholder="••••••••"
             value={password}
             onChange={(e) => {
@@ -658,6 +659,7 @@ export function RegisterForm({ mode }: { mode: AuthFormMode }) {
           <Input
             id="reg-confirm"
             type={showConfirm ? "text" : "password"}
+            autoComplete="new-password"
             placeholder="••••••••"
             value={confirmPassword}
             onChange={(e) => {
