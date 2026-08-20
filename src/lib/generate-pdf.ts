@@ -7,10 +7,14 @@ import { jsPDF } from "jspdf";
 import type { PersonalInfo, VehicleInfo, InsurerOffer } from "@/types";
 import { parseFCFA } from "@/lib/utils";
 
-/** Format a number in FCFA */
-function fmt(amount: number | null | undefined, suffix = " FCFA"): string {
+/** Format a number in FCFA (exporté pour tests de régression du séparateur). */
+export function fmt(amount: number | null | undefined, suffix = " FCFA"): string {
   if (amount == null) return "—";
-  return new Intl.NumberFormat("fr-FR").format(amount) + suffix;
+  // Intl.NumberFormat("fr-FR") sépare les milliers par une ESPACE FINE
+  // INSÉCABLE (U+202F) — absente des polices standard de jsPDF, elle s'affiche
+  // alors comme un « ¥ »/carré (ex. « 2¥075¥000 »). On la remplace, ainsi que
+  // l'espace insécable normale (U+00A0), par une espace ASCII rendue correctement.
+  return new Intl.NumberFormat("fr-FR").format(amount).replace(/[  ]/g, " ") + suffix;
 }
 
 /** Contract type label map */
