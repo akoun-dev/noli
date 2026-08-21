@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import {
   Eye,
   EyeOff,
@@ -834,6 +834,11 @@ function parseRecoveryTokens(hash: string): RecoveryTokens | null {
   return { accessToken, refreshToken };
 }
 
+/** Nettoie l'URL (query params + hash) sans recharger la page. */
+function cleanUrl() {
+  window.history.replaceState(null, "", window.location.pathname);
+}
+
 export function ForgotPasswordForm({ mode }: { mode: AuthFormMode }) {
   const { setView, setAuthModal } = useAppStore();
   const { toast } = useToast();
@@ -849,12 +854,49 @@ export function ForgotPasswordForm({ mode }: { mode: AuthFormMode }) {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [resetDone, setResetDone] = useState(false);
 
+  // Empêche le double appel en React Strict Mode (useEffect exécuté 2× en dev).
+  const exchangedRef = useRef(false);
+
   useEffect(() => {
+    const url = new URL(window.location.href);
+
+    // 1) Flow PKCE (défaut Supabase récent) : ?code=... dans les query params
+    const code = url.searchParams.get("code");
+    if (code) {
+      // Nettoyer l'URL immédiatement pour éviter un 2e appel (Strict Mode).
+      cleanUrl();
+      if (exchangedRef.current) return;
+      exchangedRef.current = true;
+
+      setLoading(true);
+      import("@/lib/supabase-browser")
+        .then(({ getSupabaseBrowserClient }) => getSupabaseBrowserClient())
+        .then(async (supabase) => {
+          const { data, error: exchangeError } =
+            await supabase.auth.exchangeCodeForSession(code);
+          if (exchangeError || !data.session) {
+            setError(
+              "Lien de réinitialisation invalide ou expiré. Refaites une demande."
+            );
+            return;
+          }
+          setRecovery({
+            accessToken: data.session.access_token,
+            refreshToken: data.session.refresh_token,
+          });
+        })
+        .catch(() => {
+          setError("Une erreur est survenue. Veuillez réessayer.");
+        })
+        .finally(() => setLoading(false));
+      return;
+    }
+
+    // 2) Flow implicite legacy : #access_token=...&type=recovery dans le hash
     const tokens = parseRecoveryTokens(window.location.hash);
     if (tokens) {
       setRecovery(tokens);
-      // Nettoyer le hash pour ne pas exposer les tokens dans l'historique.
-      window.history.replaceState(null, "", window.location.pathname);
+      cleanUrl();
     }
   }, []);
 
@@ -934,6 +976,10 @@ export function ForgotPasswordForm({ mode }: { mode: AuthFormMode }) {
         setError(data.error || "Une erreur est survenue");
         return;
       }
+
+      // Déconnecter le client browser (session PKCE établie par exchangeCodeForSession).
+      const { getSupabaseBrowserClient } = await import("@/lib/supabase-browser");
+      await getSupabaseBrowserClient().auth.signOut();
 
       setResetDone(true);
       toast({

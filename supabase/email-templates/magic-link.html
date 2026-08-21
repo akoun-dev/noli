@@ -1,0 +1,59 @@
+<table width="100%" cellpadding="0" cellspacing="0" style="margin:0;padding:0;background-color:#f4f5f4;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+  <tr>
+    <td align="center" style="padding:40px 16px;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+
+        <!-- Header -->
+        <tr>
+          <td style="background-color:#1B464D;padding:32px 40px;text-align:center;">
+            <img src="https://noli.ci/img/noli-vertical.png" alt="NOLI" width="140" style="display:inline-block;height:36px;width:auto;" />
+          </td>
+        </tr>
+
+        <!-- Body -->
+        <tr>
+          <td style="padding:40px 40px 16px;">
+            <h2 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#171817;">
+              Connectez-vous à votre compte
+            </h2>
+            <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#555555;">
+              Cliquez sur le bouton ci-dessous pour vous connecter à <strong>NOLI Assurance</strong> sans mot de passe.
+            </p>
+
+            <!-- CTA Button -->
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td align="center" style="padding:0 0 24px;">
+                  <a href="{{ .ConfirmationURL }}"
+                     style="display:inline-block;background-color:#1B464D;color:#DEEF4A;text-decoration:none;font-size:15px;font-weight:600;padding:14px 36px;border-radius:9999px;">
+                    Se connecter
+                  </a>
+                </td>
+              </tr>
+            </table>
+
+            <p style="margin:0 0 8px;font-size:13px;line-height:1.5;color:#999999;">
+              Si le bouton ne fonctionne pas, copiez et collez ce lien dans votre navigateur&nbsp;:
+            </p>
+            <p style="margin:0;font-size:13px;word-break:break-all;">
+              <a href="{{ .ConfirmationURL }}" style="color:#1B464D;text-decoration:underline;">{{ .ConfirmationURL }}</a>
+            </p>
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td style="padding:24px 40px 32px;border-top:1px solid #eee;">
+            <p style="margin:0 0 4px;font-size:12px;color:#999999;text-align:center;">
+              Vous n'avez pas demandé cette connexion ? Ignorez cet email.
+            </p>
+            <p style="margin:0;font-size:12px;color:#999999;text-align:center;">
+              &copy; {{ .Year }} NOLI Assurance &mdash; Comparateur d'assurances en Côte d'Ivoire
+            </p>
+          </td>
+        </tr>
+
+      </table>
+    </td>
+  </tr>
+</table>
