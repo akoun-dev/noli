@@ -14,28 +14,39 @@
         <tr>
           <td style="padding:40px 40px 16px;">
             <h2 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#171817;">
-              Votre adresse email a été modifiée
+              Confirmez votre nouvelle adresse email
             </h2>
             <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#555555;">
-              L'adresse email de votre compte <strong>NOLI Assurance</strong> a été changée de <strong>{{ .OldEmail }}</strong> à <strong>{{ .Email }}</strong>.
+              Cliquez sur le bouton ci-dessous pour confirmer <strong>{{ .NewEmail }}</strong> comme nouvelle adresse email sur <strong>NOLI Assurance</strong>.
             </p>
 
-            <!-- Warning -->
-            <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+            <!-- CTA Button -->
+            <table width="100%" cellpadding="0" cellspacing="0">
               <tr>
-                <td style="background-color:#fef3cd;border-left:4px solid #f59e0b;padding:14px 18px;border-radius:0 6px 6px 0;">
-                  <p style="margin:0;font-size:14px;line-height:1.5;color:#856404;">
-                    Si vous n'avez pas effectué cette modification, contactez notre support immédiatement.
-                  </p>
+                <td align="center" style="padding:0 0 24px;">
+                  <a href="{{ .ConfirmationURL }}"
+                     style="display:inline-block;background-color:#1B464D;color:#DEEF4A;text-decoration:none;font-size:15px;font-weight:600;padding:14px 36px;border-radius:9999px;">
+                    Confirmer la nouvelle adresse
+                  </a>
                 </td>
               </tr>
             </table>
+
+            <p style="margin:0 0 8px;font-size:13px;line-height:1.5;color:#999999;">
+              Si le bouton ne fonctionne pas, copiez et collez ce lien dans votre navigateur&nbsp;:
+            </p>
+            <p style="margin:0;font-size:13px;word-break:break-all;">
+              <a href="{{ .ConfirmationURL }}" style="color:#1B464D;text-decoration:underline;">{{ .ConfirmationURL }}</a>
+            </p>
           </td>
         </tr>
 
         <!-- Footer -->
         <tr>
           <td style="padding:24px 40px 32px;border-top:1px solid #eee;">
+            <p style="margin:0 0 4px;font-size:12px;color:#999999;text-align:center;">
+              Vous n'avez pas demandé ce changement ? Ignorez cet email. Votre adresse actuelle restera inchangée.
+            </p>
             <p style="margin:0;font-size:12px;color:#999999;text-align:center;">
               &copy; {{ .Year }} NOLI Assurance &mdash; Comparateur d'assurances en Côte d'Ivoire
             </p>
