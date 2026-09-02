@@ -1,58 +1,60 @@
 /**
- * fetchWithTimeout — LOT E (résilience réseau).
+ * fetch avec délai maximal (AbortController) — résilience réseau (LOT E).
  *
  * Enveloppe `fetch` avec un `AbortController` qui interrompt la requête au bout
  * de `timeoutMs` (12 s par défaut). Sans cela, un backend injoignable laisse la
  * promesse `fetch` en suspens indéfiniment : le `finally` qui remet `loading` à
  * false ne s'exécute jamais et l'écran reste bloqué en skeleton.
  *
- * En cas de dépassement, une `TimeoutError` est levée pour que l'appelant
- * distingue un timeout d'une autre erreur réseau et affiche un message clair
- * avec un bouton « Réessayer ».
+ * En cas de dépassement, la requête est annulée et rejette avec un
+ * `DOMException` nommé `TimeoutError`. Utilisez `isTimeoutError` pour distinguer
+ * un timeout d'une autre erreur réseau, et `networkErrorMessage` pour afficher
+ * un message utilisateur normalisé et actionnable.
+ *
+ * Usage :
+ *   try {
+ *     const res = await fetchWithTimeout("/api/...", { method: "POST", body });
+ *     ...
+ *   } catch (e) {
+ *     if (isTimeoutError(e)) { ... } // « le serveur met trop de temps »
+ *     toast({ description: networkErrorMessage(e) });
+ *   }
  */
 
-export const DEFAULT_FETCH_TIMEOUT_MS = 12_000;
+export const DEFAULT_TIMEOUT_MS = 12_000;
 
-export class TimeoutError extends Error {
-  constructor(message = "La requête a expiré. Le serveur met trop de temps à répondre.") {
-    super(message);
-    this.name = "TimeoutError";
-  }
-}
+/** Alias rétro-compatible pour l'ancien nom du délai par défaut. */
+export const DEFAULT_FETCH_TIMEOUT_MS = DEFAULT_TIMEOUT_MS;
 
 export interface FetchWithTimeoutOptions extends RequestInit {
   /** Délai avant abandon, en millisecondes (défaut : 12 000 ms). */
   timeoutMs?: number;
 }
 
+/** Vrai si l'erreur provient de l'expiration du délai (et non d'un autre échec). */
+export function isTimeoutError(error: unknown): boolean {
+  return error instanceof DOMException && error.name === "TimeoutError";
+}
+
 export async function fetchWithTimeout(
   input: RequestInfo | URL,
-  { timeoutMs = DEFAULT_FETCH_TIMEOUT_MS, signal, ...init }: FetchWithTimeoutOptions = {}
+  init: FetchWithTimeoutOptions = {}
 ): Promise<Response> {
+  const { timeoutMs = DEFAULT_TIMEOUT_MS, signal, ...rest } = init;
   const controller = new AbortController();
-  let timedOut = false;
-  const timer = setTimeout(() => {
-    timedOut = true;
-    controller.abort();
-  }, timeoutMs);
+  const timer = setTimeout(
+    () => controller.abort(new DOMException("La requête a expiré", "TimeoutError")),
+    timeoutMs
+  );
 
-  // Propager un éventuel signal fourni par l'appelant vers notre controller.
+  // Respecte un éventuel signal fourni par l'appelant (composition).
   if (signal) {
-    if (signal.aborted) {
-      controller.abort();
-    } else {
-      signal.addEventListener("abort", () => controller.abort(), { once: true });
-    }
+    if (signal.aborted) controller.abort(signal.reason);
+    else signal.addEventListener("abort", () => controller.abort(signal.reason), { once: true });
   }
 
   try {
-    return await fetch(input, { ...init, signal: controller.signal });
-  } catch (err) {
-    // Abandon déclenché par notre minuteur (et non par l'appelant) → timeout.
-    if (timedOut && !(signal?.aborted)) {
-      throw new TimeoutError();
-    }
-    throw err;
+    return await fetch(input, { ...rest, signal: controller.signal });
   } finally {
     clearTimeout(timer);
   }
@@ -63,7 +65,7 @@ export async function fetchWithTimeout(
  * connexion), afin d'afficher un texte cohérent et actionnable partout.
  */
 export function networkErrorMessage(err: unknown): string {
-  if (err instanceof TimeoutError) {
+  if (isTimeoutError(err)) {
     return "Le serveur met trop de temps à répondre. Vérifiez votre connexion et réessayez.";
   }
   if (err instanceof TypeError) {

@@ -45,8 +45,11 @@ module.exports = {
       script: ".next/standalone/server.js",
       cwd: __dirname,
 
-      // SQLite ne supporte pas les accès concurrents en écriture :
-      // 1 seule instance, mode fork obligatoire.
+      // Mono-instance (mode fork). NB : la base est Supabase/Postgres (externe),
+      // PAS SQLite — rien n'oblige techniquement le mono-instance côté données.
+      // La seule dépendance à l'instance unique est le rate-limiting EN MÉMOIRE
+      // (src/lib/rate-limit.ts). Pour passer en cluster / multi-instance (HA),
+      // basculer d'abord le rate-limit sur un store partagé (Redis/Upstash).
       instances: 1,
       exec_mode: "fork",
 

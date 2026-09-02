@@ -108,13 +108,13 @@ const advantages = [
   },
   {
     icon: Users,
-    title: "Assureurs vérifiés",
-    desc: "Tous nos partenaires sont agréés par l'ASA (Autorité de Supervision de l'Assurance) de Côte d'Ivoire.",
+    title: "Assureurs partenaires",
+    desc: "Nous comparons les offres de compagnies d'assurance agréées exerçant en Côte d'Ivoire.",
   },
   {
     icon: Shield,
-    title: "Économies garanties",
-    desc: "Jusqu'à 40% d'économies en moyenne grâce à notre algorithme de comparaison intelligent.",
+    title: "Payez le juste prix",
+    desc: "Comparez les tarifs en un coup d'œil et choisissez l'offre la plus avantageuse pour votre profil.",
   },
 ];
 

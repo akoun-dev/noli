@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   User,
   Car,
@@ -169,6 +169,18 @@ export function ComparisonForm() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   // LOT E : erreur réseau persistante (inline) à la soumission de la comparaison.
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // LOT F : quand une validation d'étape échoue, amener la 1re erreur à l'écran
+  // (sinon elle reste masquée sous le header sticky) et la focaliser pour les
+  // lecteurs d'écran. Cible le premier champ marqué aria-invalid dans le DOM.
+  useEffect(() => {
+    if (Object.keys(errors).length === 0) return;
+    const el = document.querySelector<HTMLElement>('[aria-invalid="true"]');
+    if (el) {
+      el.scrollIntoView({ block: "center", behavior: "smooth" });
+      el.focus({ preventScroll: true });
+    }
+  }, [errors]);
 
   const goNext = useCallback(() => {
     if (comparisonStep < 3) {

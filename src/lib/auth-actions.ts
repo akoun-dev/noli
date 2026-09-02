@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { reconcileAnonymousQuotes } from "@/lib/quotes-reconcile";
 import { registerSchema, loginSchema, emailSchema } from "@/lib/validation";
 import { getSessionProfile, getSupabaseServerClient } from "@/lib/auth-guard";
 import {
@@ -18,7 +19,63 @@ import { logAudit } from "@/lib/audit";
  * et l'ancien endpoint unique POST /api/auth (rétro-compatibilité).
  */
 
-const SITE_URL = () => process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+/**
+ * Détermine l'URL publique du site pour construire les liens envoyés par email
+ * (réinitialisation de mot de passe). En production, l'application tourne derrière
+ * un reverse-proxy (nginx / Caddy) : on privilégie donc l'origine RÉELLE de la
+ * requête (en-têtes `x-forwarded-*`) afin que le lien pointe toujours vers le
+ * domaine visité (ex. https://noli.ci) — même si la variable d'environnement
+ * NEXT_PUBLIC_SITE_URL n'a pas été positionnée sur le serveur.
+ *
+ * Priorité :
+ *   1. NEXT_PUBLIC_SITE_URL si elle est réellement configurée (≠ localhost) ;
+ *   2. l'origine dérivée des en-têtes de la requête (proxy) ;
+ *   3. en dernier recours, la valeur d'environnement ou localhost (dev).
+ *
+ * ⚠️ Le domaine résultant doit figurer dans la liste « Redirect URLs » du projet
+ * Supabase (Authentication → URL Configuration), sinon Supabase ignore ce
+ * paramètre et retombe sur son « Site URL ».
+ */
+function resolveSiteUrl(request: NextRequest): string {
+  const env = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/+$/, "");
+  if (env && !/localhost|127\.0\.0\.1/.test(env)) return env;
+
+  const proto = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim() || "https";
+  const host =
+    request.headers.get("x-forwarded-host")?.split(",")[0]?.trim() ||
+    request.headers.get("host")?.trim();
+  if (host) return `${proto}://${host}`;
+
+  return env || "http://localhost:3000";
+}
+
+/**
+ * Traduit l'erreur de `supabase.auth.signUp` en message français exploitable.
+ * Les cas reconnus (email existant, mot de passe faible, inscriptions désactivées,
+ * rate limit email) sont distingués ; tout le reste retombe sur le message
+ * générique (aucune énumération côté login/forgot n'est affectée).
+ */
+export function signUpErrorMessage(err: { code?: string; message?: string }): string {
+  const code = (err.code || "").toLowerCase();
+  const message = (err.message || "").toLowerCase();
+
+  if (code.includes("already_exists") || message.includes("already registered") || message.includes("already been registered")) {
+    return "Un compte existe déjà avec cette adresse email. Connectez-vous ou réinitialisez votre mot de passe.";
+  }
+  if (code.includes("weak_password") || message.includes("password should") || message.includes("at least")) {
+    return "Le mot de passe ne respecte pas les exigences de sécurité. Utilisez au moins 8 caractères, une majuscule et un chiffre.";
+  }
+  if (code.includes("over_email_send_rate_limit") || code.includes("rate_limit") || message.includes("rate limit") || message.includes("too fast")) {
+    return "Trop de demandes d'inscription pour cet email. Attendez quelques minutes avant de réessayer.";
+  }
+  if (code.includes("signup_disabled") || message.includes("signup") || message.includes("not allowed")) {
+    return "L'inscription est momentanément indisponible. Réessayez plus tard ou contactez le support.";
+  }
+  if (code.includes("provider_disabled") || message.includes("disabled")) {
+    return "L'inscription par email est momentanément indisponible. Réessayez plus tard.";
+  }
+  return "Inscription impossible. Vérifiez vos informations ou connectez-vous.";
+}
 
 function rateLimitedResponse(result: { ok: false; retryAfterSec: number }): NextResponse {
   return NextResponse.json(
@@ -30,6 +87,34 @@ function rateLimitedResponse(result: { ok: false; retryAfterSec: number }): Next
     },
     { status: 429, headers: { "Retry-After": String(result.retryAfterSec) } }
   );
+}
+
+/**
+ * Étape « best-effort » bornée dans le temps. Les étapes post-inscription
+ * (confirmation email, filet profil, session immédiate, rattachement des devis)
+ * ne doivent JAMAIS bloquer la réponse : si un appel réseau (Supabase) traîne
+ * au-delà de `ms`, on l'abandonne et on continue. Sans cette borne, un appel
+ * lent faisait dépasser le délai nginx (60 s) → 502 Bad Gateway à l'inscription.
+ */
+async function bestEffort<T>(
+  label: string,
+  run: () => PromiseLike<T>,
+  ms = 8000
+): Promise<T | null> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      run(),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`timeout ${ms}ms`)), ms);
+      }),
+    ]);
+  } catch (err) {
+    console.warn(`[auth] ${label} ignoré:`, err instanceof Error ? err.message : err);
+    return null;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
 }
 
 /* ── Inscription ────────────────────────────────────────────────── */
@@ -69,24 +154,44 @@ export async function registerAction(request: NextRequest) {
 
     // Création du compte Supabase Auth (le profil est créé par le trigger
     // on_auth_user_created à partir de user_metadata).
-    const { data: authData, error: signUpError } = await supabase.auth.signUp({
-      email: parsed.data.email.trim(),
-      password: parsed.data.password,
-      options: {
-        data: {
-          role: selectedRole,
-          firstName,
-          lastName,
-          phone: parsed.data.phone || null,
-        },
-      },
-    });
+    const signUpResult = await bestEffort(
+      "Création du compte (signUp)",
+      () =>
+        supabase.auth.signUp({
+          email: parsed.data.email.trim(),
+          password: parsed.data.password,
+          options: {
+            data: {
+              role: selectedRole,
+              firstName,
+              lastName,
+              phone: parsed.data.phone || null,
+            },
+          },
+        }),
+      20000
+    );
+    if (!signUpResult) {
+      // signUp a dépassé le délai (service Auth momentanément lent) : on renvoie
+      // une erreur propre au lieu de laisser la requête pendre (→ 502 nginx).
+      return NextResponse.json(
+        { error: "Le service d'inscription est momentanément indisponible. Réessayez dans un instant." },
+        { status: 503 }
+      );
+    }
+    const { data: authData, error: signUpError } = signUpResult;
 
     if (signUpError) {
-      // Message générique : ne pas révéler si l'email existe déjà (anti-
-      // énumération de comptes), aligné sur le comportement de /login et /forgot.
+      // Le détail est journalisé côté serveur ; le message renvoyé est traduit
+      // pour les cas connus (email existant, mot de passe faible…) sans
+      // impacter l'anti-énumération des flux login/forgot.
+      console.error("[auth] Erreur signUp:", {
+        code: signUpError.code,
+        status: signUpError.status,
+        message: signUpError.message,
+      });
       return NextResponse.json(
-        { error: "Inscription impossible. Vérifiez vos informations ou connectez-vous." },
+        { error: signUpErrorMessage(signUpError) },
         { status: 400 }
       );
     }
@@ -98,21 +203,34 @@ export async function registerAction(request: NextRequest) {
 
     // Choix produit conservé : confirmation email automatique + connexion
     // immédiate pour tous les rôles (y compris USER).
-    const { error: confirmError } = await db.auth.admin.updateUserById(userId, {
-      email_confirm: true,
-    });
-    if (confirmError) {
-      console.warn("[auth] Confirmation email auto impossible:", confirmError.message);
-    }
+    await bestEffort("Confirmation email auto", () =>
+      db.auth.admin.updateUserById(userId, { email_confirm: true })
+    );
+
+    // Filet de sécurité : le profil est normalement créé par le trigger
+    // on_auth_user_created. Si ce trigger est absent ou échoue côté base, on
+    // crée le profil ici via la service_role (idempotent). Sans profil, la
+    // connexion serait ensuite refusée (« Aucun profil associé à ce compte »).
+    await bestEffort("Filet de création de profil", () =>
+      db.from("profiles").upsert(
+        {
+          id: userId,
+          email: parsed.data.email.trim().toLowerCase(),
+          first_name: firstName,
+          last_name: lastName,
+          phone: parsed.data.phone || null,
+        },
+        { onConflict: "id", ignoreDuplicates: true }
+      )
+    );
 
     // Établit la session (cookie httpOnly) : connexion immédiate après l'inscription.
-    const { error: signInAfterSignUpError } = await supabase.auth.signInWithPassword({
-      email: parsed.data.email.trim(),
-      password: parsed.data.password,
-    });
-    if (signInAfterSignUpError) {
-      console.warn("[auth] Session immédiate impossible:", signInAfterSignUpError.message);
-    }
+    await bestEffort("Session immédiate", () =>
+      supabase.auth.signInWithPassword({
+        email: parsed.data.email.trim(),
+        password: parsed.data.password,
+      })
+    );
 
     // NOTE (C-02) : plus de création automatique de compagnie / insurer_accounts
     // à l'inscription. Un assureur doit être activé et lié à une compagnie par
@@ -125,12 +243,21 @@ export async function registerAction(request: NextRequest) {
       details: { email: parsed.data.email.trim(), role: selectedRole },
     });
 
+    // D : rattache les devis anonymes créés avec cet email (best-effort, borné).
+    await bestEffort("Rattachement des devis anonymes", () =>
+      reconcileAnonymousQuotes(userId, parsed.data.email.trim())
+    );
+
+    // Le rôle réel en base est TOUJOURS "USER" (le trigger handle_new_user force
+    // ce rôle ; un assureur doit ensuite être activé par un admin). On renvoie
+    // donc "USER" et non le rôle demandé, sinon la session cliente et la
+    // redirection seraient incohérentes (accès à un espace non encore autorisé).
     return NextResponse.json({
       user: {
         id: userId,
         email: parsed.data.email.trim(),
         name: [firstName, lastName].filter(Boolean).join(" "),
-        role: selectedRole,
+        role: "USER",
       },
     });
   } catch (error) {
@@ -194,6 +321,11 @@ export async function loginAction(request: NextRequest) {
       return NextResponse.json({ error: "Compte désactivé. Contactez le support." }, { status: 403 });
     }
 
+    // D : rattache les devis anonymes créés avec cet email (best-effort, borné).
+    await bestEffort("Rattachement des devis anonymes", () =>
+      reconcileAnonymousQuotes(authData.user.id, normalizedEmail)
+    );
+
     return NextResponse.json({
       user: {
         id: authData.user.id,
@@ -240,7 +372,7 @@ export async function forgotAction(request: NextRequest) {
 
     const supabase = await getSupabaseServerClient();
     await supabase.auth.resetPasswordForEmail(parsed.data.trim(), {
-      redirectTo: `${SITE_URL()}/mot-de-passe-oublie`,
+      redirectTo: `${resolveSiteUrl(request)}/mot-de-passe-oublie`,
     });
 
     // Réponse identique qu'il existe un compte ou non (pas d'énumération).

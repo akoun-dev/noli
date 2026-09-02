@@ -6,10 +6,6 @@ import { useAppStore } from "@/store/app-store"
 import type { InsurerOffer } from "@/types"
 import { MAX_COMPARE, BUDGET_MAX, BUDGET_STEP } from "@/lib/constants"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { useToast } from "@/hooks/use-toast"
-import { fetchWithTimeout, networkErrorMessage } from "@/lib/fetch-with-timeout"
-import { formatFCFA } from "@/lib/utils"
 import {
   Dialog,
   DialogContent,
@@ -17,6 +13,10 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog"
+import { Badge } from "@/components/ui/badge"
+import { useToast } from "@/hooks/use-toast"
+import { fetchWithTimeout, networkErrorMessage } from "@/lib/fetch-with-timeout"
+import { formatFCFA } from "@/lib/utils"
 import { OfferCard } from "./offer-card"
 import { FiltersSidebar } from "./filters-sidebar"
 import { ComparisonBar } from "./comparison-bar"
@@ -43,6 +43,7 @@ export function ResultsPage() {
     comparisonModalOpen,
     setComparisonModalOpen,
     user,
+    setUserTab,
   } = useAppStore()
   const { toast } = useToast()
 
@@ -275,6 +276,7 @@ export function ResultsPage() {
       setUserQuotes([quote, ...userQuotes])
 
       // LOT D : confirmation persistante à l'écran (plus un simple toast).
+      setRefCopied(false)
       setConfirmedQuote({
         reference: data.quote.reference,
         estimatedPrice: data.quote.estimatedPrice ?? null,
@@ -509,7 +511,8 @@ export function ResultsPage() {
 
             {/* Main Content — le compteur (h1 aria-live ci-dessus) annonce les
                 mises à jour ; la liste elle-même n'est pas une région live pour
-                éviter de re-annoncer tout le DOM à chaque filtre. */}
+                éviter de re-annoncer tout le DOM à chaque filtre. La <section>
+                (pas <main>, déjà présent dans le layout) porte le libellé. */}
             <section
               aria-label="Offres d'assurance"
               className="flex-1 min-w-0 space-y-4"
@@ -637,7 +640,7 @@ export function ResultsPage() {
                     {user.isLoggedIn ? (
                       <Button
                         className="w-full rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
-                        onClick={() => { setConfirmedQuote(null); setView("user-dashboard") }}
+                        onClick={() => { setConfirmedQuote(null); setUserTab("quotes"); setView("user-dashboard") }}
                       >
                         Voir mes devis
                       </Button>

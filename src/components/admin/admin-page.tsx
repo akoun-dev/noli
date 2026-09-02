@@ -14,6 +14,7 @@ import {
   ClipboardList,
   Database,
   UserCog,
+  UserCircle,
   Phone,
 } from "lucide-react";
 import {
@@ -34,6 +35,7 @@ const SettingsTab = dynamic(() => import("./settings-tab").then((m) => m.Setting
 const AuditLogsTab = dynamic(() => import("./audit-logs-tab").then((m) => m.AuditLogsTab));
 const BackupsTab = dynamic(() => import("./backups-tab").then((m) => m.BackupsTab));
 const RolesTab = dynamic(() => import("./roles-tab").then((m) => m.RolesTab));
+const UserProfileTab = dynamic(() => import("../user/tabs/user-profile-tab").then((m) => m.UserProfileTab));
 
 /* ── Sidebar config ── */
 const sidebarItems: AppShellSidebarItem[] = [
@@ -48,6 +50,7 @@ const sidebarItems: AppShellSidebarItem[] = [
   { id: "audit-logs", label: "Journaux d'audit", icon: ClipboardList },
   { id: "backups", label: "Sauvegardes", icon: Database },
   { id: "roles", label: "Rôles & Permissions", icon: UserCog },
+  { id: "profile", label: "Mon Profil", icon: UserCircle },
   { id: "settings", label: "Paramètres", icon: Settings },
 ];
 
@@ -76,6 +79,8 @@ function renderTab(tab: string) {
       return <BackupsTab />;
     case "roles":
       return <RolesTab />;
+    case "profile":
+      return <UserProfileTab />;
     case "settings":
       return <SettingsTab />;
     default:
@@ -101,6 +106,10 @@ export function AdminPage() {
           <DropdownMenuItem onClick={() => setAdminTab("dashboard")}>
             <LayoutDashboard className="mr-2 h-4 w-4" />
             Tableau de bord
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setAdminTab("profile")}>
+            <UserCircle className="mr-2 h-4 w-4" />
+            Mon Profil
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setAdminTab("settings")}>
             <Settings className="mr-2 h-4 w-4" />

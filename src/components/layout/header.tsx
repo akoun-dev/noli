@@ -170,7 +170,7 @@ export function Header() {
                 <DropdownMenuItem onClick={() => {
                   const role = useAppStore.getState().user.role;
                   if (role === "INSURER") { useAppStore.getState().setView("insurer-dashboard"); useAppStore.getState().setInsurerTab("settings"); }
-                  else if (role === "ADMIN") { useAppStore.getState().setView("admin"); }
+                  else if (role === "ADMIN") { useAppStore.getState().setAdminTab("profile"); useAppStore.getState().setView("admin"); }
                   else { useAppStore.getState().setView("user-dashboard"); useAppStore.getState().setUserTab("profile"); }
                 }}>
                   <User className="h-4 w-4" />
@@ -239,18 +239,22 @@ export function Header() {
                 {navItems.map((item, i) => {
                   const active = isActive(item.action);
                   return (
-                    <button
+                    <motion.button
                       key={item.label}
+                      // Items TOUJOURS visibles (opacité à 1) : l'animation n'est
+                      // qu'un enhancement (glissement), pas un prérequis d'affichage.
+                      initial={{ x: 20 }}
+                      animate={{ x: 0 }}
+                      transition={{ delay: i * 0.08, duration: 0.25 }}
                       onClick={() => handleNav(item.action)}
-                      style={{ animationDelay: `${i * 0.08}s` }}
-                      className={`animate-fade-in flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium uppercase tracking-wide transition-colors ${
+                      className={`flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium uppercase tracking-wide transition-colors ${
                         active
                           ? "bg-primary/10 text-primary"
                           : "text-muted-foreground hover:bg-muted hover:text-foreground"
                       }`}
                     >
                       {item.label}
-                    </button>
+                    </motion.button>
                   );
                 })}
               </nav>
@@ -307,7 +311,7 @@ export function Header() {
                       onClick={() => {
                         const role = useAppStore.getState().user.role;
                         if (role === "INSURER") { useAppStore.getState().setView("insurer-dashboard"); useAppStore.getState().setInsurerTab("settings"); }
-                        else if (role === "ADMIN") { useAppStore.getState().setView("admin"); }
+                        else if (role === "ADMIN") { useAppStore.getState().setAdminTab("profile"); useAppStore.getState().setView("admin"); }
                         else { useAppStore.getState().setView("user-dashboard"); useAppStore.getState().setUserTab("profile"); }
                         setMobileOpen(false);
                       }}

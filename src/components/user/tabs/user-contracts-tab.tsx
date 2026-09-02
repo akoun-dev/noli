@@ -10,12 +10,33 @@ import {
   CheckCircle2,
   Building2,
   AlertCircle,
+  FileWarning,
+  Loader2,
 } from "lucide-react";
 import { useAppStore } from "@/store/app-store";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
+
+const CLAIM_TYPES = [
+  { value: "ACCIDENT", label: "Accident" },
+  { value: "VOL", label: "Vol" },
+  { value: "BRIS_GLACE", label: "Bris de glace" },
+  { value: "INCENDIE", label: "Incendie" },
+  { value: "AUTRE", label: "Autre" },
+];
 
 const contractSteps = [
   {
@@ -85,11 +106,135 @@ const fmtFCFA = (n: number | null) =>
 const fmtDate = (d: string | null) =>
   d ? new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" }) : "—";
 
+/* ── Dialogue de déclaration de sinistre ── */
+function ClaimDialog({
+  contract,
+  onClose,
+}: {
+  contract: Contract | null;
+  onClose: () => void;
+}) {
+  const { toast } = useToast();
+  const [type, setType] = useState("ACCIDENT");
+  const [incidentDate, setIncidentDate] = useState("");
+  const [description, setDescription] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (contract) {
+      setType("ACCIDENT");
+      setIncidentDate("");
+      setDescription("");
+    }
+  }, [contract]);
+
+  const submit = async () => {
+    if (!contract) return;
+    if (description.trim().length < 10) {
+      toast({
+        title: "Description trop courte",
+        description: "Merci de décrire le sinistre (au moins 10 caractères).",
+        variant: "destructive",
+      });
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await fetch("/api/claims", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contractId: Number(contract.id),
+          type,
+          incidentDate: incidentDate || undefined,
+          description,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Erreur");
+      toast({
+        title: "Sinistre déclaré",
+        description: `Référence ${data.reference}. Votre assureur va l'examiner.`,
+      });
+      onClose();
+    } catch (e) {
+      toast({
+        title: "Erreur",
+        description: e instanceof Error ? e.message : "Impossible de déclarer le sinistre.",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={!!contract} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Déclarer un sinistre</DialogTitle>
+          <DialogDescription>
+            Contrat {contract?.reference} — {contract?.insurer?.name}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="claim-type">Type de sinistre</Label>
+            <select
+              id="claim-type"
+              value={type}
+              onChange={(e) => setType(e.target.value)}
+              className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+            >
+              {CLAIM_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="claim-date">Date du sinistre</Label>
+            <Input
+              id="claim-date"
+              type="date"
+              value={incidentDate}
+              onChange={(e) => setIncidentDate(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="claim-desc">Description</Label>
+            <textarea
+              id="claim-desc"
+              rows={4}
+              maxLength={2000}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Décrivez les circonstances du sinistre…"
+              className="w-full rounded-lg border bg-background p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} disabled={saving}>
+            Annuler
+          </Button>
+          <Button onClick={submit} disabled={saving} className="bg-brand text-black hover:bg-brand-hover">
+            {saving ? <Loader2 className="size-4 mr-2 animate-spin" /> : <FileWarning className="size-4 mr-2" />}
+            Envoyer la déclaration
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function UserContractsTab() {
   const { setView, setComparisonStep } = useAppStore();
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [claimFor, setClaimFor] = useState<Contract | null>(null);
 
   useEffect(() => {
     const fetchContracts = async () => {
@@ -114,7 +259,7 @@ export function UserContractsTab() {
   return (
     <div className="space-y-6">
       <motion.div
-        initial={{ opacity: 0, y: 10 }}
+        initial={{ y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
       >
@@ -146,7 +291,7 @@ export function UserContractsTab() {
             return (
               <motion.div
                 key={contract.id}
-                initial={{ opacity: 0, y: 12 }}
+                initial={{ y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: i * 0.05 }}
               >
@@ -198,6 +343,18 @@ export function UserContractsTab() {
                         <p className="font-medium">{fmtDate(contract.endDate)}</p>
                       </div>
                     </div>
+                    {contract.status === "ACTIVE" && (
+                      <div className="mt-4 pt-3 border-t border-border/40 flex justify-end">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setClaimFor(contract)}
+                        >
+                          <FileWarning className="h-4 w-4 mr-2" />
+                          Déclarer un sinistre
+                        </Button>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </motion.div>
@@ -209,7 +366,7 @@ export function UserContractsTab() {
       {/* Empty state */}
       {!loading && !error && contracts.length === 0 && (
         <motion.div
-          initial={{ opacity: 0 }}
+          initial={{}}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.4, delay: 0.1 }}
           className="rounded-xl border border-dashed bg-card/40 p-10 text-center"
@@ -239,7 +396,7 @@ export function UserContractsTab() {
       {/* Étapes explicatives (affichées quand aucun contrat) */}
       {!loading && contracts.length === 0 && (
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.2 }}
         >
@@ -270,6 +427,8 @@ export function UserContractsTab() {
           </div>
         </motion.div>
       )}
+
+      <ClaimDialog contract={claimFor} onClose={() => setClaimFor(null)} />
     </div>
   );
 }

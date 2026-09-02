@@ -140,10 +140,26 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: "noli-store",
+      // v1 (QA 2026-08-10) : currentView n'est plus persistée. On purge la
+      // valeur héritée des navigateurs existants, sinon la vue mémorisée d'une
+      // session précédente réécrase l'URL au chargement (redirections fantômes,
+      // ex. « / » → « /espace-client »). Sans ce migrate, partialize empêche
+      // seulement les NOUVELLES écritures, pas la relecture de l'ancienne clé.
+      version: 1,
+      migrate: (persisted) => {
+        if (persisted && typeof persisted === "object") {
+          delete (persisted as Record<string, unknown>).currentView;
+        }
+        return persisted as AppState;
+      },
       partialize: (state) => ({
         // Persist auth
         user: state.user,
-        currentView: state.currentView,
+        // NOTE (QA 2026-08-10) : currentView n'est PLUS persistée. L'URL est la
+        // seule source de vérité de la navigation (l'effet URL→vue la restaure
+        // au chargement). La persister provoquait des redirections incohérentes :
+        // après réhydratation, la vue mémorisée d'une session précédente écrasait
+        // l'URL ouverte (ex. « / » renvoyait sur « /comparer » ou « /admin »).
         // Persist tabs
         adminTab: state.adminTab,
         userTab: state.userTab,

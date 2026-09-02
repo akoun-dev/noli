@@ -65,16 +65,27 @@ const statusColor: Record<string, string> = {
 export function UserDashboardTab() {
   const { user, setUserTab, setView, setComparisonStep } = useAppStore();
   const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  const fetchQuotes = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     if (!user.id) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/quotes`);
-      if (res.ok) {
-        const data = await res.json();
+      const [quotesRes, notifsRes] = await Promise.all([
+        fetch(`/api/quotes`),
+        fetch(`/api/notifications?unreadOnly=true`),
+      ]);
+      if (quotesRes.ok) {
+        const data = await quotesRes.json();
         setQuotes(Array.isArray(data) ? data : data.quotes ?? []);
+      }
+      if (notifsRes.ok) {
+        const notifs = await notifsRes.json();
+        // Le compteur reflète les notifications réellement non lues (plus de 0 figé).
+        setUnreadCount(
+          Array.isArray(notifs) ? notifs.length : notifs.notifications?.length ?? 0
+        );
       }
     } catch {
       /* silent */
@@ -84,8 +95,8 @@ export function UserDashboardTab() {
   }, [user.id]);
 
   useEffect(() => {
-    fetchQuotes();
-  }, [fetchQuotes]);
+    fetchData();
+  }, [fetchData]);
 
   const firstName = user.name?.split(" ")[0] || "Utilisateur";
   const pendingCount = quotes.filter((q) => q.status === "PENDING").length;
@@ -110,7 +121,7 @@ export function UserDashboardTab() {
     },
     {
       label: "Notifications",
-      value: 0,
+      value: unreadCount,
       icon: Bell,
       color: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
     },
@@ -126,7 +137,7 @@ export function UserDashboardTab() {
     <div className="space-y-6">
       {/* Greeting */}
       <motion.div
-        initial={{ opacity: 0, y: 10 }}
+        initial={{ y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
       >
@@ -143,7 +154,7 @@ export function UserDashboardTab() {
           return (
             <motion.div
               key={stat.label}
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: i * 0.05 }}
             >
@@ -170,7 +181,7 @@ export function UserDashboardTab() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Activity */}
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.2 }}
           className="lg:col-span-2"
@@ -246,7 +257,7 @@ export function UserDashboardTab() {
 
         {/* Quick Actions */}
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.3 }}
         >
