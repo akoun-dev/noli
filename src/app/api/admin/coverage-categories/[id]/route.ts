@@ -2,6 +2,7 @@ import { db, mapRow } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-guard";
 import { logAudit } from "@/lib/audit";
+import { updateCoverageCategorySchema } from "@/lib/validation";
 
 export async function GET(
   _request: NextRequest,
@@ -51,8 +52,20 @@ export async function PUT(
   try {
     const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
     const { id } = await params;
-    const body = await request.json();
-    const { code, name, description, displayOrder, isActive } = body;
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: "Requête invalide" }, { status: 400 });
+    }
+    const parsed = updateCoverageCategorySchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message ?? "Requête invalide" },
+        { status: 400 }
+      );
+    }
+    const { code, name, description, displayOrder, isActive } = parsed.data;
 
     const { data: existingData } = await db
       .from("coverage_categories")

@@ -25,12 +25,6 @@ export interface PricingResult {
   breakdown: string;
 }
 
-/** Options pour le calcul de la prime nette */
-export interface NetPremiumOptions {
-  taxDiscountPercent?: number; // défaut 5 %
-  fees?: number;               // défaut 2 500 FCFA
-}
-
 /** Résultat du scoring d'une offre */
 export interface ScoreResult {
   score: number;
@@ -854,31 +848,7 @@ function findTierceRate(
   return null;
 }
 
-// ── 2. calculateNetPremium ───────────────────────────────────
-//
-// ⚠️ DÉCISION P2 (métier) : RÈGLE NON VALIDÉE — NE PAS BRANCHER SUR LE PRIX CLIENT.
-// Cette fonction applique une remise fiscale (5 %) et des frais (2 500 FCFA) à la
-// prime brute. Ces valeurs ne sont, à ce jour, confirmées par aucune source métier
-// (assiette, taux, caractère obligatoire non vérifiés). Le prix affiché reste donc
-// le prix BRUT (grossPremium). À confirmer explicitement par Hervé/Akoun avant tout
-// usage ; à supprimer lors du nettoyage si aucune source fiable ne la valide.
-// Voir docs/EXEMPLE_CALCUL_PRIX.md.
-
-export function calculateNetPremium(
-  grossPremium: number,
-  options?: NetPremiumOptions
-): number {
-  const taxDiscountPercent = options?.taxDiscountPercent ?? 5;
-  const fees = options?.fees ?? 2_500;
-
-  const taxDiscount = grossPremium * (taxDiscountPercent / 100);
-  const net = grossPremium - taxDiscount + fees;
-
-  // La prime nette ne peut pas être négative
-  return Math.max(0, Math.round(net));
-}
-
-// ── 3. scoreOffer ────────────────────────────────────────────
+// ── 2. scoreOffer ────────────────────────────────────────────
 
 export function scoreOffer(
   offer: OfferInput,

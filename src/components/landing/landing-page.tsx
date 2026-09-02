@@ -90,8 +90,8 @@ const steps = [
   {
     num: "03",
     icon: CheckCircle2,
-    title: "Comparez et obtenez votre devis",
-    desc: "Sélectionnez l'offre qui vous convient et obtenez votre devis en quelques clics — un conseiller vous accompagne pour finaliser votre contrat.",
+    title: "Obtenez votre devis",
+    desc: "Comparez et obtenez votre devis en quelques clics — un conseiller NOLI vous accompagne pour finaliser votre contrat.",
   },
 ];
 
@@ -241,7 +241,7 @@ export function LandingPage() {
               3 étapes simples
             </h2>
             <p className="mt-3 text-muted-foreground max-w-xl mx-auto">
-              Comparez et souscrivez votre assurance en quelques minutes, sans quitter votre canapé.
+              Comparez les offres et obtenez votre devis en quelques minutes, sans quitter votre canapé.
             </p>
           </div>
 
@@ -335,8 +335,8 @@ export function LandingPage() {
               Prêt à économiser sur votre assurance ?
             </h2>
             <p className="text-muted-foreground max-w-lg mx-auto mb-8">
-              Comparez les offres des assureurs partenaires et obtenez votre
-              devis en toute confiance avec NOLI.
+              Comparez les offres des assureurs partenaires de NOLI et obtenez
+              votre devis en toute confiance, en quelques minutes.
             </p>
             <Button
               size="lg"

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, mapRow, mapRows } from "@/lib/db";
 import { requireAuth } from "@/lib/auth-guard";
 import { logAudit } from "@/lib/audit";
+import { assignProfileRolesSchema } from "@/lib/validation";
 
 /* ── GET : Rôles personnalisés d'un profil ───────────────────── */
 export async function GET(
@@ -47,8 +48,20 @@ export async function PUT(
   try {
     const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
     const { id } = await params;
-    const body = await request.json();
-    const { roleIds } = body as { roleIds: string[] };
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: "Requête invalide" }, { status: 400 });
+    }
+    const parsed = assignProfileRolesSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message ?? "Requête invalide" },
+        { status: 400 }
+      );
+    }
+    const { roleIds } = parsed.data;
 
     const { data: profileData } = await db
       .from("profiles")

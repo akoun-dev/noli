@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   calculateGuaranteePremium,
-  calculateNetPremium,
   scoreOffer,
   isVehicleEligible,
   type VehiclePricingData,
@@ -398,28 +397,6 @@ describe("calculateGuaranteePremium — méthode inconnue", () => {
     expect(result.amount).toBe(0);
     expect(result.method).toBe("WEIRD");
     expect(result.breakdown).toContain("non reconnue");
-  });
-});
-
-/* ── calculateNetPremium ── */
-describe("calculateNetPremium", () => {
-  it("applique la remise fiscale de 5 % et des frais de 2 500 par défaut", () => {
-    // 100 000 − 5 000 + 2 500 = 97 500
-    expect(calculateNetPremium(100000)).toBe(97500);
-  });
-
-  it("accepte des options personnalisées", () => {
-    // 100 000 − 10 000 + 1 000 = 91 000
-    expect(calculateNetPremium(100000, { taxDiscountPercent: 10, fees: 1000 })).toBe(91000);
-  });
-
-  it("ne renvoie jamais de prime négative", () => {
-    expect(calculateNetPremium(100, { taxDiscountPercent: 200, fees: 0 })).toBe(0);
-  });
-
-  it("arrondit le résultat", () => {
-    // 99 999 − 4 999.95 + 2 500 = 97 499.05 → 97 499
-    expect(calculateNetPremium(99999)).toBe(97499);
   });
 });
 
