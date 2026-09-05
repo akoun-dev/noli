@@ -1,15 +1,15 @@
 # Déploiement NOLI
 
-Guide de déploiement production. Stack : **Next.js 16 (build `standalone`) · Supabase (Postgres + Auth) · Caddy + PM2**.
+Guide de déploiement production. Stack : **Next.js 16 (build `standalone`) · PostgreSQL natif + authentification locale · Caddy + PM2**.
 
-> L'ancienne stack **Prisma / SQLite / NextAuth n'est plus utilisée**. La base est **Postgres (Supabase Cloud)**, l'authentification via **Supabase Auth**. Package manager de référence : **bun** (`bun.lock`).
+> La stack runtime utilise PostgreSQL natif et une authentification locale. PostgreSQL de développement est fourni par Docker. Package manager de référence : **npm** (`package-lock.json`).
 
 ---
 
 ## 1. Prérequis
 
-- **Node.js >= 18** + **bun**
-- **Supabase CLI** (`npx supabase`) — projet lié : `lqjdmugtrhwtkofkcmlw`
+- **Node.js >= 18** + **npm**
+- **Docker Compose** — PostgreSQL local via `docker-compose.dev.yml`
 - **PM2** : `npm install -g pm2`
 - **Caddy** (reverse-proxy, **seul** point d'entrée public)
 
@@ -17,13 +17,13 @@ Guide de déploiement production. Stack : **Next.js 16 (build `standalone`) · S
 
 ## 2. Variables d'environnement (`.env`)
 
-Copier `.env.example` et renseigner (Dashboard Supabase → Project Settings → API) :
+Copier `.env.example` et renseigner les variables locales :
 
 | Variable | Rôle |
 |---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | URL du projet Supabase |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Clé anon (client, soumise à la RLS) |
-| `SUPABASE_SERVICE_ROLE_KEY` | Clé service_role (**serveur uniquement**, contourne la RLS — ne JAMAIS exposer côté client) |
+| `DATABASE_URL` | Connexion PostgreSQL serveur |
+| `AUTH_SESSION_SECRET` | Secret des sessions locales, serveur uniquement |
+| `POSTGRES_PASSWORD` | Mot de passe du conteneur PostgreSQL de développement |
 | `NEXT_PUBLIC_SITE_URL` | URL publique de l'app (emails de réinitialisation) |
 | `RESEND_API_KEY` | Emails transactionnels (Resend) |
 
@@ -31,32 +31,27 @@ Copier `.env.example` et renseigner (Dashboard Supabase → Project Settings →
 
 ---
 
-## 3. Base de données (Postgres / Supabase)
+## 3. Base de données PostgreSQL
 
-**Pas de Prisma, pas de SQLite.** Schéma + RLS dans `supabase/migrations/`.
-
-```bash
-npx supabase link --project-ref lqjdmugtrhwtkofkcmlw
-npx supabase migration list   # migrations appliquées vs en attente
-npx supabase db push          # appliquer les nouvelles migrations
-```
-
-Edge Function (notifications) :
+**Pas de Prisma, pas de SQLite.** Schéma natif dans `db/migrations/`.
 
 ```bash
-npx supabase functions deploy send-notification
-npx supabase secrets set NOLI_FUNCTION_SECRET=...   # secret partagé (anti-invocation publique)
+docker compose -f docker-compose.dev.yml up -d postgres
+npm run db:migrate
+npm run db:seed
 ```
+
+Les notifications sont écrites directement par le serveur Next.js dans PostgreSQL.
 
 ---
 
 ## 4. Build
 
-Avant un déploiement : `npx tsc --noEmit && bun run test`.
+Avant un déploiement : `npx tsc --noEmit && npm test`.
 
 ```bash
-bun install
-bun run build                 # output: "standalone" → .next/standalone/server.js
+npm ci
+npm run build                 # output: "standalone" → .next/standalone/server.js
 cp -r .next/static .next/standalone/.next/
 cp -r public .next/standalone/
 ```
@@ -78,7 +73,7 @@ L'app écoute sur **:8080** (`PORT: process.env.PORT || 8080`).
 Sans PM2 :
 
 ```bash
-bun run start   # NODE_ENV=production, lance .next/standalone/server.js
+npm run start   # NODE_ENV=production, lance .next/standalone/server.js
 ```
 
 ---
@@ -99,10 +94,10 @@ caddy start --config Caddyfile   # ou : caddy reload --config Caddyfile
 
 ```bash
 git pull
-bun install
-bun run build
+npm ci
+npm run build
 cp -r .next/static .next/standalone/.next/ && cp -r public .next/standalone/
-npx supabase db push          # si de nouvelles migrations
+npm run db:migrate            # si de nouvelles migrations
 pm2 reload ecosystem.config.js
 caddy reload --config Caddyfile
 ```
@@ -115,8 +110,7 @@ caddy reload --config Caddyfile
 pm2 status                              # état
 pm2 logs noli                           # logs
 pm2 reload ecosystem.config.js          # redémarrage sans coupure
-npx supabase migration list             # état des migrations
-npx supabase db query --linked          # requête SQL read-only sur la base liée
+docker compose -f docker-compose.dev.yml exec postgres psql -U noli_app -d noli
 ```
 
 ---

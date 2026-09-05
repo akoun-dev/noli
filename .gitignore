@@ -57,6 +57,7 @@ server.log
 # Database
 prisma/dev.db
 prisma/dev.db-journal
+backups/
 
 # IDE
 .vscode/

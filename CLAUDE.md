@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Stack
 
-Next.js 16 (App Router) · TypeScript (strict) · Supabase (Postgres + Auth, **pas de Prisma**) · Tailwind v4 + shadcn/ui · Zustand · React Query · react-hook-form + Zod v4 · Vitest. Build `output: "standalone"`, prod derrière **Caddy** + **PM2** (mono-instance fork).
+Next.js 16 (App Router) · TypeScript (strict) · PostgreSQL natif (Docker en développement) · authentification applicative locale · Tailwind v4 + shadcn/ui · Zustand · React Query · react-hook-form + Zod v4 · Vitest. Build `output: "standalone"`, prod derrière **Caddy** + **PM2** (mono-instance fork).
 
 ## Commandes
 
@@ -26,18 +26,18 @@ bunx vitest -t "calcule la prime"                 # un seul test par nom
 bun run test:coverage       # couverture (rapport dans ./coverage)
 ```
 
-Migrations SQL (schéma + RLS) dans `supabase/migrations/`, appliquées via la **CLI Supabase** (`supabase db push` / `supabase migration up`, projet lié). Edge Function notifications : `supabase functions deploy send-notification`.
+Migrations SQL natives dans `db/migrations/`, appliquées via `npm run db:migrate`. PostgreSQL de développement : `docker compose -f docker-compose.dev.yml up -d postgres`.
 
-> Les scripts `.zscripts/*.sh` sont des wrappers CI hérités (référencent un `db:push` Prisma qui n'existe plus) — préférer les commandes ci-dessus.
+> Les scripts `.zscripts/*.sh` sont des wrappers historiques — préférer `docker compose -f docker-compose.dev.yml up -d postgres`, `npm run db:migrate` et `npm run db:seed`.
 
 ## Architecture — ce qui n'est pas évident
 
-### Deux clients Supabase, deux sémantiques (CRUCIAL)
-- **`db`** (`src/lib/db.ts`) → client **`service_role`**, **contourne la RLS**, serveur uniquement. C'est un `Proxy` qui crée le client au premier appel (un `.env` incomplet ne casse donc pas le build). **Tout le data-access métier passe par `db`** → l'autorisation repose **entièrement sur les checks applicatifs** (`requireAuth`, `requireRole`, comparaison d'IDs). La RLS n'est évaluée que pour les requêtes via la anon key. Conséquence : une route qui oublie `requireAuth` = fuite sans filet.
-- **`getSupabaseServerClient()`** (`src/lib/auth-guard.ts`) → client **anon lié au cookie session**, RLS active. Utilisé **pour l'auth** (`signUp`, `signInWithPassword`, `getUser`).
+### Accès database et authentification
+- **`db`** (`src/lib/db.ts`) → builder PostgreSQL natif basé sur `DATABASE_URL`, serveur uniquement. Les requêtes doivent rester paramétrées et les contrôles d'accès applicatifs (`requireAuth`, `requireRole`, ownership) restent obligatoires.
+- **`local-auth`** (`src/lib/local-auth.ts`) → sessions persistées dans PostgreSQL, cookies httpOnly et hashes bcrypt via `pgcrypto`.
 
 ### Modèle d'authentification / RBAC
-- Session = JWT Supabase Auth dans cookies httpOnly (`@supabase/ssr`). Toujours valider côté serveur via `supabase.auth.getUser()` (jamais `getSession`/client).
+- Session = token opaque haché dans `sessions`, conservé dans un cookie httpOnly et validé côté serveur.
 - `getSessionProfile()` (`auth-guard.ts`) → renvoie le profil (rôle, `isActive`) lu via `db` ; renvoie `null` si le compte est désactivé. Helpers : `requireAuth(roles?)`, `requireAdmin(profile)`, `requireRole(profile, roles)`, `getInsurerAccount(profileId)`.
 - **L'identité vient toujours de la session**, jamais d'un paramètre client (anti-IDOR). Pour un insurer, `getInsurerAccount(profile.id)` puis filtrage `where insurer_id = account.insurerId`.
 - Conventions de routes API : `/api/admin/*` (ADMIN), `/api/insurer/*` (INSURER + scope `insurer_account`), `/api/user/*` (ownership `userId === session.id`), `/api/auth/*` (actions dans `src/lib/auth-actions.ts`), publiques : `/api/quotes`, `/api/compare`, `/api/offers`, `/api/contact*`.
@@ -64,9 +64,9 @@ Cœur métier dans `src/lib/` : `pricing-service.ts` (calcul des primes via `cov
 - Commentaires et messages utilisateur en **français**.
 - Réponses API : `{ data }` ou `{ error }` avec code HTTP approprié ; messages d'erreur génériques côté auth (pas d'énumération de comptes).
 - `console.error` pour le logging serveur ; `logAudit()` (`src/lib/audit.ts`) pour les actions sensibles (attribue à l'utilisateur de la session).
-- Ne jamais exposer la `service_role` côté client ni committer `.env` (déjà dans `.gitignore`).
+- Ne jamais exposer `DATABASE_URL`, `AUTH_SESSION_SECRET` ou `POSTGRES_PASSWORD` côté client ni committer `.env` (déjà dans `.gitignore`).
 
 ## Pièges connus
-- `next-auth` est listé dans `package.json` mais **n'est plus utilisé** (auth via Supabase) — à retirer.
-- Le projet a migré Prisma/SQLite → Supabase : certains commentaires/scripts mentionnent encore SQLite (ex. `ecosystem.config.js`). La BDD est Postgres.
+- Les références Supabase historiques sont conservées sous `supabase/` pour audit et migration, mais ne sont plus utilisées par le runtime.
+- `db/custom.db` est un artefact SQLite historique et ne constitue pas la base de l'application.
 - `roles`/`permissions`/`role_permissions`/`profile_roles` existent mais ne sont lus par aucune policy ni le code (RBAC décoratif) — `is_admin()` ne vérifie que `profiles.role = 'ADMIN'`.

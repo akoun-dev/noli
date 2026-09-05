@@ -1,6 +1,7 @@
 import { db, mapRow } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
-import { getSessionProfile, getSupabaseServerClient } from "@/lib/auth-guard";
+import { getSessionProfile } from "@/lib/auth-guard";
+import { updateUserPassword, verifyUserPassword } from "@/lib/local-auth";
 import { validatePasswordPolicy } from "@/lib/password-policy";
 
 type ProfileRow = {
@@ -109,19 +110,13 @@ export async function PUT(request: NextRequest) {
       if (!policy.ok) {
         return NextResponse.json({ error: policy.message }, { status: 400 });
       }
-      const supabase = await getSupabaseServerClient();
-      const { error: verifyError } = await supabase.auth.signInWithPassword({
-        email: sessionProfile.email,
-        password: currentPassword,
-      });
-      if (verifyError) {
+      if (!await verifyUserPassword(sessionProfile.id, currentPassword)) {
         return NextResponse.json(
           { error: "Mot de passe actuel incorrect" },
           { status: 401 }
         );
       }
-      const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
-      if (updateError) throw updateError;
+      await updateUserPassword(sessionProfile.id, newPassword);
     }
 
     const { data: updatedData, error: updateError } = await db

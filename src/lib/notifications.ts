@@ -15,7 +15,7 @@ export interface CreateNotificationParams {
 export async function createNotification(params: CreateNotificationParams) {
   const { userId, type, title, message, link } = params;
 
-  const validTypes = ["INFO", "SUCCESS", "WARNING", "ERROR"];
+  const validTypes = ["INFO", "SUCCESS", "WARNING", "ERROR", "CALLBACK"];
   const notificationType = type && validTypes.includes(type) ? type : "INFO";
 
   const { data, error } = await db

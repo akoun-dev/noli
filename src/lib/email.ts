@@ -290,3 +290,17 @@ export async function sendCallbackConfirmation(to: string, insurerName: string, 
 </html>`,
   });
 }
+
+/** Envoie un lien de reinitialisation pour l'authentification locale. */
+export async function sendPasswordResetEmail(to: string, resetUrl: string) {
+  const safeUrl = escapeHtml(resetUrl);
+  return sendMail({
+    to,
+    subject: "Réinitialisation de votre mot de passe NOLI",
+    html: `
+      <p>Une demande de réinitialisation de mot de passe a été reçue.</p>
+      <p><a href="${safeUrl}">Réinitialiser mon mot de passe</a></p>
+      <p>Ce lien expire prochainement. Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.</p>
+    `,
+  });
+}

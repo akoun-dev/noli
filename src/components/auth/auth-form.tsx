@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   Eye,
   EyeOff,
@@ -819,19 +819,13 @@ export function RegisterForm({ mode }: { mode: AuthFormMode }) {
 /* ── Forgot Password Form ── */
 
 interface RecoveryTokens {
-  accessToken: string;
-  refreshToken: string;
+  token: string;
 }
 
-/** Extrait les tokens de récupération du hash d'URL (#access_token=...&type=recovery). */
-function parseRecoveryTokens(hash: string): RecoveryTokens | null {
-  if (!hash || hash.length < 2) return null;
-  const params = new URLSearchParams(hash.slice(1));
-  if (params.get("type") !== "recovery") return null;
-  const accessToken = params.get("access_token");
-  const refreshToken = params.get("refresh_token");
-  if (!accessToken || !refreshToken) return null;
-  return { accessToken, refreshToken };
+/** Extrait le token de récupération de l'URL locale (?token=...). */
+function parseRecoveryToken(url: URL): RecoveryTokens | null {
+  const token = url.searchParams.get("token");
+  return token ? { token } : null;
 }
 
 /** Nettoie l'URL (query params + hash) sans recharger la page. */
@@ -848,54 +842,17 @@ export function ForgotPasswordForm({ mode }: { mode: AuthFormMode }) {
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
 
-  // Étape 2 : lien de réinitialisation (type=recovery dans le hash d'URL).
+  // Étape 2 : lien de réinitialisation local (?token=...).
   const [recovery, setRecovery] = useState<RecoveryTokens | null>(null);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [resetDone, setResetDone] = useState(false);
 
-  // Empêche le double appel en React Strict Mode (useEffect exécuté 2× en dev).
-  const exchangedRef = useRef(false);
-
   useEffect(() => {
     const url = new URL(window.location.href);
-
-    // 1) Flow PKCE (défaut Supabase récent) : ?code=... dans les query params
-    const code = url.searchParams.get("code");
-    if (code) {
-      // Nettoyer l'URL immédiatement pour éviter un 2e appel (Strict Mode).
-      cleanUrl();
-      if (exchangedRef.current) return;
-      exchangedRef.current = true;
-
-      setLoading(true);
-      import("@/lib/supabase-browser")
-        .then(({ getSupabaseBrowserClient }) => getSupabaseBrowserClient())
-        .then(async (supabase) => {
-          const { data, error: exchangeError } =
-            await supabase.auth.exchangeCodeForSession(code);
-          if (exchangeError || !data.session) {
-            setError(
-              "Lien de réinitialisation invalide ou expiré. Refaites une demande."
-            );
-            return;
-          }
-          setRecovery({
-            accessToken: data.session.access_token,
-            refreshToken: data.session.refresh_token,
-          });
-        })
-        .catch(() => {
-          setError("Une erreur est survenue. Veuillez réessayer.");
-        })
-        .finally(() => setLoading(false));
-      return;
-    }
-
-    // 2) Flow implicite legacy : #access_token=...&type=recovery dans le hash
-    const tokens = parseRecoveryTokens(window.location.hash);
-    if (tokens) {
-      setRecovery(tokens);
+    const token = parseRecoveryToken(url);
+    if (token) {
+      setRecovery(token);
       cleanUrl();
     }
   }, []);
@@ -965,8 +922,7 @@ export function ForgotPasswordForm({ mode }: { mode: AuthFormMode }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          accessToken: recovery.accessToken,
-          refreshToken: recovery.refreshToken,
+          token: recovery.token,
           password,
         }),
       });
@@ -976,10 +932,6 @@ export function ForgotPasswordForm({ mode }: { mode: AuthFormMode }) {
         setError(data.error || "Une erreur est survenue");
         return;
       }
-
-      // Déconnecter le client browser (session PKCE établie par exchangeCodeForSession).
-      const { getSupabaseBrowserClient } = await import("@/lib/supabase-browser");
-      await getSupabaseBrowserClient().auth.signOut();
 
       setResetDone(true);
       toast({

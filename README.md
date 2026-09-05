@@ -8,27 +8,23 @@ Plateforme de comparaison d'assurances multi-assureurs avec interface admin, esp
 
 - **Framework** : Next.js 16 (App Router)
 - **Langage** : TypeScript
-- **Base de données / Auth** : Supabase (Postgres + Supabase Auth, migrations SQL dans `supabase/migrations/`)
+- **Base de données / Auth** : PostgreSQL natif (Docker en développement) + authentification applicative locale
 - **UI** : Tailwind CSS v4 + shadcn/ui
 - **State** : Zustand
 - **Validation** : Zod v4
 - **Tests** : Vitest + Testing Library + @vitest/coverage-v8
 
-> ⚠️ Le projet a migré de Prisma/SQLite vers Supabase. La dépendance
-> `next-auth` présente dans `package.json` n'est plus utilisée dans le code
-> (l'authentification passe entièrement par Supabase Auth via
-> `src/lib/auth-guard.ts`) — à retirer lors d'un prochain nettoyage de
-> dépendances.
+Les migrations natives sont dans `db/migrations/`. La base de développement se
+lance avec `docker compose -f docker-compose.dev.yml up -d postgres`, puis se
+prépare avec `npm run db:migrate` et `npm run db:seed`.
 
 ## Configuration
 
-Copier `.env.example` en `.env` et renseigner les clés Supabase du projet
-(`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
-`SUPABASE_SERVICE_ROLE_KEY`) ainsi que `RESEND_API_KEY` pour les emails.
+Copier `.env.example` en `.env` et renseigner `DATABASE_URL` ainsi que
+`AUTH_SESSION_SECRET`. Les variables SMTP/Resend sont optionnelles en local.
 
-Les migrations SQL (schéma + policies RLS) se trouvent dans
-`supabase/migrations/` et s'appliquent via la CLI Supabase
-(`supabase db push` / `supabase migration up`, selon votre workflow).
+Les anciennes migrations Supabase sont conservées comme référence historique.
+Les migrations exécutées par l'application se trouvent dans `db/migrations/`.
 
 ## Scripts
 
