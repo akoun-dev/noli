@@ -3,6 +3,7 @@ import { db, mapRow, mapRows } from "@/lib/db";
 import { requireAuth } from "@/lib/auth-guard";
 import { logAudit } from "@/lib/audit";
 import { MASKED_SECRET, isMasked } from "@/lib/security";
+import { updateSettingSchema } from "@/lib/validation";
 
 /* ── Default settings (seeded if missing) ─────────────────────── */
 
@@ -110,12 +111,20 @@ export async function GET() {
 export async function PUT(req: NextRequest) {
   const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
   try {
-    const body = await req.json();
-    const { key, value } = body as { key?: string; value?: string };
-
-    if (!key || value === undefined) {
-      return NextResponse.json({ error: "Clé et valeur requis" }, { status: 400 });
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: "Requête invalide" }, { status: 400 });
     }
+    const parsed = updateSettingSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message ?? "Requête invalide" },
+        { status: 400 }
+      );
+    }
+    const { key, value } = parsed.data;
 
     // Ne pas écraser un secret avec le placeholder masqué renvoyé par le GET.
     if (SENSITIVE_KEYS.has(key) && isMasked(value)) {

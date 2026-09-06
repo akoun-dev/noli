@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, mapRow, mapRows } from "@/lib/db";
 import { requireAuth } from "@/lib/auth-guard";
 import { logAudit } from "@/lib/audit";
+import { createRoleSchema } from "@/lib/validation";
 
 /* ── Default roles (seeded if missing) ────────────────────────── */
 
@@ -86,16 +87,20 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
   try {
-    const body = await request.json();
-    const { name, description, permissionIds } = body as {
-      name: string;
-      description?: string;
-      permissionIds?: string[];
-    };
-
-    if (!name || !name.trim()) {
-      return NextResponse.json({ error: "Nom du rôle requis" }, { status: 400 });
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: "Requête invalide" }, { status: 400 });
     }
+    const parsed = createRoleSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message ?? "Requête invalide" },
+        { status: 400 }
+      );
+    }
+    const { name, description, permissionIds } = parsed.data;
 
     const { data: existingData } = await db.from("roles").select("id").eq("name", name.trim()).maybeSingle();
     const existing = mapRow(existingData);

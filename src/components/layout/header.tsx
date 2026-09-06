@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useSyncExternalStore } from "react";
 import Image from "next/image";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   Menu,
   Moon,
@@ -236,29 +236,27 @@ export function Header() {
               </SheetHeader>
 
               <nav className="flex flex-col gap-1 p-4">
-                <AnimatePresence>
-                  {navItems.map((item, i) => {
-                    const active = isActive(item.action);
-                    return (
-                      <motion.button
-                        key={item.label}
-                        // Items TOUJOURS visibles (opacité à 1) : l'animation n'est
-                        // qu'un enhancement (glissement), pas un prérequis d'affichage.
-                        initial={{ x: 20 }}
-                        animate={{ x: 0 }}
-                        transition={{ delay: i * 0.08, duration: 0.25 }}
-                        onClick={() => handleNav(item.action)}
-                        className={`flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium uppercase tracking-wide transition-colors ${
-                          active
-                            ? "bg-primary/10 text-primary"
-                            : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                        }`}
-                      >
-                        {item.label}
-                      </motion.button>
-                    );
-                  })}
-                </AnimatePresence>
+                {navItems.map((item, i) => {
+                  const active = isActive(item.action);
+                  return (
+                    <motion.button
+                      key={item.label}
+                      // Items TOUJOURS visibles (opacité à 1) : l'animation n'est
+                      // qu'un enhancement (glissement), pas un prérequis d'affichage.
+                      initial={{ x: 20 }}
+                      animate={{ x: 0 }}
+                      transition={{ delay: i * 0.08, duration: 0.25 }}
+                      onClick={() => handleNav(item.action)}
+                      className={`flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium uppercase tracking-wide transition-colors ${
+                        active
+                          ? "bg-primary/10 text-primary"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      }`}
+                    >
+                      {item.label}
+                    </motion.button>
+                  );
+                })}
               </nav>
 
               {/* Theme toggle in mobile */}

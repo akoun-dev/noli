@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-guard";
 import { logAudit } from "@/lib/audit";
 import { sanitizePostgrestSearch } from "@/lib/security";
+import { createInsurerSchema } from "@/lib/validation";
 import {
   getPagination,
   hasPaginationParams,
@@ -95,16 +96,21 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
   try {
-    const body = await request.json();
-    const { code, name, logoUrl, contactEmail, phone, website, isActive } =
-      body;
-
-    if (!name) {
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: "Requête invalide" }, { status: 400 });
+    }
+    const parsed = createInsurerSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "Le nom est requis" },
+        { error: parsed.error.issues[0]?.message ?? "Requête invalide" },
         { status: 400 }
       );
     }
+    const { code, name, logoUrl, contactEmail, phone, website, isActive } =
+      parsed.data;
 
     // Auto-generate code from name (first word, uppercase)
     let genCode = code;

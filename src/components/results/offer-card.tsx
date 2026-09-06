@@ -114,7 +114,7 @@ function OfferCardComponent({
                     key={idx}
                     className="flex items-start gap-2 text-sm"
                   >
-                    <CheckCircle2 className="size-4 text-green-700 mt-0.5 shrink-0" />
+                    <CheckCircle2 className="size-4 text-success mt-0.5 shrink-0" />
                     <div className="flex-1 min-w-0 flex flex-wrap items-start gap-x-2 gap-y-0.5">
                       <span className="text-foreground/90 min-w-0 break-words">
                         {feature}
@@ -123,7 +123,7 @@ function OfferCardComponent({
                         <span
                           className={`text-xs font-semibold shrink-0 tabular-nums whitespace-nowrap ml-auto ${
                             pricing.amount === 0
-                              ? "text-green-700"
+                              ? "text-success"
                               : "text-foreground"
                           }`}
                         >
@@ -355,7 +355,7 @@ function OfferCardComponent({
                         key={idx}
                         className="flex items-start gap-2 text-sm"
                       >
-                        <CheckCircle2 className="size-4 text-green-700 mt-0.5 shrink-0" />
+                        <CheckCircle2 className="size-4 text-success mt-0.5 shrink-0" />
                         <div className="flex-1 min-w-0 flex flex-wrap items-start gap-x-2 gap-y-0.5">
                           <span className="text-foreground/90 min-w-0 break-words">
                             {resolvedName}
@@ -364,7 +364,7 @@ function OfferCardComponent({
                             <span
                               className={`text-xs font-semibold shrink-0 tabular-nums whitespace-nowrap ml-auto ${
                                 pricing.amount === 0
-                                  ? "text-green-700"
+                                  ? "text-success"
                                   : "text-foreground"
                               }`}
                             >

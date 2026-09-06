@@ -141,11 +141,10 @@ base (X × 12 = Y). La durée du contrat ne modifie plus le prix mensuel affich�
 Un futur « montant par échéance » selon la durée serait un concept/libellé distinct.
 Test `respecte la durée de contrat choisie` ajusté (÷ 12).
 
-**P2 — prime nette NON appliquée** (prix brut conservé).
-`calculateNetPremium` (remise 5 % + frais 2 500 FCFA) est traitée comme **règle
-métier non validée** : origine, assiette, taux et caractère obligatoire non
-confirmés. Elle **n'est pas branchée** sur le prix client (marquée en commentaire
-d'avertissement dans `pricing-service.ts`). À confirmer explicitement par le métier ;
-à supprimer lors du nettoyage si aucune source fiable ne la valide.
+**P2 — prime nette ÉCARTÉE** (prix brut conservé).
+`calculateNetPremium` (remise 5 % + frais 2 500 FCFA) reposait sur une règle métier
+non validée (origine, assiette, taux et caractère obligatoire non confirmés).
+**Décision Hervé : règle écartée** → la fonction et ses tests ont été **supprimés**
+de `pricing-service.ts`. Le prix affiché reste le prix **brut** (`grossPremium`).
 
 Vérifié après P1/P2 : `tsc` 0, `eslint` 0, **99 tests**, `next build` OK.

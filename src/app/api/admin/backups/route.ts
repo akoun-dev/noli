@@ -5,6 +5,7 @@ import { join } from 'path'
 import { requireAuth } from '@/lib/auth-guard'
 import { logAudit } from '@/lib/audit'
 import { BACKUPS_DIR } from '@/lib/backups'
+import { backupScheduleSchema } from '@/lib/validation'
 
 /**
  * Tables métier exportées dans une sauvegarde logique.
@@ -245,15 +246,20 @@ export async function POST(request: NextRequest) {
     const action = searchParams.get('action')
 
     if (action === 'schedule') {
-      const body = await request.json()
-      const { schedule, enabled } = body
-
-      if (schedule === undefined || enabled === undefined) {
+      let body: unknown
+      try {
+        body = await request.json()
+      } catch {
+        return NextResponse.json({ error: 'Requête invalide' }, { status: 400 })
+      }
+      const parsed = backupScheduleSchema.safeParse(body)
+      if (!parsed.success) {
         return NextResponse.json(
-          { error: 'Schedule et enabled sont requis' },
+          { error: parsed.error.issues[0]?.message ?? 'Requête invalide' },
           { status: 400 }
         )
       }
+      const { schedule, enabled } = parsed.data
 
       await Promise.all([
         upsertSetting('backup_schedule', JSON.stringify(schedule), 'general', 'Planification sauvegarde', 'json'),
