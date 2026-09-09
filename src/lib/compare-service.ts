@@ -134,6 +134,13 @@ function priceCoverages(
         breakdown: result.breakdown,
       });
     } catch (err) {
+      // Un échec de calcul ne doit pas passer inaperçu : sans ce log, une prime
+      // qui devrait être tarifée (ex. individuel accident en matrice) retombait
+      // silencieusement à 0 et s'affichait « Inclus ».
+      console.error(
+        `[pricing] Échec du calcul de la garantie « ${coverage.name} » (${coverage.code}, ${coverage.calculationType}) :`,
+        err
+      );
       const meta = (() => { try { return JSON.parse(coverage.metadata || "{}"); } catch { return {}; } })();
       const coverageCapital = coverage.capital || meta.capital || meta.maxAmount || coverage.maxAmount || null;
       pricingBreakdown.push({

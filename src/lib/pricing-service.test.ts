@@ -347,6 +347,21 @@ describe("calculateGuaranteePremium — MATRIX_BASED", () => {
       );
       expect(result.amount).toBe(8500);
     });
+
+    it("tolère une formule sans nom (créée via l'UI, champ prime) sans jeter", () => {
+      // Régression #5 : une formule renseignée seulement par `prime` (sans
+      // `name`) faisait jeter le calcul (f.name.toLowerCase()), la garantie
+      // retombait dans le catch appelant et s'affichait « Inclus » au lieu de
+      // répercuter la matrice. Le montant doit désormais valoir la prime fixe.
+      const result = calculateGuaranteePremium(
+        coverage({
+          dimension: "FORMULA",
+          formulas: [{ prime: 5500 }],
+        }),
+        vehicle
+      );
+      expect(result.amount).toBe(5500);
+    });
   });
 
   describe("dimension TIERCE_COMPLETE / TIERCE_COLLISION", () => {
