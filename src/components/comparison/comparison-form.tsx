@@ -31,6 +31,18 @@ import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { fetchWithTimeout, networkErrorMessage } from "@/lib/fetch-with-timeout";
 
+// ─── Date d'effet ───────────────────────────────────────────────────
+// La date d'effet doit être au plus tôt le lendemain (J+1) : un contrat ne
+// peut pas prendre effet le jour même. Format YYYY-MM-DD (fuseau local).
+function tomorrowISO(): string {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 // ─── Contract type configuration ───────────────────────────────────
 const CONTRACT_TYPES: {
   value: string;
@@ -225,7 +237,11 @@ export function ComparisonForm() {
     if (!vehicleInfo.newValue.trim()) e.newValue = "Indiquez la valeur neuve (en FCFA)";
     if (!vehicleInfo.currentValue.trim()) e.currentValue = "Indiquez la valeur actuelle (en FCFA)";
     if (!vehicleInfo.usage) e.usage = "Sélectionnez l'usage du véhicule";
-    if (!vehicleInfo.effectiveDate?.trim()) e.effectiveDate = "Choisissez la date d'effet souhaitée";
+    if (!vehicleInfo.effectiveDate?.trim()) {
+      e.effectiveDate = "Choisissez la date d'effet souhaitée";
+    } else if (vehicleInfo.effectiveDate < tomorrowISO()) {
+      e.effectiveDate = "La date d'effet doit être au plus tôt demain";
+    }
     setErrors(e);
     return e;
   };
@@ -737,14 +753,14 @@ function Step2({
           className={`w-full ${errors.effectiveDate ? "border-destructive" : ""}`}
           value={vehicleInfo.effectiveDate || ""}
           onChange={(e) => setVehicleInfo({ effectiveDate: e.target.value })}
-          min={new Date().toISOString().slice(0, 10)}
+          min={tomorrowISO()}
           aria-invalid={!!errors.effectiveDate}
           aria-describedby={
             errors.effectiveDate ? "effectiveDate-error" : "effectiveDate-help"
           }
         />
         <p id="effectiveDate-help" className="text-xs text-muted-foreground">
-          À partir de cette date, votre couverture sera effective
+          À partir de cette date, votre couverture sera effective (au plus tôt demain)
         </p>
         {errors.effectiveDate && (
           <p id="effectiveDate-error" className="mt-1 text-xs text-destructive">

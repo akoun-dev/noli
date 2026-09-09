@@ -11,6 +11,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Check,
+  X,
   UserRound,
   Shield,
   Globe,
@@ -86,6 +87,45 @@ export function PasswordStrength({ password }: { password: string }) {
 
 export const isValidEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 export const hasMinLength = (v: string, min: number) => v.length >= min;
+
+/*
+ * Règles de mot de passe (alignées sur la politique serveur par défaut,
+ * src/lib/password-policy.ts : 8 caractères min, majuscule, minuscule, chiffre).
+ * Le client applique les mêmes contraintes pour éviter l'« Erreur de création
+ * de compte » côté serveur et afficher les exigences à l'utilisateur.
+ */
+export const passwordRules = (pw: string) => [
+  { label: "Au moins 8 caractères", ok: pw.length >= 8 },
+  { label: "Une lettre majuscule", ok: /[A-Z]/.test(pw) },
+  { label: "Une lettre minuscule", ok: /[a-z]/.test(pw) },
+  { label: "Un chiffre", ok: /[0-9]/.test(pw) },
+];
+
+export const isPasswordValid = (pw: string) => passwordRules(pw).every((r) => r.ok);
+
+/* Affichage des exigences de mot de passe (checklist en direct) */
+export function PasswordRequirements({ password }: { password: string }) {
+  const rules = passwordRules(password);
+  return (
+    <ul className="mt-2 space-y-1" aria-label="Exigences du mot de passe">
+      {rules.map((r) => (
+        <li
+          key={r.label}
+          className={`flex items-center gap-1.5 text-xs ${
+            r.ok ? "text-emerald-600" : "text-muted-foreground"
+          }`}
+        >
+          {r.ok ? (
+            <Check className="size-3.5 shrink-0" aria-hidden="true" />
+          ) : (
+            <X className="size-3.5 shrink-0" aria-hidden="true" />
+          )}
+          <span>{r.label}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 /* ── Redirection post-authentification par rôle ── */
 
@@ -376,8 +416,9 @@ export function RegisterForm({ mode }: { mode: AuthFormMode }) {
 
     if ((step === 3 && role !== "INSURER") || (step === 4)) {
       if (!password) e.password = "Le mot de passe est requis";
-      else if (!hasMinLength(password, 6))
-        e.password = "Le mot de passe doit contenir au moins 6 caractères";
+      else if (!isPasswordValid(password))
+        e.password =
+          "8 caractères minimum, avec au moins une majuscule, une minuscule et un chiffre.";
       if (password !== confirmPassword)
         e.confirmPassword = "Les mots de passe ne correspondent pas";
     }
@@ -661,7 +702,9 @@ export function RegisterForm({ mode }: { mode: AuthFormMode }) {
     <div className="space-y-4">
       <div className="text-center">
         <h3 className="text-base font-semibold">Sécurisez votre compte</h3>
-        <p className="text-xs text-muted-foreground mt-1">Choisissez un mot de passe sécurisé</p>
+        <p className="text-xs text-muted-foreground mt-1">
+          8 caractères minimum, avec une majuscule, une minuscule et un chiffre
+        </p>
       </div>
 
       <div className="space-y-2">
@@ -691,6 +734,7 @@ export function RegisterForm({ mode }: { mode: AuthFormMode }) {
           </button>
         </div>
         <PasswordStrength password={password} />
+        <PasswordRequirements password={password} />
         {errors.password && (
           <p className="text-xs text-destructive">{errors.password}</p>
         )}

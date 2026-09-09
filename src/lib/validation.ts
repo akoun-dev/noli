@@ -2,9 +2,15 @@ import { z } from "zod";
 
 export const emailSchema = z.string().email("Adresse email invalide");
 
+// Aligné sur la politique serveur par défaut (src/lib/password-policy.ts) :
+// 8 caractères min, une majuscule, une minuscule et un chiffre. La règle
+// détaillée reste appliquée par validatePasswordPolicy() dans registerAction.
 export const passwordSchema = z
   .string()
-  .min(6, "Le mot de passe doit contenir au moins 6 caractères");
+  .min(8, "Le mot de passe doit contenir au moins 8 caractères")
+  .regex(/[A-Z]/, "Le mot de passe doit contenir au moins une majuscule")
+  .regex(/[a-z]/, "Le mot de passe doit contenir au moins une minuscule")
+  .regex(/[0-9]/, "Le mot de passe doit contenir au moins un chiffre");
 
 export const personalInfoSchema = z.object({
   lastName: z.string().min(1, "Le nom est requis"),

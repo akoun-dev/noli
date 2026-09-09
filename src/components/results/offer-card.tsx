@@ -186,13 +186,6 @@ function OfferCardComponent({
                                       )}
                                 </span>
                               </p>
-                              {pricing.breakdown && (
-                                <p className="text-background/80 whitespace-pre-line text-xs">
-                                  {
-                                    pricing.breakdown
-                                  }
-                                </p>
-                              )}
                             </div>
                           )}
                         </div>
@@ -428,21 +421,6 @@ function OfferCardComponent({
                                         : `${formatFCFA(pricing.amount)}/an`}
                                     </span>
                                   </p>
-                                  <p className="text-background/90">
-                                    Méthode :{" "}
-                                    <span className="font-semibold text-background">
-                                      {
-                                        pricing.method
-                                      }
-                                    </span>
-                                  </p>
-                                  {pricing.breakdown && (
-                                    <p className="text-background/80 whitespace-pre-line text-xs">
-                                      {
-                                        pricing.breakdown
-                                      }
-                                    </p>
-                                  )}
                                 </div>
                               )}
                             </div>
