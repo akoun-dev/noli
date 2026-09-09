@@ -616,9 +616,14 @@ function calculateMatrixBased(
         amount = tariffMatch.prime;
         breakdown = `Formule sièges « ${seatsLabel} » → prime ${amount.toLocaleString("fr-FR")} FCFA`;
       } else {
-        // 2) Cherche dans formulas par nom correspondant aux sièges
+        // 2) Cherche dans formulas par nom correspondant aux sièges.
+        //    Le libellé peut être absent (formule créée via l'UI admin qui ne
+        //    renseigne que `prime`) : on tolère `name`/`label` manquants pour
+        //    ne pas jeter — sinon la garantie retombait dans le catch appelant
+        //    et s'affichait « Inclus » (individuel accident : matrice ignorée).
+        const formulaLabel = (f: MatrixFormula) => (f.name || f.label || "").toLowerCase();
         const formulaMatch = formulas.find((f) =>
-          f.name.toLowerCase().includes(seatsLabel)
+          formulaLabel(f).includes(seatsLabel)
         );
         if (formulaMatch) {
           // Calcule : baseRate % de la VN, plafonné au ceiling
@@ -627,7 +632,7 @@ function calculateMatrixBased(
             ? Math.min(gross, formulaMatch.ceiling)
             : gross;
           amount = roundTo500(amount);
-          breakdown = `Formule « ${formulaMatch.name} » : ${formulaMatch.baseRate}% × VN ${nv.toLocaleString("fr-FR")} = ${gross.toLocaleString("fr-FR")} FCFA${formulaMatch.ceiling ? ` (plafond ${formulaMatch.ceiling.toLocaleString("fr-FR")})` : ""} → ${amount.toLocaleString("fr-FR")} FCFA`;
+          breakdown = `Formule « ${formulaMatch.name || formulaMatch.label || "?"} » : ${formulaMatch.baseRate}% × VN ${nv.toLocaleString("fr-FR")} = ${gross.toLocaleString("fr-FR")} FCFA${formulaMatch.ceiling ? ` (plafond ${formulaMatch.ceiling.toLocaleString("fr-FR")})` : ""} → ${amount.toLocaleString("fr-FR")} FCFA`;
         } else {
           // 3) Fallback : première formule disponible
           if (formulas.length > 0) {
@@ -637,7 +642,7 @@ function calculateMatrixBased(
               ? Math.min(gross, fallback.ceiling)
               : gross;
             amount = roundTo500(amount);
-            breakdown = `Formule par défaut « ${fallback.name} » : ${fallback.baseRate}% × VN → ${amount.toLocaleString("fr-FR")} FCFA`;
+            breakdown = `Formule par défaut « ${fallback.name || fallback.label || "?"} » : ${fallback.baseRate}% × VN → ${amount.toLocaleString("fr-FR")} FCFA`;
           } else {
             breakdown = `Aucune formule trouvée pour ${seatsRaw} places`;
           }
