@@ -265,6 +265,21 @@ function ComparisonModalComponent({ offers, open, onClose }: ComparisonModalProp
           )}
         </div>
 
+        {/* Légende des couleurs — explique la signification du vert dans le tableau */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2.5 text-[11px] text-muted-foreground border-b border-border/40 bg-muted/10">
+          <span className="font-semibold uppercase tracking-wide">Légende</span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-green-500 text-white text-[8px] font-bold">
+              ★
+            </span>
+            <span className="text-green-600 dark:text-green-400 font-medium">Offre la moins chère</span>
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="text-green-600 dark:text-green-400 font-bold">Gratuit</span>
+            <span>Garantie incluse sans surcoût</span>
+          </span>
+        </div>
+
         {/* Comparison Table */}
         <div className="overflow-x-auto">
           <table className="w-full min-w-[500px]">
@@ -572,21 +587,6 @@ function ComparisonModalComponent({ offers, open, onClose }: ComparisonModalProp
                                                       )}
                                                 </span>
                                               </p>
-                                              <p className="text-background/90">
-                                                Méthode :{" "}
-                                                <span className="font-semibold text-background">
-                                                  {
-                                                    pricing.method
-                                                  }
-                                                </span>
-                                              </p>
-                                              {pricing.breakdown && (
-                                                <p className="text-background/80 whitespace-pre-line text-xs">
-                                                  {
-                                                    pricing.breakdown
-                                                  }
-                                                </p>
-                                              )}
                                             </div>
                                           )}
                                         </>

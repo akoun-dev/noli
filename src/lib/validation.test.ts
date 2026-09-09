@@ -27,16 +27,22 @@ describe("emailSchema", () => {
 });
 
 describe("passwordSchema", () => {
-  it("accepte un mot de passe de 6 caractères minimum", () => {
-    expect(passwordSchema.safeParse("123456").success).toBe(true);
+  it("accepte un mot de passe conforme à la politique (8+, maj, min, chiffre)", () => {
+    expect(passwordSchema.safeParse("Secret123").success).toBe(true);
   });
 
   it("rejette un mot de passe trop court", () => {
-    const result = passwordSchema.safeParse("12345");
+    const result = passwordSchema.safeParse("Ab1c5");
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toContain("6 caractères");
+      expect(result.error.issues[0].message).toContain("8 caractères");
     }
+  });
+
+  it("rejette un mot de passe sans majuscule / minuscule / chiffre", () => {
+    expect(passwordSchema.safeParse("motdepasse").success).toBe(false); // pas de maj ni chiffre
+    expect(passwordSchema.safeParse("MOTDEPASSE1").success).toBe(false); // pas de minuscule
+    expect(passwordSchema.safeParse("Motdepasse").success).toBe(false); // pas de chiffre
   });
 });
 
@@ -153,7 +159,7 @@ describe("registerSchema", () => {
     const parsed = registerSchema.parse({
       email: "jean@example.com",
       name: "Jean Dupont",
-      password: "secret123",
+      password: "Secret123",
       phone: "+2250700000000",
     });
     expect(parsed.role).toBe("USER");
@@ -164,7 +170,7 @@ describe("registerSchema", () => {
       registerSchema.safeParse({
         email: "a@example.com",
         name: "Compagnie",
-        password: "secret123",
+        password: "Secret123",
         role: "INSURER",
         companyName: "Assureur CI",
       }).success
@@ -175,7 +181,7 @@ describe("registerSchema", () => {
     const result = registerSchema.safeParse({
       email: "a@example.com",
       name: "X",
-      password: "secret123",
+      password: "Secret123",
       role: "SUPERADMIN",
     });
     expect(result.success).toBe(false);

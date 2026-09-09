@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState, useCallback, useEffect } from "react"
+import { useMemo, useState, useCallback, useEffect, useRef } from "react"
 import { ArrowLeft, Filter, ChevronDown, SearchX, RotateCcw, Check, Copy, UserPlus } from "lucide-react"
 import { useAppStore } from "@/store/app-store"
 import type { InsurerOffer } from "@/types"
@@ -24,6 +24,16 @@ import { ComparisonModal } from "./comparison-modal"
 import { SummaryPanels } from "./summary-panels"
 import { CallbackModal } from "./callback-modal"
 import { EmptyResultsState } from "./empty-results-state"
+
+// Type de contrat choisi au formulaire → libellé de formule affiché sur les
+// offres (aligné sur contractTypeLabel de compare-service.ts).
+const CONTRACT_TYPE_TO_COVERAGE: Record<string, string> = {
+  basic: "Tiers",
+  third_party_plus: "Tiers+",
+  all_risks: "Tous Risques",
+  premium: "Premium",
+  premium_plus: "Premium+",
+}
 
 /* ══════════════════════════ MAIN ══════════════════════════ */
 
@@ -86,9 +96,9 @@ export function ResultsPage() {
     new Set()
   )
 
-  // Le filtre « Formules » démarre sur « Tous » : la comparaison renvoie
-  // toutes les formules éligibles (le type choisi au formulaire n'est qu'un
-  // critère de classement, pas un filtre strict).
+  // Le filtre « Formules » est pré-sélectionné sur la formule choisie au
+  // formulaire (auto-sélection), puis reste librement modifiable par
+  // l'utilisateur — y compris pour revenir à « Tous ».
   const [coverageFilter, setCoverageFilter] = useState<string>("all")
   const [budgetMax, setBudgetMax] = useState<number>(effectiveBudgetMax)
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
@@ -100,6 +110,20 @@ export function ResultsPage() {
   useEffect(() => {
     setBudgetMax(effectiveBudgetMax)
   }, [effectiveBudgetMax])
+
+  // Auto-sélection de la formule choisie au formulaire, une seule fois quand
+  // les résultats arrivent. Ne s'applique que si au moins une offre correspond
+  // à cette formule (sinon on garde « Tous » pour ne pas afficher 0 offre).
+  const formulaAutoSelected = useRef(false)
+  useEffect(() => {
+    if (formulaAutoSelected.current) return
+    if (comparisonResults.length === 0) return
+    formulaAutoSelected.current = true
+    const wanted = CONTRACT_TYPE_TO_COVERAGE[coverageNeeds.contractType || ""]
+    if (wanted && comparisonResults.some((o) => o.coverageType === wanted)) {
+      setCoverageFilter(wanted)
+    }
+  }, [comparisonResults, coverageNeeds.contractType])
 
   const uniqueInsurers = useMemo(() => {
     const names = [...new Set(comparisonResults.map(o => o.insurerName))]
