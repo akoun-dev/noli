@@ -92,9 +92,9 @@ export function UserProfileTab() {
       const data = await res.json();
       const p: UserProfile = data.profile;
       setProfile(p);
-      setFirstName(p.firstName);
-      setLastName(p.lastName);
-      setPhone(p.phone);
+      setFirstName(p.firstName ?? "");
+      setLastName(p.lastName ?? "");
+      setPhone(p.phone ?? "");
     } catch {
       toast({
         title: "Erreur",
