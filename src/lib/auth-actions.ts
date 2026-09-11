@@ -126,7 +126,7 @@ export async function registerAction(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { email, password, name, phone, role } = body;
+    const { email, password, name, phone, role, companyName, companyEmail, companyPhone, companyWebsite } = body;
     const supabase = await getSupabaseServerClient();
 
     const parsed = registerSchema.safeParse({
@@ -216,6 +216,7 @@ export async function registerAction(request: NextRequest) {
         {
           id: userId,
           email: parsed.data.email.trim().toLowerCase(),
+          role: selectedRole,
           first_name: firstName,
           last_name: lastName,
           phone: parsed.data.phone || null,
@@ -224,6 +225,46 @@ export async function registerAction(request: NextRequest) {
       )
     );
 
+    // Auto-inscription assureur : créer la compagnie + lien profil
+    if (selectedRole === "INSURER" && companyName) {
+      // Générer un code unique à partir du nom de la compagnie
+      const code = companyName
+        .trim()
+        .toUpperCase()
+        .replace(/[^A-Z0-9]+/g, "")
+        .slice(0, 20);
+
+      const insurerResult = await bestEffort("Création insurer", () =>
+        db.from("insurers").upsert(
+          {
+            code,
+            name: companyName.trim(),
+            contact_email: companyEmail || parsed.data.email.trim().toLowerCase(),
+            phone: companyPhone || null,
+            website: companyWebsite || null,
+          },
+          { onConflict: "code" }
+        )
+      );
+
+      if (insurerResult) {
+        const { data: insurer } = await db
+          .from("insurers")
+          .select("id")
+          .eq("code", code)
+          .single();
+
+        if (insurer) {
+          await bestEffort("Lien insurer_accounts", () =>
+            db.from("insurer_accounts").upsert(
+              { profile_id: userId, insurer_id: insurer.id },
+              { onConflict: "profile_id,insurer_id" }
+            )
+          );
+        }
+      }
+    }
+
     // Établit la session (cookie httpOnly) : connexion immédiate après l'inscription.
     await bestEffort("Session immédiate", () =>
       supabase.auth.signInWithPassword({
@@ -231,10 +272,6 @@ export async function registerAction(request: NextRequest) {
         password: parsed.data.password,
       })
     );
-
-    // NOTE (C-02) : plus de création automatique de compagnie / insurer_accounts
-    // à l'inscription. Un assureur doit être activé et lié à une compagnie par
-    // un administrateur avant d'accéder à son espace.
 
     logAudit({
       action: "REGISTER",
@@ -248,16 +285,12 @@ export async function registerAction(request: NextRequest) {
       reconcileAnonymousQuotes(userId, parsed.data.email.trim())
     );
 
-    // Le rôle réel en base est TOUJOURS "USER" (le trigger handle_new_user force
-    // ce rôle ; un assureur doit ensuite être activé par un admin). On renvoie
-    // donc "USER" et non le rôle demandé, sinon la session cliente et la
-    // redirection seraient incohérentes (accès à un espace non encore autorisé).
     return NextResponse.json({
       user: {
         id: userId,
         email: parsed.data.email.trim(),
         name: [firstName, lastName].filter(Boolean).join(" "),
-        role: "USER",
+        role: selectedRole,
       },
     });
   } catch (error) {
