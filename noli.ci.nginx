@@ -1,0 +1,46 @@
+# Noli — Config reverse proxy de production.
+#
+# A-05 : le proxy à port arbitraire (XTransformPort) a été supprimé :
+# il permettait de rediriger vers n'importe quel port interne (contournement
+# du proxy, exposition de services internes). En production, seul le port
+# applicatif 8080 est exposé (via nginx sur :443).
+#
+# Déploiement : copier ce fichier sur /etc/nginx/sites-available/noli.ci
+# puis : nginx -t && systemctl reload nginx
+
+# HTTPS (port 443)
+server {
+    server_name noli.ci www.noli.ci;
+
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+        # Buffers suffisants pour les gros headers CSP de Next.js
+        proxy_buffer_size 16k;
+        proxy_buffers 4 32k;
+        proxy_busy_buffers_size 64k;
+        proxy_read_timeout 60s;
+        proxy_connect_timeout 10s;
+    }
+
+    listen 443 ssl;
+    ssl_certificate /etc/letsencrypt/live/noli.ci/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/noli.ci/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+}
+
+# HTTP → HTTPS redirect (port 80)
+server {
+    if ($host = noli.ci) {
+        return 301 https://$host$request_uri;
+    }
+
+    listen 80;
+    server_name noli.ci www.noli.ci;
+    return 404;
+}

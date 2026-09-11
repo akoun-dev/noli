@@ -1,6 +1,7 @@
 "use client";
 
-import { Search, ChevronDown, ChevronUp } from "lucide-react";
+import { useState } from "react";
+import { Search, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +29,16 @@ import {
   type Profile,
   type Role,
 } from "./settings-types";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export interface AccountsTabProps {
   profiles: Profile[];
@@ -38,6 +49,7 @@ export interface AccountsTabProps {
   setExpandedRow: (id: string | null) => void;
   toggleProfileStatus: (p: Profile) => void;
   changeProfileRole: (p: Profile, r: string) => void;
+  deleteProfile: (p: Profile) => void;
 }
 
 export function SettingsAccountsTab({
@@ -49,7 +61,10 @@ export function SettingsAccountsTab({
   setExpandedRow,
   toggleProfileStatus,
   changeProfileRole,
+  deleteProfile,
 }: AccountsTabProps) {
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+
   return (
     <>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
@@ -297,6 +312,15 @@ export function SettingsAccountsTab({
                           <SelectItem value="ADMIN">Admin</SelectItem>
                         </SelectContent>
                       </Select>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-destructive hover:text-destructive"
+                        onClick={() => setDeleteId(p.id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                        Supprimer
+                      </Button>
                     </div>
                   </div>
                 )}
@@ -402,6 +426,15 @@ export function SettingsAccountsTab({
                           <SelectItem value="ADMIN">Admin</SelectItem>
                         </SelectContent>
                       </Select>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-destructive hover:text-destructive"
+                        onClick={() => setDeleteId(p.id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                        Supprimer
+                      </Button>
                     </div>
                   </>
                 );
@@ -410,6 +443,31 @@ export function SettingsAccountsTab({
           </Card>
         </div>
       )}
+
+      {/* Delete AlertDialog */}
+      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer ce compte ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action est irréversible. Le compte et toutes les données associées seront définitivement supprimés.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                const p = profiles.find((pr) => pr.id === deleteId);
+                if (p) deleteProfile(p);
+                setDeleteId(null);
+              }}
+            >
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

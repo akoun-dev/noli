@@ -43,6 +43,15 @@ export function AuthPages() {
       {/* Auth content area */}
       <div className="flex-1 flex items-center justify-center px-4 py-12 md:py-20">
         <div className="w-full max-w-md">
+          <div className="flex justify-center mb-6">
+            <Image
+              src="/img/noli-vertical.png"
+              alt="NOLI Assurance"
+              width={160}
+              height={36}
+              className="h-12 w-auto object-contain"
+            />
+          </div>
           {currentView === "login" && (
             <div className="mb-6 text-center">
               <h1 className="font-[family-name:var(--font-space-grotesk)] text-2xl font-bold text-foreground">

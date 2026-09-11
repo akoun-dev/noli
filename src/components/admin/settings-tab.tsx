@@ -233,6 +233,22 @@ export function SettingsTab() {
     }
   };
 
+  const deleteProfile = async (p: Profile) => {
+    try {
+      const res = await fetch(`/api/admin/profiles/${p.id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const e = await res.json();
+        throw new Error(e.error || "Erreur");
+      }
+      toast({ title: "Compte supprimé" });
+      fetchProfiles();
+    } catch (err) {
+      toast({ title: (err as Error).message, variant: "destructive" });
+    }
+  };
+
   /* ================================================================ */
   /*  Loading skeleton                                                 */
   /* ================================================================ */
@@ -327,6 +343,7 @@ export function SettingsTab() {
             }}
             toggleProfileStatus={toggleProfileStatus}
             openEdit={openEdit}
+            deleteProfile={deleteProfile}
           />
           <PaginationControls
             page={page}
@@ -377,6 +394,7 @@ export function SettingsTab() {
             setExpandedRow={setExpandedRow}
             toggleProfileStatus={toggleProfileStatus}
             changeProfileRole={changeProfileRole}
+            deleteProfile={deleteProfile}
           />
         </TabsContent>
       </Tabs>

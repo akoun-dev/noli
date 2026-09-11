@@ -1,6 +1,7 @@
 "use client";
 
-import { Search, Pencil } from "lucide-react";
+import { useState } from "react";
+import { Search, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +17,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { roleColors, roleLabels, type Profile } from "./settings-types";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export interface UsersTabProps {
   profiles: Profile[];
@@ -23,6 +34,7 @@ export interface UsersTabProps {
   setSearch: (s: string) => void;
   toggleProfileStatus: (p: Profile) => void;
   openEdit: (p: Profile) => void;
+  deleteProfile: (p: Profile) => void;
 }
 
 export function SettingsUsersTab({
@@ -31,7 +43,10 @@ export function SettingsUsersTab({
   setSearch,
   toggleProfileStatus,
   openEdit,
+  deleteProfile,
 }: UsersTabProps) {
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+
   return (
     <>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
@@ -59,7 +74,7 @@ export function SettingsUsersTab({
               <TableHead className="text-center">Devis</TableHead>
               <TableHead>Date</TableHead>
               <TableHead className="text-center">Statut</TableHead>
-              <TableHead className="w-10" />
+              <TableHead className="w-20" />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -90,14 +105,24 @@ export function SettingsUsersTab({
                   />
                 </TableCell>
                 <TableCell>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => openEdit(p)}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => openEdit(p)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive hover:text-destructive"
+                      onClick={() => setDeleteId(p.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
@@ -148,14 +173,24 @@ export function SettingsUsersTab({
                     onCheckedChange={() => toggleProfileStatus(p)}
                   />
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => openEdit(p)}
-                >
-                  <Pencil className="h-3.5 w-3.5 mr-1.5" />
-                  Modifier
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => openEdit(p)}
+                  >
+                    <Pencil className="h-3.5 w-3.5 mr-1.5" />
+                    Modifier
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-destructive hover:text-destructive"
+                    onClick={() => setDeleteId(p.id)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -166,6 +201,31 @@ export function SettingsUsersTab({
           </p>
         )}
       </div>
+
+      {/* Delete AlertDialog */}
+      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer cet utilisateur ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action est irréversible. Le compte et toutes les données associées seront définitivement supprimés.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                const p = profiles.find((pr) => pr.id === deleteId);
+                if (p) deleteProfile(p);
+                setDeleteId(null);
+              }}
+            >
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

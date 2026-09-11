@@ -23,7 +23,7 @@ Copier `.env.example` et renseigner (Dashboard Supabase → Project Settings →
 |---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | URL du projet Supabase |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Clé anon (client, soumise à la RLS) |
-| `SUPABASE_SERVICE_ROLE_KEY` | Clé service_role (**serveur uniquement**, contourne la RLS — ne JAMAIS exposer côté client) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Clé service_role (__serveur uniquement__, contourne la RLS — ne JAMAIS exposer côté client) |
 | `NEXT_PUBLIC_SITE_URL` | URL publique de l'app (emails de réinitialisation) |
 | `RESEND_API_KEY` | Emails transactionnels (Resend) |
 
@@ -39,6 +39,9 @@ Copier `.env.example` et renseigner (Dashboard Supabase → Project Settings →
 npx supabase link --project-ref lqjdmugtrhwtkofkcmlw
 npx supabase migration list   # migrations appliquées vs en attente
 npx supabase db push          # appliquer les nouvelles migrations
+
+001974
+001972
 ```
 
 Edge Function (notifications) :
@@ -73,7 +76,7 @@ pm2 startup
 
 L'app écoute sur **:8080** (`PORT: process.env.PORT || 8080`).
 
-> **Mono-instance obligatoire** (`instances: 1`, `exec_mode: "fork"`). Raison : le **rate limiting est en mémoire** (`src/lib/rate-limit.ts`). Avant tout scale-out, migrer vers Redis/Upstash (`UPSTASH_REDIS_REST_URL`), sinon la limite effective = limite × nb d'instances.
+> __Mono-instance obligatoire__ (`instances: 1`, `exec_mode: "fork"`). Raison : le __rate limiting est en mémoire__ (`src/lib/rate-limit.ts`). Avant tout scale-out, migrer vers Redis/Upstash (`UPSTASH_REDIS_REST_URL`), sinon la limite effective = limite × nb d'instances.
 
 Sans PM2 :
 
@@ -85,7 +88,7 @@ bun run start   # NODE_ENV=production, lance .next/standalone/server.js
 
 ## 6. Reverse-proxy (Caddy)
 
-Le `Caddyfile` expose **:81** et proxie vers `localhost:8080`. Caddy **écrase** `X-Forwarded-For` (`{remote_host}`) → l'IP client est fiable **tant que Caddy est le seul point d'entrée**.
+Le `Caddyfile` expose __:81__ et proxie vers `localhost:8080`. Caddy __écrase__ `X-Forwarded-For` (`{remote_host}`) → l'IP client est fiable __tant que Caddy est le seul point d'entrée__.
 
 ```bash
 caddy start --config Caddyfile   # ou : caddy reload --config Caddyfile
