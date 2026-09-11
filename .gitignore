@@ -74,3 +74,8 @@ scripts/
 
 # Tests
 __tests__/
+
+# Sauvegardes base de données — ne JAMAIS committer (fuite de données/PII)
+backups/
+*.dump
+*.sql.gz

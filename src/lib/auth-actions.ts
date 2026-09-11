@@ -225,42 +225,63 @@ export async function registerAction(request: NextRequest) {
       )
     );
 
-    // Auto-inscription assureur : créer la compagnie + lien profil
-    if (selectedRole === "INSURER" && companyName) {
-      // Générer un code unique à partir du nom de la compagnie
-      const code = companyName
-        .trim()
-        .toUpperCase()
-        .replace(/[^A-Z0-9]+/g, "")
-        .slice(0, 20);
-
-      const insurerResult = await bestEffort("Création insurer", () =>
-        db.from("insurers").upsert(
-          {
-            code,
-            name: companyName.trim(),
-            contact_email: companyEmail || parsed.data.email.trim().toLowerCase(),
-            phone: companyPhone || null,
-            website: companyWebsite || null,
-          },
-          { onConflict: "code" }
-        )
+    // ── Auto-inscription assureur : compte EN ATTENTE de validation admin ──
+    // Sécurité (P1) : un assureur qui s'inscrit lui-même ne doit jamais être
+    // actif d'emblée, ni pouvoir reprendre/écraser une compagnie existante
+    // (sinon usurpation → accès aux offres/devis d'un assureur tiers). Le
+    // rattachement définitif est décidé par un administrateur.
+    if (selectedRole === "INSURER") {
+      // 1) Profil inactif tant qu'un admin n'a pas validé le compte.
+      //    (Update explicite : le trigger crée le profil avec is_active=true
+      //    par défaut, et le filet upsert ci-dessus ignore les doublons.)
+      await bestEffort("Assureur en attente de validation", () =>
+        db.from("profiles").update({ is_active: false }).eq("id", userId)
       );
 
-      if (insurerResult) {
-        const { data: insurer } = await db
-          .from("insurers")
-          .select("id")
-          .eq("code", code)
-          .single();
+      // 2) Compagnie : ne créer/rattacher QUE si le code n'existe pas déjà.
+      if (companyName) {
+        const code = companyName
+          .trim()
+          .toUpperCase()
+          .replace(/[^A-Z0-9]+/g, "")
+          .slice(0, 20);
 
-        if (insurer) {
-          await bestEffort("Lien insurer_accounts", () =>
-            db.from("insurer_accounts").upsert(
-              { profile_id: userId, insurer_id: insurer.id },
-              { onConflict: "profile_id,insurer_id" }
-            )
+        const existing = await bestEffort("Recherche compagnie existante", () =>
+          db.from("insurers").select("id").eq("code", code).maybeSingle()
+        );
+
+        if (existing?.data) {
+          // Compagnie déjà connue : on ne modifie rien et on ne rattache pas
+          // automatiquement — un admin décidera du rattachement à la validation.
+          console.warn(
+            `[auth] Auto-inscription assureur : compagnie « ${code} » déjà existante — aucun rattachement automatique (validation admin requise).`
           );
+        } else {
+          // Nouvelle compagnie, inactive jusqu'à validation admin.
+          const created = await bestEffort("Création insurer", () =>
+            db
+              .from("insurers")
+              .insert({
+                code,
+                name: companyName.trim(),
+                contact_email: companyEmail || parsed.data.email.trim().toLowerCase(),
+                phone: companyPhone || null,
+                website: companyWebsite || null,
+                is_active: false,
+              })
+              .select("id")
+              .single()
+          );
+
+          const insurerId = created?.data?.id;
+          if (insurerId) {
+            await bestEffort("Lien insurer_accounts", () =>
+              db.from("insurer_accounts").upsert(
+                { profile_id: userId, insurer_id: insurerId },
+                { onConflict: "profile_id,insurer_id" }
+              )
+            );
+          }
         }
       }
     }
