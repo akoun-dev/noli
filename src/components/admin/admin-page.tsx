@@ -15,6 +15,7 @@ import {
   Database,
   UserCog,
   UserCircle,
+  UserCheck,
   Phone,
 } from "lucide-react";
 import {
@@ -25,6 +26,7 @@ import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 // UI-C06 : les onglets admin sont chargés à la demande (code splitting).
 const DashboardTab = dynamic(() => import("./dashboard-tab").then((m) => m.DashboardTab));
 const AssureursTab = dynamic(() => import("./assureurs-tab").then((m) => m.AssureursTab));
+const InsurerValidationTab = dynamic(() => import("./insurer-validation-tab").then((m) => m.InsurerValidationTab));
 const InsuranceCategoriesTab = dynamic(() => import("./insurance-categories-tab").then((m) => m.InsuranceCategoriesTab));
 const InsuranceOffersTab = dynamic(() => import("./insurance-offers-tab").then((m) => m.InsuranceOffersTab));
 const CoverageCategoriesTab = dynamic(() => import("./coverage-categories-tab").then((m) => m.CoverageCategoriesTab));
@@ -41,6 +43,7 @@ const UserProfileTab = dynamic(() => import("../user/tabs/user-profile-tab").the
 const sidebarItems: AppShellSidebarItem[] = [
   { id: "dashboard", label: "Tableau de bord", icon: LayoutDashboard },
   { id: "assureurs", label: "Assureurs", icon: Building2 },
+  { id: "validation-assureurs", label: "Validation Assureurs", icon: UserCheck },
   { id: "insurance-categories", label: "Catégories Produits", icon: Layers },
   { id: "insurance-offers", label: "Offres", icon: FileText },
   { id: "coverage-categories", label: "Cat. Garanties", icon: ShieldCheck },
@@ -61,6 +64,8 @@ function renderTab(tab: string) {
       return <DashboardTab />;
     case "assureurs":
       return <AssureursTab />;
+    case "validation-assureurs":
+      return <InsurerValidationTab />;
     case "insurance-categories":
       return <InsuranceCategoriesTab />;
     case "insurance-offers":
