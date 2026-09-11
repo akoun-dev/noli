@@ -14,6 +14,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 
 interface PendingCompany {
@@ -37,6 +47,7 @@ export function InsurerValidationTab() {
   const [items, setItems] = useState<PendingInsurer[]>([]);
   const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState<string | null>(null); // profileId en cours
+  const [rejectTarget, setRejectTarget] = useState<PendingInsurer | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -186,7 +197,7 @@ export function InsurerValidationTab() {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => act(i.profileId, "reject")}
+                          onClick={() => setRejectTarget(i)}
                           disabled={acting === i.profileId}
                         >
                           <X className="size-4" />
@@ -250,7 +261,7 @@ export function InsurerValidationTab() {
                       size="sm"
                       variant="outline"
                       className="flex-1"
-                      onClick={() => act(i.profileId, "reject")}
+                      onClick={() => setRejectTarget(i)}
                       disabled={acting === i.profileId}
                     >
                       <X className="size-4" />
@@ -263,6 +274,31 @@ export function InsurerValidationTab() {
           </div>
         </>
       )}
+
+      {/* Confirmation de rejet (action destructive : suppression du compte) */}
+      <AlertDialog open={!!rejectTarget} onOpenChange={(open) => { if (!open) setRejectTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Rejeter ce compte assureur ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {rejectTarget
+                ? `Le compte « ${rejectTarget.email} »${rejectTarget.company ? ` (${rejectTarget.company.name})` : ""} sera définitivement supprimé. Cette action est irréversible.`
+                : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (rejectTarget) act(rejectTarget.profileId, "reject");
+                setRejectTarget(null);
+              }}
+            >
+              Rejeter
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
