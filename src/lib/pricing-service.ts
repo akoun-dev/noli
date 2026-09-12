@@ -631,7 +631,10 @@ function calculateMatrixBased(
           amount = formulaMatch.ceiling
             ? Math.min(gross, formulaMatch.ceiling)
             : gross;
-          amount = roundTo500(amount);
+          // Prime FIXE (baseRate=100 ⇒ prime issue du catalogue) : montant exact,
+          // pas d'arrondi (sinon 8 400 → 8 500, 15 900 → 16 000 ≠ catalogue).
+          // L'arrondi à 500 reste sur les calculs en pourcentage (baseRate ≠ 100).
+          if (formulaMatch.baseRate !== 100) amount = roundTo500(amount);
           breakdown = `Formule « ${formulaMatch.name || formulaMatch.label || "?"} » : ${formulaMatch.baseRate}% × VN ${nv.toLocaleString("fr-FR")} = ${gross.toLocaleString("fr-FR")} FCFA${formulaMatch.ceiling ? ` (plafond ${formulaMatch.ceiling.toLocaleString("fr-FR")})` : ""} → ${amount.toLocaleString("fr-FR")} FCFA`;
         } else {
           // 3) Fallback : première formule disponible
@@ -641,7 +644,8 @@ function calculateMatrixBased(
             amount = fallback.ceiling
               ? Math.min(gross, fallback.ceiling)
               : gross;
-            amount = roundTo500(amount);
+            // Prime fixe (baseRate=100) : montant exact du catalogue, pas d'arrondi.
+            if (fallback.baseRate !== 100) amount = roundTo500(amount);
             breakdown = `Formule par défaut « ${fallback.name || fallback.label || "?"} » : ${fallback.baseRate}% × VN → ${amount.toLocaleString("fr-FR")} FCFA`;
           } else {
             breakdown = `Aucune formule trouvée pour ${seatsRaw} places`;
