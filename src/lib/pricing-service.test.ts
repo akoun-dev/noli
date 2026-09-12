@@ -362,6 +362,22 @@ describe("calculateGuaranteePremium — MATRIX_BASED", () => {
       );
       expect(result.amount).toBe(5500);
     });
+
+    it("prime fixe non multiple de 500 : montant EXACT du catalogue (pas d'arrondi)", () => {
+      // Individuelle Conducteur (catalogue) : Formule 2 = 8 400, Formule 3 = 15 900.
+      // La prime fixe (baseRate 100) ne doit PAS être arrondie à 500
+      // (sinon 8 400 → 8 500, 15 900 → 16 000, ≠ catalogue).
+      const f2 = calculateGuaranteePremium(
+        coverage({ dimension: "FORMULA", formulas: [{ name: "Formule 2", primeFixe: 8400, baseRate: 100, ceiling: 8400 }] }),
+        vehicle
+      );
+      expect(f2.amount).toBe(8400);
+      const f3 = calculateGuaranteePremium(
+        coverage({ dimension: "FORMULA", formulas: [{ name: "Formule 3", primeFixe: 15900, baseRate: 100, ceiling: 15900 }] }),
+        vehicle
+      );
+      expect(f3.amount).toBe(15900);
+    });
   });
 
   describe("dimension TIERCE_COMPLETE / TIERCE_COLLISION", () => {
