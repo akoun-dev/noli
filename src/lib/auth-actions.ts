@@ -286,13 +286,17 @@ export async function registerAction(request: NextRequest) {
       }
     }
 
-    // Établit la session (cookie httpOnly) : connexion immédiate après l'inscription.
-    await bestEffort("Session immédiate", () =>
-      supabase.auth.signInWithPassword({
-        email: parsed.data.email.trim(),
-        password: parsed.data.password,
-      })
-    );
+    // Les assureurs ne sont pas connectés automatiquement : leur compte
+    // est en attente de validation admin. Seuls les USER et ADMIN bénéficient
+    // de la session immédiate.
+    if (selectedRole !== "INSURER") {
+      await bestEffort("Session immédiate", () =>
+        supabase.auth.signInWithPassword({
+          email: parsed.data.email.trim(),
+          password: parsed.data.password,
+        })
+      );
+    }
 
     logAudit({
       action: "REGISTER",
@@ -306,6 +310,18 @@ export async function registerAction(request: NextRequest) {
       reconcileAnonymousQuotes(userId, parsed.data.email.trim())
     );
 
+    // Email de notification aux assureurs : compte en attente de validation.
+    if (selectedRole === "INSURER") {
+      const { sendInsurerRegistrationPending } = await import("@/lib/email");
+      await bestEffort("Email assureur en attente", () =>
+        sendInsurerRegistrationPending(
+          parsed.data.email.trim(),
+          [firstName, lastName].filter(Boolean).join(" ") || parsed.data.email.trim(),
+          companyName || undefined
+        )
+      );
+    }
+
     return NextResponse.json({
       user: {
         id: userId,
@@ -313,6 +329,7 @@ export async function registerAction(request: NextRequest) {
         name: [firstName, lastName].filter(Boolean).join(" "),
         role: selectedRole,
       },
+      pendingValidation: selectedRole === "INSURER",
     });
   } catch (error) {
     console.error("Auth error:", error);

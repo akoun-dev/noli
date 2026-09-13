@@ -290,3 +290,149 @@ export async function sendCallbackConfirmation(to: string, insurerName: string, 
 </html>`,
   });
 }
+
+/**
+ * Email envoyé à un assureur après son inscription :
+ * son compte est en attente de validation par un administrateur.
+ */
+export async function sendInsurerRegistrationPending(to: string, name: string, companyName?: string) {
+  const h = {
+    name: escapeHtml(name),
+    companyName: escapeHtml(companyName || ""),
+  };
+
+  return sendMail({
+    to,
+    subject: "Votre inscription NOLI Assurance — en attente de validation",
+    html: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; background: #E8F4F0; }
+    .container { max-width: 600px; margin: 0 auto; padding: 24px; }
+    .header { background: #1B464D; color: #DEEF4A; padding: 32px; border-radius: 12px 12px 0 0; text-align: center; }
+    .body { background: #FFFFFF; padding: 32px; border-radius: 0 0 12px 12px; }
+    .footer { text-align: center; padding: 24px; font-size: 12px; color: #36636D; }
+    .notice { background: #FFF8E1; border: 1px solid #FFD54F; border-radius: 8px; padding: 16px; margin: 16px 0; }
+    .notice-title { font-weight: 600; color: #E65100; margin: 0 0 8px; font-size: 14px; }
+    .notice-text { margin: 0; font-size: 13px; color: #555555; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>NOLI Assurance</h1>
+      <p>Inscription assureur</p>
+    </div>
+    <div class="body">
+      <p style="font-size: 15px; color: #171717; margin: 0 0 16px;">
+        Bonjour <strong>${h.name}</strong>,
+      </p>
+      <p style="font-size: 15px; color: #171717; margin: 0 0 16px;">
+        Merci pour votre inscription sur <strong>NOLI Assurance</strong>${h.companyName ? ` en tant que représentant de <strong>${h.companyName}</strong>` : ""}.
+      </p>
+
+      <div class="notice">
+        <p class="notice-title">Compte en attente de validation</p>
+        <p class="notice-text">
+          Votre compte est en cours de vérification par notre équipe.
+          Vous recevrez un email de confirmation dès que votre accès sera activé.
+          Vous pourrez ensuite vous connecter et gérer vos offres.
+        </p>
+      </div>
+
+      <p style="font-size: 14px; color: #36636D; margin: 16px 0 0;">
+        Si vous avez des questions, contactez-nous à <a href="mailto:contact@noli.ci" style="color:#1B464D;">contact@noli.ci</a>.
+      </p>
+    </div>
+    <div class="footer">
+      <p>NOLI Assurance — Comparateur d'assurances en Côte d'Ivoire</p>
+      <p>contact@noli.ci | +225 27 00 00 00 00</p>
+    </div>
+  </div>
+</body>
+</html>`,
+  });
+}
+
+/**
+ * Email envoyé à un assureur après validation de son compte par un administrateur.
+ */
+export async function sendInsurerAccountValidated(to: string, name: string, companyName?: string) {
+  const h = {
+    name: escapeHtml(name),
+    companyName: escapeHtml(companyName || ""),
+    loginUrl: escapeHtml("https://noli.ci/connexion"),
+  };
+
+  return sendMail({
+    to,
+    subject: "Votre compte NOLI Assurance est activé !",
+    html: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; background: #E8F4F0; }
+    .container { max-width: 600px; margin: 0 auto; padding: 24px; }
+    .header { background: #1B464D; color: #DEEF4A; padding: 32px; border-radius: 12px 12px 0 0; text-align: center; }
+    .body { background: #FFFFFF; padding: 32px; border-radius: 0 0 12px 12px; }
+    .footer { text-align: center; padding: 24px; font-size: 12px; color: #36636D; }
+    .btn { display: inline-block; background: #1B464D; color: #DEEF4A; text-decoration: none; padding: 14px 36px; border-radius: 9999px; font-size: 15px; font-weight: 600; }
+    .success { background: #E8F5E9; border: 1px solid #81C784; border-radius: 8px; padding: 16px; margin: 16px 0; }
+    .success-title { font-weight: 600; color: #2E7D32; margin: 0 0 8px; font-size: 14px; }
+    .success-text { margin: 0; font-size: 13px; color: #555555; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>NOLI Assurance</h1>
+      <p>Compte assureur activé</p>
+    </div>
+    <div class="body">
+      <p style="font-size: 15px; color: #171717; margin: 0 0 16px;">
+        Bonjour <strong>${h.name}</strong>,
+      </p>
+
+      <div class="success">
+        <p class="success-title">Votre compte est maintenant actif !</p>
+        <p class="success-text">
+          ${h.companyName ? `Le compte de <strong>${h.companyName}</strong> a été validé par notre équipe.` : "Votre compte a été validé par notre équipe."}
+          Vous pouvez maintenant accéder à votre espace assureur.
+        </p>
+      </div>
+
+      <p style="font-size: 15px; color: #171717; margin: 16px 0;">
+        Connectez-vous pour gérer vos offres, consulter les devis et suivre vos demandes :
+      </p>
+
+      <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+          <td align="center" style="padding: 8px 0 24px;">
+            <a href="${h.loginUrl}" class="btn">
+              Accéder à mon espace
+            </a>
+          </td>
+        </tr>
+      </table>
+
+      <p style="font-size: 13px; color: #36636D; margin: 16px 0 0;">
+        Si le bouton ne fonctionne pas, copiez et collez ce lien dans votre navigateur&nbsp;:
+      </p>
+      <p style="margin: 0; font-size: 13px; word-break: break-all;">
+        <a href="${h.loginUrl}" style="color:#1B464D;text-decoration:underline;">${h.loginUrl}</a>
+      </p>
+    </div>
+    <div class="footer">
+      <p>NOLI Assurance — Comparateur d'assurances en Côte d'Ivoire</p>
+      <p>contact@noli.ci | +225 27 00 00 00 00</p>
+    </div>
+  </div>
+</body>
+</html>`,
+  });
+}

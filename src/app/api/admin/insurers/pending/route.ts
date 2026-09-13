@@ -1,4 +1,4 @@
-import { db, mapRows } from "@/lib/db";
+import { db, mapRow, mapRows } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-guard";
 import { logAudit } from "@/lib/audit";
@@ -149,12 +149,38 @@ export async function POST(request: NextRequest) {
         if (upInsurerError) throw upInsurerError;
       }
 
+      // Récupère le nom et l'email du profil + nom de la compagnie pour l'email.
+      const profileFull = mapRow<{ email: string; firstName: string | null; lastName: string | null }>(
+        (await db.from("profiles").select("email, first_name, last_name").eq("id", profileId).maybeSingle()).data
+      );
+      let companyName: string | undefined;
+      if (insurerIds.length > 0) {
+        const { data: compData } = await db
+          .from("insurers")
+          .select("name")
+          .eq("id", insurerIds[0])
+          .maybeSingle();
+        if (compData) companyName = compData.name as string;
+      }
+
       logAudit({
         action: "VALIDATE_INSURER",
         entity: "Profile",
         entityId: profileId,
         details: { email: profileData.email, insurerIds },
       });
+
+      // Email de confirmation à l'assureur (best-effort).
+      if (profileFull) {
+        const { sendInsurerAccountValidated } = await import("@/lib/email");
+        const displayName = [profileFull.firstName, profileFull.lastName].filter(Boolean).join(" ") || profileFull.email;
+        try {
+          await sendInsurerAccountValidated(profileFull.email, displayName, companyName);
+        } catch (err) {
+          console.error("[admin/insurers/pending] Erreur envoi email validation:", err);
+        }
+      }
+
       return NextResponse.json({ data: { profileId, status: "validated" } });
     }
 

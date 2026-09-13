@@ -457,6 +457,22 @@ export function RegisterForm({ mode }: { mode: AuthFormMode }) {
         return;
       }
 
+      if (data.pendingValidation) {
+        // Assureur : compte créé mais en attente de validation admin.
+        // Rediriger vers la page de connexion avec un message informatif.
+        toast({
+          title: "Compte créé",
+          description:
+            "Votre compte a été créé avec succès ! Un administrateur doit valider votre inscription avant que vous puissiez vous connecter. Vous recevrez un email de confirmation.",
+        });
+        if (mode === "modal") {
+          setAuthModal("login");
+        } else {
+          setView("login");
+        }
+        return;
+      }
+
       setUser({
         id: data.user.id,
         email: data.user.email,
@@ -470,10 +486,7 @@ export function RegisterForm({ mode }: { mode: AuthFormMode }) {
 
       toast({
         title: "Compte créé",
-        description:
-          data.user.role === "INSURER"
-            ? "Compte créé ! Un administrateur doit activer votre espace assureur avant sa première utilisation."
-            : `Bienvenue, ${data.user.name} ! Votre compte a été créé avec succès.`,
+        description: `Bienvenue, ${data.user.name} ! Votre compte a été créé avec succès.`,
       });
 
       redirect(data.user.role);
