@@ -2,11 +2,18 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { FileText, Filter, Loader2 } from "lucide-react";
+import { FileText, Filter, Loader2, Car, Shield, Building2, ChevronRight } from "lucide-react";
 import { useAppStore } from "@/store/app-store";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
 /* ── Types ── */
 interface Quote {
@@ -19,6 +26,26 @@ interface Quote {
   createdAt: string;
   category?: { name: string } | null;
   offer?: { insurer?: { name: string } | null; name: string } | null;
+}
+
+/* Détail d'un devis (route /api/user/quotes/[id]) */
+interface QuoteCoverageLine {
+  id: string;
+  premiumAmount: number | null;
+  isIncluded: boolean;
+  isMandatory: boolean;
+  coverage: { id: string; code: string; name: string; type: string };
+}
+interface QuoteDetail extends Quote {
+  updatedAt?: string;
+  vehicleData?: Record<string, unknown>;
+  offer?: {
+    insurer?: { name: string } | null;
+    name: string;
+    contractType?: string | null;
+    deductible?: number | null;
+  } | null;
+  coverageLines?: QuoteCoverageLine[];
 }
 
 /* ── Helpers ── */
@@ -73,6 +100,26 @@ export function UserQuotesTab() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [activeFilter, setActiveFilter] = useState("all");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [detail, setDetail] = useState<QuoteDetail | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState(false);
+
+  const openDetail = useCallback(async (id: string) => {
+    setSelectedId(id);
+    setDetail(null);
+    setDetailError(false);
+    setDetailLoading(true);
+    try {
+      const res = await fetch(`/api/user/quotes/${id}`);
+      if (!res.ok) throw new Error();
+      setDetail(await res.json());
+    } catch {
+      setDetailError(true);
+    } finally {
+      setDetailLoading(false);
+    }
+  }, []);
 
   const fetchQuotes = useCallback(async () => {
     if (!user.id) return;
@@ -206,7 +253,14 @@ export function UserQuotesTab() {
                 animate={{ y: 0 }}
                 transition={{ duration: 0.3, delay: i * 0.03 }}
               >
-                <Card className="rounded-xl border bg-card hover:shadow-md transition-shadow">
+                <Card
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => openDetail(q.id)}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openDetail(q.id); } }}
+                  className="rounded-xl border bg-card hover:shadow-md hover:border-primary/40 transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                  aria-label={`Voir le détail du devis ${q.reference}`}
+                >
                   <CardContent className="p-4 sm:p-5">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       {/* Left info */}
@@ -255,6 +309,7 @@ export function UserQuotesTab() {
                         >
                           {cfg.label}
                         </span>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
                       </div>
                     </div>
                   </CardContent>
@@ -264,6 +319,128 @@ export function UserQuotesTab() {
           })}
         </div>
       )}
+
+      {/* Détail d'un devis (MET-USR-05) */}
+      <Dialog open={!!selectedId} onOpenChange={(o) => { if (!o) { setSelectedId(null); setDetail(null); } }}>
+        <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Détail du devis</DialogTitle>
+            <DialogDescription>
+              {detail ? `Référence ${detail.reference}` : "Chargement…"}
+            </DialogDescription>
+          </DialogHeader>
+
+          {detailLoading ? (
+            <div className="space-y-3 py-2">
+              <Skeleton className="h-16 w-full rounded-lg" />
+              <Skeleton className="h-24 w-full rounded-lg" />
+              <Skeleton className="h-24 w-full rounded-lg" />
+            </div>
+          ) : detailError ? (
+            <div className="py-6 text-center">
+              <p className="text-sm text-muted-foreground mb-3">
+                Impossible de charger le détail de ce devis.
+              </p>
+              {selectedId && (
+                <Button variant="outline" size="sm" onClick={() => openDetail(selectedId)}>
+                  Réessayer
+                </Button>
+              )}
+            </div>
+          ) : detail ? (
+            <div className="space-y-4 text-sm">
+              {/* En-tête : statut + prix */}
+              <div className="flex items-center justify-between gap-3">
+                <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${(statusConfig[detail.status] || { color: "bg-gray-100 text-gray-700" }).color}`}>
+                  {(statusConfig[detail.status] || { label: detail.status }).label}
+                </span>
+                <div className="text-right">
+                  <p className="text-xs text-muted-foreground">
+                    {detail.finalPrice != null ? "Prix final" : "Prix estimé"}
+                  </p>
+                  <p className="font-semibold">{formatFCFA(detail.finalPrice ?? detail.estimatedPrice)}</p>
+                </div>
+              </div>
+
+              {/* Offre */}
+              {detail.offer && (
+                <div className="rounded-lg border p-3 space-y-1.5">
+                  <p className="flex items-center gap-2 font-medium">
+                    <Building2 className="h-4 w-4 text-muted-foreground" />
+                    {detail.offer.name}
+                  </p>
+                  {detail.offer.insurer?.name && (
+                    <p className="text-muted-foreground">Assureur : {detail.offer.insurer.name}</p>
+                  )}
+                  {detail.offer.contractType && (
+                    <p className="text-muted-foreground">Formule : {detail.offer.contractType}</p>
+                  )}
+                  {detail.offer.deductible != null && (
+                    <p className="text-muted-foreground">Franchise : {formatFCFA(detail.offer.deductible)}</p>
+                  )}
+                </div>
+              )}
+
+              {/* Véhicule */}
+              {detail.vehicleData && Object.keys(detail.vehicleData).length > 0 && (
+                <div className="rounded-lg border p-3">
+                  <p className="flex items-center gap-2 font-medium mb-2">
+                    <Car className="h-4 w-4 text-muted-foreground" /> Véhicule
+                  </p>
+                  <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                    {([
+                      ["fuelType", "Carburant"],
+                      ["fiscalPower", "Puissance fiscale"],
+                      ["seats", "Places"],
+                      ["year", "Année"],
+                      ["newValue", "Valeur neuve"],
+                      ["currentValue", "Valeur actuelle"],
+                      ["usage", "Usage"],
+                      ["effectiveDate", "Date d'effet"],
+                    ] as const).map(([key, label]) =>
+                      detail.vehicleData?.[key] != null && String(detail.vehicleData[key]).length > 0 ? (
+                        <div key={key} className="flex justify-between gap-2">
+                          <dt className="text-muted-foreground">{label}</dt>
+                          <dd className="font-medium text-right">{String(detail.vehicleData[key])}</dd>
+                        </div>
+                      ) : null
+                    )}
+                  </dl>
+                </div>
+              )}
+
+              {/* Garanties */}
+              {detail.coverageLines && detail.coverageLines.length > 0 && (
+                <div className="rounded-lg border p-3">
+                  <p className="flex items-center gap-2 font-medium mb-2">
+                    <Shield className="h-4 w-4 text-muted-foreground" /> Garanties
+                  </p>
+                  <ul className="space-y-1.5">
+                    {detail.coverageLines.map((line) => (
+                      <li key={line.id} className="flex items-center justify-between gap-3">
+                        <span className="text-foreground/90">{line.coverage.name}</span>
+                        <span className={`shrink-0 font-medium tabular-nums ${!line.premiumAmount ? "text-success" : ""}`}>
+                          {!line.premiumAmount ? "Inclus" : `${formatFCFA(line.premiumAmount)}/an`}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Notes */}
+              {detail.notes && (
+                <div className="rounded-lg border p-3">
+                  <p className="font-medium mb-1">Notes</p>
+                  <p className="text-muted-foreground whitespace-pre-line">{detail.notes}</p>
+                </div>
+              )}
+
+              <p className="text-xs text-muted-foreground">Créé le {formatDate(detail.createdAt)}</p>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
