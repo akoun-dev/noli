@@ -169,6 +169,61 @@ export async function PUT(request: NextRequest) {
 
     const quote = mapRow(quoteData);
 
+    // ── Contrat : créé automatiquement à l'approbation, comme dans l'espace
+    // assureur. Sans cela, un devis approuvé PAR L'ADMIN n'ouvrait aucun
+    // contrat côté client. L'assureur est déduit de l'offre du devis.
+    // Condition volontairement basée sur « pas de contrat existant » (et non sur
+    // la transition de statut) : cela rattrape aussi les devis DÉJÀ approuvés
+    // qui n'avaient pas de contrat. Idempotent grâce au contrôle ci-dessous.
+    if (updateData.status === "APPROVED" && quote.userId) {
+      const { data: existingContract } = await db
+        .from("contracts")
+        .select("id")
+        .eq("quote_id", id)
+        .maybeSingle();
+
+      if (!existingContract) {
+        let insurerId: number | null = null;
+        if (quote.offerId) {
+          const { data: offerRow } = await db
+            .from("insurance_offers")
+            .select("insurer_id")
+            .eq("id", quote.offerId)
+            .maybeSingle();
+          insurerId = (offerRow as { insurer_id?: number } | null)?.insurer_id ?? null;
+        }
+
+        if (insurerId) {
+          const contractRef = `NOLI-CON-${Date.now().toString(36).toUpperCase()}${Math.random()
+            .toString(36)
+            .slice(2, 6)
+            .toUpperCase()}`;
+          const startDate = new Date();
+          const endDate = new Date(startDate);
+          endDate.setFullYear(endDate.getFullYear() + 1);
+
+          const { error: contractError } = await db.from("contracts").insert({
+            reference: contractRef,
+            quote_id: id,
+            profile_id: quote.userId,
+            insurer_id: insurerId,
+            offer_id: quote.offerId ?? null,
+            status: "ACTIVE",
+            start_date: startDate.toISOString().split("T")[0],
+            end_date: endDate.toISOString().split("T")[0],
+            premium: quote.finalPrice ?? quote.estimatedPrice ?? null,
+          });
+          if (contractError) {
+            console.error("Erreur création contrat (admin):", contractError);
+          }
+        } else {
+          console.warn(
+            `[admin/quotes] Devis ${id} approuvé sans offre/assureur associés → contrat non créé.`
+          );
+        }
+      }
+    }
+
     await logAudit({
       action: "UPDATE",
       entity: "Quote",
