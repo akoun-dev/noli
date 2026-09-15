@@ -23,6 +23,7 @@ type PendingInsurer = {
   phone: string | null;
   createdAt: string;
   company: PendingCompany | null;
+  requestedCompanyName: string | null;
 };
 
 // ── GET : liste des assureurs en attente de validation ──────────────
@@ -32,7 +33,7 @@ export async function GET() {
     // 1) Profils assureurs inactifs (en attente).
     const { data: profilesData, error: profilesError } = await db
       .from("profiles")
-      .select("id, email, first_name, last_name, phone, created_at")
+      .select("id, email, first_name, last_name, phone, created_at, pending_company_name")
       .eq("role", "INSURER")
       .eq("is_active", false)
       .order("created_at", { ascending: false });
@@ -41,6 +42,7 @@ export async function GET() {
     const profiles = mapRows(profilesData || []) as Array<{
       id: string; email: string; firstName: string | null;
       lastName: string | null; phone: string | null; createdAt: string;
+      pendingCompanyName: string | null;
     }>;
 
     if (profiles.length === 0) {
@@ -83,6 +85,7 @@ export async function GET() {
       phone: p.phone,
       createdAt: p.createdAt,
       company: companyByProfile.get(p.id) ?? null,
+      requestedCompanyName: p.pendingCompanyName,
     }));
 
     return NextResponse.json({ data: result });
@@ -114,7 +117,7 @@ export async function POST(request: NextRequest) {
     // Vérifie que la cible est bien un assureur en attente (profil inactif).
     const { data: profileData, error: profileError } = await db
       .from("profiles")
-      .select("id, role, is_active, email")
+      .select("id, role, is_active, email, pending_company_name")
       .eq("id", profileId)
       .maybeSingle();
     if (profileError) throw profileError;
@@ -132,6 +135,31 @@ export async function POST(request: NextRequest) {
       .eq("profile_id", profileId);
     const insurerIds = [...new Set((linksData || []).map((l: { insurer_id: number }) => l.insurer_id))];
 
+    // Une compagnie existante n'est jamais liée pendant l'inscription. Le
+    // rattachement devient une décision explicite de l'administrateur lors de
+    // la validation, à partir du nom conservé sur le profil.
+    if (action === "validate" && insurerIds.length === 0 && profileData.pending_company_name) {
+      const requestedCode = profileData.pending_company_name
+        .trim()
+        .toUpperCase()
+        .replace(/[^A-Z0-9]+/g, "")
+        .slice(0, 20);
+      const { data: existingInsurer, error: existingInsurerError } = await db
+        .from("insurers")
+        .select("id")
+        .eq("code", requestedCode)
+        .maybeSingle();
+      if (existingInsurerError) throw existingInsurerError;
+      if (existingInsurer) {
+        const { error: linkError } = await db.from("insurer_accounts").insert({
+          profile_id: profileId,
+          insurer_id: existingInsurer.id,
+        });
+        if (linkError) throw linkError;
+        insurerIds.push(existingInsurer.id);
+      }
+    }
+
     if (action === "validate") {
       // Active le profil…
       const { error: upProfileError } = await db
@@ -148,6 +176,8 @@ export async function POST(request: NextRequest) {
           .in("id", insurerIds);
         if (upInsurerError) throw upInsurerError;
       }
+
+      await db.from("profiles").update({ pending_company_name: null }).eq("id", profileId);
 
       // Récupère le nom et l'email du profil + nom de la compagnie pour l'email.
       const profileFull = mapRow<{ email: string; firstName: string | null; lastName: string | null }>(

@@ -234,9 +234,14 @@ export async function registerAction(request: NextRequest) {
       // 1) Profil inactif tant qu'un admin n'a pas validé le compte.
       //    (Update explicite : le trigger crée le profil avec is_active=true
       //    par défaut, et le filet upsert ci-dessus ignore les doublons.)
-      await bestEffort("Assureur en attente de validation", () =>
-        db.from("profiles").update({ is_active: false }).eq("id", userId)
-      );
+      const { error: pendingProfileError } = await db
+        .from("profiles")
+        .update({
+          is_active: false,
+          pending_company_name: companyName?.trim() || null,
+        })
+        .eq("id", userId);
+      if (pendingProfileError) throw pendingProfileError;
 
       // 2) Compagnie : ne créer/rattacher QUE si le code n'existe pas déjà.
       if (companyName) {

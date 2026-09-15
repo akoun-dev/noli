@@ -40,6 +40,7 @@ interface PendingInsurer {
   phone: string | null;
   createdAt: string;
   company: PendingCompany | null;
+  requestedCompanyName: string | null;
 }
 
 export function InsurerValidationTab() {
@@ -159,6 +160,8 @@ export function InsurerValidationTab() {
                           {i.company.name}
                           <span className="text-xs text-muted-foreground">({i.company.code})</span>
                         </span>
+                      ) : i.requestedCompanyName ? (
+                        <span className="text-sm">{i.requestedCompanyName} <span className="text-xs text-muted-foreground">(à rattacher)</span></span>
                       ) : (
                         <span className="text-muted-foreground text-sm">—</span>
                       )}
@@ -219,12 +222,17 @@ export function InsurerValidationTab() {
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <p className="font-semibold">{fullName(i)}</p>
-                      {i.company && (
+                      {i.company ? (
                         <p className="text-sm text-muted-foreground inline-flex items-center gap-1.5">
                           <Building2 className="size-3.5" />
                           {i.company.name} ({i.company.code})
                         </p>
-                      )}
+                      ) : i.requestedCompanyName ? (
+                        <p className="text-sm text-muted-foreground inline-flex items-center gap-1.5">
+                          <Building2 className="size-3.5" />
+                          {i.requestedCompanyName} (à rattacher)
+                        </p>
+                      ) : null}
                     </div>
                     <Badge variant="outline" className="inline-flex items-center gap-1">
                       <CalendarDays className="size-3" />
