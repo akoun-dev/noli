@@ -259,6 +259,7 @@ export function ResultsPage() {
           vehicleInfo,
           coverageNeeds,
           offer: {
+            id: offer.id,
             insurerName: offer.insurerName,
             insurerId: offer.insurerId,
             name: offer.name,

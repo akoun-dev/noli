@@ -61,9 +61,20 @@ export async function POST(request: NextRequest) {
     // Générer une référence unique
     const ref = `NOLI-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
-    // Look up the offer by insurerId and name to link it
+    // Lier le devis à l'offre. On privilégie l'ID d'offre transmis par le
+    // client (fiable) — sans quoi le devis reste orphelin d'offre et AUCUN
+    // contrat ne peut être créé à l'approbation (pas d'assureur à rattacher).
+    // Repli : recherche par assureur + nom (ancien comportement).
     let offerId: string | null = null;
-    if (offer.insurerId && offer.name) {
+    if (offer.id) {
+      const { data } = await db
+        .from("insurance_offers")
+        .select("id")
+        .eq("id", offer.id)
+        .maybeSingle();
+      offerId = mapRow<{ id: string }>(data)?.id || null;
+    }
+    if (!offerId && offer.insurerId && offer.name) {
       const { data, error } = await db
         .from("insurance_offers")
         .select("id")
