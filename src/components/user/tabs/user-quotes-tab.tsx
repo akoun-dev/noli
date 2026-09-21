@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { FileText, Filter, Loader2, Car, Shield, Building2, ChevronRight } from "lucide-react";
+import { FileText, Filter, Loader2, Car, Shield, Building2, ChevronRight, Download } from "lucide-react";
 import { useAppStore } from "@/store/app-store";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -104,6 +104,30 @@ export function UserQuotesTab() {
   const [detail, setDetail] = useState<QuoteDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+
+  // Télécharge le PDF du devis. On récupère un blob (plutôt qu'un lien direct)
+  // pour gérer proprement les erreurs (403/500) et afficher un état de chargement.
+  const downloadPdf = useCallback(async (id: string, reference: string) => {
+    setDownloading(true);
+    try {
+      const res = await fetch(`/api/user/quotes/${id}/pdf`);
+      if (!res.ok) throw new Error();
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `NOLI-Devis-${reference}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      alert("Le téléchargement du devis a échoué. Veuillez réessayer.");
+    } finally {
+      setDownloading(false);
+    }
+  }, []);
 
   const openDetail = useCallback(async (id: string) => {
     setSelectedId(id);
@@ -437,6 +461,20 @@ export function UserQuotesTab() {
               )}
 
               <p className="text-xs text-muted-foreground">Créé le {formatDate(detail.createdAt)}</p>
+
+              {/* Téléchargement du devis (PDF) */}
+              <Button
+                className="w-full bg-brand text-black hover:bg-brand-hover"
+                onClick={() => downloadPdf(detail.id, detail.reference)}
+                disabled={downloading}
+              >
+                {downloading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4" />
+                )}
+                Télécharger le devis (PDF)
+              </Button>
             </div>
           ) : null}
         </DialogContent>
