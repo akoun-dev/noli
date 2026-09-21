@@ -3,10 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { sendQuoteConfirmation, isEmailConfigured } from "@/lib/email";
 import { generateQuotePDFBuffer } from "@/lib/generate-pdf";
 import { getSessionProfile } from "@/lib/auth-guard";
-import { sanitizePostgrestSearch } from "@/lib/security";
+import { sanitizePostgrestSearch, parseNumberField } from "@/lib/security";
 import { getClientIp, checkQuoteCreateLimit, rateLimitResponse } from "@/lib/rate-limit";
-import { emailSchema } from "@/lib/validation";
-import type { InsurerOffer } from "@/types";
+import { createQuoteSchema } from "@/lib/validation";
+import type { InsurerOffer, VehicleInfo } from "@/types";
 
 function parseJsonField<T>(value: string, fallback: T): T {
   try {
@@ -41,22 +41,22 @@ export async function POST(request: NextRequest) {
     const limited = rateLimitResponse(checkQuoteCreateLimit(getClientIp(request)));
     if (limited) return limited;
 
-    const body = await request.json();
-    const { personalInfo, vehicleInfo, coverageNeeds, offer } = body;
-
-    if (!personalInfo?.email || !offer?.insurerName) {
+    // Validation stricte du corps AVANT toute écriture en base ou envoi d'email
+    // (endpoint public) : shape des données, email valide, prix bornés. Empêche
+    // l'insertion de données arbitraires et le relayage de spam / email bombing.
+    const parsed = createQuoteSchema.safeParse(await request.json());
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "Données incomplètes pour créer le devis" },
+        { error: parsed.error.issues[0]?.message || "Données invalides pour créer le devis" },
         { status: 400 }
       );
     }
+    const { personalInfo, vehicleInfo, coverageNeeds, offer } = parsed.data;
 
-    // Valider l'email avant tout envoi : empêche le relayage de spam / email
-    // bombing vers des adresses arbitraires via le champ personalInfo.email.
-    const emailCheck = emailSchema.safeParse(personalInfo.email);
-    if (!emailCheck.success) {
-      return NextResponse.json({ error: "Adresse email invalide" }, { status: 400 });
-    }
+    // Prix estimé (mensuel) validé et borné — jamais NaN/Infinity/négatif.
+    const monthlyRaw = offer.monthlyPrice ?? (offer.annualPrice != null ? offer.annualPrice / 12 : 0);
+    const priceCheck = parseNumberField(monthlyRaw, { field: "prix estimé", min: 0, max: 1_000_000_000 });
+    const estimatedPrice = Math.round(priceCheck.ok ? priceCheck.value ?? 0 : 0);
 
     // Générer une référence unique
     const ref = `NOLI-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
         status: "PENDING",
         user_id: sessionProfile?.id || null,
         offer_id: offerId,
-        estimated_price: Math.round(offer.monthlyPrice || offer.annualPrice / 12 || 0),
+        estimated_price: estimatedPrice,
         personal_data: JSON.stringify(personalInfo),
         vehicle_data: JSON.stringify(vehicleInfo || {}),
         coverage_requirements: JSON.stringify(coverageNeeds || {}),
@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
     // Envoi d'email (non bloquant) — SMTP principal, Resend en fallback.
     // Le devis est généré en PDF côté serveur et joint à l'email.
     if (isEmailConfigured()) {
-      const monthlyPrice = Math.round(offer.monthlyPrice || offer.annualPrice / 12 || 0);
+      const monthlyPrice = estimatedPrice;
       const quoteOffer: InsurerOffer = {
         id: offer.insurerId || ref,
         insurerId: offer.insurerId || "",
@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
         to: personalInfo.email,
         reference: ref,
         insurerName: offer.insurerName,
-        offerName: offer.name || offer.coverageType,
+        offerName: offer.name || offer.coverageType || "Offre",
         estimatedPrice: monthlyPrice,
         contactPhone: personalInfo.phone,
         contractType: offer.coverageType,
@@ -143,7 +143,7 @@ export async function POST(request: NextRequest) {
           content: Buffer.from(
             generateQuotePDFBuffer(
               personalInfo,
-              vehicleInfo || {},
+              (vehicleInfo ?? {}) as VehicleInfo,
               coverageNeeds?.contractType || "basic",
               [quoteOffer],
               coverageNeeds?.contractDuration || 12,

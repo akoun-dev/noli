@@ -44,6 +44,61 @@ export const compareRequestSchema = z.object({
   userId: z.string().optional(),
 });
 
+/* ── Création de devis (POST public /api/user/quotes) ────────────────
+ * Endpoint public : on valide le corps avant toute écriture en base et
+ * tout envoi d'email. L'offre transmise par le client est validée en
+ * shape (insurerName requis) ; les prix sont bornés. Les champs d'offre
+ * supplémentaires sont tolérés (passthrough) car réutilisés pour le PDF. */
+export const createQuoteSchema = z.object({
+  personalInfo: personalInfoSchema,
+  vehicleInfo: vehicleInfoSchema.optional(),
+  coverageNeeds: coverageNeedsSchema.partial().optional(),
+  offer: z
+    .object({
+      id: z.string().optional(),
+      insurerId: z.string().optional(),
+      insurerName: z.string().trim().min(1, "L'assureur est requis").max(160),
+      name: z.string().max(200).optional(),
+      coverageType: z.string().max(80).optional(),
+      description: z.string().max(2000).nullish(),
+      monthlyPrice: z.number().nonnegative().max(1_000_000_000).optional(),
+      annualPrice: z.number().nonnegative().max(1_000_000_000).optional(),
+      contractDuration: z.number().int().min(1).max(60).optional(),
+      deductible: z.number().optional(),
+      maxCoverage: z.number().optional(),
+      features: z.array(z.string()).optional(),
+      conditions: z.string().nullish(),
+      guaranteeDescriptions: z.record(z.string(), z.string()).optional(),
+      matchedGuarantees: z.array(z.string()).optional(),
+    })
+    .passthrough(),
+});
+
+/* ── Formulaire de contact (POST public /api/contact/messages) ───────── */
+export const contactMessageSchema = z.object({
+  name: z.string().trim().min(1, "Le nom est requis").max(120),
+  email: emailSchema,
+  phone: z.string().trim().max(40).nullish(),
+  subject: z.string().trim().min(1, "Le sujet est requis").max(160),
+  message: z.string().trim().min(1, "Le message est requis").max(5000),
+});
+
+/* ── Demande de rappel (POST public /api/contact/request-callback) ───── */
+export const requestCallbackSchema = z.object({
+  phone: z.string().trim().min(1, "Le numéro de téléphone est requis").max(40),
+  preferredTime: z.string().trim().max(120).nullish(),
+  insurerName: z.string().trim().min(1, "L'assureur est requis").max(160),
+  insurerId: z.string().max(64).nullish(),
+  personalInfo: z
+    .object({
+      firstName: z.string().trim().max(120).nullish(),
+      lastName: z.string().trim().max(120).nullish(),
+      email: z.string().trim().max(200).nullish(),
+    })
+    .partial()
+    .optional(),
+});
+
 export const registerSchema = z.object({
   email: emailSchema,
   name: z.string().min(1, "Le nom complet est requis"),

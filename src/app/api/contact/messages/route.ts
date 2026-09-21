@@ -1,6 +1,7 @@
 import { db, mapRows } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { contactMessageSchema } from "@/lib/validation";
 
 /**
  * Formulaire de contact — endpoint réel (remplace l'ancien setTimeout simulé).
@@ -22,22 +23,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body = await request.json();
-    const { name, email, phone, subject, message } = body;
-
-    if (!name || !email || !subject || !message) {
+    // Validation stricte (types, présence et bornes de longueur) avant écriture :
+    // empêche l'injection de contenu volumineux/arbitraire dans les notifications.
+    const parsed = contactMessageSchema.safeParse(await request.json());
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "Nom, email, sujet et message sont requis" },
+        { error: parsed.error.issues[0]?.message || "Données invalides" },
         { status: 400 }
       );
     }
-    if (typeof name !== "string" || typeof email !== "string" ||
-        typeof subject !== "string" || typeof message !== "string") {
-      return NextResponse.json(
-        { error: "Données invalides" },
-        { status: 400 }
-      );
-    }
+    const { name, email, phone, subject, message } = parsed.data;
 
     // Notifier les administrateurs actifs
     const { data: adminProfilesData } = await db

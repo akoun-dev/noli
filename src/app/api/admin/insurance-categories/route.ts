@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-guard";
 import { logAudit } from "@/lib/audit";
 import { createInsuranceCategorySchema } from "@/lib/validation";
+import { sanitizePostgrestSearch } from "@/lib/security";
 
 export async function GET(request: NextRequest) {
   const guard = await requireAuth(["ADMIN"]); if (guard) return guard;
@@ -11,7 +12,7 @@ export async function GET(request: NextRequest) {
     let query = db
       .from("insurance_categories")
       .select("*");
-    if (search) query = query.ilike("name", `%${search}%`);
+    if (search) query = query.ilike("name", `%${sanitizePostgrestSearch(search)}%`);
     const { data, error } = await query.order("created_at", { ascending: false });
     if (error) throw error;
     const categories = mapRows(data || []);
