@@ -36,7 +36,31 @@ import { logAudit } from "@/lib/audit";
  * Supabase (Authentication → URL Configuration), sinon Supabase ignore ce
  * paramètre et retombe sur son « Site URL ».
  */
-function resolveSiteUrl(request: NextRequest): string {
+/**
+ * Liste blanche des hôtes autorisés à construire les liens email.
+ * Source : l'hôte de NEXT_PUBLIC_SITE_URL (si configurée), la variable
+ * SITE_ALLOWED_HOSTS (hôtes séparés par des virgules) et des valeurs par
+ * défaut connues (production + dev). Empêche qu'un en-tête Host falsifié
+ * ne serve à fabriquer le lien.
+ */
+function allowedHosts(): Set<string> {
+  const hosts = new Set<string>(["noli.ci", "www.noli.ci", "localhost:3000", "localhost"]);
+  const env = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (env) {
+    try {
+      hosts.add(new URL(env).host.toLowerCase());
+    } catch {
+      /* URL invalide en env : ignorée */
+    }
+  }
+  for (const h of (process.env.SITE_ALLOWED_HOSTS || "").split(",")) {
+    const t = h.trim().toLowerCase();
+    if (t) hosts.add(t);
+  }
+  return hosts;
+}
+
+export function resolveSiteUrl(request: NextRequest): string {
   const env = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/+$/, "");
   if (env && !/localhost|127\.0\.0\.1/.test(env)) return env;
 
@@ -44,7 +68,11 @@ function resolveSiteUrl(request: NextRequest): string {
   const host =
     request.headers.get("x-forwarded-host")?.split(",")[0]?.trim() ||
     request.headers.get("host")?.trim();
-  if (host) return `${proto}://${host}`;
+  // Anti Host-header poisoning : n'accepter l'hôte de la requête que s'il est
+  // explicitement autorisé. Sinon un attaquant falsifiant l'en-tête Host
+  // détournerait le lien de réinitialisation (fuite du token → prise de compte).
+  if (host && allowedHosts().has(host.toLowerCase())) return `${proto}://${host}`;
+  if (host) console.warn(`[auth] Hôte non autorisé ignoré pour le lien email : ${host}`);
 
   return env || "http://localhost:3000";
 }

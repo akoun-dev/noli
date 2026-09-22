@@ -10,6 +10,9 @@ import {
   loginSchema,
   createOfferSchema,
   updateUserSchema,
+  createQuoteSchema,
+  contactMessageSchema,
+  requestCallbackSchema,
 } from "./validation";
 
 describe("emailSchema", () => {
@@ -237,5 +240,72 @@ describe("updateUserSchema", () => {
 
   it("rejette une mise à jour sans id", () => {
     expect(updateUserSchema.safeParse({ name: "X" }).success).toBe(false);
+  });
+});
+
+describe("createQuoteSchema (F-02)", () => {
+  const validBody = {
+    personalInfo: { lastName: "Doe", firstName: "John", email: "john@doe.ci", phone: "0700000000" },
+    vehicleInfo: {
+      fuelType: "Essence", fiscalPower: "7", seats: "5", year: "2020",
+      newValue: "15000000", currentValue: "10000000", usage: "Personnel",
+    },
+    coverageNeeds: { contractType: "all_risks", contractDuration: 12 },
+    offer: { insurerName: "SandyAssur", name: "Tous Risques", monthlyPrice: 25000, annualPrice: 300000 },
+  };
+
+  it("accepte un corps de devis complet", () => {
+    expect(createQuoteSchema.safeParse(validBody).success).toBe(true);
+  });
+
+  it("rejette une offre sans assureur (insurerName)", () => {
+    const bad = { ...validBody, offer: { name: "X" } };
+    expect(createQuoteSchema.safeParse(bad).success).toBe(false);
+  });
+
+  it("rejette un email invalide", () => {
+    const bad = { ...validBody, personalInfo: { ...validBody.personalInfo, email: "pas-un-email" } };
+    expect(createQuoteSchema.safeParse(bad).success).toBe(false);
+  });
+
+  it("rejette un prix négatif ou hors bornes", () => {
+    expect(createQuoteSchema.safeParse({ ...validBody, offer: { insurerName: "A", monthlyPrice: -1 } }).success).toBe(false);
+    expect(createQuoteSchema.safeParse({ ...validBody, offer: { insurerName: "A", annualPrice: 2_000_000_000 } }).success).toBe(false);
+  });
+
+  it("conserve les champs d'offre additionnels (passthrough)", () => {
+    const res = createQuoteSchema.safeParse({
+      ...validBody,
+      offer: { ...validBody.offer, features: ["a", "b"], matchedGuarantees: ["g1"] },
+    });
+    expect(res.success).toBe(true);
+    if (res.success) expect(res.data.offer.features).toEqual(["a", "b"]);
+  });
+});
+
+describe("contactMessageSchema (F-04)", () => {
+  const valid = { name: "Jean", email: "jean@x.ci", subject: "Bonjour", message: "Un message" };
+
+  it("accepte un message valide", () => {
+    expect(contactMessageSchema.safeParse(valid).success).toBe(true);
+  });
+
+  it("rejette les champs manquants", () => {
+    expect(contactMessageSchema.safeParse({ email: "jean@x.ci" }).success).toBe(false);
+  });
+
+  it("rejette un message trop long (borne de longueur)", () => {
+    expect(contactMessageSchema.safeParse({ ...valid, message: "x".repeat(5001) }).success).toBe(false);
+  });
+});
+
+describe("requestCallbackSchema (F-04)", () => {
+  it("accepte une demande valide", () => {
+    expect(requestCallbackSchema.safeParse({ phone: "0700000000", insurerName: "SandyAssur" }).success).toBe(true);
+  });
+
+  it("rejette l'absence de téléphone ou d'assureur", () => {
+    expect(requestCallbackSchema.safeParse({ insurerName: "A" }).success).toBe(false);
+    expect(requestCallbackSchema.safeParse({ phone: "07" }).success).toBe(false);
   });
 });

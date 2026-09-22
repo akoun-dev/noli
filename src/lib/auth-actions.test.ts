@@ -1,5 +1,9 @@
-import { describe, expect, it } from "vitest";
-import { signUpErrorMessage } from "@/lib/auth-actions";
+import { describe, expect, it, afterEach } from "vitest";
+import type { NextRequest } from "next/server";
+import { signUpErrorMessage, resolveSiteUrl } from "@/lib/auth-actions";
+
+const reqWith = (headers: Record<string, string>) =>
+  ({ headers: new Headers(headers) } as unknown as NextRequest);
 
 describe("signUpErrorMessage", () => {
   it("signale un email déjà utilisé", () => {
@@ -31,5 +35,40 @@ describe("signUpErrorMessage", () => {
     expect(signUpErrorMessage({})).toBe(
       "Inscription impossible. Vérifiez vos informations ou connectez-vous."
     );
+  });
+});
+
+describe("resolveSiteUrl (F-01 — anti Host-header poisoning)", () => {
+  const savedEnv = process.env.NEXT_PUBLIC_SITE_URL;
+  const savedAllowed = process.env.SITE_ALLOWED_HOSTS;
+  afterEach(() => {
+    process.env.NEXT_PUBLIC_SITE_URL = savedEnv;
+    process.env.SITE_ALLOWED_HOSTS = savedAllowed;
+  });
+
+  it("utilise NEXT_PUBLIC_SITE_URL en priorité, même avec un Host falsifié", () => {
+    process.env.NEXT_PUBLIC_SITE_URL = "https://noli.ci";
+    const url = resolveSiteUrl(reqWith({ "x-forwarded-host": "evil.example.com" }));
+    expect(url).toBe("https://noli.ci");
+  });
+
+  it("accepte un hôte autorisé issu de l'en-tête quand l'env n'est pas fixée", () => {
+    delete process.env.NEXT_PUBLIC_SITE_URL;
+    const url = resolveSiteUrl(reqWith({ "x-forwarded-proto": "https", "x-forwarded-host": "noli.ci" }));
+    expect(url).toBe("https://noli.ci");
+  });
+
+  it("IGNORE un hôte falsifié non autorisé (pas de poisoning du lien)", () => {
+    delete process.env.NEXT_PUBLIC_SITE_URL;
+    const url = resolveSiteUrl(reqWith({ "x-forwarded-host": "evil.example.com" }));
+    expect(url).not.toContain("evil.example.com");
+    expect(url).toBe("http://localhost:3000");
+  });
+
+  it("autorise un hôte supplémentaire via SITE_ALLOWED_HOSTS", () => {
+    delete process.env.NEXT_PUBLIC_SITE_URL;
+    process.env.SITE_ALLOWED_HOSTS = "staging.noli.ci";
+    const url = resolveSiteUrl(reqWith({ "x-forwarded-host": "staging.noli.ci" }));
+    expect(url).toBe("https://staging.noli.ci");
   });
 });

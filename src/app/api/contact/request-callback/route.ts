@@ -2,7 +2,7 @@ import { db, mapRows } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { sendCallbackConfirmation, isEmailConfigured } from "@/lib/email";
 import { getClientIp, checkCallbackLimit, rateLimitResponse } from "@/lib/rate-limit";
-import { emailSchema } from "@/lib/validation";
+import { requestCallbackSchema } from "@/lib/validation";
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,21 +11,16 @@ export async function POST(request: NextRequest) {
     const limited = rateLimitResponse(checkCallbackLimit(getClientIp(request)));
     if (limited) return limited;
 
-    const body = await request.json();
-    const {
-      phone,
-      preferredTime,
-      insurerName,
-      insurerId,
-      personalInfo,
-    } = body;
-
-    if (!phone || !insurerName) {
+    // Validation stricte (types, présence et bornes) avant notifications/email :
+    // empêche l'injection de contenu arbitraire dans les notifications.
+    const parsed = requestCallbackSchema.safeParse(await request.json());
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "Numéro de téléphone et assureur requis" },
+        { error: parsed.error.issues[0]?.message || "Numéro de téléphone et assureur requis" },
         { status: 400 }
       );
     }
+    const { phone, preferredTime, insurerName, insurerId, personalInfo } = parsed.data;
 
     // Envoi d'email de confirmation au client (si email fourni) — SMTP principal, Resend en fallback
     if (personalInfo?.email && isEmailConfigured()) {
