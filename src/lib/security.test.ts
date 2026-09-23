@@ -5,6 +5,7 @@ import {
   parseNumberField,
   isMasked,
   MASKED_SECRET,
+  validateOfferRanges,
 } from "./security";
 
 describe("escapeHtml", () => {
@@ -77,5 +78,39 @@ describe("isMasked", () => {
   it("reconnaît le secret masqué", () => {
     expect(isMasked(MASKED_SECRET)).toBe(true);
     expect(isMasked("vraie-valeur")).toBe(false);
+  });
+});
+
+describe("validateOfferRanges (TEC-DATA-02)", () => {
+  it("accepte des bornes cohérentes (min ≤ max)", () => {
+    expect(
+      validateOfferRanges({ priceMin: 100, priceMax: 500, fiscalPowerMin: 4, fiscalPowerMax: 10 })
+    ).toBeNull();
+  });
+
+  it("accepte des champs absents (création/màj partielle)", () => {
+    expect(validateOfferRanges({})).toBeNull();
+    expect(validateOfferRanges({ priceMin: 100 })).toBeNull();
+    expect(validateOfferRanges({ priceMax: 500 })).toBeNull();
+  });
+
+  it("rejette le prix min > max", () => {
+    const err = validateOfferRanges({ priceMin: 900, priceMax: 100 });
+    expect(err).toContain("prix");
+  });
+
+  it("rejette la puissance fiscale min > max", () => {
+    expect(validateOfferRanges({ fiscalPowerMin: 12, fiscalPowerMax: 5 })).toContain("puissance");
+  });
+
+  it("rejette la valeur neuve et la valeur vénale incohérentes", () => {
+    expect(validateOfferRanges({ newValueMin: 2, newValueMax: 1 })).toContain("valeur neuve");
+    expect(validateOfferRanges({ venalValueMin: 2, venalValueMax: 1 })).toContain("valeur vénale");
+  });
+
+  it("rejette une valeur non numérique / négative", () => {
+    expect(validateOfferRanges({ priceMin: "abc" })).not.toBeNull();
+    expect(validateOfferRanges({ priceMax: -5 })).not.toBeNull();
+    expect(validateOfferRanges({ priceMin: Infinity })).not.toBeNull();
   });
 });
