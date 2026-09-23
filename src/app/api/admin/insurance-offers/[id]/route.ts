@@ -2,6 +2,7 @@ import { db, mapRow } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-guard";
 import { logAudit } from "@/lib/audit";
+import { validateOfferRanges } from "@/lib/security";
 
 function parseFeatures(offer: Record<string, unknown>) {
   try {
@@ -75,6 +76,13 @@ export async function PUT(
       venalValueMax,
       vehicleUsage,
     } = body;
+
+    // Contrôle des bornes (min ≤ max) et des valeurs numériques sur les champs
+    // fournis (mise à jour partielle) avant écriture — TEC-DATA-02.
+    const rangeError = validateOfferRanges(body);
+    if (rangeError) {
+      return NextResponse.json({ error: rangeError }, { status: 400 });
+    }
 
     const { data: existing } = await db
       .from("insurance_offers")
