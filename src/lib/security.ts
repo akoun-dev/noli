@@ -68,6 +68,35 @@ export function parseNumberField(
 }
 
 /**
+ * Couples min/max d'une offre d'assurance à contrôler.
+ */
+const OFFER_RANGE_PAIRS = [
+  { min: "priceMin", max: "priceMax", label: "Le prix" },
+  { min: "fiscalPowerMin", max: "fiscalPowerMax", label: "La puissance fiscale" },
+  { min: "newValueMin", max: "newValueMax", label: "La valeur neuve" },
+  { min: "venalValueMin", max: "venalValueMax", label: "La valeur vénale" },
+] as const;
+
+/**
+ * Valide les bornes min/max d'une offre : chaque valeur présente doit être un
+ * nombre fini positif (via parseNumberField) et `min ≤ max`. Les champs
+ * absents/vides sont ignorés (compatible création ET mise à jour partielle).
+ * Renvoie un message d'erreur français, ou `null` si tout est cohérent.
+ */
+export function validateOfferRanges(body: Record<string, unknown>): string | null {
+  for (const { min, max, label } of OFFER_RANGE_PAIRS) {
+    const minChk = parseNumberField(body[min], { field: `${label} (min)`, optional: true });
+    if (!minChk.ok) return minChk.error;
+    const maxChk = parseNumberField(body[max], { field: `${label} (max)`, optional: true });
+    if (!maxChk.ok) return maxChk.error;
+    if (minChk.value !== null && maxChk.value !== null && minChk.value > maxChk.value) {
+      return `${label} : le minimum ne peut pas dépasser le maximum.`;
+    }
+  }
+  return null;
+}
+
+/**
  * Masque une valeur sensible pour les réponses API.
  */
 export const MASKED_SECRET = "********";

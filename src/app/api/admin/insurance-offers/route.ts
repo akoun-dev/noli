@@ -2,7 +2,7 @@ import { db, mapRow, mapRows } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-guard";
 import { logAudit } from "@/lib/audit";
-import { sanitizePostgrestSearch } from "@/lib/security";
+import { sanitizePostgrestSearch, validateOfferRanges } from "@/lib/security";
 
 function parseFeatures(offer: Record<string, unknown>) {
   try {
@@ -89,6 +89,13 @@ export async function POST(request: NextRequest) {
         { error: "Le nom est requis" },
         { status: 400 }
       );
+    }
+
+    // Contrôle des bornes (min ≤ max) et des valeurs numériques (pas de
+    // NaN/Infinity/négatif) avant écriture — TEC-DATA-02.
+    const rangeError = validateOfferRanges(body);
+    if (rangeError) {
+      return NextResponse.json({ error: rangeError }, { status: 400 });
     }
 
     const { data: offer, error } = await db
