@@ -938,8 +938,11 @@ export function ForgotPasswordForm({ mode }: { mode: AuthFormMode }) {
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
 
-  // Étape 2 : lien de réinitialisation (type=recovery dans le hash d'URL).
-  const [recovery, setRecovery] = useState<RecoveryTokens | null>(null);
+  // Étape 2 : lien de réinitialisation. Deux flux :
+  //  - PKCE (?code=) : la session est établie CÔTÉ SERVEUR (httpOnly) → objet
+  //    sans tokens ({}) une fois l'échange réussi.
+  //  - Implicite (legacy, #access_token) : tokens présents.
+  const [recovery, setRecovery] = useState<{ accessToken?: string; refreshToken?: string } | null>(null);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [resetDone, setResetDone] = useState(false);
@@ -959,21 +962,23 @@ export function ForgotPasswordForm({ mode }: { mode: AuthFormMode }) {
       exchangedRef.current = true;
 
       setLoading(true);
-      import("@/lib/supabase-browser")
-        .then(({ getSupabaseBrowserClient }) => getSupabaseBrowserClient())
-        .then(async (supabase) => {
-          const { data, error: exchangeError } =
-            await supabase.auth.exchangeCodeForSession(code);
-          if (exchangeError || !data.session) {
+      // Échange du code CÔTÉ SERVEUR (TEC-AUTH-01) : la session est posée dans
+      // un cookie httpOnly. Aucun token n'est exposé au navigateur.
+      fetch("/api/auth/recovery", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code }),
+      })
+        .then(async (res) => {
+          if (!res.ok) {
             setError(
               "Lien de réinitialisation invalide ou expiré. Refaites une demande."
             );
             return;
           }
-          setRecovery({
-            accessToken: data.session.access_token,
-            refreshToken: data.session.refresh_token,
-          });
+          // Session serveur établie : on affiche le formulaire de nouveau mot
+          // de passe (sans tokens côté client).
+          setRecovery({});
         })
         .catch(() => {
           setError("Une erreur est survenue. Veuillez réessayer.");
@@ -1054,9 +1059,12 @@ export function ForgotPasswordForm({ mode }: { mode: AuthFormMode }) {
       const res = await fetch("/api/auth/reset-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        // Flux PKCE : session serveur déjà établie → pas de tokens.
+        // Flux legacy (#access_token) : tokens transmis pour setSession serveur.
         body: JSON.stringify({
-          accessToken: recovery.accessToken,
-          refreshToken: recovery.refreshToken,
+          ...(recovery.accessToken && recovery.refreshToken
+            ? { accessToken: recovery.accessToken, refreshToken: recovery.refreshToken }
+            : {}),
           password,
         }),
       });
@@ -1067,10 +1075,8 @@ export function ForgotPasswordForm({ mode }: { mode: AuthFormMode }) {
         return;
       }
 
-      // Déconnecter le client browser (session PKCE établie par exchangeCodeForSession).
-      const { getSupabaseBrowserClient } = await import("@/lib/supabase-browser");
-      await getSupabaseBrowserClient().auth.signOut();
-
+      // La session de récupération est fermée CÔTÉ SERVEUR par reset-password
+      // (signOut). Plus aucun client navigateur à déconnecter.
       setResetDone(true);
       toast({
         title: "Mot de passe réinitialisé",
