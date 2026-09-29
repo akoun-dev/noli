@@ -207,15 +207,28 @@ export function SettingsTab() {
   };
 
   const toggleProfileStatus = async (p: Profile) => {
+    const nextActive = !p.isActive;
     try {
-      await fetch("/api/admin/profiles", {
+      const res = await fetch("/api/admin/profiles", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: p.id, isActive: !p.isActive }),
+        body: JSON.stringify({ id: p.id, isActive: nextActive }),
+      });
+      if (!res.ok) {
+        const e = await res.json().catch(() => ({}));
+        throw new Error(e.error || "La mise à jour du statut a échoué");
+      }
+      // Confirmation explicite (TEC-AUTH-06) : l'admin voit clairement que le
+      // compte a été activé/désactivé.
+      toast({
+        title: nextActive ? "Compte activé" : "Compte désactivé",
+        description: nextActive
+          ? "L'utilisateur peut de nouveau se connecter."
+          : "L'utilisateur ne pourra plus se connecter.",
       });
       fetchProfiles();
-    } catch {
-      toast({ title: "Erreur", variant: "destructive" });
+    } catch (err) {
+      toast({ title: (err as Error).message || "Erreur", variant: "destructive" });
     }
   };
 
