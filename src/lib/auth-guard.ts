@@ -46,7 +46,18 @@ export async function getSupabaseServerClient() {
         setAll(cookiesToSet) {
           try {
             cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options);
+              // Durcissement du cookie de session (TEC-AUTH-01) : le token
+              // d'auth ne doit JAMAIS être lisible en JavaScript (document.cookie).
+              // On force httpOnly + secure (prod) + sameSite=lax + path=/. Tous les
+              // flux d'auth (login, logout, récupération) passent désormais par le
+              // serveur, donc aucun client navigateur n'a besoin de lire ce cookie.
+              cookieStore.set(name, value, {
+                ...options,
+                httpOnly: true,
+                sameSite: options?.sameSite ?? "lax",
+                secure: process.env.NODE_ENV === "production",
+                path: options?.path ?? "/",
+              });
             });
           } catch {
             // Appelé depuis un Server Component → cookie en lecture seule

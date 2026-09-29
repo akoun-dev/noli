@@ -500,6 +500,45 @@ export async function forgotAction(request: NextRequest) {
  * session active) avant d'appeler updateUser. La session de récupération
  * est ensuite fermée pour forcer une connexion explicite.
  */
+/**
+ * Échange le `code` PKCE du lien de récupération contre une session, CÔTÉ
+ * SERVEUR (TEC-AUTH-01). Auparavant fait par le client navigateur, ce qui
+ * imposait un cookie de session lisible en JS. En passant par le serveur, la
+ * session est posée dans un cookie httpOnly. Le `code_verifier` (posé par
+ * forgotAction lors de la demande) est un cookie httpOnly renvoyé au serveur.
+ */
+export async function recoveryExchangeAction(request: NextRequest) {
+  const ip = getClientIp(request);
+  try {
+    const body = await request.json();
+    const { code } = body;
+    if (!code || typeof code !== "string") {
+      return NextResponse.json(
+        { error: "Lien de réinitialisation invalide ou expiré. Refaites une demande." },
+        { status: 400 }
+      );
+    }
+
+    const limit = checkResetPasswordLimit(ip);
+    if (!limit.ok) return rateLimitedResponse(limit);
+
+    const supabase = await getSupabaseServerClient();
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+    if (error || !data.session) {
+      return NextResponse.json(
+        { error: "Lien de réinitialisation invalide ou expiré. Refaites une demande." },
+        { status: 400 }
+      );
+    }
+    // Session (httpOnly) établie : le nouveau mot de passe sera posé via
+    // resetPasswordAction, qui s'appuiera sur cette session.
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    console.error("Auth error:", error);
+    return NextResponse.json({ error: "Erreur d'authentification" }, { status: 500 });
+  }
+}
+
 export async function resetPasswordAction(request: NextRequest) {
   const ip = getClientIp(request);
 
@@ -507,12 +546,14 @@ export async function resetPasswordAction(request: NextRequest) {
     const body = await request.json();
     const { accessToken, refreshToken, password } = body;
 
-    if (!accessToken || !refreshToken || typeof accessToken !== "string" || typeof refreshToken !== "string") {
-      return NextResponse.json(
-        { error: "Lien de réinitialisation invalide ou expiré. Refaites une demande." },
-        { status: 400 }
-      );
-    }
+    // Deux flux possibles :
+    //  - PKCE (défaut récent) : la session a déjà été établie côté serveur par
+    //    recoveryExchangeAction → pas de tokens dans le corps, on s'appuie sur
+    //    la session (cookie httpOnly) courante.
+    //  - Implicite (legacy) : les tokens sont transmis dans le corps.
+    const hasTokens =
+      typeof accessToken === "string" && accessToken.length > 0 &&
+      typeof refreshToken === "string" && refreshToken.length > 0;
 
     const limit = checkResetPasswordLimit(ip);
     if (!limit.ok) return rateLimitedResponse(limit);
@@ -524,15 +565,26 @@ export async function resetPasswordAction(request: NextRequest) {
 
     const supabase = await getSupabaseServerClient();
 
-    const { error: sessionError } = await supabase.auth.setSession({
-      access_token: accessToken,
-      refresh_token: refreshToken,
-    });
-    if (sessionError) {
-      return NextResponse.json(
-        { error: "Lien de réinitialisation invalide ou expiré. Refaites une demande." },
-        { status: 400 }
-      );
+    if (hasTokens) {
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      });
+      if (sessionError) {
+        return NextResponse.json(
+          { error: "Lien de réinitialisation invalide ou expiré. Refaites une demande." },
+          { status: 400 }
+        );
+      }
+    } else {
+      // Flux PKCE : la session doit déjà exister (exchange préalable).
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        return NextResponse.json(
+          { error: "Lien de réinitialisation invalide ou expiré. Refaites une demande." },
+          { status: 400 }
+        );
+      }
     }
 
     const { error: updateError } = await supabase.auth.updateUser({ password });
