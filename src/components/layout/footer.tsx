@@ -6,6 +6,7 @@ import { Separator } from "@/components/ui/separator";
 import { useAppStore } from "@/store/app-store";
 
 const noliLinks: { label: string; view: string }[] = [
+  { label: "Offres", view: "offers" },
   { label: "À propos", view: "about" },
   { label: "Contact", view: "contact" },
   { label: "FAQ", view: "faq" },
