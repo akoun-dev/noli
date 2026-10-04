@@ -36,6 +36,7 @@ import { getInitials } from "@/lib/utils";
 
 const navItemsPublic = [
   { label: "ACCUEIL", action: "landing" as const },
+  { label: "OFFRES", action: "offers" as const },
   { label: "À PROPOS", action: "about" as const },
   { label: "FAQ", action: "faq" as const },
   { label: "CONTACT", action: "contact" as const },
@@ -43,6 +44,7 @@ const navItemsPublic = [
 
 const navItemsPrivate = [
   { label: "ACCUEIL", action: "landing" as const },
+  { label: "OFFRES", action: "offers" as const },
   { label: "À PROPOS", action: "about" as const },
   { label: "FAQ", action: "faq" as const },
   { label: "CONTACT", action: "contact" as const },
