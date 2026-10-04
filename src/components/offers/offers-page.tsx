@@ -54,7 +54,8 @@ interface Offer {
   contractType: string;
   features: string[];
   insurer: OfferInsurer;
-  category: OfferCategory;
+  // Jointure "left" côté API : une offre sans catégorie renvoie null.
+  category: OfferCategory | null;
 }
 
 interface OffersResponse {
@@ -84,7 +85,8 @@ const CONTRACT_TYPE_BADGE: Record<string, string> = {
 
 const FORMAT = new Intl.NumberFormat("fr-FR");
 
-function formatPrice(amount: number): string {
+function formatPrice(amount: number | null | undefined): string {
+  if (amount == null || !Number.isFinite(amount)) return "—";
   return FORMAT.format(amount) + " FCFA";
 }
 
@@ -167,7 +169,7 @@ function OfferCard({
                 {offer.insurer.name}
               </p>
               <p className="text-xs text-muted-foreground truncate">
-                {offer.category.name}
+                {offer.category?.name || "Assurance"}
               </p>
             </div>
             <Badge
