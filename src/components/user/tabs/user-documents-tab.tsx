@@ -16,7 +16,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { downloadAttestationPDF } from "@/lib/generate-pdf";
+// PERF-002 : plus d'import statique de @/lib/generate-pdf (qui embarque jsPDF,
+// ~350 Ko) dans le bundle client initial — le module est importé dynamiquement
+// dans handleDownload, uniquement au clic sur « Attestation PDF ».
 
 const docCategories = [
   {
@@ -56,6 +58,7 @@ interface Contract {
 export function UserDocumentsTab() {
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(true);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchContracts = async () => {
@@ -75,15 +78,25 @@ export function UserDocumentsTab() {
 
   const activeContracts = contracts.filter((c) => c.status === "ACTIVE");
 
-  const handleDownload = (contract: Contract) => {
-    downloadAttestationPDF({
-      reference: contract.reference,
-      insurerName: contract.insurer?.name || "Assureur",
-      offerName: contract.offer?.name || null,
-      premium: contract.premium,
-      startDate: contract.startDate,
-      endDate: contract.endDate,
-    });
+  const handleDownload = async (contract: Contract) => {
+    setDownloadingId(contract.id);
+    try {
+      // Chargement à la demande (PERF-002) : le chunk jsPDF n'est téléchargé
+      // qu'au premier clic, puis mis en cache par le navigateur.
+      const { downloadAttestationPDF } = await import("@/lib/generate-pdf");
+      downloadAttestationPDF({
+        reference: contract.reference,
+        insurerName: contract.insurer?.name || "Assureur",
+        offerName: contract.offer?.name || null,
+        premium: contract.premium,
+        startDate: contract.startDate,
+        endDate: contract.endDate,
+      });
+    } catch (error) {
+      console.error("Erreur lors de la génération de l'attestation PDF :", error);
+    } finally {
+      setDownloadingId(null);
+    }
   };
 
   if (loading) {
@@ -173,9 +186,10 @@ export function UserDocumentsTab() {
                       variant="outline"
                       className="rounded-full"
                       onClick={() => handleDownload(contract)}
+                      disabled={downloadingId === contract.id}
                     >
                       <Download className="mr-1.5 h-3.5 w-3.5" />
-                      Attestation PDF
+                      {downloadingId === contract.id ? "Génération…" : "Attestation PDF"}
                     </Button>
                   </div>
                 </CardContent>

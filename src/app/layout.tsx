@@ -1,5 +1,6 @@
+import type { CSSProperties } from "react";
 import type { Metadata } from "next";
-import { Space_Grotesk, Nunito_Sans, Poppins } from "next/font/google";
+import { Space_Grotesk, Poppins } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -12,17 +13,27 @@ const spaceGrotesk = Space_Grotesk({
   weight: ["600", "700"],
 });
 
-const nunitoSans = Nunito_Sans({
-  variable: "--font-nunito-sans",
-  subsets: ["latin"],
-  weight: ["400", "600", "700"],
-});
-
+// PERF-007 : Nunito Sans supprimée (3 fichiers de fonte en moins au chargement
+// initial — 9 → 6 variantes, budget PERFORMANCE_BUDGET règle n°4). Poppins est
+// conservée avec ses 4 poids, tous réellement utilisés (font-medium/semibold/
+// bold + poids de base), et expose toujours --font-poppins pour globals.css.
 const poppins = Poppins({
   variable: "--font-poppins",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
 });
+
+// La variable de Nunito reste référencée par globals.css
+// (`--font-subtitle: var(--font-nunito-sans)`, consommée par les classes
+// `font-subtitle` des pages À propos / Contact). globals.css étant hors
+// périmètre, on redirige la variable vers la pile existante (Poppins) ici.
+// Les 7 sous-titres concernés passent ainsi de Nunito Sans à Poppins, comme
+// prévu par le ticket PERF-007. NB pour une prochaine passe (hors 10-b) :
+// simplifier globals.css en `--font-subtitle: var(--font-poppins)` puis
+// supprimer cet alias.
+const subtitleFontAlias = {
+  "--font-nunito-sans": "var(--font-poppins)",
+} as CSSProperties;
 
 // FIX-HYDRATION : neutralise les attributs injectés par les extensions navigateur
 // (ex. Bing : bis_skin_checked / bis_register / __processed_*__) AVANT l'hydratation
@@ -94,7 +105,8 @@ export default function RootLayout({
     <html lang="fr" suppressHydrationWarning>
       <body
         suppressHydrationWarning
-        className={`${spaceGrotesk.variable} ${nunitoSans.variable} ${poppins.variable} antialiased`}
+        className={`${spaceGrotesk.variable} ${poppins.variable} antialiased`}
+        style={subtitleFontAlias}
       >
         <script dangerouslySetInnerHTML={{ __html: EXTENSION_CLEANUP_SCRIPT }} />
         {/* UI-H01 : lien skip-nav, invisible sauf au focus clavier (WCAG 2.1 A) */}

@@ -206,20 +206,26 @@ export default function Home() {
   // Une fois la page courante interactive, on télécharge en tâche de fond les
   // bundles des vues lazy (offres, résultats, dashboards). Ainsi, naviguer
   // vers /offres rend le contenu instantanément, comme les vues statiques.
+  // PERF-004 : les chunks des espaces privés (admin, client, assureur) ne sont
+  // préchargés QUE si une session est active — un visiteur anonyme ne doit pas
+  // télécharger plusieurs centaines de Ko de dashboards (3G ivoirienne). Le
+  // préchargement d'offres/résultats, public, reste pour tous.
   useEffect(() => {
     const preloadChunks = () => {
       void import("@/components/offers/offers-page");
       void import("@/components/results/results-page");
-      void import("@/components/admin/admin-page");
-      void import("@/components/user/user-layout");
-      void import("@/components/insurer/insurer-layout");
+      if (user.isLoggedIn) {
+        void import("@/components/admin/admin-page");
+        void import("@/components/user/user-layout");
+        void import("@/components/insurer/insurer-layout");
+      }
     };
-    if ("requestIdleCallback" in window) {
+    if (typeof window.requestIdleCallback === "function") {
       window.requestIdleCallback(preloadChunks, { timeout: 3000 });
     } else {
       window.setTimeout(preloadChunks, 1500);
     }
-  }, []);
+  }, [user.isLoggedIn]);
 
   useEffect(() => {
     if (validated.current) return;
