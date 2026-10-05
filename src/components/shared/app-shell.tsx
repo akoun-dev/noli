@@ -201,7 +201,7 @@ export function AppShell({
       </div>
 
       {/* Main content */}
-      <main id="main-content" className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto">
         {/* Header bar */}
         <div className="sticky top-0 z-30 border-b bg-card">
           <div className="flex items-center justify-between px-4 lg:px-6 py-3 pt-4 lg:pt-3">
@@ -280,7 +280,7 @@ export function AppShell({
 
         {/* Tab content */}
         <div className="p-4 pt-2 lg:p-6 lg:pt-6 w-full">{children}</div>
-      </main>
+      </div>
     </div>
   );
 }

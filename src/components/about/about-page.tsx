@@ -50,7 +50,7 @@ export function AboutPage() {
   }, []);
 
   return (
-    <main className="min-h-screen">
+    <div className="min-h-screen">
       {/* ─── Hero ────────────────────────────────────────────── */}
       <section className="relative overflow-hidden bg-[#E8F4F0] dark:bg-[#121e19] py-20 md:py-28">
         <div className="pointer-events-none absolute -top-20 -right-20 h-72 w-72 rounded-full bg-accent/20 blur-3xl" />
@@ -179,6 +179,6 @@ export function AboutPage() {
           </div>
         </div>
       </section>
-    </main>
+    </div>
   );
 }

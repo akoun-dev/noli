@@ -401,7 +401,8 @@ export function OffersPage() {
       </section>
 
       {/* ─── Main Content ──────────────────────────────────── */}
-      <main className="flex-1 mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
+      {/* A11Y : div (et non <main>) — le landmark main unique est porté par le layout racine */}
+      <div className="flex-1 mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
         {/* ── Filter Bar ───────────────────────────────────── */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
@@ -572,7 +573,7 @@ export function OffersPage() {
             </motion.div>
           </AnimatePresence>
         )}
-      </main>
+      </div>
     </div>
   );
 }
