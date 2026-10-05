@@ -1,0 +1,22 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    "src/app/**/{page,layout,route,error,not-found,global-error,loading,template}.{ts,tsx}",
+    "src/middleware.ts",
+    "next.config.ts",
+    "vitest.config.ts",
+    "ecosystem.config.js",
+    "scripts/*.mjs"
+  ],
+  "project": ["src/**/*.{ts,tsx}"],
+  "ignore": [
+    "src/components/ui/**",
+    "src/**/*.test.{ts,tsx}"
+  ],
+  "ignoreDependencies": [
+    "husky",
+    "jscpd",
+    "knip"
+  ],
+  "ignoreBinaries": ["supabase"]
+}

@@ -44,6 +44,18 @@ const eslintConfig = [...nextCoreWebVitals, ...nextTypescript, {
     "no-useless-escape": "off",
   },
 }, {
+  // Garde-fous anti-spaghetti : en "warn" (non bloquant) car l'existant dépasse
+  // déjà les seuils. Objectif : rendre visible et empêcher l'aggravation.
+  // Exclut les composants shadcn vendored (src/components/ui) et les tests.
+  files: ["src/**/*.{ts,tsx}"],
+  ignores: ["src/components/ui/**", "src/**/*.test.{ts,tsx}"],
+  rules: {
+    "max-lines": ["warn", { max: 300, skipBlankLines: true, skipComments: true }],
+    "max-lines-per-function": ["warn", { max: 50, skipBlankLines: true, skipComments: true }],
+    "complexity": ["warn", 15],
+    "import/no-cycle": ["warn", { maxDepth: 1 }],
+  },
+}, {
   ignores: ["node_modules/**", ".next/**", "out/**", "build/**", "next-env.d.ts", "examples/**", "skills", "ecosystem.config.js"]
 }];
 

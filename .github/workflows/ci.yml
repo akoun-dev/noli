@@ -45,3 +45,13 @@ jobs:
 
       - name: Build (next build)
         run: npx next build
+
+      # Garde-fous anti-spaghetti — rapport NON BLOQUANT (seuils au niveau actuel).
+      # À durcir progressivement une fois la dette réduite.
+      - name: Garde-fous — code mort (knip)
+        run: npx knip --no-progress
+        continue-on-error: true
+
+      - name: Garde-fous — duplication (jscpd)
+        run: npx jscpd src
+        continue-on-error: true

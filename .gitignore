@@ -42,7 +42,12 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 local-*
-.claude
+# Claude Code : versionner le cadre partagé (agents, settings, hooks),
+# ignorer uniquement le local (clés, overrides perso).
+.claude/*
+!.claude/agents/
+!.claude/settings.json
+.claude/settings.local.json
 .z-ai-config
 *.log
 dev.log
