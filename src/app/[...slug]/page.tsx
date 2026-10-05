@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import { useRouter, usePathname } from "next/navigation";
 import { useAppStore } from "@/store/app-store";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { AppView } from "@/types";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
@@ -17,20 +18,65 @@ import { AuthPages } from "@/components/auth/auth-pages";
 
 // UI-C06 : code splitting — les vues lourdes (tableaux de bord, résultats,
 // offres) sont chargées à la demande pour réduire le bundle initial.
-const OffersPage = dynamic(() =>
-  import("@/components/offers/offers-page").then((m) => m.OffersPage)
+// `loading` : skeleton commun affiché instantanément pendant le chargement du
+// chunk, afin que la transition soit identique aux vues importées statiquement
+// (plus de zone de contenu vide avant l'apparition de la page).
+function ViewSkeleton() {
+  return (
+    <div
+      className="flex-1"
+      aria-busy="true"
+      aria-live="polite"
+      aria-label="Chargement du contenu"
+    >
+      <div className="mx-auto max-w-[1400px] px-4 py-10 sm:px-8">
+        <Skeleton className="mb-3 h-9 w-64" />
+        <Skeleton className="mb-8 h-4 w-96 max-w-full" />
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div
+              key={i}
+              className="space-y-4 rounded-xl border border-border/60 p-6"
+            >
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-10 w-10 shrink-0 rounded-full" />
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-28" />
+                  <Skeleton className="h-3 w-20" />
+                </div>
+              </div>
+              <Skeleton className="h-5 w-3/4" />
+              <Skeleton className="h-3 w-full" />
+              <Skeleton className="h-3 w-5/6" />
+              <Skeleton className="h-10 w-full rounded-full" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const OffersPage = dynamic(
+  () => import("@/components/offers/offers-page").then((m) => m.OffersPage),
+  { loading: () => <ViewSkeleton /> }
 );
-const ResultsPage = dynamic(() =>
-  import("@/components/results/results-page").then((m) => m.ResultsPage)
+const ResultsPage = dynamic(
+  () => import("@/components/results/results-page").then((m) => m.ResultsPage),
+  { loading: () => <ViewSkeleton /> }
 );
-const AdminPage = dynamic(() =>
-  import("@/components/admin/admin-page").then((m) => m.AdminPage)
+const AdminPage = dynamic(
+  () => import("@/components/admin/admin-page").then((m) => m.AdminPage),
+  { loading: () => <ViewSkeleton /> }
 );
-const UserLayout = dynamic(() =>
-  import("@/components/user/user-layout").then((m) => m.UserLayout)
+const UserLayout = dynamic(
+  () => import("@/components/user/user-layout").then((m) => m.UserLayout),
+  { loading: () => <ViewSkeleton /> }
 );
-const InsurerLayout = dynamic(() =>
-  import("@/components/insurer/insurer-layout").then((m) => m.InsurerLayout)
+const InsurerLayout = dynamic(
+  () =>
+    import("@/components/insurer/insurer-layout").then((m) => m.InsurerLayout),
+  { loading: () => <ViewSkeleton /> }
 );
 
 // ── URL ↔ View mapping ───────────────────────────────────────────
@@ -155,6 +201,25 @@ export default function Home() {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [currentView]);
+
+  // ── Préchargement des chunks des vues dynamiques (au repos navigateur) ──
+  // Une fois la page courante interactive, on télécharge en tâche de fond les
+  // bundles des vues lazy (offres, résultats, dashboards). Ainsi, naviguer
+  // vers /offres rend le contenu instantanément, comme les vues statiques.
+  useEffect(() => {
+    const preloadChunks = () => {
+      void import("@/components/offers/offers-page");
+      void import("@/components/results/results-page");
+      void import("@/components/admin/admin-page");
+      void import("@/components/user/user-layout");
+      void import("@/components/insurer/insurer-layout");
+    };
+    if ("requestIdleCallback" in window) {
+      window.requestIdleCallback(preloadChunks, { timeout: 3000 });
+    } else {
+      window.setTimeout(preloadChunks, 1500);
+    }
+  }, []);
 
   useEffect(() => {
     if (validated.current) return;
