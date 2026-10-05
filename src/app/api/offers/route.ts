@@ -1,9 +1,14 @@
 import { db, mapRows } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { isVehicleEligible, type VehiclePricingData } from "@/lib/pricing-service";
+import { getClientIp, checkPublicReadLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 export async function GET(request: NextRequest) {
   try {
+    // SEC-004 : endpoint public — rate limit par IP (même politique que /api/stats).
+    const limited = rateLimitResponse(checkPublicReadLimit(getClientIp(request), "offers"));
+    if (limited) return limited;
+
     const { searchParams } = new URL(request.url);
     const categoryId = searchParams.get("categoryId");
     const insurerId = searchParams.get("insurerId");

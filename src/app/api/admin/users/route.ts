@@ -1,7 +1,7 @@
 import { db, mapRow, mapRows } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { updateUserSchema } from "@/lib/validation";
-import { requireAuth } from "@/lib/auth-guard";
+import { requireAuth, getSessionProfile } from "@/lib/auth-guard";
 import { logAudit } from "@/lib/audit";
 import {
   getPagination,
@@ -75,11 +75,45 @@ export async function PUT(request: NextRequest) {
 
     const { data: existingData } = await db
       .from("profiles")
-      .select("id")
+      .select("id, role, is_active")
       .eq("id", parsed.data.id)
       .maybeSingle();
-    if (!existingData) {
+    const existing = mapRow<{ id: string; role: string; isActive: boolean }>(existingData);
+    if (!existing) {
       return NextResponse.json({ error: "Utilisateur non trouvé" }, { status: 404 });
+    }
+
+    // SEC-002 : identité de l'admin connecté (garde anti auto-modification).
+    const admin = await getSessionProfile();
+    if (!admin) {
+      return NextResponse.json({ error: "Authentification requise" }, { status: 401 });
+    }
+
+    const willDeactivate = parsed.data.isActive === false;
+    const willDemote = parsed.data.role !== undefined && parsed.data.role !== "ADMIN";
+
+    // a) Un admin ne peut pas désactiver son propre compte ni rétrograder son propre rôle.
+    if (admin.id === existing.id && (willDeactivate || willDemote)) {
+      return NextResponse.json(
+        { error: "Action interdite : vous ne pouvez pas désactiver votre propre compte ni modifier votre propre rôle." },
+        { status: 403 }
+      );
+    }
+
+    // b) Un ADMIN actif ne peut pas être désactivé/rétrogradé s'il est le dernier admin actif.
+    if (existing.role === "ADMIN" && existing.isActive && (willDeactivate || willDemote)) {
+      const { count: otherAdmins } = await db
+        .from("profiles")
+        .select("id", { count: "exact", head: true })
+        .eq("role", "ADMIN")
+        .eq("is_active", true)
+        .neq("id", parsed.data.id);
+      if ((otherAdmins ?? 0) === 0) {
+        return NextResponse.json(
+          { error: "Impossible de désactiver ou de rétrograder le dernier administrateur actif." },
+          { status: 409 }
+        );
+      }
     }
 
     const updateData: Record<string, unknown> = {};

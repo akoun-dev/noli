@@ -1,5 +1,6 @@
 import { db, mapRows } from "@/lib/db";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { getClientIp, checkPublicReadLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 type CoverageCategoryRow = {
   id: string;
@@ -9,8 +10,14 @@ type CoverageCategoryRow = {
   displayOrder: number;
 };
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    // SEC-004 : endpoint public — rate limit par IP (même politique que /api/stats).
+    const limited = rateLimitResponse(
+      checkPublicReadLimit(getClientIp(request), "coverage-categories")
+    );
+    if (limited) return limited;
+
     const { data, error } = await db
       .from("coverage_categories")
       .select("id, code, name, description, displayOrder:display_order")

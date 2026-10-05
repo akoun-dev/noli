@@ -1,10 +1,21 @@
 import { db, mapRow, mapRows } from "@/lib/db";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { COVERAGE_CODE_MAP } from "@/lib/constants";
 import { requireAuth } from "@/lib/auth-guard";
+import { getClientIp, checkPublicReadLimit, rateLimitResponse } from "@/lib/rate-limit";
 
-export async function POST() {
+export async function POST(request: NextRequest) {
+  // SEC-005 : l'initialisation de la base est interdite en production —
+  // réponse 404 immédiate, rien (ni auth, ni écriture) n'est exécuté.
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json({ error: "Ressource introuvable" }, { status: 404 });
+  }
+
   try {
+    // SEC-005 : rate limit par IP (même politique publique que /api/stats).
+    const limited = rateLimitResponse(checkPublicReadLimit(getClientIp(request), "seed"));
+    if (limited) return limited;
+
     const guard = await requireAuth(["ADMIN"]);
     if (guard) return guard;
 
