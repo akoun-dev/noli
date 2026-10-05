@@ -24,6 +24,47 @@ const poppins = Poppins({
   weight: ["400", "500", "600", "700"],
 });
 
+// FIX-HYDRATION : neutralise les attributs injectés par les extensions navigateur
+// (ex. Bing : bis_skin_checked / bis_register / __processed_*__) AVANT l'hydratation
+// React. Sans cela, React signale un mismatch SSR/CSR et l'overlay dev s'affiche,
+// alors même que l'application est saine. Exécuté en tout premier dans <body>.
+const EXTENSION_CLEANUP_SCRIPT = `
+(function () {
+  var ATTRS = ['bis_skin_checked', 'bis_register', 'bis_size', '__processed_892927d4-0bdc-49d3-80f8-ceee38665a7d__'];
+  function strip(el) {
+    if (!el || el.nodeType !== 1 || !el.removeAttribute) return;
+    for (var i = 0; i < ATTRS.length; i++) {
+      if (el.hasAttribute(ATTRS[i])) el.removeAttribute(ATTRS[i]);
+    }
+  }
+  try {
+    var observer = new MutationObserver(function (mutations) {
+      for (var m = 0; m < mutations.length; m++) {
+        var mutation = mutations[m];
+        if (mutation.type === 'attributes') strip(mutation.target);
+        if (mutation.addedNodes) {
+          for (var n = 0; n < mutation.addedNodes.length; n++) {
+            strip(mutation.addedNodes[n]);
+          }
+        }
+      }
+    });
+    observer.observe(document.documentElement, {
+      attributes: true,
+      childList: true,
+      subtree: true,
+      attributeFilter: ATTRS,
+    });
+    // On arrête l'observation après l'hydratation (extinction propre, zéro overhead).
+    window.addEventListener('load', function () {
+      setTimeout(function () { observer.disconnect(); }, 5000);
+    });
+  } catch (e) {
+    /* environnement sans MutationObserver : no-op silencieux */
+  }
+})();
+`;
+
 export const metadata: Metadata = {
   title: "NOLI Assurance - Comparez les Assurances en Côte d'Ivoire",
   description:
@@ -52,8 +93,10 @@ export default function RootLayout({
   return (
     <html lang="fr" suppressHydrationWarning>
       <body
+        suppressHydrationWarning
         className={`${spaceGrotesk.variable} ${nunitoSans.variable} ${poppins.variable} antialiased`}
       >
+        <script dangerouslySetInnerHTML={{ __html: EXTENSION_CLEANUP_SCRIPT }} />
         {/* UI-H01 : lien skip-nav, invisible sauf au focus clavier (WCAG 2.1 A) */}
         <a
           href="#main-content"
