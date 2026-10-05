@@ -220,7 +220,13 @@ export function DevisTab() {
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">{fmtDate(q.createdAt)}</TableCell>
                   <TableCell>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openDetail(q)}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => openDetail(q)}
+                      aria-label={`Voir le détail du devis ${q.reference}`}
+                    >
                       <Eye className="h-4 w-4" />
                     </Button>
                   </TableCell>

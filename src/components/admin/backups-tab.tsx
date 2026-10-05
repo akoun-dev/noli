@@ -406,7 +406,11 @@ export function BackupsTab() {
 
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
-                            <Button variant="destructive" size="sm">
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              aria-label={`Supprimer la sauvegarde ${b.filename}`}
+                            >
                               <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                           </AlertDialogTrigger>
@@ -473,7 +477,11 @@ export function BackupsTab() {
 
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button variant="destructive" size="icon">
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          aria-label={`Supprimer la sauvegarde ${b.filename}`}
+                        >
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </AlertDialogTrigger>

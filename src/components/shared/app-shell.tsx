@@ -4,7 +4,10 @@ import Image from "next/image";
 import { ArrowLeft, ChevronRight, LogOut, Menu } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useAppStore } from "@/store/app-store";
-import { NotificationDropdown } from "@/components/shared/notification-dropdown";
+import {
+  NotificationDropdown,
+  useNotifications,
+} from "@/components/shared/notification-dropdown";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { getInitials } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -131,6 +134,10 @@ export function AppShell({
   children,
 }: AppShellProps) {
   const { user, setUser, setView } = useAppStore();
+  // PERF-005 : hub de notifications instancié UNE fois ici (et non dans
+  // chaque instance visuelle) → un seul fetch /api/notifications au montage,
+  // partagé par la cloche mobile et la cloche desktop.
+  const notificationsHub = useNotifications(user.id);
   const currentLabel =
     sidebarItems.find((i) => i.id === activeTab)?.label ??
     sidebarItems[0]?.label ??
@@ -166,7 +173,10 @@ export function AppShell({
         <div className="flex items-center gap-2">
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon">
+              {/* A11Y-002 : nom accessible du bouton hamburger. Radix Sheet
+                  (DialogTrigger) ajoute lui-même aria-expanded/aria-haspopup
+                  selon l'état ouvert/fermé du menu. */}
+              <Button variant="ghost" size="icon" aria-label="Ouvrir le menu">
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
@@ -195,7 +205,7 @@ export function AppShell({
           </div>
         </div>
         <div className="flex items-center gap-1">
-          {user.id && <NotificationDropdown userId={user.id} />}
+          {user.id && <NotificationDropdown hub={notificationsHub} />}
           <ThemeToggle />
         </div>
       </div>
@@ -215,7 +225,7 @@ export function AppShell({
 
             {/* Right: Actions */}
             <div className="flex items-center gap-1">
-              {user.id && <NotificationDropdown userId={user.id} />}
+              {user.id && <NotificationDropdown hub={notificationsHub} />}
               <ThemeToggle />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

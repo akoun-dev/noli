@@ -1388,7 +1388,14 @@ export function InsurerGuaranteesTab() {
                               setMatrixTariffs(matrixTariffs.map(t => t.key === tariff.key ? { ...t, prime: parseInt(e.target.value) || 0 } : t));
                             }} />
                             <span className="text-xs text-muted-foreground">FCFA</span>
-                            <Button type="button" variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive" onClick={() => setMatrixTariffs(matrixTariffs.filter(t => t.key !== tariff.key))}>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 text-destructive"
+                              aria-label="Supprimer cette ligne de tarif"
+                              onClick={() => setMatrixTariffs(matrixTariffs.filter(t => t.key !== tariff.key))}
+                            >
                               <Trash2 className="h-3 w-3" />
                             </Button>
                           </div>
@@ -1428,7 +1435,14 @@ export function InsurerGuaranteesTab() {
                           <span className="font-semibold text-sm">Formule {formula.formula}</span>
                           <Input type="text" value={formula.label} onChange={(e) => setMatrixFormulas(matrixFormulas.map(f => f.formula === formula.formula ? { ...f, label: e.target.value } : f))} className="h-8 w-40 text-sm" placeholder="Libellé" />
                         </div>
-                        <Button type="button" variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive" onClick={() => setMatrixFormulas(matrixFormulas.filter(f => f.formula !== formula.formula))}>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 text-destructive"
+                          aria-label={`Supprimer la formule ${formula.formula}`}
+                          onClick={() => setMatrixFormulas(matrixFormulas.filter(f => f.formula !== formula.formula))}
+                        >
                           <Trash2 className="h-3 w-3" />
                         </Button>
                       </div>
@@ -1523,6 +1537,7 @@ export function InsurerGuaranteesTab() {
                                   variant="ghost"
                                   size="sm"
                                   className="h-8 w-8 p-0 text-destructive mt-4"
+                                  aria-label="Supprimer cette ligne de tarif"
                                   onClick={() => {
                                     const newTariffs = (formula.placesTariffs || []).filter((_, i) => i !== idx);
                                     setMatrixFormulas(matrixFormulas.map(f =>
@@ -1595,7 +1610,14 @@ export function InsurerGuaranteesTab() {
                         setMatrixTariffs(matrixTariffs.map(t => t.key === tariff.key ? { ...t, prime: parseInt(e.target.value) || 0 } : t));
                       }} />
                       <span className="text-xs text-muted-foreground shrink-0">FCFA</span>
-                      <Button type="button" variant="ghost" size="sm" className="h-8 w-8 p-0 shrink-0 text-destructive" onClick={() => setMatrixTariffs(matrixTariffs.filter(t => t.key !== tariff.key))}>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 shrink-0 text-destructive"
+                        aria-label="Supprimer cette catégorie de véhicule"
+                        onClick={() => setMatrixTariffs(matrixTariffs.filter(t => t.key !== tariff.key))}
+                      >
                         <Trash2 className="h-3 w-3" />
                       </Button>
                     </div>
@@ -1958,6 +1980,7 @@ export function InsurerGuaranteesTab() {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8"
+                          aria-label={`Modifier la garantie ${cov.name}`}
                           onClick={() => openEdit(cov)}
                         >
                           <Pencil className="h-3.5 w-3.5" />
@@ -1966,6 +1989,7 @@ export function InsurerGuaranteesTab() {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 text-destructive hover:text-destructive"
+                          aria-label={`Supprimer la garantie ${cov.name}`}
                           onClick={() => setDeleteTarget(cov)}
                         >
                           <Trash2 className="h-3.5 w-3.5" />

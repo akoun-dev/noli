@@ -471,6 +471,7 @@ export function AuditLogsTab() {
               <Button
                 variant="outline"
                 size="icon"
+                aria-label="Page précédente"
                 disabled={page <= 1}
                 onClick={() => setPage((p) => p - 1)}
               >
@@ -494,6 +495,7 @@ export function AuditLogsTab() {
               <Button
                 variant="outline"
                 size="icon"
+                aria-label="Page suivante"
                 disabled={page >= pages}
                 onClick={() => setPage((p) => p + 1)}
               >

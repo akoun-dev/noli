@@ -28,7 +28,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { USAGE_OPTIONS } from "@/lib/constants";
 import { Progress } from "@/components/ui/progress";
-import { toast } from "sonner";
+import { useToast } from "@/hooks/use-toast";
 import { fetchWithTimeout, networkErrorMessage } from "@/lib/fetch-with-timeout";
 
 // ─── Date d'effet ───────────────────────────────────────────────────
@@ -178,6 +178,8 @@ export function ComparisonForm() {
     setView, setIsComparing, setComparisonResults,
     isComparing, user,
   } = useAppStore();
+  // A11Y-003 : toast Radix (monté par le layout) et non sonner (orphelin).
+  const { toast } = useToast();
   const [errors, setErrors] = useState<Record<string, string>>({});
   // LOT E : erreur réseau persistante (inline) à la soumission de la comparaison.
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -285,7 +287,8 @@ export function ComparisonForm() {
     } catch (err) {
       const msg = networkErrorMessage(err);
       setSubmitError(msg);
-      toast.error(msg);
+      // Pattern useToast partagé par les 24 autres fichiers (voir ui/toaster.tsx).
+      toast({ title: "Erreur", description: msg, variant: "destructive" });
     } finally {
       setIsComparing(false);
     }

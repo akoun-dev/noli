@@ -5,9 +5,11 @@ import { Bell, CheckCheck, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
+import { useAppStore } from "@/store/app-store";
+import type { AppView } from "@/types";
 
 /* ── Types ── */
-interface Notification {
+export interface Notification {
   id: string;
   type: string; // INFO | SUCCESS | WARNING | ERROR
   title: string;
@@ -15,6 +17,42 @@ interface Notification {
   link?: string | null;
   isRead: boolean;
   createdAt: string;
+}
+
+/* ── A11Y-010 : navigation SPA depuis les notifications ─────────────
+ * Mapping URL ↔ vue, calqué sur PATH_TO_VIEW de src/app/[...slug]/page.tsx
+ * (source de vérité du routeur catch-all). Dupliqué volontairement : la
+ * table n'est pas exportée par page.tsx et ce composant doit rester
+ * découplé du fichier de route.
+ */
+const PATH_TO_VIEW: Record<string, AppView> = {
+  "/": "landing",
+  "/comparer": "compare",
+  "/resultats": "results",
+  "/offres": "offers",
+  "/a-propos": "about",
+  "/contact": "contact",
+  "/faq": "faq",
+  "/mentions-legales": "mentions-legales",
+  "/connexion": "login",
+  "/inscription": "register",
+  "/mot-de-passe-oublie": "forgot",
+  "/admin": "admin",
+  "/espace-client": "user-dashboard",
+  "/espace-assureur": "insurer-dashboard",
+};
+
+/**
+ * Résout le lien d'une notification vers la vue SPA cible.
+ * - chemin interne mappé → la vue correspondante (setView) ;
+ * - sinon null (le lien n'est pas une URL interne navigable : certains
+ *   payloads historiques stockent du JSON dans `link`, ex. /api/contact).
+ */
+function resolveLinkToView(link: string): AppView | null {
+  if (!link.startsWith("/")) return null;
+  // Ignore query string et fragment : "/espace-client?devis=X" → "/espace-client"
+  const path = link.split(/[?#]/)[0];
+  return PATH_TO_VIEW[path] ?? null;
 }
 
 /* ── Relative time in French ── */
@@ -52,10 +90,25 @@ function typeBorderClass(type: string): string {
   }
 }
 
-/* ── Component ── */
-export function NotificationDropdown({ userId }: { userId: string }) {
+/* ── Shared notifications hub (PERF-005) ────────────────────────────
+ * AppShell appelle ce hook UNE seule fois et transmet le résultat aux
+ * instances visuelles (mobile + desktop) : un seul fetch /api/notifications
+ * au montage, un seul état, des mises à jour optimistes partagées.
+ */
+export interface NotificationsHub {
+  notifications: Notification[];
+  loading: boolean;
+  markingAll: boolean;
+  unreadCount: number;
+  markRead: (notification: Notification) => Promise<void>;
+  markAllRead: () => Promise<void>;
+}
+
+export function useNotifications(userId: string | undefined): NotificationsHub {
   const { toast } = useToast();
-  const [open, setOpen] = useState(false);
+  // A11Y-010 : setView du store zustand (même pattern que header.tsx) ;
+  // l'effet de synchro URL↔vue de page.tsx met ensuite l'URL à jour.
+  const setView = useAppStore((s) => s.setView);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [markingAll, setMarkingAll] = useState(false);
@@ -64,6 +117,11 @@ export function NotificationDropdown({ userId }: { userId: string }) {
 
   /* Fetch notifications */
   const fetchNotifications = useCallback(async () => {
+    if (!userId) {
+      setNotifications([]);
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       const res = await fetch(`/api/notifications`);
@@ -85,38 +143,48 @@ export function NotificationDropdown({ userId }: { userId: string }) {
     fetchNotifications();
   }, [fetchNotifications]);
 
-  /* Mark single notification as read */
-  const handleMarkRead = async (notification: Notification) => {
-    if (notification.isRead) return;
+  /* Mark single notification as read (+ SPA navigation if link) */
+  const markRead = useCallback(
+    async (notification: Notification) => {
+      if (notification.isRead) return;
 
-    try {
-      await fetch(`/api/notifications/${notification.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isRead: true }),
-      });
+      try {
+        await fetch(`/api/notifications/${notification.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ isRead: true }),
+        });
 
-      // Optimistic update
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === notification.id ? { ...n, isRead: true } : n))
-      );
+        // Optimistic update
+        setNotifications((prev) =>
+          prev.map((n) => (n.id === notification.id ? { ...n, isRead: true } : n))
+        );
 
-      // If notification has a link, close popover and navigate
-      if (notification.link) {
-        setOpen(false);
-        window.location.href = notification.link;
+        // If notification has a link, navigate WITHOUT full page reload
+        if (notification.link) {
+          const targetView = resolveLinkToView(notification.link);
+          if (targetView) {
+            setView(targetView);
+          } else if (/^https?:\/\//i.test(notification.link)) {
+            // Lien externe : sortie de SPA inévitable.
+            window.location.href = notification.link;
+          }
+          // Sinon : `link` n'est pas une URL navigable (payload interne) →
+          // on se contente de marquer la notification comme lue.
+        }
+      } catch {
+        toast({
+          title: "Erreur",
+          description: "Impossible de marquer la notification comme lue.",
+          variant: "destructive",
+        });
       }
-    } catch {
-      toast({
-        title: "Erreur",
-        description: "Impossible de marquer la notification comme lue.",
-        variant: "destructive",
-      });
-    }
-  };
+    },
+    [setView, toast]
+  );
 
   /* Mark all as read */
-  const handleMarkAllRead = async () => {
+  const markAllRead = useCallback(async () => {
     if (unreadCount === 0) return;
 
     try {
@@ -135,6 +203,40 @@ export function NotificationDropdown({ userId }: { userId: string }) {
     } finally {
       setMarkingAll(false);
     }
+  }, [unreadCount, toast]);
+
+  return {
+    notifications,
+    loading,
+    markingAll,
+    unreadCount,
+    markRead,
+    markAllRead,
+  };
+}
+
+/* ── Component (présentational — données fournies par useNotifications) ── */
+interface NotificationDropdownProps {
+  /** État + actions partagés, fournis par AppShell via useNotifications() */
+  hub: NotificationsHub;
+}
+
+export function NotificationDropdown({ hub }: NotificationDropdownProps) {
+  const {
+    notifications,
+    loading,
+    markingAll,
+    unreadCount,
+    markRead,
+    markAllRead,
+  } = hub;
+  const [open, setOpen] = useState(false);
+
+  const handleItemClick = (n: Notification) => {
+    // Le popover se referme seulement si la notification provoque une
+    // navigation (comportement d'origine préservé).
+    if (n.link) setOpen(false);
+    void markRead(n);
   };
 
   return (
@@ -163,7 +265,7 @@ export function NotificationDropdown({ userId }: { userId: string }) {
             variant="ghost"
             size="sm"
             className="h-auto px-2 py-1 text-xs text-muted-foreground hover:text-foreground gap-1"
-            onClick={handleMarkAllRead}
+            onClick={() => void markAllRead()}
             disabled={markingAll || unreadCount === 0}
           >
             {markingAll ? (
@@ -191,7 +293,7 @@ export function NotificationDropdown({ userId }: { userId: string }) {
               {notifications.map((n) => (
                 <li
                   key={n.id}
-                  onClick={() => handleMarkRead(n)}
+                  onClick={() => handleItemClick(n)}
                   className={`flex gap-3 px-4 py-3 cursor-pointer transition-colors hover:bg-muted/50 border-l-[3px] ${typeBorderClass(n.type)}`}
                 >
                   {/* Unread dot */}
