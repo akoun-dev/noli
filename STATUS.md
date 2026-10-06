@@ -14,12 +14,16 @@ Branche : `claude/decoupe-insurer-guarantees-ohdyp0` · commit `3731b35` · prev
 | 3 | `bun run check` + `build` verts | ✅ | 0 erreur, 176 tests ; « Compiled successfully » |
 | 4 | Écran rendu (smoke) | ✅ (home) / ⏳ (onglet) | home 200, 0 erreur console ; **onglet « Garanties » assureur = à tester sur preview (login requis)** |
 
-Chaîne : dev-frontend (extraction) → **relecteur : CONFORME** → recette. Bonus : suppression de `renderFranchiseSection` (code mort). **Merge `2.0.0` : autorisé « dès que prêt » → en cours.**
-⚠️ Seule vérif restante : rendu/comportement réel de l'onglet assureur « Garanties » (wizard/matrice/tarifs/CRUD) sur la deploy-preview Netlify avec un compte assureur — non reproductible en local.
+Chaîne : dev-frontend (extraction) → **relecteur : CONFORME** → recette. Bonus : suppression de `renderFranchiseSection` (code mort). **PR #62 mergée dans `2.0.0` (`758f484`).**
+⚠️ Seule vérif restante : rendu/comportement réel de l'onglet assureur « Garanties » (wizard/matrice/tarifs/CRUD) sur la deploy-preview Netlify (https://deploy-preview-62--noliassurance.netlify.app, ou prod après redéploiement) avec un compte assureur — non reproductible en local.
 
 ### Livrables précédents (mergés dans `2.0.0`)
 - Design system source unique (PR #61, mergée) — 12 tokens, 0 hex en dur, `tailwind.config.ts` supprimé.
 - Cadre de travail + garde-fous (commit `8c794f8`).
+
+### Backlog « fichiers géants » (prochains)
+- `coverages-tab.tsx` (1846 l) · `auth-form.tsx` (1241 l) · puis les autres > 300 l — un par un, même méthode (extraction pure → relecteur → recette).
+- Option : re-découper les sous-composants denses du lot garanties (`use-guarantees-wizard` 270, `tierce-editor` 220) si on veut réduire les warnings de complexité.
 
 ## État des lieux (enquête 2026-10-05)
 ### Livré / fonctionne
