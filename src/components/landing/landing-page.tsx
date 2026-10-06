@@ -21,17 +21,17 @@ const insuranceCards = [
   {
     label: "Assurance Auto",
     icon: Car,
-    color: "#F97316",
-    colorBg: "rgba(249,115,22,0.10)",
+    color: "var(--category-auto)",
+    colorBg: "color-mix(in srgb, var(--category-auto) 10%, transparent)",
     badge: "En service",
-    badgeClass: "bg-[#16A34A]/10 text-[#16A34A]",
+    badgeClass: "bg-status-available/10 text-status-available",
     available: true,
   },
   {
     label: "Assurance Moto",
     icon: Bike,
-    color: "#3B82F6",
-    colorBg: "rgba(59,130,246,0.10)",
+    color: "var(--category-moto)",
+    colorBg: "color-mix(in srgb, var(--category-moto) 10%, transparent)",
     badge: "Bientôt",
     badgeClass: "bg-muted/30 text-muted-foreground",
     available: false,
@@ -39,8 +39,8 @@ const insuranceCards = [
   {
     label: "Mutuelle Santé",
     icon: Heart,
-    color: "#22C55E",
-    colorBg: "rgba(34,197,94,0.10)",
+    color: "var(--category-sante)",
+    colorBg: "color-mix(in srgb, var(--category-sante) 10%, transparent)",
     badge: "Bientôt",
     badgeClass: "bg-muted/30 text-muted-foreground",
     available: false,
@@ -48,8 +48,8 @@ const insuranceCards = [
   {
     label: "Assurance Habitation",
     icon: Home,
-    color: "#EF4444",
-    colorBg: "rgba(239,68,68,0.10)",
+    color: "var(--category-habitation)",
+    colorBg: "color-mix(in srgb, var(--category-habitation) 10%, transparent)",
     badge: "Bientôt",
     badgeClass: "bg-muted/30 text-muted-foreground",
     available: false,
@@ -57,8 +57,8 @@ const insuranceCards = [
   {
     label: "Assurance Emprunteur",
     icon: Shield,
-    color: "#A855F7",
-    colorBg: "rgba(168,85,247,0.10)",
+    color: "var(--category-emprunteur)",
+    colorBg: "color-mix(in srgb, var(--category-emprunteur) 10%, transparent)",
     badge: "Bientôt",
     badgeClass: "bg-muted/30 text-muted-foreground",
     available: false,
@@ -66,8 +66,8 @@ const insuranceCards = [
   {
     label: "Énergie & Services",
     icon: Zap,
-    color: "#EAB308",
-    colorBg: "rgba(234,179,8,0.10)",
+    color: "var(--category-energie)",
+    colorBg: "color-mix(in srgb, var(--category-energie) 10%, transparent)",
     badge: "Bientôt",
     badgeClass: "bg-muted/30 text-muted-foreground",
     available: false,
@@ -124,9 +124,9 @@ export function LandingPage() {
   return (
     <div className="flex-1">
       {/* ════════════ HERO ════════════ */}
-      <section className="relative overflow-hidden bg-[#E8F4F0] dark:bg-[#121e19]">
-        <div className="absolute -top-40 -right-40 h-[500px] w-[500px] rounded-full bg-[#D1ECDF]/50 dark:bg-[#1a3a2a]/50 blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-32 -left-32 h-[400px] w-[400px] rounded-full bg-[#DEEF4A]/10 dark:bg-[#DEEF4A]/5 blur-3xl pointer-events-none" />
+      <section className="relative overflow-hidden bg-section">
+        <div className="absolute -top-40 -right-40 h-[500px] w-[500px] rounded-full bg-section-glow/50 blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-32 -left-32 h-[400px] w-[400px] rounded-full bg-glow/10 dark:bg-glow/5 blur-3xl pointer-events-none" />
 
         <div className="relative mx-auto max-w-[1400px] px-4 sm:px-8 py-10 sm:py-14 md:py-20 lg:py-24">
           <div className="mb-8 md:mb-12 max-w-2xl animate-slide-up">
@@ -201,7 +201,7 @@ export function LandingPage() {
                   className="absolute inset-0 -m-6 rounded-full blur-3xl pointer-events-none"
                   style={{
                     background:
-                      "radial-gradient(circle, rgba(222,239,74,0.35) 0%, rgba(222,239,74,0.08) 50%, transparent 70%)",
+                      "radial-gradient(circle, color-mix(in srgb, var(--glow) 35%, transparent) 0%, color-mix(in srgb, var(--glow) 8%, transparent) 50%, transparent 70%)",
                   }}
                 />
                 <div className="absolute -inset-4 rounded-full border-2 border-dashed border-accent/20 pointer-events-none" />
@@ -278,7 +278,7 @@ export function LandingPage() {
       </section>
 
       {/* ════════════ POURQUOI NOLI ════════════ */}
-      <section className="bg-primary dark:bg-[#1B464D] py-16 md:py-24">
+      <section className="bg-brand-panel py-16 md:py-24">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14 animate-fade-in-up">
             <span className="mb-4 inline-block rounded-full bg-primary-foreground/15 px-4 py-1.5 text-xs font-semibold tracking-wider text-primary-foreground uppercase">

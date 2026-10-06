@@ -47,6 +47,18 @@
   --color-brand: #B9E54D;
   --color-brand-foreground: #000000;
   --color-brand-hover: #a5d044;
+  --color-section: var(--section);
+  --color-section-glow: var(--section-glow);
+  --color-brand-panel: var(--brand-panel);
+  --color-glow: var(--glow);
+  --color-status-available: var(--status-available);
+  --color-tier-basic: var(--tier-basic);
+  --color-category-auto: var(--category-auto);
+  --color-category-moto: var(--category-moto);
+  --color-category-sante: var(--category-sante);
+  --color-category-habitation: var(--category-habitation);
+  --color-category-emprunteur: var(--category-emprunteur);
+  --color-category-energie: var(--category-energie);
 }
 
 :root {
@@ -85,6 +97,18 @@
   --sidebar-ring: #DEEF4A;
   --card-shadow: 0 20px 45px -15px rgb(60 80 82 / 0.15);
   --hover-shadow: 0 30px 55px -15px rgb(35 132 126 / 0.25);
+  --section: #E8F4F0;
+  --section-glow: #D1ECDF;
+  --brand-panel: #1B464D;
+  --glow: #DEEF4A;
+  --status-available: #16A34A;
+  --tier-basic: #6b7280;
+  --category-auto: #F97316;
+  --category-moto: #3B82F6;
+  --category-sante: #22C55E;
+  --category-habitation: #EF4444;
+  --category-emprunteur: #A855F7;
+  --category-energie: #EAB308;
 }
 
 .dark {
@@ -122,6 +146,18 @@
   --sidebar-ring: #DEEF4A;
   --card-shadow: 0 25px 55px -20px rgb(20 60 66 / 0.6);
   --hover-shadow: 0 30px 65px -20px rgb(222 239 85 / 0.45);
+  --section: #121e19;
+  --section-glow: #1a3a2a;
+  --brand-panel: #1B464D;
+  --glow: #DEEF4A;
+  --status-available: #16A34A;
+  --tier-basic: #6b7280;
+  --category-auto: #F97316;
+  --category-moto: #3B82F6;
+  --category-sante: #22C55E;
+  --category-habitation: #EF4444;
+  --category-emprunteur: #A855F7;
+  --category-energie: #EAB308;
 }
 
 @layer base {

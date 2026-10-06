@@ -52,7 +52,7 @@ export function AboutPage() {
   return (
     <div className="min-h-screen">
       {/* ─── Hero ────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden bg-[#E8F4F0] dark:bg-[#121e19] py-20 md:py-28">
+      <section className="relative overflow-hidden bg-section py-20 md:py-28">
         <div className="pointer-events-none absolute -top-20 -right-20 h-72 w-72 rounded-full bg-accent/20 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-16 -left-16 h-56 w-56 rounded-full bg-secondary/15 blur-3xl" />
 
@@ -115,7 +115,7 @@ export function AboutPage() {
       </section>
 
       {/* ─── Nos Valeurs ─────────────────────────────────────── */}
-      <section className="bg-[#E8F4F0] dark:bg-[#121e19] py-16 md:py-24">
+      <section className="bg-section py-16 md:py-24">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
           <div className="mb-4 inline-block rounded-full bg-primary/10 px-4 py-1.5 text-xs font-semibold tracking-wider text-primary uppercase animate-fade-in-up">
             Nos Valeurs
@@ -165,7 +165,7 @@ export function AboutPage() {
             {stats.map((s, idx) => (
               <div
                 key={s.label}
-                className="rounded-xl border border-border/50 bg-[#E8F4F0] dark:bg-[#121e19] px-6 py-8 text-center animate-fade-in-up"
+                className="rounded-xl border border-border/50 bg-section px-6 py-8 text-center animate-fade-in-up"
                 style={{ animationDelay: `${(idx + 1) * 100}ms` }}
               >
                 <p className="font-display text-4xl font-bold text-primary sm:text-5xl">

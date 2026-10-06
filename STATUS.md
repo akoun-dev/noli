@@ -4,7 +4,19 @@
 > Dernière mise à jour : 2026-10-05 · branche par défaut `2.0.0`.
 
 ## Livrable en cours
-**Mise en place du cadre de travail (agents + garde-fous)** — voir « État du chantier » plus bas. Aucun livrable applicatif ouvert (en attente de validation du prochain).
+**Consolidation du design system — une seule source de vérité** (validé le 2026-10-06).
+Branche : `claude/design-system-source-unique-ohdyp0`. Preview : build local (noli.ci inaccessible depuis l'environnement).
+
+**DoD :**
+| # | Critère | Statut | Preuve |
+|---|---|---|---|
+| 1 | `tailwind.config.ts` (mort, non chargé) supprimé sans régression | en cours | vérif : aucun `@config`, non référencé, postcss v4 pur |
+| 2 | 0 hex en dur dans les 5 fichiers (landing, about, contact, footer, comparison-form) → tokens | en cours | — |
+| 3 | `globals.css` = source unique documentée (tokens ajoutés si besoin) | en cours | — |
+| 4 | `bun run check` vert | en cours | — |
+| 5 | Captures *avant/après* identiques (landing, about, contact) | en cours | recette |
+
+Chaîne : designer (mapping) → dev-frontend (application) → relecteur (anti-spaghetti) → recette (captures). PR/merge `2.0.0` sur demande explicite.
 
 ## État des lieux (enquête 2026-10-05)
 ### Livré / fonctionne
