@@ -59,7 +59,7 @@ const CONTRACT_TYPES: {
     description: "Couverture de base obligatoire : Responsabilité Civile et Défense & Recours. Idéal pour un budget maîtrisé.",
     icon: Shield,
     color: "var(--tier-basic)",
-    colorBg: "rgba(107,114,128,0.12)",
+    colorBg: "color-mix(in srgb, var(--tier-basic) 12%, transparent)",
     features: ["RC", "DR"],
   },
   {
@@ -68,7 +68,7 @@ const CONTRACT_TYPES: {
     description: "Garanties renforcées : Incendie, Vol, Bris de Glaces, Individuelle Conducteur & Passagers. Le meilleur rapport qualité-prix.",
     icon: ShieldCheck,
     color: "var(--secondary)",
-    colorBg: "rgba(35,132,126,0.12)",
+    colorBg: "color-mix(in srgb, var(--secondary) 12%, transparent)",
     features: ["RC", "DR", "IC", "IPT", "INCENDIE", "VOL", "BDG"],
   },
   {
@@ -77,7 +77,7 @@ const CONTRACT_TYPES: {
     description: "Protection maximale incluant la Tierce Complète, Collision et Assistance. Une tranquillité d'esprit totale.",
     icon: Sparkles,
     color: "var(--brand)",
-    colorBg: "rgba(185,229,77,0.15)",
+    colorBg: "color-mix(in srgb, var(--brand) 15%, transparent)",
     features: ["RC", "DR", "IC", "IPT", "INCENDIE", "VOL", "BDG", "TCM", "TCL", "ASSISTANCE"],
   },
 ];

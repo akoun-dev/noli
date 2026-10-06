@@ -44,7 +44,7 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  --color-brand: #B9E54D;
+  --color-brand: var(--brand);
   --color-brand-foreground: #000000;
   --color-brand-hover: #a5d044;
   --color-section: var(--section);
@@ -103,6 +103,7 @@
   --glow: #DEEF4A;
   --status-available: #16A34A;
   --tier-basic: #6b7280;
+  --brand: #B9E54D;
   --category-auto: #F97316;
   --category-moto: #3B82F6;
   --category-sante: #22C55E;
@@ -152,6 +153,7 @@
   --glow: #DEEF4A;
   --status-available: #16A34A;
   --tier-basic: #6b7280;
+  --brand: #B9E54D;
   --category-auto: #F97316;
   --category-moto: #3B82F6;
   --category-sante: #22C55E;
