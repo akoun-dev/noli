@@ -3,20 +3,20 @@
 > Source de vérité du chantier. Mise à jour à chaque étape et avant toute fin de session.
 > Dernière mise à jour : 2026-10-05 · branche par défaut `2.0.0`.
 
-## Livrable en cours
-**Consolidation du design system — une seule source de vérité** (validé le 2026-10-06).
-Branche : `claude/design-system-source-unique-ohdyp0`. Preview : build local (noli.ci inaccessible depuis l'environnement).
+## Livrable LIVRÉ ✅ — Consolidation du design system (source unique)
+Branche : `claude/design-system-source-unique-ohdyp0` · commits `9896980` + `26acf36` · preview : build local (noli.ci inaccessible depuis l'environnement).
 
 **DoD :**
 | # | Critère | Statut | Preuve |
 |---|---|---|---|
-| 1 | `tailwind.config.ts` (mort, non chargé) supprimé sans régression | en cours | vérif : aucun `@config`, non référencé, postcss v4 pur |
-| 2 | 0 hex en dur dans les 5 fichiers (landing, about, contact, footer, comparison-form) → tokens | en cours | — |
-| 3 | `globals.css` = source unique documentée (tokens ajoutés si besoin) | en cours | — |
-| 4 | `bun run check` vert | en cours | — |
-| 5 | Captures *avant/après* identiques (landing, about, contact) | en cours | recette |
+| 1 | `tailwind.config.ts` (mort) supprimé sans régression | ✅ | `git rm` ; aucun `@config`/import ; build vert |
+| 2 | 0 hex en dur dans les 5 fichiers → tokens | ✅ | grep hex = 0 (relecteur + recette) |
+| 3 | `globals.css` = source unique (12 tokens ajoutés) | ✅ | tokens `:root`/`.dark`/`@theme inline`, valeurs = hex d'origine |
+| 4 | `bun run check` vert | ✅ | typecheck 0, lint 0 erreur (290 warnings hérités), 176 tests |
+| 5 | Captures identiques (landing/about/contact clair+sombre) | ✅ | /tmp/claude-0/recette-ds/*.png (6 captures) |
 
-Chaîne : designer (mapping) → dev-frontend (application) → relecteur (anti-spaghetti) → recette (captures). PR/merge `2.0.0` sur demande explicite.
+Chaîne : designer → dev-frontend → relecteur (**a attrapé 1 régression `var(--brand)` + 2 points, corrigés**) → recette. **Verdict relecteur : CONFORME.** PR/merge `2.0.0` : en attente du feu vert.
+Réserve hors périmètre : `/api/stats` 500 en local (pas de vraie base) → « chiffres » à-propos en « undefined » ; à reconfirmer sur prod.
 
 ## État des lieux (enquête 2026-10-05)
 ### Livré / fonctionne
