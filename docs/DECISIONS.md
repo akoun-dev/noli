@@ -4,6 +4,7 @@
 
 | Date | Décision | Raison / source |
 |---|---|---|
+| 2026-10-06 | **Design system consolidé en une source unique** : 12 tokens ajoutés à `globals.css` (`:root`/`.dark`/`@theme inline`), suppression de tous les hex en dur des 5 composants (landing, about, contact, footer, comparison-form). Suppression de `tailwind.config.ts` (config v3 morte) et de la dépendance `tailwindcss-animate` (consommée uniquement par ce fichier). | Livrable validé 2026-10-06. Rendu préservé à l'identique (tokens = hex d'origine). Tailwind v4 = config CSS pure. |
 | 2026-10-05 | Mise en place du cadre de travail : agents (`.claude/agents/`), `CLAUDE.md` (règles), `STATUS.md`, garde-fous (eslint taille/complexité/cycles, knip, jscpd, hook pre-push `check`). | Demande du chef de projet (cadre « chef de chantier »). |
 | 2026-10-05 | Garde-fous anti-spaghetti réglés en **warn / non bloquant**, seuils au niveau actuel. | L'existant dépasse déjà (38 fichiers > 300 l, 288 warnings, 7,6 % dup). Objectif : rendre visible + empêcher l'aggravation sans bloquer le flux. |
 | 2026-10-05 | **Design system : source de vérité = `src/app/globals.css`** (Tailwind v4, `@theme`). `tailwind.config.ts` (style v3, `hsl(var(--))`) est considéré **hérité/mort**. | Projet en Tailwind v4 (`@tailwindcss/postcss`) ; la config JS n'est pas chargée. Source : rapport d'exploration 2026-10-05. |

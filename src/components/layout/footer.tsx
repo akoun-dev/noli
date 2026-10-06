@@ -16,7 +16,7 @@ const noliLinks: { label: string; view: string }[] = [
 export function Footer() {
   const setView = useAppStore((s) => s.setView);
   return (
-    <footer id="footer" className="mt-auto w-full bg-primary dark:bg-[#1B464D] text-secondary-foreground">
+    <footer id="footer" className="mt-auto w-full bg-brand-panel text-secondary-foreground">
       <div className="h-1 w-full bg-accent" />
 
       <div className="mx-auto max-w-[1400px] px-8 py-12">
