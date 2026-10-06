@@ -1,22 +1,25 @@
 # STATUS — NOLI
 
 > Source de vérité du chantier. Mise à jour à chaque étape et avant toute fin de session.
-> Dernière mise à jour : 2026-10-05 · branche par défaut `2.0.0`.
+> Dernière mise à jour : 2026-10-06 · branche par défaut `2.0.0`.
 
-## Livrable LIVRÉ ✅ — Consolidation du design system (source unique)
-Branche : `claude/design-system-source-unique-ohdyp0` · commits `9896980` + `26acf36` · preview : build local (noli.ci inaccessible depuis l'environnement).
+## Livrable LIVRÉ ✅ — Découpe `insurer-guarantees-tab` (2238 → 123 l)
+Branche : `claude/decoupe-insurer-guarantees-ohdyp0` · commit `3731b35` · preview : build local.
 
 **DoD :**
 | # | Critère | Statut | Preuve |
 |---|---|---|---|
-| 1 | `tailwind.config.ts` (mort) supprimé sans régression | ✅ | `git rm` ; aucun `@config`/import ; build vert |
-| 2 | 0 hex en dur dans les 5 fichiers → tokens | ✅ | grep hex = 0 (relecteur + recette) |
-| 3 | `globals.css` = source unique (12 tokens ajoutés) | ✅ | tokens `:root`/`.dark`/`@theme inline`, valeurs = hex d'origine |
-| 4 | `bun run check` vert | ✅ | typecheck 0, lint 0 erreur (290 warnings hérités), 176 tests |
-| 5 | Captures identiques (landing/about/contact clair+sombre) | ✅ | /tmp/claude-0/recette-ds/*.png (6 captures) |
+| 1 | Orchestrateur < 300 l + chaque fichier < 300 l | ✅ | tab 123 l ; 18 modules `guarantees/` de 64 à 270 l |
+| 2 | Extraction PURE (0 changement de comportement) | ✅ | relecteur : blocs vérifiés verbatim (defaults, builders, parsing, hooks) |
+| 3 | `bun run check` + `build` verts | ✅ | 0 erreur, 176 tests ; « Compiled successfully » |
+| 4 | Écran rendu (smoke) | ✅ (home) / ⏳ (onglet) | home 200, 0 erreur console ; **onglet « Garanties » assureur = à tester sur preview (login requis)** |
 
-Chaîne : designer → dev-frontend → relecteur (**a attrapé 1 régression `var(--brand)` + 2 points, corrigés**) → recette. **Verdict relecteur : CONFORME.** PR/merge `2.0.0` : en attente du feu vert.
-Réserve hors périmètre : `/api/stats` 500 en local (pas de vraie base) → « chiffres » à-propos en « undefined » ; à reconfirmer sur prod.
+Chaîne : dev-frontend (extraction) → **relecteur : CONFORME** → recette. Bonus : suppression de `renderFranchiseSection` (code mort). **Merge `2.0.0` : autorisé « dès que prêt » → en cours.**
+⚠️ Seule vérif restante : rendu/comportement réel de l'onglet assureur « Garanties » (wizard/matrice/tarifs/CRUD) sur la deploy-preview Netlify avec un compte assureur — non reproductible en local.
+
+### Livrables précédents (mergés dans `2.0.0`)
+- Design system source unique (PR #61, mergée) — 12 tokens, 0 hex en dur, `tailwind.config.ts` supprimé.
+- Cadre de travail + garde-fous (commit `8c794f8`).
 
 ## État des lieux (enquête 2026-10-05)
 ### Livré / fonctionne
