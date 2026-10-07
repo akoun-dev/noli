@@ -33,7 +33,8 @@ Chaîne : dev-frontend (extraction) → **relecteur : CONFORME** → recette. Bo
 - CI verte (tsc · lint · tests · build) sur `2.0.0`.
 
 ### Partiel / à confirmer
-- **Page blanche intermittente** signalée par plusieurs testeurs (« ça part, ça vient »). Process PM2 **stable** (logs : pas de crash). Hypothèse : assets `_next/static` incohérents après 2 redéploiements rapprochés. Correctif proposé : build propre unique + `pm2 restart`. **Non reproductible depuis l'environnement** (sortie vers noli.ci bloquée).
+- **Page blanche / pages non stylées** signalées par Hervé (et confirmées multi-testeurs) sur Edge/Firefox/Chrome. **Diagnostic établi** : build sain (rebuild local du commit `2.0.0` → CSS principal `dde7a43004f4dd8f.css` ≈183 Ko contenant tous les tokens, servi 200). Symptôme = **assets `/_next/static/*.css`+`.js` en 404 en prod** (désynchro `.next` après redéploiements rapprochés, ou build tué avant la copie des statiques dans le standalone). **Non reproductible depuis l'environnement** (sortie vers noli.ci bloquée).
+  - **Action en cours (2026-10-07) : message + runbook de redéploiement propre envoyés à Bernard** (`rm -rf .next` → `bun run build` complet → vérifier `ls .next/standalone/.next/static/chunks/*.css` → `pm2 restart` → `curl -I`). Vérif 404 côté testeur : F12 → Réseau → rouge sur `/_next/static/`. **En attente du retour de Bernard.**
 - Re-tests recette technique (TEC-AUTH-01 cookie httpOnly, TEC-AUTH-06 compte désactivé) + flux reset mot de passe : à cocher par le testeur après redéploiement.
 
 ### Cassé / dette
